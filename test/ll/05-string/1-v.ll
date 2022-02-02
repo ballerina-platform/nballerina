@@ -78,30 +78,41 @@ define internal i1 @_B_isKeyword(i8 addrspace(1)* %0) !dbg !7 {
   %s = alloca i8 addrspace(1)*
   %2 = alloca i1
   %s.1 = alloca i8 addrspace(1)*
-  %3 = alloca i1
   %s.2 = alloca i8 addrspace(1)*
-  %4 = alloca i1
+  %3 = alloca i1
   %s.3 = alloca i8 addrspace(1)*
-  %5 = alloca i1
   %s.4 = alloca i8 addrspace(1)*
-  %6 = alloca i1
+  %4 = alloca i1
   %s.5 = alloca i8 addrspace(1)*
-  %7 = alloca i1
   %s.6 = alloca i8 addrspace(1)*
-  %8 = alloca i1
+  %5 = alloca i1
   %s.7 = alloca i8 addrspace(1)*
-  %9 = alloca i1
   %s.8 = alloca i8 addrspace(1)*
-  %10 = alloca i1
+  %6 = alloca i1
   %s.9 = alloca i8 addrspace(1)*
-  %11 = alloca i1
   %s.10 = alloca i8 addrspace(1)*
-  %12 = alloca i1
+  %7 = alloca i1
   %s.11 = alloca i8 addrspace(1)*
+  %s.12 = alloca i8 addrspace(1)*
+  %8 = alloca i1
+  %s.13 = alloca i8 addrspace(1)*
+  %s.14 = alloca i8 addrspace(1)*
+  %9 = alloca i1
+  %s.15 = alloca i8 addrspace(1)*
+  %s.16 = alloca i8 addrspace(1)*
+  %10 = alloca i1
+  %s.17 = alloca i8 addrspace(1)*
+  %s.18 = alloca i8 addrspace(1)*
+  %11 = alloca i1
+  %s.19 = alloca i8 addrspace(1)*
+  %s.20 = alloca i8 addrspace(1)*
+  %12 = alloca i1
+  %s.21 = alloca i8 addrspace(1)*
+  %s.22 = alloca i8 addrspace(1)*
   %13 = alloca i8
   %14 = load i8*, i8** @_bal_stack_guard
   %15 = icmp ult i8* %13, %14
-  br i1 %15, label %83, label %16
+  br i1 %15, label %94, label %16
 16:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %s
   %17 = load i8 addrspace(1)*, i8 addrspace(1)** %s
@@ -115,109 +126,131 @@ define internal i1 @_B_isKeyword(i8 addrspace(1)* %0) !dbg !7 {
   ret i1 1
 22:
   %23 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %24 = icmp eq i8 addrspace(1)* %23, getelementptr(i8, i8 addrspace(1)* null, i64 3057488285269978978)
-  store i1 %24, i1* %3
-  %25 = load i1, i1* %3
-  br i1 %25, label %26, label %28
-26:
-  %27 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %27, i8 addrspace(1)** %s.2
+  store i8 addrspace(1)* %23, i8 addrspace(1)** %s.2
+  %24 = load i8 addrspace(1)*, i8 addrspace(1)** %s.2
+  %25 = icmp eq i8 addrspace(1)* %24, getelementptr(i8, i8 addrspace(1)* null, i64 3057488285269978978)
+  store i1 %25, i1* %3
+  %26 = load i1, i1* %3
+  br i1 %26, label %27, label %29
+27:
+  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %s.2
+  store i8 addrspace(1)* %28, i8 addrspace(1)** %s.3
   ret i1 1
-28:
-  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %30 = icmp eq i8 addrspace(1)* %29, getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621754473)
-  store i1 %30, i1* %4
-  %31 = load i1, i1* %4
-  br i1 %31, label %32, label %34
-32:
-  %33 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %33, i8 addrspace(1)** %s.3
-  ret i1 1
+29:
+  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %s.2
+  store i8 addrspace(1)* %30, i8 addrspace(1)** %s.4
+  %31 = load i8 addrspace(1)*, i8 addrspace(1)** %s.4
+  %32 = icmp eq i8 addrspace(1)* %31, getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621754473)
+  store i1 %32, i1* %4
+  %33 = load i1, i1* %4
+  br i1 %33, label %34, label %36
 34:
-  %35 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %36 = icmp eq i8 addrspace(1)* %35, getelementptr(i8, i8 addrspace(1)* null, i64 3098308792567362675)
-  store i1 %36, i1* %5
-  %37 = load i1, i1* %5
-  br i1 %37, label %38, label %40
-38:
-  %39 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %39, i8 addrspace(1)** %s.4
+  %35 = load i8 addrspace(1)*, i8 addrspace(1)** %s.4
+  store i8 addrspace(1)* %35, i8 addrspace(1)** %s.5
   ret i1 1
-40:
-  %41 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %42 = icmp eq i8 addrspace(1)* %41, getelementptr(i8, i8 addrspace(1)* null, i64 3098475879729817719)
-  store i1 %42, i1* %6
-  %43 = load i1, i1* %6
-  br i1 %43, label %44, label %46
-44:
-  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %45, i8 addrspace(1)** %s.5
+36:
+  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %s.4
+  store i8 addrspace(1)* %37, i8 addrspace(1)** %s.6
+  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %s.6
+  %39 = icmp eq i8 addrspace(1)* %38, getelementptr(i8, i8 addrspace(1)* null, i64 3098308792567362675)
+  store i1 %39, i1* %5
+  %40 = load i1, i1* %5
+  br i1 %40, label %41, label %43
+41:
+  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %s.6
+  store i8 addrspace(1)* %42, i8 addrspace(1)** %s.7
   ret i1 1
-46:
-  %47 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %48 = icmp eq i8 addrspace(1)* %47, getelementptr(i8, i8 addrspace(1)* null, i64 3055801617135857510)
-  store i1 %48, i1* %7
-  %49 = load i1, i1* %7
-  br i1 %49, label %50, label %52
+43:
+  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %s.6
+  store i8 addrspace(1)* %44, i8 addrspace(1)** %s.8
+  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %s.8
+  %46 = icmp eq i8 addrspace(1)* %45, getelementptr(i8, i8 addrspace(1)* null, i64 3098475879729817719)
+  store i1 %46, i1* %6
+  %47 = load i1, i1* %6
+  br i1 %47, label %48, label %50
+48:
+  %49 = load i8 addrspace(1)*, i8 addrspace(1)** %s.8
+  store i8 addrspace(1)* %49, i8 addrspace(1)** %s.9
+  ret i1 1
 50:
-  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %51, i8 addrspace(1)** %s.6
+  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %s.8
+  store i8 addrspace(1)* %51, i8 addrspace(1)** %s.10
+  %52 = load i8 addrspace(1)*, i8 addrspace(1)** %s.10
+  %53 = icmp eq i8 addrspace(1)* %52, getelementptr(i8, i8 addrspace(1)* null, i64 3055801617135857510)
+  store i1 %53, i1* %7
+  %54 = load i1, i1* %7
+  br i1 %54, label %55, label %57
+55:
+  %56 = load i8 addrspace(1)*, i8 addrspace(1)** %s.10
+  store i8 addrspace(1)* %56, i8 addrspace(1)** %s.11
   ret i1 1
-52:
-  %53 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %54 = icmp eq i8 addrspace(1)* %53, getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630861929)
-  store i1 %54, i1* %8
-  %55 = load i1, i1* %8
-  br i1 %55, label %56, label %58
-56:
-  %57 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %57, i8 addrspace(1)** %s.7
-  ret i1 1
-58:
-  %59 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %60 = icmp eq i8 addrspace(1)* %59, getelementptr(i8, i8 addrspace(1)* null, i64 3098476541037997157)
-  store i1 %60, i1* %9
-  %61 = load i1, i1* %9
+57:
+  %58 = load i8 addrspace(1)*, i8 addrspace(1)** %s.10
+  store i8 addrspace(1)* %58, i8 addrspace(1)** %s.12
+  %59 = load i8 addrspace(1)*, i8 addrspace(1)** %s.12
+  %60 = icmp eq i8 addrspace(1)* %59, getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630861929)
+  store i1 %60, i1* %8
+  %61 = load i1, i1* %8
   br i1 %61, label %62, label %64
 62:
-  %63 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %63, i8 addrspace(1)** %s.8
+  %63 = load i8 addrspace(1)*, i8 addrspace(1)** %s.12
+  store i8 addrspace(1)* %63, i8 addrspace(1)** %s.13
   ret i1 1
 64:
-  %65 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %66 = icmp eq i8 addrspace(1)* %65, getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621489005)
-  store i1 %66, i1* %10
-  %67 = load i1, i1* %10
-  br i1 %67, label %68, label %70
-68:
-  %69 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %69, i8 addrspace(1)** %s.9
+  %65 = load i8 addrspace(1)*, i8 addrspace(1)** %s.12
+  store i8 addrspace(1)* %65, i8 addrspace(1)** %s.14
+  %66 = load i8 addrspace(1)*, i8 addrspace(1)** %s.14
+  %67 = icmp eq i8 addrspace(1)* %66, getelementptr(i8, i8 addrspace(1)* null, i64 3098476541037997157)
+  store i1 %67, i1* %9
+  %68 = load i1, i1* %9
+  br i1 %68, label %69, label %71
+69:
+  %70 = load i8 addrspace(1)*, i8 addrspace(1)** %s.14
+  store i8 addrspace(1)* %70, i8 addrspace(1)** %s.15
   ret i1 1
-70:
-  %71 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %72 = icmp eq i8 addrspace(1)* %71, getelementptr(i8, i8 addrspace(1)* null, i64 3098476541038129780)
-  store i1 %72, i1* %11
-  %73 = load i1, i1* %11
-  br i1 %73, label %74, label %76
-74:
-  %75 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %75, i8 addrspace(1)** %s.10
-  ret i1 1
+71:
+  %72 = load i8 addrspace(1)*, i8 addrspace(1)** %s.14
+  store i8 addrspace(1)* %72, i8 addrspace(1)** %s.16
+  %73 = load i8 addrspace(1)*, i8 addrspace(1)** %s.16
+  %74 = icmp eq i8 addrspace(1)* %73, getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621489005)
+  store i1 %74, i1* %10
+  %75 = load i1, i1* %10
+  br i1 %75, label %76, label %78
 76:
-  %77 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %78 = icmp eq i8 addrspace(1)* %77, getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030)
-  store i1 %78, i1* %12
-  %79 = load i1, i1* %12
-  br i1 %79, label %80, label %82
-80:
-  %81 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  store i8 addrspace(1)* %81, i8 addrspace(1)** %s.11
+  %77 = load i8 addrspace(1)*, i8 addrspace(1)** %s.16
+  store i8 addrspace(1)* %77, i8 addrspace(1)** %s.17
   ret i1 1
-82:
-  ret i1 0
+78:
+  %79 = load i8 addrspace(1)*, i8 addrspace(1)** %s.16
+  store i8 addrspace(1)* %79, i8 addrspace(1)** %s.18
+  %80 = load i8 addrspace(1)*, i8 addrspace(1)** %s.18
+  %81 = icmp eq i8 addrspace(1)* %80, getelementptr(i8, i8 addrspace(1)* null, i64 3098476541038129780)
+  store i1 %81, i1* %11
+  %82 = load i1, i1* %11
+  br i1 %82, label %83, label %85
 83:
-  %84 = call i8 addrspace(1)* @_bal_panic_construct(i64 3332), !dbg !22
-  call void @_bal_panic(i8 addrspace(1)* %84)
+  %84 = load i8 addrspace(1)*, i8 addrspace(1)** %s.18
+  store i8 addrspace(1)* %84, i8 addrspace(1)** %s.19
+  ret i1 1
+85:
+  %86 = load i8 addrspace(1)*, i8 addrspace(1)** %s.18
+  store i8 addrspace(1)* %86, i8 addrspace(1)** %s.20
+  %87 = load i8 addrspace(1)*, i8 addrspace(1)** %s.20
+  %88 = icmp eq i8 addrspace(1)* %87, getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030)
+  store i1 %88, i1* %12
+  %89 = load i1, i1* %12
+  br i1 %89, label %90, label %92
+90:
+  %91 = load i8 addrspace(1)*, i8 addrspace(1)** %s.20
+  store i8 addrspace(1)* %91, i8 addrspace(1)** %s.21
+  ret i1 1
+92:
+  %93 = load i8 addrspace(1)*, i8 addrspace(1)** %s.20
+  store i8 addrspace(1)* %93, i8 addrspace(1)** %s.22
+  ret i1 0
+94:
+  %95 = call i8 addrspace(1)* @_bal_panic_construct(i64 3332), !dbg !22
+  call void @_bal_panic(i8 addrspace(1)* %95)
   unreachable
 }
 !llvm.module.flags = !{!0}

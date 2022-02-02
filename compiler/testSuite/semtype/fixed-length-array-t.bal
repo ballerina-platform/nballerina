@@ -76,3 +76,6 @@ type LargeArray int[MAX_VALUE];
 // @type LargeArray2 < IntArray
 // @type LargeArray <> LargeArray2
 type LargeArray2 int[MAX_VALUE_M_1];
+
+// @type Int5Intersection = Int5
+type Int5Intersection int[5] & !LargeArray;

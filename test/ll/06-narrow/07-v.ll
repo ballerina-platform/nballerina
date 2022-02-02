@@ -31,11 +31,11 @@ define internal void @_B_foo(double %0) !dbg !7 {
   %f = alloca double
   %2 = alloca i1
   %f.1 = alloca double
-  %3 = alloca i1
-  %4 = alloca double
+  %3 = alloca double
+  %4 = alloca i1
   %5 = alloca i8 addrspace(1)*
-  %6 = alloca i1
-  %7 = alloca double
+  %6 = alloca double
+  %7 = alloca i1
   %8 = alloca i8 addrspace(1)*
   %f.2 = alloca double
   %9 = alloca i8 addrspace(1)*
@@ -55,11 +55,11 @@ define internal void @_B_foo(double %0) !dbg !7 {
   store double %18, double* %f.1
   %19 = load double, double* %f.1
   %20 = fdiv double 1.0, %19
-  store double %20, double* %4
-  %21 = load double, double* %4
+  store double %20, double* %3
+  %21 = load double, double* %3
   %22 = call i1 @_bal_float_eq(double %21, double 0x7FF0000000000000)
-  store i1 %22, i1* %3
-  %23 = load i1, i1* %3
+  store i1 %22, i1* %4
+  %23 = load i1, i1* %4
   br i1 %23, label %24, label %25
 24:
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [20 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360)), !dbg !14
@@ -68,11 +68,11 @@ define internal void @_B_foo(double %0) !dbg !7 {
 25:
   %26 = load double, double* %f.1
   %27 = fdiv double 3.0, %26
-  store double %27, double* %7
-  %28 = load double, double* %7
+  store double %27, double* %6
+  %28 = load double, double* %6
   %29 = call i1 @_bal_float_eq(double %28, double 0xFFF0000000000000)
-  store i1 %29, i1* %6
-  %30 = load i1, i1* %6
+  store i1 %29, i1* %7
+  %30 = load i1, i1* %7
   br i1 %30, label %31, label %32
 31:
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [20 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360)), !dbg !15

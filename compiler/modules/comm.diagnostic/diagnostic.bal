@@ -4,7 +4,7 @@ public type Message string|Template;
 public type Template object {
     *object:RawTemplate;
     public (readonly & string[]) strings;
-    public (string|int|float|decimal)[] insertions;
+    public (boolean|string|int|float|decimal)[] insertions;
 };
 
 const QUOTE = "'";
@@ -45,7 +45,8 @@ public function locationLineColumn(Location loc) returns LineColumn {
 public enum Category {
     SYNTAX = "syntax",
     SEMANTIC = "semantic",
-    UNIMPLEMENTED = "unimplemented"
+    UNIMPLEMENTED = "unimplemented",
+    INTERNAL = "internal"
 }
 
 // JBUG if this is readonly, then jBallerina rejects `error<Diagnostic>`
@@ -71,6 +72,11 @@ public type SemanticDiagnostic record {|
 public type UnimplementedDiagnostic record {|
     *Diagnostic;
     UNIMPLEMENTED category = UNIMPLEMENTED;
+|};
+
+public type InternalDiagnostic record {|
+    *Diagnostic;
+    INTERNAL category = INTERNAL;
 |};
 
 public function location(File file, Position|Range range) returns Location {
@@ -104,6 +110,10 @@ public function messageFormat(Template t) returns string {
     }
     strs.push(t.strings[i]);
     return string:concat(...strs);
+}
+
+public function toString(Diagnostic d) returns string {
+    return "\n".join(...format(d));
 }
 
 public function format(Diagnostic d) returns string[] {

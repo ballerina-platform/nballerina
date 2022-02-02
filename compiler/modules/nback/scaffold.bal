@@ -4,7 +4,7 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-type BuildError err:Semantic|err:Unimplemented;
+type BuildError err:Semantic|err:Unimplemented|err:Internal;
 
 type DIBuilder llvm:DIBuilder;
 type DISubprogram llvm:Metadata;
@@ -29,8 +29,7 @@ final llvm:PointerType LLVM_DECIMAL_CONST = llvm:pointerType("i8");
 enum UniformBaseRepr {
     BASE_REPR_INT,
     BASE_REPR_FLOAT,
-    BASE_REPR_BOOLEAN,
-    BASE_REPR_ERROR
+    BASE_REPR_BOOLEAN
 }
 
 const BASE_REPR_VOID = "BASE_REPR_VOID";
@@ -436,8 +435,7 @@ function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolea
 function padBytes(byte[] bytes, int headerSize) returns int {
     int nBytes = bytes.length();
     int nBytesPadded = (((nBytes + headerSize + 7) >> 3) << 3) - headerSize;
-    // JBUG #33352 should be able to use `_` here
-    foreach int i in 0 ..< nBytesPadded - nBytes {
+    foreach var _ in 0 ..< nBytesPadded - nBytes {
         bytes.push(0);
     }
     return nBytesPadded;

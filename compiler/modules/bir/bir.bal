@@ -172,7 +172,9 @@ public enum InsnName {
     INSN_LIST_GET,
     INSN_LIST_SET,
     INSN_MAPPING_CONSTRUCT_RW,
+    // MappingGetInsn has two potential names
     INSN_MAPPING_GET,
+    INSN_MAPPING_FILLING_GET,
     INSN_MAPPING_SET,
     INSN_STR_CONCAT,
     INSN_ERROR_CONSTRUCT,
@@ -214,17 +216,53 @@ public type Insn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
-public type ConstOperand t:SingleValue;
-public type StringOperand string|Register;
-public type IntOperand int|Register;
-public type FloatOperand float|Register;
-public type DecimalOperand decimal|Register;
-public type BooleanOperand boolean|Register;
-public type NilOperand ()|Register;
+
+public type ConstOperand  readonly & record {|
+    t:SemType semType;
+    t:SingleValue value;
+|};
+
+public type NilConstOperand readonly & record {|
+    t:SemType semType;
+    () value;
+|};
+
+public final NilConstOperand NIL_OPERAND = { value: (), semType: t:NIL };
+
+public type BooleanConstOperand readonly & record {|
+    t:SemType semType;
+    boolean value;
+|};
+
+public type IntConstOperand readonly & record {|
+    t:SemType semType;
+    int value;
+|};
+
+public type DecimalConstOperand readonly & record {|
+    t:SemType semType;
+    decimal value;
+|};
+
+public type FloatConstOperand readonly & record {|
+    t:SemType semType;
+    float value;
+|};
+
+public type StringConstOperand readonly & record {|
+    t:SemType semType;
+    string value;
+|};
+
+public type IntOperand IntConstOperand|Register;
+public type FloatOperand FloatConstOperand|Register;
+public type DecimalOperand DecimalConstOperand|Register;
+public type BooleanOperand BooleanConstOperand|Register;
+public type StringOperand StringConstOperand|Register;
 public type FunctionOperand FunctionRef|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
-    return operand is Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand);
+    return t:isSubtype(tc, operand.semType, semType);
 }
 
 # Perform a arithmetic operand on ints with two operands.
@@ -393,11 +431,12 @@ public type MappingConstructInsn readonly & record {|
 |};
 
 # Gets a member of a mapping with a specified key.
-# This returns nil if there is no such member.
-# So this is not a PPI
+# INSN_MAPPING_GET returns nil if there is no such member; this is not a PPI.
+# INSN_MAPPING_FILLING_GET fills if there is no such member; this is a PPI
+# The filling version 
 public type MappingGetInsn readonly & record {|
     *InsnBase;
-    INSN_MAPPING_GET name = INSN_MAPPING_GET;
+    INSN_MAPPING_GET|INSN_MAPPING_FILLING_GET name;
     Register result;
     [Register, StringOperand] operands;
 |};
@@ -627,6 +666,7 @@ final readonly & map<true> PPI_INSNS = {
     [INSN_TYPE_CAST]: true,
     [INSN_LIST_GET]: true,
     [INSN_LIST_SET]: true,
+    [INSN_MAPPING_FILLING_GET]: true,
     [INSN_MAPPING_SET]: true
 };
 

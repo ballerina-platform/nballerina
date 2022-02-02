@@ -9,17 +9,16 @@ define void @_B04rootmain() !dbg !5 {
   %3 = alloca i8
   %4 = load i8*, i8** @_bal_stack_guard
   %5 = icmp ult i8* %3, %4
-  br i1 %5, label %8, label %6
+  br i1 %5, label %7, label %6
 6:
   call void @_B_doPanic(), !dbg !12
   store i8 addrspace(1)* null, i8 addrspace(1)** %1, !dbg !12
-  %7 = load i8 addrspace(1)*, i8 addrspace(1)** %1, !dbg !13
-  call void @_Bb02ioprintln(i8 addrspace(1)* %7), !dbg !13
+  call void @_Bb02ioprintln(i8 addrspace(1)* null), !dbg !13
   store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !13
   ret void
-8:
-  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 516), !dbg !11
-  call void @_bal_panic(i8 addrspace(1)* %9)
+7:
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 516), !dbg !11
+  call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }
 define internal void @_B_doPanic() !dbg !7 {

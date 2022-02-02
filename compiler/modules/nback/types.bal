@@ -16,6 +16,7 @@ const LLVM_PANIC_CODE = "i64";
 
 final llvm:StructType llStructureDescType = llvm:structType([LLVM_TID]);
 final llvm:PointerType llStructureDescPtrType = llvm:pointerType(llStructureDescType);
+final llvm:ConstPointerValue llNoFillerDesc = llvm:constNull(llStructureDescPtrType);
 
 // This is an approximation, but close enough since we are only accessing the pointer in C.
 final llvm:StructType llComplexType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
@@ -47,8 +48,6 @@ final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType), 
                                               LLVM_INT,                                  // int64_t length
                                               LLVM_INT,                                  // int64_t capacity
                                               heapPointerType(llvm:pointerType("i8"))]); // union {TaggedPtr, int64_t, float} *members
-
-final llvm:StructType llMapDescType = llvm:structType([LLVM_TID, LLVM_MEMBER_TYPE]);
 
 type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST;
 

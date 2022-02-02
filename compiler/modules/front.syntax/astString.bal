@@ -67,10 +67,10 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
         w.push(func.params[i].name);
     }
     w.push(")");
-    TypeDesc funcRetTd = func.typeDesc.ret;
-    if !(funcRetTd is BuiltinTypeDesc && funcRetTd.builtinTypeName == "null") {
+    TypeDesc? funcRetTd = func.typeDesc.ret;
+    if funcRetTd != () {
         w.push("returns");
-        typeDescToWords(w, func.typeDesc.ret);
+        typeDescToWords(w, funcRetTd);
     }
     blockToWords(w, func.body);
 }
@@ -145,16 +145,16 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push("if");
         exprToWords(w, stmt.condition);
         blockToWords(w, stmt.ifTrue);
-        StmtBlock? ifFalse = stmt.ifFalse;
-        if ifFalse is StmtBlock {
-            if ifFalse.stmts.length() == 1 &&  ifFalse.stmts[0] is IfElseStmt {
-                w.push(<Word>LF, "else");
-                stmtToWords(w, ifFalse.stmts[0]);
-            }
-            else if ifFalse.stmts.length() > 0 {
-                w.push(<Word>LF, "else");
-                blockToWords(w, ifFalse);
-            }
+        StmtBlock|IfElseStmt? ifFalse = stmt.ifFalse;
+        if ifFalse == () {
+            return;
+        }
+        w.push(<Word>LF, "else");
+        if ifFalse is IfElseStmt {
+            stmtToWords(w, ifFalse);
+        }
+        else if ifFalse is StmtBlock {
+            blockToWords(w, ifFalse);
         }
     }
     else if stmt is MatchStmt {
@@ -318,22 +318,15 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is BinaryTypeDesc {
         // subset 6 does not allow parentheses
         // so we need to take care not to add them unnecessarily
-        TypeDesc rightTd = td.right;
-        if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName === "null" {
-            typeDescToWords(w, td.left, wrap);
-            w.push(CLING, "?");
+        boolean noWrap = wrap == false || wrap == td.op;
+        if !noWrap {
+            w.push("(");
         }
-        else {
-            boolean noWrap = wrap == false || wrap == td.op;
-            if !noWrap {
-                w.push("(");
-            }
-            typeDescToWords(w, td.left, td.op);
-            w.push(td.op);
-            typeDescToWords(w, td.right, td.op);
-            if !noWrap {
-                w.push(")");
-            }
+        typeDescToWords(w, td.left, td.op);
+        w.push(td.op);
+        typeDescToWords(w, td.right, td.op);
+        if !noWrap {
+            w.push(")");
         }
     }
     else if td is SingletonTypeDesc {
@@ -345,8 +338,17 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push(CLING, ">");
     }    
     else if td is UnaryTypeDesc {
-        w.push(td.op, CLING);
-        typeDescToWords(w, td.td);
+        if td.op == "(" {
+            return typeDescToWords(w, td.td, wrap);
+        }
+        else if td.op == "!" {
+            w.push(td.op, CLING);
+            typeDescToWords(w, td.td);
+        }
+        else {
+            typeDescToWords(w, td.td, wrap);
+            w.push(CLING, "?");
+        }
     }
     else if td is XmlSequenceTypeDesc {
         w.push("xml", CLING, "<", CLING);
@@ -367,8 +369,8 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
             comma = true;
         }
         w.push(")");
-        TypeDesc ret = td.ret;
-        if ret !is BuiltinTypeDesc || ret.builtinTypeName != "null" {
+        TypeDesc? ret = td.ret;
+        if ret != () {
             w.push("returns");
             typeDescToWords(w, ret);
         }
@@ -419,7 +421,10 @@ function lExprToWords(Word[] w, LExpr expr) {
 }
 
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
-    if expr is ConstValueExpr {
+    if expr is GroupingExpr {
+        exprToWords(w, expr.innerExpr, wrap);
+    }
+    else if expr is LiteralExpr {
         valueToWords(w, expr.value);      
     }
     else if expr is IntLiteralExpr {
@@ -480,6 +485,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         }
         else if expr is BinaryRelationalExpr {
             op = expr.relationalOp;
+        }
+        else if expr is BinaryLogicalExpr {
+            op = expr.logicalOp;
         }
         else {
             op = expr.equalityOp;
@@ -648,8 +656,7 @@ function wordsToLines(Word[] s) returns string[] {
             firstInLine = true;
             lines.push("".'join(...buf));
             buf.setLength(0);
-            // JBUG #33532 should use `_` here
-            foreach int i in 0 ..< level {
+            foreach var _ in 0 ..< level {
                 buf.push("    ");
             }
         }

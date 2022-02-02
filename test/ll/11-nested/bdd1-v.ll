@@ -131,12 +131,14 @@ define internal i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %0, i8 addrspace(
   %b1.1 = alloca i1
   %5 = alloca i1
   %b1.2 = alloca i1
-  %b1.3 = alloca i8 addrspace(1)*
+  %b1.3 = alloca i1
+  %b1.4 = alloca i8 addrspace(1)*
   %6 = alloca i1
   %b2.1 = alloca i1
   %7 = alloca i1
   %b2.2 = alloca i1
-  %b2.3 = alloca i8 addrspace(1)*
+  %b2.3 = alloca i1
+  %b2.4 = alloca i8 addrspace(1)*
   %cmp = alloca i64
   %8 = alloca i64
   %9 = alloca i64
@@ -169,7 +171,7 @@ define internal i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %0, i8 addrspace(
   %36 = alloca i8
   %37 = load i8*, i8** @_bal_stack_guard
   %38 = icmp ult i8* %36, %37
-  br i1 %38, label %191, label %39
+  br i1 %38, label %193, label %39
 39:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %b1
   store i8 addrspace(1)* %1, i8 addrspace(1)** %b2
@@ -190,7 +192,7 @@ define internal i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %0, i8 addrspace(
   %51 = icmp eq i64 %50, 72057594037927936
   store i1 %51, i1* %4
   %52 = load i1, i1* %4
-  br i1 %52, label %53, label %68
+  br i1 %52, label %53, label %69
 53:
   %54 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
   %55 = addrspacecast i8 addrspace(1)* %54 to i8*
@@ -210,178 +212,182 @@ define internal i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %0, i8 addrspace(
   %65 = getelementptr i8, i8 addrspace(1)* null, i64 %64
   ret i8 addrspace(1)* %65
 66:
-  %67 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
-  ret i8 addrspace(1)* %67
-68:
-  %69 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
-  store i8 addrspace(1)* %69, i8 addrspace(1)** %b1.3
-  %70 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
-  %71 = addrspacecast i8 addrspace(1)* %70 to i8*
-  %72 = ptrtoint i8* %71 to i64
-  %73 = and i64 %72, 2233785415175766016
-  %74 = icmp eq i64 %73, 72057594037927936
-  store i1 %74, i1* %6
-  %75 = load i1, i1* %6
-  br i1 %75, label %76, label %91
-76:
-  %77 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
-  %78 = addrspacecast i8 addrspace(1)* %77 to i8*
-  %79 = ptrtoint i8* %78 to i64
-  %80 = trunc i64 %79 to i1
-  store i1 %80, i1* %b2.1
-  %81 = load i1, i1* %b2.1
-  %82 = icmp eq i1 %81, 1
-  store i1 %82, i1* %7
-  %83 = load i1, i1* %7
-  br i1 %83, label %84, label %89
-84:
-  %85 = load i1, i1* %b2.1
-  store i1 %85, i1* %b2.2
-  %86 = zext i1 1 to i64
-  %87 = or i64 %86, 72057594037927936
-  %88 = getelementptr i8, i8 addrspace(1)* null, i64 %87
-  ret i8 addrspace(1)* %88
-89:
-  %90 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  ret i8 addrspace(1)* %90
-91:
-  %92 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
-  store i8 addrspace(1)* %92, i8 addrspace(1)** %b2.3
-  %93 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %94 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %93, i64 0)
-  %95 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %94)
-  store i64 %95, i64* %8
-  %96 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %97 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %96, i64 0)
-  %98 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %97)
-  store i64 %98, i64* %9
-  %99 = load i64, i64* %8, !dbg !35
-  %100 = load i64, i64* %9, !dbg !35
-  %101 = call i64 @_B_atomCmp(i64 %99, i64 %100), !dbg !35
-  store i64 %101, i64* %10, !dbg !35
-  %102 = load i64, i64* %10
-  store i64 %102, i64* %cmp
-  %103 = load i64, i64* %cmp
-  %104 = icmp slt i64 %103, 0
-  store i1 %104, i1* %11
-  %105 = load i1, i1* %11
-  br i1 %105, label %106, label %128
-106:
-  %107 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %108 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %107, i64 0)
-  %109 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %108)
-  store i64 %109, i64* %12
-  %110 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %111 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %110, i64 1)
-  %112 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %110, i8 addrspace(1)* %111)
-  store i8 addrspace(1)* %112, i8 addrspace(1)** %13
-  %113 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %114 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %113, i64 2)
-  %115 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %113, i8 addrspace(1)* %114)
-  store i8 addrspace(1)* %115, i8 addrspace(1)** %14
-  %116 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !36
-  %117 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3, !dbg !36
-  %118 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %116, i8 addrspace(1)* %117), !dbg !36
-  store i8 addrspace(1)* %118, i8 addrspace(1)** %15, !dbg !36
-  %119 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %120 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %119, i64 3)
-  %121 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %119, i8 addrspace(1)* %120)
-  store i8 addrspace(1)* %121, i8 addrspace(1)** %16
-  %122 = load i64, i64* %12, !dbg !37
-  %123 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !37
-  %124 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !37
-  %125 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !37
-  %126 = call i8 addrspace(1)* @_B_bddCreate(i64 %122, i8 addrspace(1)* %123, i8 addrspace(1)* %124, i8 addrspace(1)* %125), !dbg !37
-  store i8 addrspace(1)* %126, i8 addrspace(1)** %17, !dbg !37
-  %127 = load i8 addrspace(1)*, i8 addrspace(1)** %17
-  ret i8 addrspace(1)* %127
-128:
-  %129 = load i64, i64* %cmp
-  %130 = icmp sgt i64 %129, 0
-  store i1 %130, i1* %18
-  %131 = load i1, i1* %18
-  br i1 %131, label %132, label %154
-132:
-  %133 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %134 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %133, i64 0)
-  %135 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %134)
-  store i64 %135, i64* %19
-  %136 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %137 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %136, i64 1)
-  %138 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %136, i8 addrspace(1)* %137)
-  store i8 addrspace(1)* %138, i8 addrspace(1)** %20
-  %139 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %140 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %139, i64 2)
-  %141 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %139, i8 addrspace(1)* %140)
-  store i8 addrspace(1)* %141, i8 addrspace(1)** %21
-  %142 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3, !dbg !38
-  %143 = load i8 addrspace(1)*, i8 addrspace(1)** %21, !dbg !38
-  %144 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %142, i8 addrspace(1)* %143), !dbg !38
-  store i8 addrspace(1)* %144, i8 addrspace(1)** %22, !dbg !38
-  %145 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %146 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %145, i64 3)
-  %147 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %145, i8 addrspace(1)* %146)
-  store i8 addrspace(1)* %147, i8 addrspace(1)** %23
-  %148 = load i64, i64* %19, !dbg !39
-  %149 = load i8 addrspace(1)*, i8 addrspace(1)** %20, !dbg !39
-  %150 = load i8 addrspace(1)*, i8 addrspace(1)** %22, !dbg !39
-  %151 = load i8 addrspace(1)*, i8 addrspace(1)** %23, !dbg !39
-  %152 = call i8 addrspace(1)* @_B_bddCreate(i64 %148, i8 addrspace(1)* %149, i8 addrspace(1)* %150, i8 addrspace(1)* %151), !dbg !39
-  store i8 addrspace(1)* %152, i8 addrspace(1)** %24, !dbg !39
-  %153 = load i8 addrspace(1)*, i8 addrspace(1)** %24
-  ret i8 addrspace(1)* %153
-154:
-  %155 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %156 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %155, i64 0)
-  %157 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %156)
-  store i64 %157, i64* %25
-  %158 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %159 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %158, i64 1)
-  %160 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %158, i8 addrspace(1)* %159)
-  store i8 addrspace(1)* %160, i8 addrspace(1)** %26
-  %161 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %162 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %161, i64 1)
-  %163 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %161, i8 addrspace(1)* %162)
-  store i8 addrspace(1)* %163, i8 addrspace(1)** %27
-  %164 = load i8 addrspace(1)*, i8 addrspace(1)** %26, !dbg !40
-  %165 = load i8 addrspace(1)*, i8 addrspace(1)** %27, !dbg !40
-  %166 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %164, i8 addrspace(1)* %165), !dbg !40
-  store i8 addrspace(1)* %166, i8 addrspace(1)** %28, !dbg !40
-  %167 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %168 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %167, i64 2)
-  %169 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %167, i8 addrspace(1)* %168)
-  store i8 addrspace(1)* %169, i8 addrspace(1)** %29
-  %170 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %171 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %170, i64 2)
-  %172 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %170, i8 addrspace(1)* %171)
-  store i8 addrspace(1)* %172, i8 addrspace(1)** %30
-  %173 = load i8 addrspace(1)*, i8 addrspace(1)** %29, !dbg !41
-  %174 = load i8 addrspace(1)*, i8 addrspace(1)** %30, !dbg !41
-  %175 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %173, i8 addrspace(1)* %174), !dbg !41
-  store i8 addrspace(1)* %175, i8 addrspace(1)** %31, !dbg !41
-  %176 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %177 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %176, i64 3)
-  %178 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %176, i8 addrspace(1)* %177)
-  store i8 addrspace(1)* %178, i8 addrspace(1)** %32
-  %179 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %180 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %179, i64 3)
-  %181 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %179, i8 addrspace(1)* %180)
-  store i8 addrspace(1)* %181, i8 addrspace(1)** %33
-  %182 = load i8 addrspace(1)*, i8 addrspace(1)** %32, !dbg !42
-  %183 = load i8 addrspace(1)*, i8 addrspace(1)** %33, !dbg !42
-  %184 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %182, i8 addrspace(1)* %183), !dbg !42
-  store i8 addrspace(1)* %184, i8 addrspace(1)** %34, !dbg !42
-  %185 = load i64, i64* %25, !dbg !43
-  %186 = load i8 addrspace(1)*, i8 addrspace(1)** %28, !dbg !43
-  %187 = load i8 addrspace(1)*, i8 addrspace(1)** %31, !dbg !43
-  %188 = load i8 addrspace(1)*, i8 addrspace(1)** %34, !dbg !43
-  %189 = call i8 addrspace(1)* @_B_bddCreate(i64 %185, i8 addrspace(1)* %186, i8 addrspace(1)* %187, i8 addrspace(1)* %188), !dbg !43
-  store i8 addrspace(1)* %189, i8 addrspace(1)** %35, !dbg !43
-  %190 = load i8 addrspace(1)*, i8 addrspace(1)** %35
-  ret i8 addrspace(1)* %190
-191:
-  %192 = call i8 addrspace(1)* @_bal_panic_construct(i64 6404), !dbg !34
-  call void @_bal_panic(i8 addrspace(1)* %192)
+  %67 = load i1, i1* %b1.1
+  store i1 %67, i1* %b1.3
+  %68 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
+  ret i8 addrspace(1)* %68
+69:
+  %70 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
+  store i8 addrspace(1)* %70, i8 addrspace(1)** %b1.4
+  %71 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
+  %72 = addrspacecast i8 addrspace(1)* %71 to i8*
+  %73 = ptrtoint i8* %72 to i64
+  %74 = and i64 %73, 2233785415175766016
+  %75 = icmp eq i64 %74, 72057594037927936
+  store i1 %75, i1* %6
+  %76 = load i1, i1* %6
+  br i1 %76, label %77, label %93
+77:
+  %78 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
+  %79 = addrspacecast i8 addrspace(1)* %78 to i8*
+  %80 = ptrtoint i8* %79 to i64
+  %81 = trunc i64 %80 to i1
+  store i1 %81, i1* %b2.1
+  %82 = load i1, i1* %b2.1
+  %83 = icmp eq i1 %82, 1
+  store i1 %83, i1* %7
+  %84 = load i1, i1* %7
+  br i1 %84, label %85, label %90
+85:
+  %86 = load i1, i1* %b2.1
+  store i1 %86, i1* %b2.2
+  %87 = zext i1 1 to i64
+  %88 = or i64 %87, 72057594037927936
+  %89 = getelementptr i8, i8 addrspace(1)* null, i64 %88
+  ret i8 addrspace(1)* %89
+90:
+  %91 = load i1, i1* %b2.1
+  store i1 %91, i1* %b2.3
+  %92 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  ret i8 addrspace(1)* %92
+93:
+  %94 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
+  store i8 addrspace(1)* %94, i8 addrspace(1)** %b2.4
+  %95 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %96 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %95, i64 0)
+  %97 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %96)
+  store i64 %97, i64* %8
+  %98 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %99 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %98, i64 0)
+  %100 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %99)
+  store i64 %100, i64* %9
+  %101 = load i64, i64* %8, !dbg !35
+  %102 = load i64, i64* %9, !dbg !35
+  %103 = call i64 @_B_atomCmp(i64 %101, i64 %102), !dbg !35
+  store i64 %103, i64* %10, !dbg !35
+  %104 = load i64, i64* %10
+  store i64 %104, i64* %cmp
+  %105 = load i64, i64* %cmp
+  %106 = icmp slt i64 %105, 0
+  store i1 %106, i1* %11
+  %107 = load i1, i1* %11
+  br i1 %107, label %108, label %130
+108:
+  %109 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %110 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %109, i64 0)
+  %111 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %110)
+  store i64 %111, i64* %12
+  %112 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %113 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %112, i64 1)
+  %114 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %112, i8 addrspace(1)* %113)
+  store i8 addrspace(1)* %114, i8 addrspace(1)** %13
+  %115 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %116 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %115, i64 2)
+  %117 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %115, i8 addrspace(1)* %116)
+  store i8 addrspace(1)* %117, i8 addrspace(1)** %14
+  %118 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !36
+  %119 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4, !dbg !36
+  %120 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %118, i8 addrspace(1)* %119), !dbg !36
+  store i8 addrspace(1)* %120, i8 addrspace(1)** %15, !dbg !36
+  %121 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %122 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %121, i64 3)
+  %123 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %121, i8 addrspace(1)* %122)
+  store i8 addrspace(1)* %123, i8 addrspace(1)** %16
+  %124 = load i64, i64* %12, !dbg !37
+  %125 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !37
+  %126 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !37
+  %127 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !37
+  %128 = call i8 addrspace(1)* @_B_bddCreate(i64 %124, i8 addrspace(1)* %125, i8 addrspace(1)* %126, i8 addrspace(1)* %127), !dbg !37
+  store i8 addrspace(1)* %128, i8 addrspace(1)** %17, !dbg !37
+  %129 = load i8 addrspace(1)*, i8 addrspace(1)** %17
+  ret i8 addrspace(1)* %129
+130:
+  %131 = load i64, i64* %cmp
+  %132 = icmp sgt i64 %131, 0
+  store i1 %132, i1* %18
+  %133 = load i1, i1* %18
+  br i1 %133, label %134, label %156
+134:
+  %135 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %136 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %135, i64 0)
+  %137 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %136)
+  store i64 %137, i64* %19
+  %138 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %139 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %138, i64 1)
+  %140 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %138, i8 addrspace(1)* %139)
+  store i8 addrspace(1)* %140, i8 addrspace(1)** %20
+  %141 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %142 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %141, i64 2)
+  %143 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %141, i8 addrspace(1)* %142)
+  store i8 addrspace(1)* %143, i8 addrspace(1)** %21
+  %144 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4, !dbg !38
+  %145 = load i8 addrspace(1)*, i8 addrspace(1)** %21, !dbg !38
+  %146 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %144, i8 addrspace(1)* %145), !dbg !38
+  store i8 addrspace(1)* %146, i8 addrspace(1)** %22, !dbg !38
+  %147 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %148 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %147, i64 3)
+  %149 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %147, i8 addrspace(1)* %148)
+  store i8 addrspace(1)* %149, i8 addrspace(1)** %23
+  %150 = load i64, i64* %19, !dbg !39
+  %151 = load i8 addrspace(1)*, i8 addrspace(1)** %20, !dbg !39
+  %152 = load i8 addrspace(1)*, i8 addrspace(1)** %22, !dbg !39
+  %153 = load i8 addrspace(1)*, i8 addrspace(1)** %23, !dbg !39
+  %154 = call i8 addrspace(1)* @_B_bddCreate(i64 %150, i8 addrspace(1)* %151, i8 addrspace(1)* %152, i8 addrspace(1)* %153), !dbg !39
+  store i8 addrspace(1)* %154, i8 addrspace(1)** %24, !dbg !39
+  %155 = load i8 addrspace(1)*, i8 addrspace(1)** %24
+  ret i8 addrspace(1)* %155
+156:
+  %157 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %158 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %157, i64 0)
+  %159 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %158)
+  store i64 %159, i64* %25
+  %160 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %161 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %160, i64 1)
+  %162 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %160, i8 addrspace(1)* %161)
+  store i8 addrspace(1)* %162, i8 addrspace(1)** %26
+  %163 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %164 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %163, i64 1)
+  %165 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %163, i8 addrspace(1)* %164)
+  store i8 addrspace(1)* %165, i8 addrspace(1)** %27
+  %166 = load i8 addrspace(1)*, i8 addrspace(1)** %26, !dbg !40
+  %167 = load i8 addrspace(1)*, i8 addrspace(1)** %27, !dbg !40
+  %168 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %166, i8 addrspace(1)* %167), !dbg !40
+  store i8 addrspace(1)* %168, i8 addrspace(1)** %28, !dbg !40
+  %169 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %170 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %169, i64 2)
+  %171 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %169, i8 addrspace(1)* %170)
+  store i8 addrspace(1)* %171, i8 addrspace(1)** %29
+  %172 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %173 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %172, i64 2)
+  %174 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %172, i8 addrspace(1)* %173)
+  store i8 addrspace(1)* %174, i8 addrspace(1)** %30
+  %175 = load i8 addrspace(1)*, i8 addrspace(1)** %29, !dbg !41
+  %176 = load i8 addrspace(1)*, i8 addrspace(1)** %30, !dbg !41
+  %177 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %175, i8 addrspace(1)* %176), !dbg !41
+  store i8 addrspace(1)* %177, i8 addrspace(1)** %31, !dbg !41
+  %178 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %179 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %178, i64 3)
+  %180 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %178, i8 addrspace(1)* %179)
+  store i8 addrspace(1)* %180, i8 addrspace(1)** %32
+  %181 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %182 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %181, i64 3)
+  %183 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %181, i8 addrspace(1)* %182)
+  store i8 addrspace(1)* %183, i8 addrspace(1)** %33
+  %184 = load i8 addrspace(1)*, i8 addrspace(1)** %32, !dbg !42
+  %185 = load i8 addrspace(1)*, i8 addrspace(1)** %33, !dbg !42
+  %186 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %184, i8 addrspace(1)* %185), !dbg !42
+  store i8 addrspace(1)* %186, i8 addrspace(1)** %34, !dbg !42
+  %187 = load i64, i64* %25, !dbg !43
+  %188 = load i8 addrspace(1)*, i8 addrspace(1)** %28, !dbg !43
+  %189 = load i8 addrspace(1)*, i8 addrspace(1)** %31, !dbg !43
+  %190 = load i8 addrspace(1)*, i8 addrspace(1)** %34, !dbg !43
+  %191 = call i8 addrspace(1)* @_B_bddCreate(i64 %187, i8 addrspace(1)* %188, i8 addrspace(1)* %189, i8 addrspace(1)* %190), !dbg !43
+  store i8 addrspace(1)* %191, i8 addrspace(1)** %35, !dbg !43
+  %192 = load i8 addrspace(1)*, i8 addrspace(1)** %35
+  ret i8 addrspace(1)* %192
+193:
+  %194 = call i8 addrspace(1)* @_bal_panic_construct(i64 6404), !dbg !34
+  call void @_bal_panic(i8 addrspace(1)* %194)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !11 {
@@ -392,12 +398,14 @@ define internal i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %0, i8 addrsp
   %b1.1 = alloca i1
   %5 = alloca i1
   %b1.2 = alloca i1
-  %b1.3 = alloca i8 addrspace(1)*
+  %b1.3 = alloca i1
+  %b1.4 = alloca i8 addrspace(1)*
   %6 = alloca i1
   %b2.1 = alloca i1
   %7 = alloca i1
   %b2.2 = alloca i1
-  %b2.3 = alloca i8 addrspace(1)*
+  %b2.3 = alloca i1
+  %b2.4 = alloca i8 addrspace(1)*
   %cmp = alloca i64
   %8 = alloca i64
   %9 = alloca i64
@@ -439,7 +447,7 @@ define internal i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %0, i8 addrsp
   %45 = alloca i8
   %46 = load i8*, i8** @_bal_stack_guard
   %47 = icmp ult i8* %45, %46
-  br i1 %47, label %229, label %48
+  br i1 %47, label %231, label %48
 48:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %b1
   store i8 addrspace(1)* %1, i8 addrspace(1)** %b2
@@ -460,7 +468,7 @@ define internal i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %0, i8 addrsp
   %60 = icmp eq i64 %59, 72057594037927936
   store i1 %60, i1* %4
   %61 = load i1, i1* %4
-  br i1 %61, label %62, label %77
+  br i1 %61, label %62, label %78
 62:
   %63 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
   %64 = addrspacecast i8 addrspace(1)* %63 to i8*
@@ -478,218 +486,222 @@ define internal i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %0, i8 addrsp
   %72 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
   ret i8 addrspace(1)* %72
 73:
-  %74 = zext i1 0 to i64
-  %75 = or i64 %74, 72057594037927936
-  %76 = getelementptr i8, i8 addrspace(1)* null, i64 %75
-  ret i8 addrspace(1)* %76
-77:
-  %78 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
-  store i8 addrspace(1)* %78, i8 addrspace(1)** %b1.3
-  %79 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
-  %80 = addrspacecast i8 addrspace(1)* %79 to i8*
-  %81 = ptrtoint i8* %80 to i64
-  %82 = and i64 %81, 2233785415175766016
-  %83 = icmp eq i64 %82, 72057594037927936
-  store i1 %83, i1* %6
-  %84 = load i1, i1* %6
-  br i1 %84, label %85, label %100
-85:
-  %86 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
-  %87 = addrspacecast i8 addrspace(1)* %86 to i8*
-  %88 = ptrtoint i8* %87 to i64
-  %89 = trunc i64 %88 to i1
-  store i1 %89, i1* %b2.1
-  %90 = load i1, i1* %b2.1
-  %91 = icmp eq i1 %90, 1
-  store i1 %91, i1* %7
-  %92 = load i1, i1* %7
-  br i1 %92, label %93, label %96
-93:
-  %94 = load i1, i1* %b2.1
-  store i1 %94, i1* %b2.2
-  %95 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  ret i8 addrspace(1)* %95
-96:
-  %97 = zext i1 0 to i64
-  %98 = or i64 %97, 72057594037927936
-  %99 = getelementptr i8, i8 addrspace(1)* null, i64 %98
-  ret i8 addrspace(1)* %99
-100:
-  %101 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
-  store i8 addrspace(1)* %101, i8 addrspace(1)** %b2.3
-  %102 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %103 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %102, i64 0)
-  %104 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %103)
-  store i64 %104, i64* %8
-  %105 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %106 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %105, i64 0)
-  %107 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %106)
-  store i64 %107, i64* %9
-  %108 = load i64, i64* %8, !dbg !45
-  %109 = load i64, i64* %9, !dbg !45
-  %110 = call i64 @_B_atomCmp(i64 %108, i64 %109), !dbg !45
-  store i64 %110, i64* %10, !dbg !45
-  %111 = load i64, i64* %10
-  store i64 %111, i64* %cmp
-  %112 = load i64, i64* %cmp
-  %113 = icmp slt i64 %112, 0
-  store i1 %113, i1* %11
-  %114 = load i1, i1* %11
-  br i1 %114, label %115, label %143
-115:
-  %116 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %117 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %116, i64 0)
-  %118 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %117)
-  store i64 %118, i64* %12
-  %119 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %120 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %119, i64 1)
-  %121 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %119, i8 addrspace(1)* %120)
-  store i8 addrspace(1)* %121, i8 addrspace(1)** %13
-  %122 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !46
-  %123 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3, !dbg !46
-  %124 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %122, i8 addrspace(1)* %123), !dbg !46
-  store i8 addrspace(1)* %124, i8 addrspace(1)** %14, !dbg !46
-  %125 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %126 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %125, i64 2)
-  %127 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %125, i8 addrspace(1)* %126)
-  store i8 addrspace(1)* %127, i8 addrspace(1)** %15
-  %128 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !47
-  %129 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3, !dbg !47
-  %130 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %128, i8 addrspace(1)* %129), !dbg !47
-  store i8 addrspace(1)* %130, i8 addrspace(1)** %16, !dbg !47
-  %131 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %132 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %131, i64 3)
-  %133 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %131, i8 addrspace(1)* %132)
-  store i8 addrspace(1)* %133, i8 addrspace(1)** %17
-  %134 = load i8 addrspace(1)*, i8 addrspace(1)** %17, !dbg !48
-  %135 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3, !dbg !48
-  %136 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %134, i8 addrspace(1)* %135), !dbg !48
-  store i8 addrspace(1)* %136, i8 addrspace(1)** %18, !dbg !48
-  %137 = load i64, i64* %12, !dbg !49
-  %138 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !49
-  %139 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !49
-  %140 = load i8 addrspace(1)*, i8 addrspace(1)** %18, !dbg !49
-  %141 = call i8 addrspace(1)* @_B_bddCreate(i64 %137, i8 addrspace(1)* %138, i8 addrspace(1)* %139, i8 addrspace(1)* %140), !dbg !49
-  store i8 addrspace(1)* %141, i8 addrspace(1)** %19, !dbg !49
-  %142 = load i8 addrspace(1)*, i8 addrspace(1)** %19
-  ret i8 addrspace(1)* %142
-143:
-  %144 = load i64, i64* %cmp
-  %145 = icmp sgt i64 %144, 0
-  store i1 %145, i1* %20
-  %146 = load i1, i1* %20
-  br i1 %146, label %147, label %175
-147:
-  %148 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %149 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %148, i64 0)
-  %150 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %149)
-  store i64 %150, i64* %21
-  %151 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %152 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %151, i64 1)
-  %153 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %151, i8 addrspace(1)* %152)
-  store i8 addrspace(1)* %153, i8 addrspace(1)** %22
-  %154 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3, !dbg !50
-  %155 = load i8 addrspace(1)*, i8 addrspace(1)** %22, !dbg !50
-  %156 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %154, i8 addrspace(1)* %155), !dbg !50
-  store i8 addrspace(1)* %156, i8 addrspace(1)** %23, !dbg !50
-  %157 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %158 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %157, i64 2)
-  %159 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %157, i8 addrspace(1)* %158)
-  store i8 addrspace(1)* %159, i8 addrspace(1)** %24
-  %160 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3, !dbg !51
-  %161 = load i8 addrspace(1)*, i8 addrspace(1)** %24, !dbg !51
-  %162 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %160, i8 addrspace(1)* %161), !dbg !51
-  store i8 addrspace(1)* %162, i8 addrspace(1)** %25, !dbg !51
-  %163 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %164 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %163, i64 3)
-  %165 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %163, i8 addrspace(1)* %164)
-  store i8 addrspace(1)* %165, i8 addrspace(1)** %26
-  %166 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3, !dbg !52
-  %167 = load i8 addrspace(1)*, i8 addrspace(1)** %26, !dbg !52
-  %168 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %166, i8 addrspace(1)* %167), !dbg !52
-  store i8 addrspace(1)* %168, i8 addrspace(1)** %27, !dbg !52
-  %169 = load i64, i64* %21, !dbg !53
-  %170 = load i8 addrspace(1)*, i8 addrspace(1)** %23, !dbg !53
-  %171 = load i8 addrspace(1)*, i8 addrspace(1)** %25, !dbg !53
-  %172 = load i8 addrspace(1)*, i8 addrspace(1)** %27, !dbg !53
-  %173 = call i8 addrspace(1)* @_B_bddCreate(i64 %169, i8 addrspace(1)* %170, i8 addrspace(1)* %171, i8 addrspace(1)* %172), !dbg !53
-  store i8 addrspace(1)* %173, i8 addrspace(1)** %28, !dbg !53
-  %174 = load i8 addrspace(1)*, i8 addrspace(1)** %28
-  ret i8 addrspace(1)* %174
-175:
-  %176 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %177 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %176, i64 0)
-  %178 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %177)
-  store i64 %178, i64* %29
-  %179 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %180 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %179, i64 1)
-  %181 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %179, i8 addrspace(1)* %180)
-  store i8 addrspace(1)* %181, i8 addrspace(1)** %30
-  %182 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %183 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %182, i64 2)
-  %184 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %182, i8 addrspace(1)* %183)
-  store i8 addrspace(1)* %184, i8 addrspace(1)** %31
-  %185 = load i8 addrspace(1)*, i8 addrspace(1)** %30, !dbg !54
-  %186 = load i8 addrspace(1)*, i8 addrspace(1)** %31, !dbg !54
-  %187 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %185, i8 addrspace(1)* %186), !dbg !54
-  store i8 addrspace(1)* %187, i8 addrspace(1)** %32, !dbg !54
-  %188 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %189 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %188, i64 1)
-  %190 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %188, i8 addrspace(1)* %189)
-  store i8 addrspace(1)* %190, i8 addrspace(1)** %33
-  %191 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %192 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %191, i64 2)
-  %193 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %191, i8 addrspace(1)* %192)
-  store i8 addrspace(1)* %193, i8 addrspace(1)** %34
-  %194 = load i8 addrspace(1)*, i8 addrspace(1)** %33, !dbg !55
-  %195 = load i8 addrspace(1)*, i8 addrspace(1)** %34, !dbg !55
-  %196 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %194, i8 addrspace(1)* %195), !dbg !55
-  store i8 addrspace(1)* %196, i8 addrspace(1)** %35, !dbg !55
-  %197 = load i8 addrspace(1)*, i8 addrspace(1)** %32, !dbg !56
-  %198 = load i8 addrspace(1)*, i8 addrspace(1)** %35, !dbg !56
-  %199 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %197, i8 addrspace(1)* %198), !dbg !56
-  store i8 addrspace(1)* %199, i8 addrspace(1)** %36, !dbg !56
-  %200 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %201 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %200, i64 3)
-  %202 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %200, i8 addrspace(1)* %201)
-  store i8 addrspace(1)* %202, i8 addrspace(1)** %37
-  %203 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %204 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %203, i64 2)
-  %205 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %203, i8 addrspace(1)* %204)
-  store i8 addrspace(1)* %205, i8 addrspace(1)** %38
-  %206 = load i8 addrspace(1)*, i8 addrspace(1)** %37, !dbg !57
-  %207 = load i8 addrspace(1)*, i8 addrspace(1)** %38, !dbg !57
-  %208 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %206, i8 addrspace(1)* %207), !dbg !57
-  store i8 addrspace(1)* %208, i8 addrspace(1)** %39, !dbg !57
-  %209 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %210 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %209, i64 3)
-  %211 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %209, i8 addrspace(1)* %210)
-  store i8 addrspace(1)* %211, i8 addrspace(1)** %40
-  %212 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %213 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %212, i64 2)
-  %214 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %212, i8 addrspace(1)* %213)
-  store i8 addrspace(1)* %214, i8 addrspace(1)** %41
-  %215 = load i8 addrspace(1)*, i8 addrspace(1)** %40, !dbg !58
-  %216 = load i8 addrspace(1)*, i8 addrspace(1)** %41, !dbg !58
-  %217 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %215, i8 addrspace(1)* %216), !dbg !58
-  store i8 addrspace(1)* %217, i8 addrspace(1)** %42, !dbg !58
-  %218 = load i8 addrspace(1)*, i8 addrspace(1)** %39, !dbg !59
-  %219 = load i8 addrspace(1)*, i8 addrspace(1)** %42, !dbg !59
-  %220 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %218, i8 addrspace(1)* %219), !dbg !59
-  store i8 addrspace(1)* %220, i8 addrspace(1)** %43, !dbg !59
-  %221 = load i64, i64* %29, !dbg !60
-  %222 = load i8 addrspace(1)*, i8 addrspace(1)** %36, !dbg !60
-  %223 = zext i1 0 to i64, !dbg !60
-  %224 = or i64 %223, 72057594037927936, !dbg !60
-  %225 = getelementptr i8, i8 addrspace(1)* null, i64 %224, !dbg !60
-  %226 = load i8 addrspace(1)*, i8 addrspace(1)** %43, !dbg !60
-  %227 = call i8 addrspace(1)* @_B_bddCreate(i64 %221, i8 addrspace(1)* %222, i8 addrspace(1)* %225, i8 addrspace(1)* %226), !dbg !60
-  store i8 addrspace(1)* %227, i8 addrspace(1)** %44, !dbg !60
-  %228 = load i8 addrspace(1)*, i8 addrspace(1)** %44
-  ret i8 addrspace(1)* %228
-229:
-  %230 = call i8 addrspace(1)* @_bal_panic_construct(i64 16388), !dbg !44
-  call void @_bal_panic(i8 addrspace(1)* %230)
+  %74 = load i1, i1* %b1.1
+  store i1 %74, i1* %b1.3
+  %75 = zext i1 0 to i64
+  %76 = or i64 %75, 72057594037927936
+  %77 = getelementptr i8, i8 addrspace(1)* null, i64 %76
+  ret i8 addrspace(1)* %77
+78:
+  %79 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
+  store i8 addrspace(1)* %79, i8 addrspace(1)** %b1.4
+  %80 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
+  %81 = addrspacecast i8 addrspace(1)* %80 to i8*
+  %82 = ptrtoint i8* %81 to i64
+  %83 = and i64 %82, 2233785415175766016
+  %84 = icmp eq i64 %83, 72057594037927936
+  store i1 %84, i1* %6
+  %85 = load i1, i1* %6
+  br i1 %85, label %86, label %102
+86:
+  %87 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
+  %88 = addrspacecast i8 addrspace(1)* %87 to i8*
+  %89 = ptrtoint i8* %88 to i64
+  %90 = trunc i64 %89 to i1
+  store i1 %90, i1* %b2.1
+  %91 = load i1, i1* %b2.1
+  %92 = icmp eq i1 %91, 1
+  store i1 %92, i1* %7
+  %93 = load i1, i1* %7
+  br i1 %93, label %94, label %97
+94:
+  %95 = load i1, i1* %b2.1
+  store i1 %95, i1* %b2.2
+  %96 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  ret i8 addrspace(1)* %96
+97:
+  %98 = load i1, i1* %b2.1
+  store i1 %98, i1* %b2.3
+  %99 = zext i1 0 to i64
+  %100 = or i64 %99, 72057594037927936
+  %101 = getelementptr i8, i8 addrspace(1)* null, i64 %100
+  ret i8 addrspace(1)* %101
+102:
+  %103 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
+  store i8 addrspace(1)* %103, i8 addrspace(1)** %b2.4
+  %104 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %105 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %104, i64 0)
+  %106 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %105)
+  store i64 %106, i64* %8
+  %107 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %108 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %107, i64 0)
+  %109 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %108)
+  store i64 %109, i64* %9
+  %110 = load i64, i64* %8, !dbg !45
+  %111 = load i64, i64* %9, !dbg !45
+  %112 = call i64 @_B_atomCmp(i64 %110, i64 %111), !dbg !45
+  store i64 %112, i64* %10, !dbg !45
+  %113 = load i64, i64* %10
+  store i64 %113, i64* %cmp
+  %114 = load i64, i64* %cmp
+  %115 = icmp slt i64 %114, 0
+  store i1 %115, i1* %11
+  %116 = load i1, i1* %11
+  br i1 %116, label %117, label %145
+117:
+  %118 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %119 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %118, i64 0)
+  %120 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %119)
+  store i64 %120, i64* %12
+  %121 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %122 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %121, i64 1)
+  %123 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %121, i8 addrspace(1)* %122)
+  store i8 addrspace(1)* %123, i8 addrspace(1)** %13
+  %124 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !46
+  %125 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4, !dbg !46
+  %126 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %124, i8 addrspace(1)* %125), !dbg !46
+  store i8 addrspace(1)* %126, i8 addrspace(1)** %14, !dbg !46
+  %127 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %128 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %127, i64 2)
+  %129 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %127, i8 addrspace(1)* %128)
+  store i8 addrspace(1)* %129, i8 addrspace(1)** %15
+  %130 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !47
+  %131 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4, !dbg !47
+  %132 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %130, i8 addrspace(1)* %131), !dbg !47
+  store i8 addrspace(1)* %132, i8 addrspace(1)** %16, !dbg !47
+  %133 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %134 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %133, i64 3)
+  %135 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %133, i8 addrspace(1)* %134)
+  store i8 addrspace(1)* %135, i8 addrspace(1)** %17
+  %136 = load i8 addrspace(1)*, i8 addrspace(1)** %17, !dbg !48
+  %137 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4, !dbg !48
+  %138 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %136, i8 addrspace(1)* %137), !dbg !48
+  store i8 addrspace(1)* %138, i8 addrspace(1)** %18, !dbg !48
+  %139 = load i64, i64* %12, !dbg !49
+  %140 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !49
+  %141 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !49
+  %142 = load i8 addrspace(1)*, i8 addrspace(1)** %18, !dbg !49
+  %143 = call i8 addrspace(1)* @_B_bddCreate(i64 %139, i8 addrspace(1)* %140, i8 addrspace(1)* %141, i8 addrspace(1)* %142), !dbg !49
+  store i8 addrspace(1)* %143, i8 addrspace(1)** %19, !dbg !49
+  %144 = load i8 addrspace(1)*, i8 addrspace(1)** %19
+  ret i8 addrspace(1)* %144
+145:
+  %146 = load i64, i64* %cmp
+  %147 = icmp sgt i64 %146, 0
+  store i1 %147, i1* %20
+  %148 = load i1, i1* %20
+  br i1 %148, label %149, label %177
+149:
+  %150 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %151 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %150, i64 0)
+  %152 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %151)
+  store i64 %152, i64* %21
+  %153 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %154 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %153, i64 1)
+  %155 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %153, i8 addrspace(1)* %154)
+  store i8 addrspace(1)* %155, i8 addrspace(1)** %22
+  %156 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4, !dbg !50
+  %157 = load i8 addrspace(1)*, i8 addrspace(1)** %22, !dbg !50
+  %158 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %156, i8 addrspace(1)* %157), !dbg !50
+  store i8 addrspace(1)* %158, i8 addrspace(1)** %23, !dbg !50
+  %159 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %160 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %159, i64 2)
+  %161 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %159, i8 addrspace(1)* %160)
+  store i8 addrspace(1)* %161, i8 addrspace(1)** %24
+  %162 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4, !dbg !51
+  %163 = load i8 addrspace(1)*, i8 addrspace(1)** %24, !dbg !51
+  %164 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %162, i8 addrspace(1)* %163), !dbg !51
+  store i8 addrspace(1)* %164, i8 addrspace(1)** %25, !dbg !51
+  %165 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %166 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %165, i64 3)
+  %167 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %165, i8 addrspace(1)* %166)
+  store i8 addrspace(1)* %167, i8 addrspace(1)** %26
+  %168 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4, !dbg !52
+  %169 = load i8 addrspace(1)*, i8 addrspace(1)** %26, !dbg !52
+  %170 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %168, i8 addrspace(1)* %169), !dbg !52
+  store i8 addrspace(1)* %170, i8 addrspace(1)** %27, !dbg !52
+  %171 = load i64, i64* %21, !dbg !53
+  %172 = load i8 addrspace(1)*, i8 addrspace(1)** %23, !dbg !53
+  %173 = load i8 addrspace(1)*, i8 addrspace(1)** %25, !dbg !53
+  %174 = load i8 addrspace(1)*, i8 addrspace(1)** %27, !dbg !53
+  %175 = call i8 addrspace(1)* @_B_bddCreate(i64 %171, i8 addrspace(1)* %172, i8 addrspace(1)* %173, i8 addrspace(1)* %174), !dbg !53
+  store i8 addrspace(1)* %175, i8 addrspace(1)** %28, !dbg !53
+  %176 = load i8 addrspace(1)*, i8 addrspace(1)** %28
+  ret i8 addrspace(1)* %176
+177:
+  %178 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %179 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %178, i64 0)
+  %180 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %179)
+  store i64 %180, i64* %29
+  %181 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %182 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %181, i64 1)
+  %183 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %181, i8 addrspace(1)* %182)
+  store i8 addrspace(1)* %183, i8 addrspace(1)** %30
+  %184 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %185 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %184, i64 2)
+  %186 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %184, i8 addrspace(1)* %185)
+  store i8 addrspace(1)* %186, i8 addrspace(1)** %31
+  %187 = load i8 addrspace(1)*, i8 addrspace(1)** %30, !dbg !54
+  %188 = load i8 addrspace(1)*, i8 addrspace(1)** %31, !dbg !54
+  %189 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %187, i8 addrspace(1)* %188), !dbg !54
+  store i8 addrspace(1)* %189, i8 addrspace(1)** %32, !dbg !54
+  %190 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %191 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %190, i64 1)
+  %192 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %190, i8 addrspace(1)* %191)
+  store i8 addrspace(1)* %192, i8 addrspace(1)** %33
+  %193 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %194 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %193, i64 2)
+  %195 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %193, i8 addrspace(1)* %194)
+  store i8 addrspace(1)* %195, i8 addrspace(1)** %34
+  %196 = load i8 addrspace(1)*, i8 addrspace(1)** %33, !dbg !55
+  %197 = load i8 addrspace(1)*, i8 addrspace(1)** %34, !dbg !55
+  %198 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %196, i8 addrspace(1)* %197), !dbg !55
+  store i8 addrspace(1)* %198, i8 addrspace(1)** %35, !dbg !55
+  %199 = load i8 addrspace(1)*, i8 addrspace(1)** %32, !dbg !56
+  %200 = load i8 addrspace(1)*, i8 addrspace(1)** %35, !dbg !56
+  %201 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %199, i8 addrspace(1)* %200), !dbg !56
+  store i8 addrspace(1)* %201, i8 addrspace(1)** %36, !dbg !56
+  %202 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %203 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %202, i64 3)
+  %204 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %202, i8 addrspace(1)* %203)
+  store i8 addrspace(1)* %204, i8 addrspace(1)** %37
+  %205 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %206 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %205, i64 2)
+  %207 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %205, i8 addrspace(1)* %206)
+  store i8 addrspace(1)* %207, i8 addrspace(1)** %38
+  %208 = load i8 addrspace(1)*, i8 addrspace(1)** %37, !dbg !57
+  %209 = load i8 addrspace(1)*, i8 addrspace(1)** %38, !dbg !57
+  %210 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %208, i8 addrspace(1)* %209), !dbg !57
+  store i8 addrspace(1)* %210, i8 addrspace(1)** %39, !dbg !57
+  %211 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %212 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %211, i64 3)
+  %213 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %211, i8 addrspace(1)* %212)
+  store i8 addrspace(1)* %213, i8 addrspace(1)** %40
+  %214 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %215 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %214, i64 2)
+  %216 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %214, i8 addrspace(1)* %215)
+  store i8 addrspace(1)* %216, i8 addrspace(1)** %41
+  %217 = load i8 addrspace(1)*, i8 addrspace(1)** %40, !dbg !58
+  %218 = load i8 addrspace(1)*, i8 addrspace(1)** %41, !dbg !58
+  %219 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %217, i8 addrspace(1)* %218), !dbg !58
+  store i8 addrspace(1)* %219, i8 addrspace(1)** %42, !dbg !58
+  %220 = load i8 addrspace(1)*, i8 addrspace(1)** %39, !dbg !59
+  %221 = load i8 addrspace(1)*, i8 addrspace(1)** %42, !dbg !59
+  %222 = call i8 addrspace(1)* @_B_bddIntersect(i8 addrspace(1)* %220, i8 addrspace(1)* %221), !dbg !59
+  store i8 addrspace(1)* %222, i8 addrspace(1)** %43, !dbg !59
+  %223 = load i64, i64* %29, !dbg !60
+  %224 = load i8 addrspace(1)*, i8 addrspace(1)** %36, !dbg !60
+  %225 = zext i1 0 to i64, !dbg !60
+  %226 = or i64 %225, 72057594037927936, !dbg !60
+  %227 = getelementptr i8, i8 addrspace(1)* null, i64 %226, !dbg !60
+  %228 = load i8 addrspace(1)*, i8 addrspace(1)** %43, !dbg !60
+  %229 = call i8 addrspace(1)* @_B_bddCreate(i64 %223, i8 addrspace(1)* %224, i8 addrspace(1)* %227, i8 addrspace(1)* %228), !dbg !60
+  store i8 addrspace(1)* %229, i8 addrspace(1)** %44, !dbg !60
+  %230 = load i8 addrspace(1)*, i8 addrspace(1)** %44
+  ret i8 addrspace(1)* %230
+231:
+  %232 = call i8 addrspace(1)* @_bal_panic_construct(i64 16388), !dbg !44
+  call void @_bal_panic(i8 addrspace(1)* %232)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !13 {
@@ -700,13 +712,15 @@ define internal i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %0, i8 addrspace(1
   %b2.1 = alloca i1
   %5 = alloca i1
   %b2.2 = alloca i1
-  %b2.3 = alloca i8 addrspace(1)*
+  %b2.3 = alloca i1
+  %b2.4 = alloca i8 addrspace(1)*
   %6 = alloca i1
   %b1.1 = alloca i1
   %7 = alloca i1
   %b1.2 = alloca i1
   %8 = alloca i8 addrspace(1)*
-  %b1.3 = alloca i8 addrspace(1)*
+  %b1.3 = alloca i1
+  %b1.4 = alloca i8 addrspace(1)*
   %cmp = alloca i64
   %9 = alloca i64
   %10 = alloca i64
@@ -747,7 +761,7 @@ define internal i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %0, i8 addrspace(1
   %45 = alloca i8
   %46 = load i8*, i8** @_bal_stack_guard
   %47 = icmp ult i8* %45, %46
-  br i1 %47, label %232, label %48
+  br i1 %47, label %234, label %48
 48:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %b1
   store i8 addrspace(1)* %1, i8 addrspace(1)** %b2
@@ -770,7 +784,7 @@ define internal i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %0, i8 addrspace(1
   %62 = icmp eq i64 %61, 72057594037927936
   store i1 %62, i1* %4
   %63 = load i1, i1* %4
-  br i1 %63, label %64, label %79
+  br i1 %63, label %64, label %80
 64:
   %65 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
   %66 = addrspacecast i8 addrspace(1)* %65 to i8*
@@ -790,217 +804,221 @@ define internal i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %0, i8 addrspace(1
   %76 = getelementptr i8, i8 addrspace(1)* null, i64 %75
   ret i8 addrspace(1)* %76
 77:
-  %78 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
-  ret i8 addrspace(1)* %78
-79:
-  %80 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
-  store i8 addrspace(1)* %80, i8 addrspace(1)** %b2.3
-  %81 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
-  %82 = addrspacecast i8 addrspace(1)* %81 to i8*
-  %83 = ptrtoint i8* %82 to i64
-  %84 = and i64 %83, 2233785415175766016
-  %85 = icmp eq i64 %84, 72057594037927936
-  store i1 %85, i1* %6
-  %86 = load i1, i1* %6
-  br i1 %86, label %87, label %104
-87:
-  %88 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
-  %89 = addrspacecast i8 addrspace(1)* %88 to i8*
-  %90 = ptrtoint i8* %89 to i64
-  %91 = trunc i64 %90 to i1
-  store i1 %91, i1* %b1.1
-  %92 = load i1, i1* %b1.1
-  %93 = icmp eq i1 %92, 1
-  store i1 %93, i1* %7
-  %94 = load i1, i1* %7
-  br i1 %94, label %95, label %100
-95:
-  %96 = load i1, i1* %b1.1
-  store i1 %96, i1* %b1.2
-  %97 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3, !dbg !62
-  %98 = call i8 addrspace(1)* @_B_bddComplement(i8 addrspace(1)* %97), !dbg !62
-  store i8 addrspace(1)* %98, i8 addrspace(1)** %8, !dbg !62
-  %99 = load i8 addrspace(1)*, i8 addrspace(1)** %8
-  ret i8 addrspace(1)* %99
-100:
-  %101 = zext i1 0 to i64
-  %102 = or i64 %101, 72057594037927936
-  %103 = getelementptr i8, i8 addrspace(1)* null, i64 %102
-  ret i8 addrspace(1)* %103
-104:
-  %105 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
-  store i8 addrspace(1)* %105, i8 addrspace(1)** %b1.3
-  %106 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %107 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %106, i64 0)
-  %108 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %107)
-  store i64 %108, i64* %9
-  %109 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %110 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %109, i64 0)
-  %111 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %110)
-  store i64 %111, i64* %10
-  %112 = load i64, i64* %9, !dbg !63
-  %113 = load i64, i64* %10, !dbg !63
-  %114 = call i64 @_B_atomCmp(i64 %112, i64 %113), !dbg !63
-  store i64 %114, i64* %11, !dbg !63
-  %115 = load i64, i64* %11
-  store i64 %115, i64* %cmp
-  %116 = load i64, i64* %cmp
-  %117 = icmp slt i64 %116, 0
-  store i1 %117, i1* %12
-  %118 = load i1, i1* %12
-  br i1 %118, label %119, label %155
-119:
-  %120 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %121 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %120, i64 0)
-  %122 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %121)
-  store i64 %122, i64* %13
-  %123 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %124 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %123, i64 1)
-  %125 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %123, i8 addrspace(1)* %124)
-  store i8 addrspace(1)* %125, i8 addrspace(1)** %14
-  %126 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %127 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %126, i64 2)
-  %128 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %126, i8 addrspace(1)* %127)
-  store i8 addrspace(1)* %128, i8 addrspace(1)** %15
-  %129 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !64
-  %130 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !64
-  %131 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %129, i8 addrspace(1)* %130), !dbg !64
-  store i8 addrspace(1)* %131, i8 addrspace(1)** %16, !dbg !64
-  %132 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !65
-  %133 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3, !dbg !65
-  %134 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %132, i8 addrspace(1)* %133), !dbg !65
-  store i8 addrspace(1)* %134, i8 addrspace(1)** %17, !dbg !65
-  %135 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %136 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %135, i64 3)
-  %137 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %135, i8 addrspace(1)* %136)
-  store i8 addrspace(1)* %137, i8 addrspace(1)** %18
-  %138 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %139 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %138, i64 2)
-  %140 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %138, i8 addrspace(1)* %139)
-  store i8 addrspace(1)* %140, i8 addrspace(1)** %19
-  %141 = load i8 addrspace(1)*, i8 addrspace(1)** %18, !dbg !66
-  %142 = load i8 addrspace(1)*, i8 addrspace(1)** %19, !dbg !66
-  %143 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %141, i8 addrspace(1)* %142), !dbg !66
-  store i8 addrspace(1)* %143, i8 addrspace(1)** %20, !dbg !66
-  %144 = load i8 addrspace(1)*, i8 addrspace(1)** %20, !dbg !67
-  %145 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3, !dbg !67
-  %146 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %144, i8 addrspace(1)* %145), !dbg !67
-  store i8 addrspace(1)* %146, i8 addrspace(1)** %21, !dbg !67
-  %147 = load i64, i64* %13, !dbg !68
-  %148 = load i8 addrspace(1)*, i8 addrspace(1)** %17, !dbg !68
-  %149 = zext i1 0 to i64, !dbg !68
-  %150 = or i64 %149, 72057594037927936, !dbg !68
-  %151 = getelementptr i8, i8 addrspace(1)* null, i64 %150, !dbg !68
-  %152 = load i8 addrspace(1)*, i8 addrspace(1)** %21, !dbg !68
-  %153 = call i8 addrspace(1)* @_B_bddCreate(i64 %147, i8 addrspace(1)* %148, i8 addrspace(1)* %151, i8 addrspace(1)* %152), !dbg !68
-  store i8 addrspace(1)* %153, i8 addrspace(1)** %22, !dbg !68
-  %154 = load i8 addrspace(1)*, i8 addrspace(1)** %22
-  ret i8 addrspace(1)* %154
-155:
-  %156 = load i64, i64* %cmp
-  %157 = icmp sgt i64 %156, 0
-  store i1 %157, i1* %23
-  %158 = load i1, i1* %23
-  br i1 %158, label %159, label %195
-159:
-  %160 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %161 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %160, i64 0)
-  %162 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %161)
-  store i64 %162, i64* %24
-  %163 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %164 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %163, i64 1)
-  %165 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %163, i8 addrspace(1)* %164)
-  store i8 addrspace(1)* %165, i8 addrspace(1)** %25
-  %166 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %167 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %166, i64 2)
-  %168 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %166, i8 addrspace(1)* %167)
-  store i8 addrspace(1)* %168, i8 addrspace(1)** %26
-  %169 = load i8 addrspace(1)*, i8 addrspace(1)** %25, !dbg !69
-  %170 = load i8 addrspace(1)*, i8 addrspace(1)** %26, !dbg !69
-  %171 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %169, i8 addrspace(1)* %170), !dbg !69
-  store i8 addrspace(1)* %171, i8 addrspace(1)** %27, !dbg !69
-  %172 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3, !dbg !70
-  %173 = load i8 addrspace(1)*, i8 addrspace(1)** %27, !dbg !70
-  %174 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %172, i8 addrspace(1)* %173), !dbg !70
-  store i8 addrspace(1)* %174, i8 addrspace(1)** %28, !dbg !70
-  %175 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %176 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %175, i64 3)
-  %177 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %175, i8 addrspace(1)* %176)
-  store i8 addrspace(1)* %177, i8 addrspace(1)** %29
-  %178 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %179 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %178, i64 2)
-  %180 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %178, i8 addrspace(1)* %179)
-  store i8 addrspace(1)* %180, i8 addrspace(1)** %30
-  %181 = load i8 addrspace(1)*, i8 addrspace(1)** %29, !dbg !71
-  %182 = load i8 addrspace(1)*, i8 addrspace(1)** %30, !dbg !71
-  %183 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %181, i8 addrspace(1)* %182), !dbg !71
-  store i8 addrspace(1)* %183, i8 addrspace(1)** %31, !dbg !71
-  %184 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3, !dbg !72
-  %185 = load i8 addrspace(1)*, i8 addrspace(1)** %31, !dbg !72
-  %186 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %184, i8 addrspace(1)* %185), !dbg !72
-  store i8 addrspace(1)* %186, i8 addrspace(1)** %32, !dbg !72
-  %187 = load i64, i64* %24, !dbg !73
-  %188 = load i8 addrspace(1)*, i8 addrspace(1)** %28, !dbg !73
-  %189 = zext i1 0 to i64, !dbg !73
-  %190 = or i64 %189, 72057594037927936, !dbg !73
-  %191 = getelementptr i8, i8 addrspace(1)* null, i64 %190, !dbg !73
-  %192 = load i8 addrspace(1)*, i8 addrspace(1)** %32, !dbg !73
-  %193 = call i8 addrspace(1)* @_B_bddCreate(i64 %187, i8 addrspace(1)* %188, i8 addrspace(1)* %191, i8 addrspace(1)* %192), !dbg !73
-  store i8 addrspace(1)* %193, i8 addrspace(1)** %33, !dbg !73
-  %194 = load i8 addrspace(1)*, i8 addrspace(1)** %33
-  ret i8 addrspace(1)* %194
-195:
-  %196 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %197 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %196, i64 0)
-  %198 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %197)
-  store i64 %198, i64* %34
-  %199 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %200 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %199, i64 1)
-  %201 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %199, i8 addrspace(1)* %200)
-  store i8 addrspace(1)* %201, i8 addrspace(1)** %35
-  %202 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %203 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %202, i64 1)
-  %204 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %202, i8 addrspace(1)* %203)
-  store i8 addrspace(1)* %204, i8 addrspace(1)** %36
-  %205 = load i8 addrspace(1)*, i8 addrspace(1)** %35, !dbg !74
-  %206 = load i8 addrspace(1)*, i8 addrspace(1)** %36, !dbg !74
-  %207 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %205, i8 addrspace(1)* %206), !dbg !74
-  store i8 addrspace(1)* %207, i8 addrspace(1)** %37, !dbg !74
-  %208 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %209 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %208, i64 2)
-  %210 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %208, i8 addrspace(1)* %209)
-  store i8 addrspace(1)* %210, i8 addrspace(1)** %38
-  %211 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %212 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %211, i64 2)
-  %213 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %211, i8 addrspace(1)* %212)
-  store i8 addrspace(1)* %213, i8 addrspace(1)** %39
-  %214 = load i8 addrspace(1)*, i8 addrspace(1)** %38, !dbg !75
-  %215 = load i8 addrspace(1)*, i8 addrspace(1)** %39, !dbg !75
-  %216 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %214, i8 addrspace(1)* %215), !dbg !75
-  store i8 addrspace(1)* %216, i8 addrspace(1)** %40, !dbg !75
-  %217 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.3
-  %218 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %217, i64 3)
-  %219 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %217, i8 addrspace(1)* %218)
-  store i8 addrspace(1)* %219, i8 addrspace(1)** %41
-  %220 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.3
-  %221 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %220, i64 3)
-  %222 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %220, i8 addrspace(1)* %221)
-  store i8 addrspace(1)* %222, i8 addrspace(1)** %42
-  %223 = load i8 addrspace(1)*, i8 addrspace(1)** %41, !dbg !76
-  %224 = load i8 addrspace(1)*, i8 addrspace(1)** %42, !dbg !76
-  %225 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %223, i8 addrspace(1)* %224), !dbg !76
-  store i8 addrspace(1)* %225, i8 addrspace(1)** %43, !dbg !76
-  %226 = load i64, i64* %34, !dbg !77
-  %227 = load i8 addrspace(1)*, i8 addrspace(1)** %37, !dbg !77
-  %228 = load i8 addrspace(1)*, i8 addrspace(1)** %40, !dbg !77
-  %229 = load i8 addrspace(1)*, i8 addrspace(1)** %43, !dbg !77
-  %230 = call i8 addrspace(1)* @_B_bddCreate(i64 %226, i8 addrspace(1)* %227, i8 addrspace(1)* %228, i8 addrspace(1)* %229), !dbg !77
-  store i8 addrspace(1)* %230, i8 addrspace(1)** %44, !dbg !77
-  %231 = load i8 addrspace(1)*, i8 addrspace(1)** %44
-  ret i8 addrspace(1)* %231
-232:
-  %233 = call i8 addrspace(1)* @_bal_panic_construct(i64 26116), !dbg !61
-  call void @_bal_panic(i8 addrspace(1)* %233)
+  %78 = load i1, i1* %b2.1
+  store i1 %78, i1* %b2.3
+  %79 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
+  ret i8 addrspace(1)* %79
+80:
+  %81 = load i8 addrspace(1)*, i8 addrspace(1)** %b2
+  store i8 addrspace(1)* %81, i8 addrspace(1)** %b2.4
+  %82 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
+  %83 = addrspacecast i8 addrspace(1)* %82 to i8*
+  %84 = ptrtoint i8* %83 to i64
+  %85 = and i64 %84, 2233785415175766016
+  %86 = icmp eq i64 %85, 72057594037927936
+  store i1 %86, i1* %6
+  %87 = load i1, i1* %6
+  br i1 %87, label %88, label %106
+88:
+  %89 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
+  %90 = addrspacecast i8 addrspace(1)* %89 to i8*
+  %91 = ptrtoint i8* %90 to i64
+  %92 = trunc i64 %91 to i1
+  store i1 %92, i1* %b1.1
+  %93 = load i1, i1* %b1.1
+  %94 = icmp eq i1 %93, 1
+  store i1 %94, i1* %7
+  %95 = load i1, i1* %7
+  br i1 %95, label %96, label %101
+96:
+  %97 = load i1, i1* %b1.1
+  store i1 %97, i1* %b1.2
+  %98 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4, !dbg !62
+  %99 = call i8 addrspace(1)* @_B_bddComplement(i8 addrspace(1)* %98), !dbg !62
+  store i8 addrspace(1)* %99, i8 addrspace(1)** %8, !dbg !62
+  %100 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  ret i8 addrspace(1)* %100
+101:
+  %102 = load i1, i1* %b1.1
+  store i1 %102, i1* %b1.3
+  %103 = zext i1 0 to i64
+  %104 = or i64 %103, 72057594037927936
+  %105 = getelementptr i8, i8 addrspace(1)* null, i64 %104
+  ret i8 addrspace(1)* %105
+106:
+  %107 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
+  store i8 addrspace(1)* %107, i8 addrspace(1)** %b1.4
+  %108 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %109 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %108, i64 0)
+  %110 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %109)
+  store i64 %110, i64* %9
+  %111 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %112 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %111, i64 0)
+  %113 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %112)
+  store i64 %113, i64* %10
+  %114 = load i64, i64* %9, !dbg !63
+  %115 = load i64, i64* %10, !dbg !63
+  %116 = call i64 @_B_atomCmp(i64 %114, i64 %115), !dbg !63
+  store i64 %116, i64* %11, !dbg !63
+  %117 = load i64, i64* %11
+  store i64 %117, i64* %cmp
+  %118 = load i64, i64* %cmp
+  %119 = icmp slt i64 %118, 0
+  store i1 %119, i1* %12
+  %120 = load i1, i1* %12
+  br i1 %120, label %121, label %157
+121:
+  %122 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %123 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %122, i64 0)
+  %124 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %123)
+  store i64 %124, i64* %13
+  %125 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %126 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %125, i64 1)
+  %127 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %125, i8 addrspace(1)* %126)
+  store i8 addrspace(1)* %127, i8 addrspace(1)** %14
+  %128 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %129 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %128, i64 2)
+  %130 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %128, i8 addrspace(1)* %129)
+  store i8 addrspace(1)* %130, i8 addrspace(1)** %15
+  %131 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !64
+  %132 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !64
+  %133 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %131, i8 addrspace(1)* %132), !dbg !64
+  store i8 addrspace(1)* %133, i8 addrspace(1)** %16, !dbg !64
+  %134 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !65
+  %135 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4, !dbg !65
+  %136 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %134, i8 addrspace(1)* %135), !dbg !65
+  store i8 addrspace(1)* %136, i8 addrspace(1)** %17, !dbg !65
+  %137 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %138 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %137, i64 3)
+  %139 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %137, i8 addrspace(1)* %138)
+  store i8 addrspace(1)* %139, i8 addrspace(1)** %18
+  %140 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %141 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %140, i64 2)
+  %142 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %140, i8 addrspace(1)* %141)
+  store i8 addrspace(1)* %142, i8 addrspace(1)** %19
+  %143 = load i8 addrspace(1)*, i8 addrspace(1)** %18, !dbg !66
+  %144 = load i8 addrspace(1)*, i8 addrspace(1)** %19, !dbg !66
+  %145 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %143, i8 addrspace(1)* %144), !dbg !66
+  store i8 addrspace(1)* %145, i8 addrspace(1)** %20, !dbg !66
+  %146 = load i8 addrspace(1)*, i8 addrspace(1)** %20, !dbg !67
+  %147 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4, !dbg !67
+  %148 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %146, i8 addrspace(1)* %147), !dbg !67
+  store i8 addrspace(1)* %148, i8 addrspace(1)** %21, !dbg !67
+  %149 = load i64, i64* %13, !dbg !68
+  %150 = load i8 addrspace(1)*, i8 addrspace(1)** %17, !dbg !68
+  %151 = zext i1 0 to i64, !dbg !68
+  %152 = or i64 %151, 72057594037927936, !dbg !68
+  %153 = getelementptr i8, i8 addrspace(1)* null, i64 %152, !dbg !68
+  %154 = load i8 addrspace(1)*, i8 addrspace(1)** %21, !dbg !68
+  %155 = call i8 addrspace(1)* @_B_bddCreate(i64 %149, i8 addrspace(1)* %150, i8 addrspace(1)* %153, i8 addrspace(1)* %154), !dbg !68
+  store i8 addrspace(1)* %155, i8 addrspace(1)** %22, !dbg !68
+  %156 = load i8 addrspace(1)*, i8 addrspace(1)** %22
+  ret i8 addrspace(1)* %156
+157:
+  %158 = load i64, i64* %cmp
+  %159 = icmp sgt i64 %158, 0
+  store i1 %159, i1* %23
+  %160 = load i1, i1* %23
+  br i1 %160, label %161, label %197
+161:
+  %162 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %163 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %162, i64 0)
+  %164 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %163)
+  store i64 %164, i64* %24
+  %165 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %166 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %165, i64 1)
+  %167 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %165, i8 addrspace(1)* %166)
+  store i8 addrspace(1)* %167, i8 addrspace(1)** %25
+  %168 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %169 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %168, i64 2)
+  %170 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %168, i8 addrspace(1)* %169)
+  store i8 addrspace(1)* %170, i8 addrspace(1)** %26
+  %171 = load i8 addrspace(1)*, i8 addrspace(1)** %25, !dbg !69
+  %172 = load i8 addrspace(1)*, i8 addrspace(1)** %26, !dbg !69
+  %173 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %171, i8 addrspace(1)* %172), !dbg !69
+  store i8 addrspace(1)* %173, i8 addrspace(1)** %27, !dbg !69
+  %174 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4, !dbg !70
+  %175 = load i8 addrspace(1)*, i8 addrspace(1)** %27, !dbg !70
+  %176 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %174, i8 addrspace(1)* %175), !dbg !70
+  store i8 addrspace(1)* %176, i8 addrspace(1)** %28, !dbg !70
+  %177 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %178 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %177, i64 3)
+  %179 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %177, i8 addrspace(1)* %178)
+  store i8 addrspace(1)* %179, i8 addrspace(1)** %29
+  %180 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %181 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %180, i64 2)
+  %182 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %180, i8 addrspace(1)* %181)
+  store i8 addrspace(1)* %182, i8 addrspace(1)** %30
+  %183 = load i8 addrspace(1)*, i8 addrspace(1)** %29, !dbg !71
+  %184 = load i8 addrspace(1)*, i8 addrspace(1)** %30, !dbg !71
+  %185 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %183, i8 addrspace(1)* %184), !dbg !71
+  store i8 addrspace(1)* %185, i8 addrspace(1)** %31, !dbg !71
+  %186 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4, !dbg !72
+  %187 = load i8 addrspace(1)*, i8 addrspace(1)** %31, !dbg !72
+  %188 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %186, i8 addrspace(1)* %187), !dbg !72
+  store i8 addrspace(1)* %188, i8 addrspace(1)** %32, !dbg !72
+  %189 = load i64, i64* %24, !dbg !73
+  %190 = load i8 addrspace(1)*, i8 addrspace(1)** %28, !dbg !73
+  %191 = zext i1 0 to i64, !dbg !73
+  %192 = or i64 %191, 72057594037927936, !dbg !73
+  %193 = getelementptr i8, i8 addrspace(1)* null, i64 %192, !dbg !73
+  %194 = load i8 addrspace(1)*, i8 addrspace(1)** %32, !dbg !73
+  %195 = call i8 addrspace(1)* @_B_bddCreate(i64 %189, i8 addrspace(1)* %190, i8 addrspace(1)* %193, i8 addrspace(1)* %194), !dbg !73
+  store i8 addrspace(1)* %195, i8 addrspace(1)** %33, !dbg !73
+  %196 = load i8 addrspace(1)*, i8 addrspace(1)** %33
+  ret i8 addrspace(1)* %196
+197:
+  %198 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %199 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %198, i64 0)
+  %200 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %199)
+  store i64 %200, i64* %34
+  %201 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %202 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %201, i64 1)
+  %203 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %201, i8 addrspace(1)* %202)
+  store i8 addrspace(1)* %203, i8 addrspace(1)** %35
+  %204 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %205 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %204, i64 1)
+  %206 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %204, i8 addrspace(1)* %205)
+  store i8 addrspace(1)* %206, i8 addrspace(1)** %36
+  %207 = load i8 addrspace(1)*, i8 addrspace(1)** %35, !dbg !74
+  %208 = load i8 addrspace(1)*, i8 addrspace(1)** %36, !dbg !74
+  %209 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %207, i8 addrspace(1)* %208), !dbg !74
+  store i8 addrspace(1)* %209, i8 addrspace(1)** %37, !dbg !74
+  %210 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %211 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %210, i64 2)
+  %212 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %210, i8 addrspace(1)* %211)
+  store i8 addrspace(1)* %212, i8 addrspace(1)** %38
+  %213 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %214 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %213, i64 2)
+  %215 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %213, i8 addrspace(1)* %214)
+  store i8 addrspace(1)* %215, i8 addrspace(1)** %39
+  %216 = load i8 addrspace(1)*, i8 addrspace(1)** %38, !dbg !75
+  %217 = load i8 addrspace(1)*, i8 addrspace(1)** %39, !dbg !75
+  %218 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %216, i8 addrspace(1)* %217), !dbg !75
+  store i8 addrspace(1)* %218, i8 addrspace(1)** %40, !dbg !75
+  %219 = load i8 addrspace(1)*, i8 addrspace(1)** %b1.4
+  %220 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %219, i64 3)
+  %221 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %219, i8 addrspace(1)* %220)
+  store i8 addrspace(1)* %221, i8 addrspace(1)** %41
+  %222 = load i8 addrspace(1)*, i8 addrspace(1)** %b2.4
+  %223 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %222, i64 3)
+  %224 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %222, i8 addrspace(1)* %223)
+  store i8 addrspace(1)* %224, i8 addrspace(1)** %42
+  %225 = load i8 addrspace(1)*, i8 addrspace(1)** %41, !dbg !76
+  %226 = load i8 addrspace(1)*, i8 addrspace(1)** %42, !dbg !76
+  %227 = call i8 addrspace(1)* @_B_bddDiff(i8 addrspace(1)* %225, i8 addrspace(1)* %226), !dbg !76
+  store i8 addrspace(1)* %227, i8 addrspace(1)** %43, !dbg !76
+  %228 = load i64, i64* %34, !dbg !77
+  %229 = load i8 addrspace(1)*, i8 addrspace(1)** %37, !dbg !77
+  %230 = load i8 addrspace(1)*, i8 addrspace(1)** %40, !dbg !77
+  %231 = load i8 addrspace(1)*, i8 addrspace(1)** %43, !dbg !77
+  %232 = call i8 addrspace(1)* @_B_bddCreate(i64 %228, i8 addrspace(1)* %229, i8 addrspace(1)* %230, i8 addrspace(1)* %231), !dbg !77
+  store i8 addrspace(1)* %232, i8 addrspace(1)** %44, !dbg !77
+  %233 = load i8 addrspace(1)*, i8 addrspace(1)** %44
+  ret i8 addrspace(1)* %233
+234:
+  %235 = call i8 addrspace(1)* @_bal_panic_construct(i64 26116), !dbg !61
+  call void @_bal_panic(i8 addrspace(1)* %235)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_bddComplement(i8 addrspace(1)* %0) !dbg !15 {
@@ -1009,8 +1027,8 @@ define internal i8 addrspace(1)* @_B_bddComplement(i8 addrspace(1)* %0) !dbg !15
   %b.1 = alloca i1
   %3 = alloca i1
   %b.2 = alloca i8 addrspace(1)*
-  %4 = alloca i1
-  %5 = alloca i8 addrspace(1)*
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i1
   %6 = alloca i64
   %7 = alloca i8 addrspace(1)*
   %8 = alloca i8 addrspace(1)*
@@ -1019,8 +1037,8 @@ define internal i8 addrspace(1)* @_B_bddComplement(i8 addrspace(1)* %0) !dbg !15
   %11 = alloca i8 addrspace(1)*
   %12 = alloca i8 addrspace(1)*
   %13 = alloca i8 addrspace(1)*
-  %14 = alloca i1
-  %15 = alloca i8 addrspace(1)*
+  %14 = alloca i8 addrspace(1)*
+  %15 = alloca i1
   %16 = alloca i64
   %17 = alloca i8 addrspace(1)*
   %18 = alloca i8 addrspace(1)*
@@ -1029,8 +1047,8 @@ define internal i8 addrspace(1)* @_B_bddComplement(i8 addrspace(1)* %0) !dbg !15
   %21 = alloca i8 addrspace(1)*
   %22 = alloca i8 addrspace(1)*
   %23 = alloca i8 addrspace(1)*
-  %24 = alloca i1
-  %25 = alloca i8 addrspace(1)*
+  %24 = alloca i8 addrspace(1)*
+  %25 = alloca i1
   %26 = alloca i64
   %27 = alloca i8 addrspace(1)*
   %28 = alloca i8 addrspace(1)*
@@ -1085,14 +1103,14 @@ define internal i8 addrspace(1)* @_B_bddComplement(i8 addrspace(1)* %0) !dbg !15
   %69 = load i8 addrspace(1)*, i8 addrspace(1)** %b.2
   %70 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %69, i64 3)
   %71 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %69, i8 addrspace(1)* %70)
-  store i8 addrspace(1)* %71, i8 addrspace(1)** %5
-  %72 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  store i8 addrspace(1)* %71, i8 addrspace(1)** %4
+  %72 = load i8 addrspace(1)*, i8 addrspace(1)** %4
   %73 = zext i1 0 to i64
   %74 = or i64 %73, 72057594037927936
   %75 = getelementptr i8, i8 addrspace(1)* null, i64 %74
   %76 = icmp eq i8 addrspace(1)* %72, %75
-  store i1 %76, i1* %4
-  %77 = load i1, i1* %4
+  store i1 %76, i1* %5
+  %77 = load i1, i1* %5
   br i1 %77, label %78, label %106
 78:
   %79 = load i8 addrspace(1)*, i8 addrspace(1)** %b.2
@@ -1135,14 +1153,14 @@ define internal i8 addrspace(1)* @_B_bddComplement(i8 addrspace(1)* %0) !dbg !15
   %107 = load i8 addrspace(1)*, i8 addrspace(1)** %b.2
   %108 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %107, i64 1)
   %109 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %107, i8 addrspace(1)* %108)
-  store i8 addrspace(1)* %109, i8 addrspace(1)** %15
-  %110 = load i8 addrspace(1)*, i8 addrspace(1)** %15
+  store i8 addrspace(1)* %109, i8 addrspace(1)** %14
+  %110 = load i8 addrspace(1)*, i8 addrspace(1)** %14
   %111 = zext i1 0 to i64
   %112 = or i64 %111, 72057594037927936
   %113 = getelementptr i8, i8 addrspace(1)* null, i64 %112
   %114 = icmp eq i8 addrspace(1)* %110, %113
-  store i1 %114, i1* %14
-  %115 = load i1, i1* %14
+  store i1 %114, i1* %15
+  %115 = load i1, i1* %15
   br i1 %115, label %116, label %144
 116:
   %117 = load i8 addrspace(1)*, i8 addrspace(1)** %b.2
@@ -1185,14 +1203,14 @@ define internal i8 addrspace(1)* @_B_bddComplement(i8 addrspace(1)* %0) !dbg !15
   %145 = load i8 addrspace(1)*, i8 addrspace(1)** %b.2
   %146 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %145, i64 2)
   %147 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_ptr(i8 addrspace(1)* %145, i8 addrspace(1)* %146)
-  store i8 addrspace(1)* %147, i8 addrspace(1)** %25
-  %148 = load i8 addrspace(1)*, i8 addrspace(1)** %25
+  store i8 addrspace(1)* %147, i8 addrspace(1)** %24
+  %148 = load i8 addrspace(1)*, i8 addrspace(1)** %24
   %149 = zext i1 0 to i64
   %150 = or i64 %149, 72057594037927936
   %151 = getelementptr i8, i8 addrspace(1)* null, i64 %150
   %152 = icmp eq i8 addrspace(1)* %148, %151
-  store i1 %152, i1* %24
-  %153 = load i1, i1* %24
+  store i1 %152, i1* %25
+  %153 = load i1, i1* %25
   br i1 %153, label %154, label %185
 154:
   %155 = load i8 addrspace(1)*, i8 addrspace(1)** %b.2
@@ -1293,13 +1311,14 @@ define internal i8 addrspace(1)* @_B_bddCreate(i64 %0, i8 addrspace(1)* %1, i8 a
   %right = alloca i8 addrspace(1)*
   %5 = alloca i1
   %middle.1 = alloca i1
+  %middle.2 = alloca i8 addrspace(1)*
   %6 = alloca i1
   %7 = alloca i8 addrspace(1)*
   %8 = alloca i8 addrspace(1)*
   %9 = alloca i8
   %10 = load i8*, i8** @_bal_stack_guard
   %11 = icmp ult i8* %9, %10
-  br i1 %11, label %45, label %12
+  br i1 %11, label %46, label %12
 12:
   store i64 %0, i64* %atom
   store i8 addrspace(1)* %1, i8 addrspace(1)** %left
@@ -1324,36 +1343,38 @@ define internal i8 addrspace(1)* @_B_bddCreate(i64 %0, i8 addrspace(1)* %1, i8 a
   %26 = getelementptr i8, i8 addrspace(1)* null, i64 %25
   ret i8 addrspace(1)* %26
 27:
-  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %left
-  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %right
-  %30 = call i1 @_bal_eq(i8 addrspace(1)* %28, i8 addrspace(1)* %29)
-  store i1 %30, i1* %6
-  %31 = load i1, i1* %6
-  br i1 %31, label %32, label %37
-32:
-  %33 = load i8 addrspace(1)*, i8 addrspace(1)** %left, !dbg !98
-  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %middle, !dbg !98
-  %35 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %33, i8 addrspace(1)* %34), !dbg !98
-  store i8 addrspace(1)* %35, i8 addrspace(1)** %7, !dbg !98
-  %36 = load i8 addrspace(1)*, i8 addrspace(1)** %7
-  ret i8 addrspace(1)* %36
-37:
-  %38 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 4)
-  %39 = load i64, i64* %atom
-  %40 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %39)
-  call void @_bal_mapping_init_member(i8 addrspace(1)* %38, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541171954785), i8 addrspace(1)* %40)
-  %41 = load i8 addrspace(1)*, i8 addrspace(1)** %left
-  call void @_bal_mapping_init_member(i8 addrspace(1)* %38, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541288801644), i8 addrspace(1)* %41)
-  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %middle
-  call void @_bal_mapping_init_member(i8 addrspace(1)* %38, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098306584869366125), i8 addrspace(1)* %42)
-  %43 = load i8 addrspace(1)*, i8 addrspace(1)** %right
-  call void @_bal_mapping_init_member(i8 addrspace(1)* %38, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475944087087474), i8 addrspace(1)* %43)
-  store i8 addrspace(1)* %38, i8 addrspace(1)** %8
-  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %8
-  ret i8 addrspace(1)* %44
-45:
-  %46 = call i8 addrspace(1)* @_bal_panic_construct(i64 45060), !dbg !97
-  call void @_bal_panic(i8 addrspace(1)* %46)
+  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %middle
+  store i8 addrspace(1)* %28, i8 addrspace(1)** %middle.2
+  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %left
+  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %right
+  %31 = call i1 @_bal_eq(i8 addrspace(1)* %29, i8 addrspace(1)* %30)
+  store i1 %31, i1* %6
+  %32 = load i1, i1* %6
+  br i1 %32, label %33, label %38
+33:
+  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %left, !dbg !98
+  %35 = load i8 addrspace(1)*, i8 addrspace(1)** %middle.2, !dbg !98
+  %36 = call i8 addrspace(1)* @_B_bddUnion(i8 addrspace(1)* %34, i8 addrspace(1)* %35), !dbg !98
+  store i8 addrspace(1)* %36, i8 addrspace(1)** %7, !dbg !98
+  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %7
+  ret i8 addrspace(1)* %37
+38:
+  %39 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 4)
+  %40 = load i64, i64* %atom
+  %41 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %40)
+  call void @_bal_mapping_init_member(i8 addrspace(1)* %39, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541171954785), i8 addrspace(1)* %41)
+  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %left
+  call void @_bal_mapping_init_member(i8 addrspace(1)* %39, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541288801644), i8 addrspace(1)* %42)
+  %43 = load i8 addrspace(1)*, i8 addrspace(1)** %middle.2
+  call void @_bal_mapping_init_member(i8 addrspace(1)* %39, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098306584869366125), i8 addrspace(1)* %43)
+  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %right
+  call void @_bal_mapping_init_member(i8 addrspace(1)* %39, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475944087087474), i8 addrspace(1)* %44)
+  store i8 addrspace(1)* %39, i8 addrspace(1)** %8
+  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  ret i8 addrspace(1)* %45
+46:
+  %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 45060), !dbg !97
+  call void @_bal_panic(i8 addrspace(1)* %47)
   unreachable
 }
 define internal i64 @_B_atomCmp(i64 %0, i64 %1) !dbg !19 {

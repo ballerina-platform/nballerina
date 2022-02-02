@@ -2,7 +2,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
 
-
 public function buildModule(bir:Module birMod, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
     llvm:Context llContext = new;
     bir:ModuleId modId = birMod.getId();

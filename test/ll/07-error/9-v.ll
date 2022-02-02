@@ -39,9 +39,9 @@ define void @_B04rootmain() !dbg !5 {
   %26 = alloca i8 addrspace(1)*
   %27 = alloca i1
   %28 = alloca i8 addrspace(1)*
-  %29 = alloca i1
+  %29 = alloca i8 addrspace(1)*
   %30 = alloca i8 addrspace(1)*
-  %31 = alloca i8 addrspace(1)*
+  %31 = alloca i1
   %32 = alloca i8 addrspace(1)*
   %33 = alloca i8
   %34 = load i8*, i8** @_bal_stack_guard
@@ -202,14 +202,14 @@ define void @_B04rootmain() !dbg !5 {
   call void @_Bb02ioprintln(i8 addrspace(1)* %141), !dbg !20
   store i8 addrspace(1)* null, i8 addrspace(1)** %28, !dbg !20
   %142 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 25), !dbg !7
-  store i8 addrspace(1)* %142, i8 addrspace(1)** %30, !dbg !7
+  store i8 addrspace(1)* %142, i8 addrspace(1)** %29, !dbg !7
   %143 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 25), !dbg !7
-  store i8 addrspace(1)* %143, i8 addrspace(1)** %31, !dbg !7
-  %144 = load i8 addrspace(1)*, i8 addrspace(1)** %30
-  %145 = load i8 addrspace(1)*, i8 addrspace(1)** %31
+  store i8 addrspace(1)* %143, i8 addrspace(1)** %30, !dbg !7
+  %144 = load i8 addrspace(1)*, i8 addrspace(1)** %29
+  %145 = load i8 addrspace(1)*, i8 addrspace(1)** %30
   %146 = call i1 @_bal_exact_eq(i8 addrspace(1)* %144, i8 addrspace(1)* %145)
-  store i1 %146, i1* %29
-  %147 = load i1, i1* %29, !dbg !21
+  store i1 %146, i1* %31
+  %147 = load i1, i1* %31, !dbg !21
   %148 = zext i1 %147 to i64, !dbg !21
   %149 = or i64 %148, 72057594037927936, !dbg !21
   %150 = getelementptr i8, i8 addrspace(1)* null, i64 %149, !dbg !21

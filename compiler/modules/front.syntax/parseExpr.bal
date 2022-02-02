@@ -1,5 +1,7 @@
 import wso2/nballerina.comm.err;
 
+type SpecialMethodName "map";
+
 function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
@@ -21,7 +23,47 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseInnerExpr(Tokenizer tok) returns Expr|err:Syntax {
-    return parseBitwiseOrExpr(tok);
+    return parseLogicalOrExpr(tok);
+}
+
+function parseLogicalOrExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
+    Expr expr = check parseLogicalAndExpr(tok);
+    while true {
+        Token? t = tok.current();
+        if t == "||" {
+            Position opPos = tok.currentStartPos();
+            check tok.advance();
+            Expr right = check parseLogicalAndExpr(tok);
+            Position endPos = tok.previousEndPos();
+            BinaryLogicalExpr bin = { startPos, endPos, opPos, logicalOp: "||", left: expr, right };
+            expr = bin;
+        }
+        else {
+            break;
+        }
+    }
+    return expr;
+}
+
+function parseLogicalAndExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
+    Expr expr = check parseBitwiseOrExpr(tok);
+    while true {
+        Token? t = tok.current();
+        if t == "&&" {
+            Position opPos = tok.currentStartPos();
+            check tok.advance();
+            Expr right = check parseBitwiseOrExpr(tok);
+            Position endPos = tok.previousEndPos();
+            BinaryLogicalExpr bin = { startPos, endPos, opPos, logicalOp: "&&", left: expr, right };
+            expr = bin;
+        }
+        else {
+            break;
+        }
+    }
+    return expr;
 }
 
 function parseBitwiseOrExpr(Tokenizer tok) returns Expr|err:Syntax {
@@ -285,7 +327,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return expr;
     }
     else if t is [STRING_LITERAL, string] {
-        ConstValueExpr expr = { startPos, endPos, value: t[1] };
+        LiteralExpr expr = { startPos, endPos, value: t[1] };
         check tok.advance();
         return expr;
     }
@@ -294,23 +336,21 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         if tok.current() == ")" {
             endPos = tok.currentEndPos();
             check tok.advance();
-            ConstValueExpr expr = { startPos, endPos, value: () };
+            LiteralExpr expr = { startPos, endPos, value: () };
             return expr;
         }
-        Expr expr = check parseInnerExpr(tok);
+        Expr innerExpr = check parseInnerExpr(tok);
         endPos = check tok.expectEnd(")");
-        expr.startPos = startPos;
-        expr.endPos = endPos;
-        return expr;
+        return { startPos, endPos, innerExpr };
     }
     else if t is "true"|"false" {
         check tok.advance();
-        ConstValueExpr expr = { startPos, endPos, value: t == "true" };
+        LiteralExpr expr = { startPos, endPos, value: t == "true" };
         return expr;
     }
     else if t is "null" {
         check tok.advance();
-        ConstValueExpr expr = { startPos, endPos, value: () };
+        LiteralExpr expr = { startPos, endPos, value: () };
         return expr;
     }
     else if t is "error" {
@@ -340,7 +380,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         opPos = tok.currentStartPos();
         check tok.advance();
         Position qnamePos = tok.currentStartPos();
-        string name = check tok.expectIdentifier();
+        string name = check parseIdentifierOrMethodName(tok);
         if tok.current() == "(" {
             return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, qnamePos, opPos), startPos);
         }
@@ -353,6 +393,18 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
     else {
         return expr;
     }
+}
+
+function parseIdentifierOrMethodName(Tokenizer tok) returns string|err:Syntax {
+    Token? t = tok.current();
+    if t is SpecialMethodName {
+        check tok.advance();
+        if tok.current() == "(" {
+            return t;
+        }
+        return parseError(tok, "expected open parenthesis");
+    }
+    return tok.expectIdentifier();
 }
 
 // Called with current token as "("
@@ -462,25 +514,25 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
         }
         [STRING_LITERAL, var value] => {
             Position endPos = tok.currentEndPos();
-            ConstValueExpr expr = { startPos, endPos, value };
+            LiteralExpr expr = { startPos, endPos, value };
             check tok.advance();
             return expr;
         }
         "null" => {
             Position endPos = tok.currentEndPos();
-            ConstValueExpr expr = { startPos, endPos, value: () };
+            LiteralExpr expr = { startPos, endPos, value: () };
             return expr;
         }
         "("  => {
             check tok.advance();
             Position endPos = check tok.expectEnd(")");
-            ConstValueExpr expr = { startPos, endPos, value: () };
+            LiteralExpr expr = { startPos, endPos, value: () };
             return expr;
         }
         "true"|"false"  => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            ConstValueExpr expr = {  startPos, endPos, value: t == "true" };
+            LiteralExpr expr = {  startPos, endPos, value: t == "true" };
             return expr;
         }
         [DECIMAL_NUMBER, _]

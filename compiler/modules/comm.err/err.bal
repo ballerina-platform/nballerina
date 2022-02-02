@@ -6,6 +6,7 @@ public type Diagnostic error<d:Diagnostic>;
 public type Syntax error<d:SyntaxDiagnostic>;
 public type Semantic error<d:SemanticDiagnostic>;
 public type Unimplemented error<d:UnimplementedDiagnostic>;
+public type Internal error<d:InternalDiagnostic>;
 
 public type Panic distinct error;
 
@@ -20,6 +21,10 @@ public function semantic(d:Message m, d:Location loc, string? defnName = (), err
 
 public function unimplemented(d:Message m, d:Location loc, string? defnName = (), error? cause = ()) returns Unimplemented {
     return error Unimplemented("unimplemented error", cause, message=d:messageToString(m), location=loc, defnName=defnName);
+}
+
+public function internal(d:Message m, d:Location loc, string? defnName = (), error? cause = ()) returns Internal {
+    return error Internal("internal error", cause, message=d:messageToString(m), location=loc, defnName=defnName);
 }
 
 // This is intended to be used with `panic`.

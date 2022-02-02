@@ -60,10 +60,14 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
         else {
             boolean isE = kind[0] == "e";
             if isE {
-                if err is err:Unimplemented {
+                if err is err:Internal {
                     io:println(err);
+                    test:assertFail("invalid error should not happen" + path);
                 }
-                test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
+                else if err is err:Unimplemented {
+                    io:println(err);
+                    test:assertFail("unimplemented error on E test" + path);
+                }
             }
             // io:println U errors are reported as semantic errors
             else if !err.detail().message.includes("'io:println'") {
@@ -87,10 +91,6 @@ function checkErrorLocation(err:Diagnostic err, string path) returns file:Error|
     string filename = loc.file.filename();
     test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
     d:LineColumn lc = d:locationLineColumn(loc);
-    if err is err:Semantic && err.detail().message.startsWith("assignment to narrowed variable") {
-        // these errors currently have the position of the variable creation not assignment
-        return;
-    }
     test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);    
 }
 

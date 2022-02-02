@@ -35,15 +35,15 @@ define internal i8 addrspace(1)* @_B_findPrimes() !dbg !7 {
   %primes = alloca i8 addrspace(1)*
   %1 = alloca i8 addrspace(1)*
   %gap = alloca i64
-  %2 = alloca i1
+  %2 = alloca i64
   %3 = alloca i64
-  %4 = alloca i64
-  %5 = alloca i1
-  %6 = alloca i8 addrspace(1)*
+  %4 = alloca i1
+  %5 = alloca i8 addrspace(1)*
+  %6 = alloca i1
   %i = alloca i64
   %7 = alloca i64
-  %8 = alloca i1
-  %9 = alloca i64
+  %8 = alloca i64
+  %9 = alloca i1
   %10 = alloca i64
   %11 = alloca i64
   %12 = alloca i8 addrspace(1)*
@@ -111,12 +111,12 @@ define internal i8 addrspace(1)* @_B_findPrimes() !dbg !7 {
   %63 = load i8 addrspace(1)*, i8 addrspace(1)** %primes, !dbg !16
   %64 = call i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)* %63), !dbg !16
   %65 = call i64 @_Bb0m4lang5arraylength(i8 addrspace(1)* %64), !dbg !16
-  store i64 %65, i64* %9, !dbg !16
+  store i64 %65, i64* %8, !dbg !16
   %66 = load i64, i64* %i
-  %67 = load i64, i64* %9
+  %67 = load i64, i64* %8
   %68 = icmp slt i64 %66, %67
-  store i1 %68, i1* %8
-  %69 = load i1, i1* %8
+  store i1 %68, i1* %9
+  %69 = load i1, i1* %9
   br i1 %69, label %70, label %84
 70:
   %71 = load i8 addrspace(1)*, i8 addrspace(1)** %primes
@@ -158,16 +158,16 @@ define internal i8 addrspace(1)* @_B_findPrimes() !dbg !7 {
   br label %89
 97:
   %98 = extractvalue {i64, i1} %45, 0
-  store i64 %98, i64* %3
+  store i64 %98, i64* %2
   %99 = load i8 addrspace(1)*, i8 addrspace(1)** %primes, !dbg !15
   %100 = call i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)* %99), !dbg !15
   %101 = call i64 @_Bb0m4lang5arraylength(i8 addrspace(1)* %100), !dbg !15
-  store i64 %101, i64* %4, !dbg !15
-  %102 = load i64, i64* %3
-  %103 = load i64, i64* %4
+  store i64 %101, i64* %3, !dbg !15
+  %102 = load i64, i64* %2
+  %103 = load i64, i64* %3
   %104 = icmp slt i64 %102, %103
-  store i1 %104, i1* %2
-  %105 = load i1, i1* %2
+  store i1 %104, i1* %4
+  %105 = load i1, i1* %4
   br i1 %105, label %47, label %55
 106:
   %107 = call i8 addrspace(1)* @_bal_panic_construct(i64 2817), !dbg !14
@@ -180,11 +180,11 @@ define internal i8 addrspace(1)* @_B_findPrimes() !dbg !7 {
   %112 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %111, align 8
   %113 = call i8 addrspace(1)* %112(i8 addrspace(1)* %48, i64 %49)
   %114 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_any(i8 addrspace(1)* %48, i8 addrspace(1)* %113)
-  store i8 addrspace(1)* %114, i8 addrspace(1)** %6
-  %115 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  store i8 addrspace(1)* %114, i8 addrspace(1)** %5
+  %115 = load i8 addrspace(1)*, i8 addrspace(1)** %5
   %116 = icmp eq i8 addrspace(1)* %115, null
-  store i1 %116, i1* %5
-  %117 = load i1, i1* %5
+  store i1 %116, i1* %6
+  %117 = load i1, i1* %6
   br i1 %117, label %57, label %85
 118:
   %119 = call i8 addrspace(1)* @_bal_panic_construct(i64 3077), !dbg !14
@@ -235,11 +235,11 @@ define internal i8 addrspace(1)* @_B_findPrimes() !dbg !7 {
 define internal void @_B_printMersenne(i8 addrspace(1)* %0) !dbg !9 {
   %primes = alloca i8 addrspace(1)*
   %i = alloca i64
-  %2 = alloca i1
-  %3 = alloca i64
-  %4 = alloca i1
-  %5 = alloca i64
-  %6 = alloca i8 addrspace(1)*
+  %2 = alloca i64
+  %3 = alloca i1
+  %4 = alloca i64
+  %5 = alloca i8 addrspace(1)*
+  %6 = alloca i1
   %7 = alloca i64
   %8 = alloca i8 addrspace(1)*
   %9 = alloca i64
@@ -256,12 +256,12 @@ define internal void @_B_printMersenne(i8 addrspace(1)* %0) !dbg !9 {
   %16 = load i8 addrspace(1)*, i8 addrspace(1)** %primes, !dbg !18
   %17 = call i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)* %16), !dbg !18
   %18 = call i64 @_Bb0m4lang5arraylength(i8 addrspace(1)* %17), !dbg !18
-  store i64 %18, i64* %3, !dbg !18
+  store i64 %18, i64* %2, !dbg !18
   %19 = load i64, i64* %i
-  %20 = load i64, i64* %3
+  %20 = load i64, i64* %2
   %21 = icmp slt i64 %19, %20
-  store i1 %21, i1* %2
-  %22 = load i1, i1* %2
+  store i1 %21, i1* %3
+  %22 = load i1, i1* %3
   br i1 %22, label %23, label %27
 23:
   %24 = load i64, i64* %i
@@ -290,9 +290,9 @@ define internal void @_B_printMersenne(i8 addrspace(1)* %0) !dbg !9 {
   unreachable
 40:
   %41 = extractvalue {i64, i1} %25, 0
-  store i64 %41, i64* %5
+  store i64 %41, i64* %4
   %42 = load i8 addrspace(1)*, i8 addrspace(1)** %primes
-  %43 = load i64, i64* %5
+  %43 = load i64, i64* %4
   %44 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %42, i64 72057594037927928)
   %45 = bitcast i8 addrspace(1)* %44 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)*
   %46 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %45, i64 0, i32 1
@@ -310,11 +310,11 @@ define internal void @_B_printMersenne(i8 addrspace(1)* %0) !dbg !9 {
   %55 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %54, align 8
   %56 = call i8 addrspace(1)* %55(i8 addrspace(1)* %42, i64 %43)
   %57 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_any(i8 addrspace(1)* %42, i8 addrspace(1)* %56)
-  store i8 addrspace(1)* %57, i8 addrspace(1)** %6
-  %58 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  store i8 addrspace(1)* %57, i8 addrspace(1)** %5
+  %58 = load i8 addrspace(1)*, i8 addrspace(1)** %5
   %59 = icmp eq i8 addrspace(1)* %58, null
-  store i1 %59, i1* %4
-  %60 = load i1, i1* %4
+  store i1 %59, i1* %6
+  %60 = load i1, i1* %6
   br i1 %60, label %28, label %32
 61:
   %62 = call i8 addrspace(1)* @_bal_panic_construct(i64 6917), !dbg !17

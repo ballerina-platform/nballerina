@@ -112,13 +112,12 @@ define internal i8 addrspace(1)* @_B_floatCmp(double %0, double %1) !dbg !7 {
   %10 = alloca i1
   %11 = alloca i1
   %12 = alloca i1
-  %f1.1 = alloca double
   %13 = alloca i1
   %14 = alloca i1
   %15 = alloca i8
   %16 = load i8*, i8** @_bal_stack_guard
   %17 = icmp ult i8* %15, %16
-  br i1 %17, label %83, label %18
+  br i1 %17, label %82, label %18
 18:
   store double %0, double* %f1
   store double %1, double* %f2
@@ -187,42 +186,40 @@ define internal i8 addrspace(1)* @_B_floatCmp(double %0, double %1) !dbg !7 {
   %61 = call i1 @_bal_float_eq(double %59, double %60)
   store i1 %61, i1* %11
   %62 = load i1, i1* %11
-  br i1 %62, label %63, label %82
+  br i1 %62, label %63, label %81
 63:
   %64 = load double, double* %f1
   %65 = call i1 @_bal_float_eq(double %64, double 0x7FF8000000000000)
   store i1 %65, i1* %12
   %66 = load i1, i1* %12
-  br i1 %66, label %67, label %69
+  br i1 %66, label %67, label %68
 67:
-  %68 = load double, double* %f1
-  store double %68, double* %f1.1
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str6 to i8*) to i8 addrspace(1)*), i64 720575940379279360)
-69:
+68:
+  %69 = load double, double* %f1
   %70 = load double, double* %f1
-  %71 = load double, double* %f1
-  %72 = fcmp ole double %70, %71
-  store i1 %72, i1* %13
-  %73 = load i1, i1* %13
-  br i1 %73, label %74, label %81
-74:
+  %71 = fcmp ole double %69, %70
+  store i1 %71, i1* %13
+  %72 = load i1, i1* %13
+  br i1 %72, label %73, label %80
+73:
+  %74 = load double, double* %f1
   %75 = load double, double* %f1
-  %76 = load double, double* %f1
-  %77 = fcmp oge double %75, %76
-  store i1 %77, i1* %14
-  %78 = load i1, i1* %14
-  br i1 %78, label %79, label %80
-79:
+  %76 = fcmp oge double %74, %75
+  store i1 %76, i1* %14
+  %77 = load i1, i1* %14
+  br i1 %77, label %78, label %79
+78:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630864741)
-80:
+79:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str8 to i8*) to i8 addrspace(1)*), i64 720575940379279360)
-81:
+80:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str9 to i8*) to i8 addrspace(1)*), i64 720575940379279360)
-82:
+81:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3057488322648960623)
-83:
-  %84 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636), !dbg !32
-  call void @_bal_panic(i8 addrspace(1)* %84)
+82:
+  %83 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636), !dbg !32
+  call void @_bal_panic(i8 addrspace(1)* %83)
   unreachable
 }
 !llvm.module.flags = !{!0}

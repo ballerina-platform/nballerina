@@ -31,6 +31,7 @@ define internal i64 @_B_foo(i64 %0) !dbg !7 {
   %3 = alloca i1
   %i.1 = alloca i64
   %4 = alloca i64
+  %i.2 = alloca i64
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
@@ -52,7 +53,8 @@ define internal i64 @_B_foo(i64 %0) !dbg !7 {
   ret i64 %17
 18:
   %19 = load i64, i64* %i
-  ret i64 %19
+  store i64 %19, i64* %i.2
+  ret i64 0
 20:
   %21 = load i8 addrspace(1)*, i8 addrspace(1)** %5
   call void @_bal_panic(i8 addrspace(1)* %21)

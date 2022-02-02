@@ -12,30 +12,30 @@ define void @_B04rootmain() !dbg !5 {
   %i1 = alloca i64
   %t = alloca i1
   %f = alloca i1
-  %1 = alloca i1
+  %1 = alloca i64
   %2 = alloca i64
-  %3 = alloca i64
+  %3 = alloca i1
   %4 = alloca i8 addrspace(1)*
-  %5 = alloca i1
-  %6 = alloca i64
+  %5 = alloca i64
+  %6 = alloca i1
   %7 = alloca i8 addrspace(1)*
   %8 = alloca i1
   %9 = alloca i1
   %10 = alloca i1
   %11 = alloca i8 addrspace(1)*
-  %12 = alloca i1
+  %12 = alloca i64
   %13 = alloca i64
-  %14 = alloca i64
+  %14 = alloca i1
   %15 = alloca i8 addrspace(1)*
   %16 = alloca i1
-  %17 = alloca i1
+  %17 = alloca i64
   %18 = alloca i1
   %19 = alloca i1
-  %20 = alloca i64
+  %20 = alloca i1
   %21 = alloca i8 addrspace(1)*
-  %22 = alloca i1
+  %22 = alloca i64
   %23 = alloca i1
-  %24 = alloca i64
+  %24 = alloca i1
   %25 = alloca i8 addrspace(1)*
   %26 = alloca i1
   %27 = alloca i1
@@ -70,7 +70,7 @@ define void @_B04rootmain() !dbg !5 {
   unreachable
 44:
   %45 = extractvalue {i64, i1} %38, 0
-  store i64 %45, i64* %2
+  store i64 %45, i64* %1
   %46 = load i64, i64* %i3
   %47 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %46, i64 15)
   %48 = extractvalue {i64, i1} %47, 1
@@ -81,12 +81,12 @@ define void @_B04rootmain() !dbg !5 {
   br label %40
 51:
   %52 = extractvalue {i64, i1} %47, 0
-  store i64 %52, i64* %3
-  %53 = load i64, i64* %2
-  %54 = load i64, i64* %3
+  store i64 %52, i64* %2
+  %53 = load i64, i64* %1
+  %54 = load i64, i64* %2
   %55 = icmp eq i64 %53, %54
-  store i1 %55, i1* %1
-  %56 = load i1, i1* %1, !dbg !10
+  store i1 %55, i1* %3
+  %56 = load i1, i1* %3, !dbg !10
   call void @_B_printBoolean(i1 %56), !dbg !10
   store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !10
   %57 = load i64, i64* %i5
@@ -99,25 +99,25 @@ define void @_B04rootmain() !dbg !5 {
   br label %40
 62:
   %63 = extractvalue {i64, i1} %58, 0
-  store i64 %63, i64* %6
+  store i64 %63, i64* %5
   %64 = load i64, i64* %i5
-  %65 = load i64, i64* %6
+  %65 = load i64, i64* %5
   %66 = icmp ne i64 %64, %65
-  store i1 %66, i1* %5
-  %67 = load i1, i1* %5, !dbg !11
+  store i1 %66, i1* %6
+  %67 = load i1, i1* %6, !dbg !11
   call void @_B_printBoolean(i1 %67), !dbg !11
   store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !11
   %68 = load i64, i64* %i5
   %69 = icmp slt i64 %68, 9
-  store i1 %69, i1* %9
+  store i1 %69, i1* %8
   %70 = load i64, i64* %i5
   %71 = icmp sgt i64 %70, 2
-  store i1 %71, i1* %10
-  %72 = load i1, i1* %9
-  %73 = load i1, i1* %10
+  store i1 %71, i1* %9
+  %72 = load i1, i1* %8
+  %73 = load i1, i1* %9
   %74 = icmp eq i1 %72, %73
-  store i1 %74, i1* %8
-  %75 = load i1, i1* %8, !dbg !12
+  store i1 %74, i1* %10
+  %75 = load i1, i1* %10, !dbg !12
   call void @_B_printBoolean(i1 %75), !dbg !12
   store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !12
   %76 = load i64, i64* %i1
@@ -131,7 +131,7 @@ define void @_B04rootmain() !dbg !5 {
   br label %40
 82:
   %83 = extractvalue {i64, i1} %78, 0
-  store i64 %83, i64* %13
+  store i64 %83, i64* %12
   %84 = load i64, i64* %i2
   %85 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %84, i64 4)
   %86 = extractvalue {i64, i1} %85, 1
@@ -142,18 +142,18 @@ define void @_B04rootmain() !dbg !5 {
   br label %40
 89:
   %90 = extractvalue {i64, i1} %85, 0
-  store i64 %90, i64* %14
-  %91 = load i64, i64* %13
-  %92 = load i64, i64* %14
+  store i64 %90, i64* %13
+  %91 = load i64, i64* %12
+  %92 = load i64, i64* %13
   %93 = icmp sle i64 %91, %92
-  store i1 %93, i1* %12
-  %94 = load i1, i1* %12, !dbg !13
+  store i1 %93, i1* %14
+  %94 = load i1, i1* %14, !dbg !13
   call void @_B_printBoolean(i1 %94), !dbg !13
   store i8 addrspace(1)* null, i8 addrspace(1)** %15, !dbg !13
   %95 = load i64, i64* %i1
   %96 = load i64, i64* %i5
   %97 = icmp sge i64 %95, %96
-  store i1 %97, i1* %18
+  store i1 %97, i1* %16
   %98 = load i64, i64* %i2
   %99 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 1, i64 %98)
   %100 = extractvalue {i64, i1} %99, 1
@@ -164,20 +164,20 @@ define void @_B04rootmain() !dbg !5 {
   br label %40
 103:
   %104 = extractvalue {i64, i1} %99, 0
-  store i64 %104, i64* %20
-  %105 = load i64, i64* %20
+  store i64 %104, i64* %17
+  %105 = load i64, i64* %17
   %106 = load i64, i64* %i3
   %107 = icmp sge i64 %105, %106
-  store i1 %107, i1* %19
-  %108 = load i1, i1* %18
-  %109 = load i1, i1* %19
+  store i1 %107, i1* %18
+  %108 = load i1, i1* %16
+  %109 = load i1, i1* %18
   %110 = icmp eq i1 %108, %109
-  store i1 %110, i1* %17
-  %111 = load i1, i1* %17
+  store i1 %110, i1* %19
+  %111 = load i1, i1* %19
   %112 = load i1, i1* %f
   %113 = icmp ne i1 %111, %112
-  store i1 %113, i1* %16
-  %114 = load i1, i1* %16, !dbg !14
+  store i1 %113, i1* %20
+  %114 = load i1, i1* %20, !dbg !14
   call void @_B_printBoolean(i1 %114), !dbg !14
   store i8 addrspace(1)* null, i8 addrspace(1)** %21, !dbg !14
   %115 = load i64, i64* %i1
@@ -190,35 +190,35 @@ define void @_B04rootmain() !dbg !5 {
   br label %40
 120:
   %121 = extractvalue {i64, i1} %116, 0
-  store i64 %121, i64* %24
-  %122 = load i64, i64* %24
+  store i64 %121, i64* %22
+  %122 = load i64, i64* %22
   %123 = icmp eq i64 %122, 8
   store i1 %123, i1* %23
   %124 = load i1, i1* %23
   %125 = load i1, i1* %f
   %126 = icmp ne i1 %124, %125
-  store i1 %126, i1* %22
-  %127 = load i1, i1* %22, !dbg !15
+  store i1 %126, i1* %24
+  %127 = load i1, i1* %24, !dbg !15
   call void @_B_printBoolean(i1 %127), !dbg !15
   store i8 addrspace(1)* null, i8 addrspace(1)** %25, !dbg !15
   %128 = load i1, i1* %t
   %129 = xor i1 1, %128
-  store i1 %129, i1* %27
-  %130 = load i1, i1* %27
+  store i1 %129, i1* %26
+  %130 = load i1, i1* %26
   %131 = load i1, i1* %f
   %132 = icmp eq i1 %130, %131
-  store i1 %132, i1* %26
-  %133 = load i1, i1* %26, !dbg !16
+  store i1 %132, i1* %27
+  %133 = load i1, i1* %27, !dbg !16
   call void @_B_printBoolean(i1 %133), !dbg !16
   store i8 addrspace(1)* null, i8 addrspace(1)** %28, !dbg !16
   %134 = load i1, i1* %t
   %135 = xor i1 1, %134
-  store i1 %135, i1* %30
+  store i1 %135, i1* %29
   %136 = load i1, i1* %f
-  %137 = load i1, i1* %30
+  %137 = load i1, i1* %29
   %138 = icmp eq i1 %136, %137
-  store i1 %138, i1* %29
-  %139 = load i1, i1* %29, !dbg !17
+  store i1 %138, i1* %30
+  %139 = load i1, i1* %30, !dbg !17
   call void @_B_printBoolean(i1 %139), !dbg !17
   store i8 addrspace(1)* null, i8 addrspace(1)** %31, !dbg !17
   ret void

@@ -9,6 +9,8 @@ const USER_MAIN_NAME = "main";
 // bitsets and pointers to subtypes
 const SUBTYPE_ALIGN = 8;
 
+final llvm:StructType llIntRangeType = llvm:structType([LLVM_INT, LLVM_INT]);
+
 public type ProgramModule readonly & record {|
     bir:ModuleId id;
     TypeUsage typeUsage;
@@ -46,6 +48,12 @@ const TYPE_KIND_ARRAY = "array";
 const TYPE_KIND_MAP = "map";
 const TYPE_KIND_RECORD = "record";
 const TYPE_KIND_PRECOMPUTED = "precomputed";
+const TYPE_KIND_TRUE = "true";
+const TYPE_KIND_FALSE = "false";
+const TYPE_KIND_INT = "int";
+const TYPE_KIND_FLOAT = "float";
+const TYPE_KIND_DECIMAL = "decimal";
+const TYPE_KIND_STRING = "string";
 
 const STRUCTURE_LIST = 0;
 const STRUCTURE_MAPPING = 1;
@@ -53,7 +61,8 @@ const STRUCTURE_MAPPING = 1;
 type StructureBasicType STRUCTURE_LIST|STRUCTURE_MAPPING;
 
 type TypeKindArrayOrMap TYPE_KIND_ARRAY|TYPE_KIND_MAP;
-type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED;
+type TypeKindSimple TYPE_KIND_TRUE|TYPE_KIND_FALSE|TYPE_KIND_INT|TYPE_KIND_FLOAT|TYPE_KIND_DECIMAL;
+type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED|TYPE_KIND_STRING|TypeKindSimple;
 
 type FunctionRef llvm:FunctionDecl|llvm:ConstPointerValue;
 
@@ -61,13 +70,14 @@ type InitModuleContext record {|
     llvm:Context llContext;
     llvm:Module llMod;
     t:Context tc;
-    int stringCount = 0;
     table<InherentTypeDefn> key(semType)[2] inherentTypeDefns = [table [], table[]];
     table<ComplexTypeDefn> key(semType) complexTypeDefns = table [];
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
     InitTypes llTypes;
     map<llvm:FunctionDecl> typeTestFuncs = {};
     map<llvm:FunctionDecl> runtimeFuncs = {};
+    map<llvm:ConstPointerValue> stringDefns = {};
+    int decimalCount = 0;
     // subtype definitions cannot be completed before inherent types are complete,
     // because precomputed subtypes need to know all inherent types
     boolean inherentTypesComplete;
@@ -150,28 +160,30 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[basic];
     int tid = defns.length();
     llvm:StructType llType;
-    llvm:ConstValue? initValue;
     if basic == STRUCTURE_LIST {
-        llType = llListDescType;
-        // The initializer is set later, because of the possibility of
-        // recursion via `getFillerDesc`.
-        initValue = ();
+        llType = llListDescType;        
     }
     else {
-        t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
-        llType = createMappingDescType(tid, mat);
-        // SUBSET move this later, when we do filling of mapping values
-        initValue = createMappingDescInit(cx, tid, mat);
+        llType = createMappingDescType(cx.tc, tid, semType);        
     }
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true, linkage=linkage);
+    // The initializer is set later, because of the possibility of
+    // recursion via `getFillerDesc`.
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, isConstant=true, linkage=linkage);
     defns.add({ llType, ptr, semType, tid });
+    llvm:ConstValue initValue;
     if basic == STRUCTURE_LIST {
-        cx.llMod.setInitializer(ptr, createListDescInit(cx, tid, <t:SemType>t:arrayMemberType(cx.tc, semType)));
+        initValue = createListDescInit(cx, tid, semType);
     }
+    else {
+        initValue = createMappingDescInit(cx, tid, semType);
+    }
+    cx.llMod.setInitializer(ptr, initValue);
+
     return ptr;
 }
 
-function createListDescInit(InitModuleContext cx, int tid, t:SemType memberType) returns llvm:ConstValue {
+function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
+    t:SemType memberType = <t:SemType>t:arrayMemberType(cx.tc, semType);
     FunctionRef[] functionRefs = getListDescFunctionRefs(cx, memberType);
     llvm:Value[] initStructValues = [llvm:constInt(LLVM_TID, tid)];
     foreach FunctionRef fr in functionRefs {
@@ -182,12 +194,30 @@ function createListDescInit(InitModuleContext cx, int tid, t:SemType memberType)
     return cx.llContext.constStruct(initStructValues);    
 }
 
+function createMappingDescType(t:Context tc, int tid, t:SemType semType) returns llvm:StructType {
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, semType);
+    // tid, fieldCount, restField, individualFields...
+    return llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, llStructureDescPtrType, llvm:arrayType(LLVM_MEMBER_TYPE, mat.names.length())]);
+}
+
+function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {  
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
+    llvm:ConstValue[] llFields = from var ty in mat.types select getMemberType(cx, ty);
+    return cx.llContext.constStruct([
+        llvm:constInt(LLVM_TID, tid),
+        llvm:constInt("i32", llFields.length()),
+        getMemberType(cx, mat.rest),
+        getFillerDesc(cx, mat.rest),
+        cx.llContext.constArray(LLVM_MEMBER_TYPE, llFields)
+    ]);
+}
+
 // Type of the value should be llStructureDescPtrType
 function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:ConstPointerValue {
     StructureBasicType? basic = fillableStructureBasicType(cx.tc, memberType);
     // JBUG narrowing does not work if you say `== ()`
     if basic is () {
-        return llvm:constNull(llStructureDescPtrType);
+        return llNoFillerDesc;
     }
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[basic];
     InherentTypeDefn? existingDefn = defns[memberType];
@@ -209,26 +239,12 @@ function fillableStructureBasicType(t:Context tc, t:SemType semType) returns Str
         }
     }
     if basic == STRUCTURE_MAPPING {
-        if t:mappingAtomicTypeRw(tc, semType) != () {
+        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, semType);
+        if  mat != () && mat.names.length() == 0 {
             return basic;
         }
     }
     return ();
-}
-
-function createMappingDescType(int tid, t:MappingAtomicType mat) returns llvm:StructType {
-    // tid, fieldCount, restField, individualFields...
-    return llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, llvm:arrayType(LLVM_MEMBER_TYPE, mat.names.length())]);
-}
-
-function createMappingDescInit(InitModuleContext cx, int tid, t:MappingAtomicType mat) returns llvm:ConstValue {    
-    llvm:ConstValue[] llFields = from var ty in mat.types select getMemberType(cx, ty);
-    return cx.llContext.constStruct([
-        llvm:constInt(LLVM_TID, tid),
-        llvm:constInt("i32", llFields.length()),
-        getMemberType(cx, mat.rest),
-        cx.llContext.constArray(LLVM_MEMBER_TYPE, llFields)
-    ]);
 }
 
 function getMemberType(InitModuleContext cx, t:SemType memberType) returns llvm:ConstValue {
@@ -327,14 +343,111 @@ function finishSubtypeDefns(InitModuleContext cx) {
 }
 
 function createSubtypeStruct(InitModuleContext cx, t:UniformTypeCode typeCode, t:ComplexSemType semType) returns SubtypeStruct {
-    // JBUG if we use a match statement for this, then we get an error for `ptr` being uninitialized
-    if typeCode == t:UT_LIST_RW {
-        return createListSubtypeStruct(cx, semType); 
-    }
-    else if typeCode == t:UT_MAPPING_RW {
-        return createMappingSubtypeStruct(cx, semType); 
+    match typeCode {
+        t:UT_BOOLEAN => {
+            return createBooleanSubtypeStruct(cx, semType);
+        }
+        t:UT_INT => {
+            return createIntSubtypeStruct(cx, semType);
+        }
+        t:UT_FLOAT => {
+            return createFloatSubtypeStruct(cx, semType);
+        }
+        t:UT_DECIMAL => {
+            return createDecimalSubtypeStruct(cx, semType);
+        }
+        t:UT_STRING => {
+            return createStringSubtypeStruct(cx, semType);
+        }
+        t:UT_LIST_RW => {
+            return createListSubtypeStruct(cx, semType); 
+        }
+        t:UT_MAPPING_RW => {
+            return createMappingSubtypeStruct(cx, semType); 
+        }
     }
     panic err:impossible(`subtypes of uniform type ${typeCode} are not implemented`);    
+}
+
+function createBooleanSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(semType);
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr],
+        values: [getSubtypeContainsFunc(cx, sub.value ? "true" : "false")]
+    };
+}
+
+function createIntSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    t:IntSubtype ranges = <t:IntSubtype>t:intSubtype(semType);
+    if ranges.length() == 0 {
+        panic err:impossible("empty list of int ranges in complex subtype");
+    }
+    return {    
+        types: [cx.llTypes.subtypeContainsFunctionPtr, "i64", llvm:arrayType(llIntRangeType, ranges.length())],
+        values: [
+            getSubtypeContainsFunc(cx, TYPE_KIND_INT),
+            llvm:constInt("i64", ranges.length()),
+            cx.llContext.constArray(llIntRangeType,
+                                    from var r in ranges select cx.llContext.constStruct([llvm:constInt(LLVM_INT, r.min),
+                                                                                          llvm:constInt(LLVM_INT, r.max)]))
+        ]
+    };
+}
+
+function createFloatSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    t:FloatSubtype sub = <t:FloatSubtype>t:floatSubtype(semType);
+    int len = sub.values.length();
+    if len == 0 {
+        panic err:impossible("empty list of float ranges in complex subtype");
+    }
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", "i32", llvm:arrayType(LLVM_DOUBLE, len)],
+        values: [
+            getSubtypeContainsFunc(cx, TYPE_KIND_FLOAT),
+            llvm:constInt("i32", len),
+            llvm:constInt("i32", sub.allowed ? 1 : 0),
+            cx.llContext.constArray(LLVM_DOUBLE, from var d in sub.values select llvm:constFloat(LLVM_DOUBLE, d))
+        ]
+    };
+}
+
+function createDecimalSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    t:DecimalSubtype sub = <t:DecimalSubtype>t:decimalSubtype(semType);
+    int len = sub.values.length();
+    if len == 0 {
+        panic err:impossible("empty list of decimal ranges in complex subtype");
+    }
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", "i32", llvm:arrayType(LLVM_DECIMAL_CONST, len)],
+        values: [
+            getSubtypeContainsFunc(cx, TYPE_KIND_DECIMAL),
+            llvm:constInt("i32", len),
+            llvm:constInt("i32", sub.allowed ? 1 : 0),
+            cx.llContext.constArray(LLVM_DECIMAL_CONST, from var d in sub.values select getInitDecimal(cx, d))
+        ]
+    };
+}
+
+function createStringSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    t:StringSubtype sub = <t:StringSubtype>t:stringSubtype(semType);
+    string[] strs = [];
+    foreach string s in sub.char.values {
+        strs.push(s);
+    }
+    foreach string s in sub.nonChar.values {
+        strs.push(s);
+    }
+    llvm:ConstValue[] strConsts = from var s in strs.sort() select getInitString(cx, s);
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", "i16", "i16", llvm:arrayType(LLVM_TAGGED_PTR, strs.length())],
+        values: [
+            getSubtypeContainsFunc(cx, TYPE_KIND_STRING),
+            llvm:constInt("i32", strs.length()),
+            llvm:constInt("i16", sub.char.allowed ? 1 : 0),
+            llvm:constInt("i16", sub.nonChar.allowed ? 1 : 0),
+            cx.llContext.constArray(LLVM_TAGGED_PTR, strConsts)
+        ]
+    };
 }
 
 function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
@@ -395,7 +508,7 @@ function createRecordSubtypeStruct(InitModuleContext cx, string[] fieldNames, t:
     final int nFields = fieldNames.length();
     llvm:ConstValue[] llFields = [];
     foreach int i in 0 ..< fieldNames.length() {
-        llFields.push(cx.llContext.constStruct([addInitString(cx, fieldNames[i]), llvm:constInt(LLVM_BITSET, fieldTypes[i])]));
+        llFields.push(cx.llContext.constStruct([getInitString(cx, fieldNames[i]), llvm:constInt(LLVM_BITSET, fieldTypes[i])]));
     }
     return {
         types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", llvm:arrayType(llFieldType, nFields)],
@@ -434,12 +547,6 @@ function getSubtypeContainsFunc(InitModuleContext cx, TypeKind tk) returns llvm:
     }
 }
 
-function addInitString(InitModuleContext cx, string str) returns llvm:ConstPointerValue {
-    int index = cx.stringCount;
-    cx.stringCount += 1;
-    return addStringDefn(cx.llContext, cx.llMod, index, str);
-}
-
 function addTypeAlias(InitModuleContext cx, string sym, TypeDefn defn) {
     _ = cx.llMod.addAlias(defn.llType, defn.ptr, sym);
 }
@@ -473,4 +580,22 @@ function getInitRuntimeFunction(InitModuleContext cx, string symbol, llvm:Functi
         cx.runtimeFuncs[symbol] = newDecl;
         return newDecl;
     }
+}
+
+// XXX this duplicates code in Scaffold
+function getInitString(InitModuleContext cx, string str) returns llvm:ConstPointerValue {
+    llvm:ConstPointerValue? curDefn = cx.stringDefns[str];
+    if curDefn != () {
+        return curDefn;
+    }
+    llvm:ConstPointerValue newDefn = addStringDefn(cx.llContext, cx.llMod, cx.stringDefns.length(), str);
+    cx.stringDefns[str] = newDefn;
+    return newDefn;
+}
+
+// This is relatively uncommon and LLVM will eliminate duplicates for us.
+function getInitDecimal(InitModuleContext cx, decimal d) returns llvm:ConstPointerValue {
+    llvm:ConstPointerValue val = addDecimalDefn(cx.llContext, cx.llMod, cx.decimalCount, d.toString());
+    cx.decimalCount += 1;
+    return val;
 }
