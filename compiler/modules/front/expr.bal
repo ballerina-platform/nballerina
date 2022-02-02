@@ -1134,7 +1134,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     else {
         func = check genImportedFunctionRef(cx, prefix, expr.funcName, expr.qNamePos);
     }
-    check validArgumentCount(cx, func, expr.args, false, expr.openParenPos);
+    check validArgumentCount(cx, func, expr);
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
@@ -1143,14 +1143,13 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         curBlock = nextBlock;
         args.push(arg);
     }
-    //check validArgumentTypes(cx, func, args, expr);
     return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, (), expr.target);
     bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
-    check validArgumentCount(cx, func, expr.args, true, expr.opPos);
+    check validArgumentCount(cx, func, expr);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:Operand[] args = [target];
@@ -1159,7 +1158,6 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
         curBlock = nextBlock;
         args.push(arg);
     }
-    //check validArgumentTypes(cx, func, args, expr);
     return codeGenCall(cx, curBlock, func, args, expr.namePos);
 }
 
@@ -1176,17 +1174,17 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
     return { result: constifyRegister(reg), block: curBlock };    
 }
 
-function validArgumentCount(ExprContext cx, bir:FunctionRef func, s:Expr[] suppliedArgs, boolean isMethod, Position pos) returns CodeGenError? {
-    // TODO fix for unimplemented arg count on io:println
-    int p = isMethod ? 1 : 0; 
+function validArgumentCount(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
+    int p = call is s:MethodCallExpr ? 1 : 0; 
+    s:Expr[] suppliedArgs = call.args;
     int nExpectedArgs = func.signature.paramTypes.length();
     int nSuppliedArgs = suppliedArgs.length() + p;
+
     if nSuppliedArgs == nExpectedArgs {
         return ();
     }
     if nSuppliedArgs < nExpectedArgs {
-        // TODO fix location to ending parenthesis 
-        return cx.semanticErr("too few arguments for call to function", pos);
+        return cx.semanticErr("too few arguments for call to function", call.closeParenPos);
     }
     else {
         return cx.semanticErr("too many arguments for call to function", s:range(suppliedArgs[nExpectedArgs - p]));

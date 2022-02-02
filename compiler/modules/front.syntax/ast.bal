@@ -252,6 +252,7 @@ public type ErrorConstructorExpr record {|
 public type FunctionCallExpr record {|
     *PositionFields;
     Position openParenPos;
+    Position closeParenPos;
     Position qNamePos;
     string? prefix = ();
     string funcName;
@@ -262,6 +263,7 @@ public type MethodCallExpr record {|
     *PositionFields;
     Position opPos; // position of .
     Position openParenPos;
+    Position closeParenPos;
     Position namePos;
     string methodName;
     Expr target;
