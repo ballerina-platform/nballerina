@@ -362,17 +362,15 @@ type MappingAccessType "."|"["|"fill";
 
 // if accessType is ".", k must be a string
 function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, Position pos) returns CodeGenError|RegExprEffect {
-    string? kVal = t:singleStringShape(k.semType);
     boolean maybeMissing = true;
-    if kVal != () {
-        if t:mappingMemberRequired(cx.mod.tc, mapping.semType, kVal) {
-            maybeMissing = false;
-        }
-        else if accessType == "." {
-            return cx.semanticErr(`field access to ${kVal} is invalid because field may not be present`, pos=pos);
-        }
+    if t:mappingMemberRequired(cx.mod.tc, mapping.semType, k.semType) {
+        maybeMissing = false;
     }
-    t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, kVal);
+    else if accessType == "." {
+        string fieldName = (<bir:StringConstOperand>k).value;
+        return cx.semanticErr(`field access to ${fieldName}} is invalid because field may not be present`, pos=pos);
+    }
+    t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, k.semType);
     bir:INSN_MAPPING_FILLING_GET|bir:INSN_MAPPING_GET name = bir:INSN_MAPPING_GET;
     if maybeMissing {
         if accessType == "fill" {
@@ -774,7 +772,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
                 return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
             }
         }
-        t:SemType expectedMemberType = t:mappingMemberType(cx.mod.tc, resultType, name);
+        t:SemType expectedMemberType = t:mappingMemberType(cx.mod.tc, resultType, t:stringConst(name));
         bir:Operand operand;
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, expectedMemberType, f.value);
         operands.push(operand);
