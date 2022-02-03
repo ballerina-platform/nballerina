@@ -255,7 +255,7 @@ function convertToDecimalEval(err:SemanticContext cx, Position pos, float|int va
 }
 
 
-function fpLiteralValue(err:SemanticContext cx, t:SemType? expectedType, string untypedLiteral, string? typeSuffix, Position pos) returns float|decimal|err:Semantic|err:Unimplemented {
+function fpLiteralValue(err:SemanticContext cx, t:SemType? expectedType, string untypedLiteral, string? typeSuffix, Position pos) returns float|decimal|err:Semantic {
     if typeSuffix != () {
         return typeSuffix is s:FLOAT_TYPE_SUFFIX ? floatFromFpLiteral(cx, untypedLiteral, pos) : check decimalFromFpLiteral(cx, untypedLiteral, pos);
     }
@@ -267,7 +267,7 @@ function fpLiteralValue(err:SemanticContext cx, t:SemType? expectedType, string 
     }
 }
 
-function intLiteralValue(err:SemanticContext cx, t:SemType? expectedType, s:IntLiteralBase base, string digits, Position pos) returns int|float|decimal|err:Semantic|err:Unimplemented {
+function intLiteralValue(err:SemanticContext cx, t:SemType? expectedType, s:IntLiteralBase base, string digits, Position pos) returns int|float|decimal|err:Semantic {
     if expectedType == () || t:includesSome(expectedType, t:INT) {
         return check intFromLiteral(cx, base, digits, pos);
     }  
@@ -294,9 +294,9 @@ function floatFromFpLiteral(err:SemanticContext cx, string digits, Position pos,
 
 // Even if the decimal floating point literal is parsed correctly,
 // overflows should return an error.
-function decimalFromFpLiteral(err:SemanticContext cx, string decimalStr, Position pos, s:IntLiteralBase base = 10) returns decimal|err:Semantic|err:Unimplemented {
+function decimalFromFpLiteral(err:SemanticContext cx, string decimalStr, Position pos, s:IntLiteralBase base = 10) returns decimal|err:Semantic {
     if base == 16 {
-        return cx.unimplementedErr("hexadecimal int cannot be converted to decimal", pos=pos);
+        return cx.semanticErr("hexadecimal int cannot be assigned to decimal", pos=pos);
     }
     decimal|error d = decimal:fromString(decimalStr);
     if d is error {

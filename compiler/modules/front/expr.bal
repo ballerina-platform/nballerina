@@ -90,7 +90,7 @@ class ExprContext {
         return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.defn.name);
     }
 
-    public function unimplementedErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Unimplemented {
+    function unimplementedErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Unimplemented {
         return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.defn.name);
     }
 

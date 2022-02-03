@@ -43,5 +43,4 @@ public function illegalArgument(d:Message detail) returns Panic {
 
 public type SemanticContext object {
     public function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns Semantic;
-    public function unimplementedErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns Unimplemented;
 };

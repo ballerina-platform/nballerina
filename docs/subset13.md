@@ -373,6 +373,7 @@ Two kinds of `import` are supported.
    * the only function from `ballerina/io` that can be called is `println`
    * `println` only accepts a single argument (which is of type `any`)
 2. An import with no organization and with a module name starting with `root`. An `import root.X;` in a file `F.bal` will read the module from the files `F.modules/X/*.bal`.
+3. Hexadecimal int cannot be assigned where a decimal is contextually expected. i.e. `decimal x = 0x1234` is not allowed.
 
 ## Notes
 
