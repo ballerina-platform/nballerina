@@ -217,9 +217,16 @@ function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicTyp
     }
     int nonRepeatedLen = int:max(members.initial.length(), lt.members.initial.length());
     foreach int i in 0 ..< nonRepeatedLen {
-        fixedArraySet(members, i, 
-            intersect(listMemberAt(members, rest, i), listMemberAt(lt.members, lt.rest, i)));
-    } 
+        fixedArraySet(members, i, intersect(
+                                        listMemberAt(members, rest, i),
+                                        listMemberAt(lt.members, lt.rest, i)));
+    }
+    // Intersect the last member of initial array
+    if nonRepeatedLen < members.fixedLength {
+        members.initial[nonRepeatedLen] =  intersect(
+                                                listMemberAt(members, rest, nonRepeatedLen), 
+                                                listMemberAt(lt.members, lt.rest, nonRepeatedLen));
+    }
     if ltLen < newLen {
         if isNever(lt.rest) {
             return ();
@@ -351,13 +358,15 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
     boolean lastMemberRepeats = members.fixedLength > initCount;
 
     // No need to expand
-    if setIndex == 0 || setIndex < initCount - (lastMemberRepeats ? 1 : 0) {
+    if setIndex < initCount - (lastMemberRepeats ? 1 : 0) {
         members.initial[setIndex] = m;
         return;
     }
-    SemType lastMember = members.initial[initCount - 1]; 
-    foreach int i in initCount ..< setIndex + 1 {
-        members.initial.push(lastMember);
+    if initCount != 0 {
+        SemType lastMember = members.initial[initCount - 1]; 
+        foreach int i in initCount ... (setIndex + 1) {
+            members.initial.push(lastMember);
+        }
     }
     members.initial[setIndex] = m;
 }
@@ -377,7 +386,7 @@ function listConjunction(Context cx, Conjunction? con) returns ListConjunction? 
     return ();
 }
 
-function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns SemType {
+function bddListMemberType(Context cx, Bdd b, IntSubtype? key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
@@ -390,19 +399,33 @@ function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns S
     }
 }
 
-function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
+function listAtomicMemberType(ListAtomicType atomic, IntSubtype? key) returns SemType {
+    return listAtomicMemberTypeAt(atomic.members, atomic.rest, key);
+}
+
+function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSubtype? key) returns SemType {
     if key != () {
-        if key < 0 {
-            return NEVER;
+        SemType m = NEVER;
+        int initLen = fixedArray.initial.length();
+        int fixedLen = fixedArray.fixedLength;
+        if fixedLen != 0 {
+            foreach var i in 0 ..< initLen {
+                if intSubtypeContains(key, i) {
+                    m = union(m, fixedArrayGet(fixedArray, i));
+                }
+            }
+            if intSubtypeOverlapRange(key, initLen, fixedLen - 1) {
+                m = union(m, fixedArrayGet(fixedArray, fixedLen - 1));
+            }
         }
-        else if key < atomic.members.fixedLength {
-            return fixedArrayGet(atomic.members, key);
+        if fixedLen == 0 || intSubtypeContainsGreaterThan(key, fixedLen - 1) {
+            m = union(m, rest);
         }
-        return atomic.rest;
+        return m;
     }
-    SemType m = atomic.rest;
-    if atomic.members.fixedLength > 0 {
-        foreach var ty in atomic.members.initial {
+    SemType m = rest;
+    if fixedArray.fixedLength > 0 {
+        foreach var ty in fixedArray.initial {
             m = union(m, ty);
         }
     }

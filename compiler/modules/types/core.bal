@@ -918,13 +918,17 @@ function bddListAtomicType(Env env, Bdd bdd, ListAtomicType top) returns ListAto
 // This is what Castagna calls projection.
 // We will extend this to allow `key` to be a SemType, which will turn into an IntSubtype.
 // If `t` is not a list, NEVER is returned
-public function listMemberType(Context cx, SemType t, int? key = ()) returns SemType {
+public function listMemberType(Context cx, SemType t, SemType? k = INT) returns SemType {
     if t is UniformTypeBitSet {
         return (t & LIST) != 0 ? TOP : NEVER;
     }
     else {
-        return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), key, TOP),
-                     bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), key, TOP));
+        IntSubtype? intSubtype = ();
+        if k is ComplexSemType {
+            intSubtype = <IntSubtype>getComplexSubtypeData(k, UT_INT);
+        }
+        return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), intSubtype, TOP),
+                     bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), intSubtype, TOP));
     }
 }
 

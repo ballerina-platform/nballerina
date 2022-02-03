@@ -133,6 +133,21 @@ function intSubtypeComplement(SubtypeData d) returns SubtypeData {
     return rangeListComplement(v).cloneReadOnly();
 }
 
+// `min` and `max` are inclusive
+function intSubtypeOverlapRange(IntSubtype subtype, int min, int max) returns boolean {
+    IntSubtype range = [{ min, max }];
+    return intSubtypeIntersect(subtype, range) != false;
+}
+
+function intSubtypeContainsGreaterThan(IntSubtype subtype, int value) returns boolean {
+    foreach Range range in subtype {
+        if range.max > value {
+            return true;
+        }
+    }
+    return false;
+}
+
 function rangeListUnion(Range[] v1, Range[] v2) returns Range[] {
     Range[] result = [];
     int i1 = 0;

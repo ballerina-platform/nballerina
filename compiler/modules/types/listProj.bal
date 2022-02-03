@@ -1,21 +1,22 @@
 // Untested full implementation of list projection.
 
 // Based on listMemberType
-public function listProj(Context cx, SemType t, int k) returns SemType {
-    if k < 0 {
-        return NEVER;
-    }
+public function listProj(Context cx, SemType t, SemType k) returns SemType {
     if t is UniformTypeBitSet {
         return (t & LIST) != 0 ? TOP : NEVER;
     }
     else {
-        return union(listProjBdd(cx, k, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()),
-                     listProjBdd(cx, k, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
+        IntSubtype? intSubtype = ();
+        if k is ComplexSemType {
+            intSubtype = <IntSubtype>getComplexSubtypeData(k, UT_INT);
+        }
+        return union(listProjBdd(cx, intSubtype, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()),
+                listProjBdd(cx, intSubtype, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
     }
 }
 
 // Based on bddEvery
-function listProjBdd(Context cx, int k, Bdd b, Conjunction? pos, Conjunction? neg) returns SemType {
+function listProjBdd(Context cx, IntSubtype? k, Bdd b, Conjunction? pos, Conjunction? neg) returns SemType {
     if b is boolean {
         return b ? listProjPath(cx, k, pos, neg) : NEVER;
     }
@@ -27,7 +28,7 @@ function listProjBdd(Context cx, int k, Bdd b, Conjunction? pos, Conjunction? ne
 }
 
 // Based on listFormulaIsEmpty
-function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) returns SemType {
+function listProjPath(Context cx, IntSubtype? k, Conjunction? pos, Conjunction? neg) returns SemType {
     FixedLengthArray members;
     SemType rest;
     if pos == () {
@@ -75,9 +76,9 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
 // when the type of e is given by members and rest.
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
-function listProjExclude(Context cx, int k, FixedLengthArray members, SemType rest, Conjunction? neg) returns SemType {
+function listProjExclude(Context cx, IntSubtype? k, FixedLengthArray members, SemType rest, Conjunction? neg) returns SemType {
     if neg == () {
-        return listMemberAt(members, rest, k);
+        return listAtomicMemberTypeAt(members, rest, k);
     }
     else {
         int len = members.fixedLength;
