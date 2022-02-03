@@ -391,4 +391,4 @@ Two kinds of `import` are supported.
 
 * Singleton types of boolean, int, float, decimal, string.
 * `byte` type
-* Logical expressions (e.g. `i is int && i < 10`).
+* `&&` and `||` operators
