@@ -320,7 +320,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
                              m,
                              check buildConstString(builder, scaffold, fieldName),
                              check buildWideRepr(builder, scaffold, operand, REPR_ANY,
-                                                 t:mappingMemberType(tc, mappingType, fieldName))
+                                                 t:mappingMemberType(tc, mappingType, t:stringConst(fieldName)))
                          ]);
     }
     builder.store(m, scaffold.address(insn.result));

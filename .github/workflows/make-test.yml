@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     env:
-      JBAL_VERSION: swan-lake-beta6
+      JBAL_VERSION: '2201.0.0'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -28,26 +28,26 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            ~/ballerina-*-${{ env.JBAL_VERSION }}.*
+            ~/ballerina-${{ env.JBAL_VERSION }}-*.*
           key: jbal-${{ env.JBAL_VERSION }}-${{ runner.os }}
       - name: Download jBallerina deb
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: |
-          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/v$JBAL_VERSION/ballerina-linux-installer-x64-$JBAL_VERSION.deb" > $HOME/ballerina-linux-installer-x64-$JBAL_VERSION.deb
+          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/v$JBAL_VERSION/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb" > $HOME/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb
       - name: Install jBallerina deb
         if: runner.os == 'Linux'
         run: |
-          sudo dpkg -i $HOME/ballerina-linux-installer-x64-$JBAL_VERSION.deb
+          sudo dpkg -i $HOME/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb
           echo "/usr/lib/ballerina/bin" >> $GITHUB_PATH
           echo "/usr/lib/ballerina/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_PATH
       - name: Download jBallerina pkg
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'macOs'
         run: |
-          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/v$JBAL_VERSION/ballerina-macos-installer-x64-$JBAL_VERSION.pkg" > $HOME/ballerina-macos-installer-x64-$JBAL_VERSION.pkg
+          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/v$JBAL_VERSION/ballerina-$JBAL_VERSION-swan-lake-macos-x64.pkg" > $HOME/ballerina-$JBAL_VERSION-swan-lake-macos-x64.pkg
       - name: Install jBallerina pkg
         if: runner.os == 'macOs'
         run: |
-          installer -pkg  $HOME/ballerina-macos-installer-x64-$JBAL_VERSION.pkg -target CurrentUserHomeDirectory
+          installer -pkg  $HOME/ballerina-$JBAL_VERSION-swan-lake-macos-x64.pkg -target CurrentUserHomeDirectory
           chmod +x "$HOME/Library/Ballerina/bin/bal"
           echo "$HOME/Library/Ballerina/bin" >> $GITHUB_PATH
           echo "JAVA=$HOME/Library/Ballerina/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_ENV
@@ -64,20 +64,26 @@ jobs:
             test/out
 
   test-jni:
-    if: ${{ false }}  # disable due to JBUG #34341
     env:
-      JBAL_VERSION: swan-lake-beta6
+      JBAL_VERSION: '2201.0.0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Cache jBallerina
+        id: cache-jbal
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/ballerina-${{ env.JBAL_VERSION }}-*.*
+          key: jbal-${{ env.JBAL_VERSION }}-${{ runner.os }}
       - name: Download jBallerina deb
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: |
-          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/v$JBAL_VERSION/ballerina-linux-installer-x64-$JBAL_VERSION.deb" > $HOME/ballerina-linux-installer-x64-$JBAL_VERSION.deb
+          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/v$JBAL_VERSION/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb" > $HOME/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb
       - name: Install jBallerina deb
         if: runner.os == 'Linux'
         run: |
-          sudo dpkg -i $HOME/ballerina-linux-installer-x64-$JBAL_VERSION.deb
+          sudo dpkg -i $HOME/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb
           echo "/usr/lib/ballerina/bin" >> $GITHUB_PATH
           echo "/usr/lib/ballerina/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_PATH
       - name: Cache Gradle

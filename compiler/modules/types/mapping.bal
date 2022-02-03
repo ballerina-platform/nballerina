@@ -393,7 +393,7 @@ class MappingPairing {
     private function curName2() returns string => self.names2[self.i2];
 }
 
-function bddMappingMemberType(Context cx, Bdd b, string? key, SemType accum) returns SemType {
+function bddMappingMemberType(Context cx, Bdd b, StringSubtype? key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
@@ -407,13 +407,17 @@ function bddMappingMemberType(Context cx, Bdd b, string? key, SemType accum) ret
 }
 
 
-function mappingAtomicMemberType(MappingAtomicType atomic, string? key) returns SemType {
+function mappingAtomicMemberType(MappingAtomicType atomic, StringSubtype? key) returns SemType {
     if key != () {
-        int? i = atomic.names.indexOf(key);
-        if i != () {
-            return atomic.types[i];
+        SemType m = NEVER;
+        StringSubtypeIntersectionResult intersection = stringSubtypeIntersection(key, atomic.names);
+        foreach int index in intersection.indices {
+            m = union(m, atomic.types[index]);
         }
-        return atomic.rest;
+        if !intersection.covered {
+            m = union(m, atomic.rest);
+        }
+        return m;
     }
     SemType m = atomic.rest;
     foreach var ty in atomic.types {
@@ -422,18 +426,17 @@ function mappingAtomicMemberType(MappingAtomicType atomic, string? key) returns 
     return m;
 }
 
-function bddMappingMemberRequired(Context cx, Bdd b, string k, boolean requiredOnPath) returns boolean {
+function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean requiredOnPath) returns boolean {
     if b is boolean {
         return b ? requiredOnPath : true;
     }
     else {
         return bddMappingMemberRequired(cx, b.left, k,
-                                        requiredOnPath || cx.mappingAtomType(b.atom).names.indexOf(k) != ())
+                                        requiredOnPath || stringSubtypeContainedIn(k, cx.mappingAtomType(b.atom).names))
                && bddMappingMemberRequired(cx, b.middle, k, requiredOnPath)
                && bddMappingMemberRequired(cx, b.right, k, requiredOnPath);
     }
 }
-
 
 final UniformTypeOps mappingRoOps = {
     union: bddSubtypeUnion,

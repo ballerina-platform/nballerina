@@ -246,13 +246,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
         else if t:isSubtypeSimple(t, t:MAPPING) {
             if index is s:Identifier {
                 t:SemType kt = lookupSemtype(m, index);
-                if kt == t:STRING {
-                    return t:mappingMemberType(tc, t, ());
-                }
-                string? k = t:singleStringShape(kt);
-                if k != () {
-                    return t:mappingMemberType(tc, t, k);
-                }
+                return t:mappingMemberType(tc, t, kt);
             }
             test:assertFail("index for mapping projection must be a string");
         }
