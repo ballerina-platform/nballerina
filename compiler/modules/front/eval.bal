@@ -275,7 +275,7 @@ function intLiteralValue(err:SemanticContext cx, t:SemType? expectedType, s:IntL
         return floatFromFpLiteral(cx, digits, pos, base);
     }
     else if t:includesSome(expectedType, t:DECIMAL) {
-        return check decimalFromFpLiteral(cx, digits, pos);
+        return check decimalFromFpLiteral(cx, digits, pos, base);
     }
     else {
         return check intFromLiteral(cx, base, digits, pos);
