@@ -48,7 +48,7 @@ the target version of the Ballerina Language Specification is the [2022-01-06 dr
    * `panic` statement
 * Expressions:
    * literals for nil, boolean, int, float and string
-   * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
+   * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`, `&&`, `||`
    * unary operators: `-`, `!`, `~`
    * type cast `<T>E`
    * type test `E is T`, `E !is T`
@@ -228,7 +228,15 @@ const-expr = inner-expr # must also satisfy restrictions of const-expr as in Bal
 
 const-reference-expr = identifier | qualified-identifier # must refer to something defined with a const-decl
 
-inner-expr = bitwise-or-expr
+inner-expr = logical-or-expr
+
+logical-or-expr =
+  logical-and-expr
+  | logical-or-expr "||" logical-and-expr
+
+logical-and-expr =
+  bitwise-or-expr
+  | logical-and-expr "&&" bitwise-or-expr
 
 bitwise-or-expr =
   bitwise-xor-expr
@@ -381,5 +389,6 @@ Two kinds of `import` are supported.
 
 ## Additions from subset 12
 
-* singleton types of boolean, int, float, decimal, string
+* Singleton types of boolean, int, float, decimal, string.
 * `byte` type
+* Logical expressions (e.g. `i is int && i < 10`).
