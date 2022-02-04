@@ -11,18 +11,16 @@ define void @_B04rootmain() !dbg !5 {
   %3 = alloca i1
   %x.1 = alloca i8 addrspace(1)*
   %_ = alloca i8 addrspace(1)*
-  %x.2 = alloca i8 addrspace(1)*
   %4 = alloca i1
   %5 = alloca i1
   %6 = alloca i1
-  %x.3 = alloca i8 addrspace(1)*
   %_.1 = alloca i8 addrspace(1)*
-  %x.4 = alloca i64
+  %x.2 = alloca i64
   %_.2 = alloca i64
   %7 = alloca i8
   %8 = load i8*, i8** @_bal_stack_guard
   %9 = icmp ult i8* %7, %8
-  br i1 %9, label %53, label %10
+  br i1 %9, label %51, label %10
 10:
   store i1 1, i1* %b
   %11 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
@@ -56,48 +54,44 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* %28, i8 addrspace(1)** %_
   br label %29
 29:
-  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  store i8 addrspace(1)* %30, i8 addrspace(1)** %x.2
-  %31 = load i1, i1* %b
-  br i1 %31, label %41, label %32
-32:
-  %33 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
-  %34 = addrspacecast i8 addrspace(1)* %33 to i8*
-  %35 = ptrtoint i8* %34 to i64
-  %36 = and i64 %35, 2233785415175766016
-  %37 = icmp eq i64 %36, 504403158265495552
-  store i1 %37, i1* %4
-  %38 = load i1, i1* %4
-  %39 = xor i1 1, %38
-  store i1 %39, i1* %5
-  %40 = load i1, i1* %5
-  store i1 %40, i1* %6
-  br label %43
-41:
-  %42 = load i1, i1* %b
-  store i1 %42, i1* %6
-  br label %43
-43:
-  %44 = load i1, i1* %6
-  br i1 %44, label %45, label %48
-45:
-  %46 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
-  store i8 addrspace(1)* %46, i8 addrspace(1)** %x.3
-  %47 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
-  store i8 addrspace(1)* %47, i8 addrspace(1)** %_.1
-  br label %52
-48:
-  %49 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
-  %50 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %49)
-  store i64 %50, i64* %x.4
-  %51 = load i64, i64* %x.4
-  store i64 %51, i64* %_.2
-  br label %52
-52:
+  %30 = load i1, i1* %b
+  br i1 %30, label %40, label %31
+31:
+  %32 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %33 = addrspacecast i8 addrspace(1)* %32 to i8*
+  %34 = ptrtoint i8* %33 to i64
+  %35 = and i64 %34, 2233785415175766016
+  %36 = icmp eq i64 %35, 504403158265495552
+  store i1 %36, i1* %4
+  %37 = load i1, i1* %4
+  %38 = xor i1 1, %37
+  store i1 %38, i1* %5
+  %39 = load i1, i1* %5
+  store i1 %39, i1* %6
+  br label %42
+40:
+  %41 = load i1, i1* %b
+  store i1 %41, i1* %6
+  br label %42
+42:
+  %43 = load i1, i1* %6
+  br i1 %43, label %44, label %46
+44:
+  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  store i8 addrspace(1)* %45, i8 addrspace(1)** %_.1
+  br label %50
+46:
+  %47 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %48 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %47)
+  store i64 %48, i64* %x.2
+  %49 = load i64, i64* %x.2
+  store i64 %49, i64* %_.2
+  br label %50
+50:
   ret void
-53:
-  %54 = call i8 addrspace(1)* @_bal_panic_construct(i64 260), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %54)
+51:
+  %52 = call i8 addrspace(1)* @_bal_panic_construct(i64 260), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %52)
   unreachable
 }
 !llvm.module.flags = !{!0}

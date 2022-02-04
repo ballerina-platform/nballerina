@@ -2,6 +2,8 @@
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
+declare i8 addrspace(1)* @_bal_float_to_tagged(double)
 define void @_B04rootmain() !dbg !5 {
   %x = alloca i8 addrspace(1)*
   %1 = alloca i1
@@ -10,12 +12,12 @@ define void @_B04rootmain() !dbg !5 {
   %3 = alloca i1
   %x.2 = alloca i8 addrspace(1)*
   %_ = alloca i8 addrspace(1)*
-  %x.3 = alloca i8 addrspace(1)*
+  %x.3 = alloca double
   %_.1 = alloca i8 addrspace(1)*
   %4 = alloca i8
   %5 = load i8*, i8** @_bal_stack_guard
   %6 = icmp ult i8* %4, %5
-  br i1 %6, label %39, label %7
+  br i1 %6, label %41, label %7
 7:
   %8 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   store i8 addrspace(1)* %8, i8 addrspace(1)** %x
@@ -53,20 +55,22 @@ define void @_B04rootmain() !dbg !5 {
   %32 = load i1, i1* %3
   br i1 %32, label %33, label %36
 33:
-  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
   store i8 addrspace(1)* %34, i8 addrspace(1)** %x.2
   %35 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
   store i8 addrspace(1)* %35, i8 addrspace(1)** %_
   ret void
 36:
-  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  store i8 addrspace(1)* %37, i8 addrspace(1)** %x.3
-  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
-  store i8 addrspace(1)* %38, i8 addrspace(1)** %_.1
+  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
+  %38 = call double @_bal_tagged_to_float(i8 addrspace(1)* %37)
+  store double %38, double* %x.3
+  %39 = load double, double* %x.3
+  %40 = call i8 addrspace(1)* @_bal_float_to_tagged(double %39)
+  store i8 addrspace(1)* %40, i8 addrspace(1)** %_.1
   ret void
-39:
-  %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 260), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %40)
+41:
+  %42 = call i8 addrspace(1)* @_bal_panic_construct(i64 260), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %42)
   unreachable
 }
 !llvm.module.flags = !{!0}
