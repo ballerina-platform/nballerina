@@ -258,7 +258,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if td is s:SingletonTypeDesc {
-        return t:singleton(mod.tc, td.value);
+        s:ResolvedConst resolved =  check resolveConstExpr(mod, modDefn, td.valueExpr, ());
+        return resolved[0];
     }
     if td is s:UnaryTypeDesc && td.op != "!" {
         if td.op == "?" {
