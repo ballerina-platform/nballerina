@@ -1,7 +1,6 @@
-# Language subset 13
+# Language subset 14
 
-For programs that are in the subset, the compiler should conform to the Ballerina Language Specification. For this subset,
-the target version of the Ballerina Language Specification is the [2022-01-06 draft](https://ballerina.io/spec/lang/master/).
+For programs that are in the subset, the compiler should conform to the Ballerina Language Specification [2022R1](https://ballerina.io/spec/lang/2022R1/).
 
 ## Summary
 
@@ -28,6 +27,7 @@ the target version of the Ballerina Language Specification is the [2022-01-06 dr
       * map type: `map<T>`
       * array type: `T[]`
       * record types: `record { T1 f1; T2 f2; }` and `record {| T1 f1; T2 f2; R...; |}`
+      * tuple types: `[T1, T2]` and `[T1, T2, R...]`
    * a reference to a type defined by a type definition
 * Statements:
    * function/method call statement
@@ -120,7 +120,9 @@ primary-type-desc =
   | singleton-type-desc
   | "(" type-desc ")"
   | type-reference
-  | mapping-type-desc
+  | map-type-desc
+  | record-type-desc
+  | tuple-type-desc
 
 builtin-type-name = "any" | "anydata" | "boolean" | "byte" | "int" | "float" | "string" | "error"
 
@@ -131,8 +133,6 @@ singleton-type-desc = simple-const-expr
 # reference to a type definition
 type-reference = identifier | qualified-identifier
 
-mapping-type-desc = map-type-desc | record-type-desc
-
 map-type-desc = "map" "<" type-desc ">"
 
 record-type-desc = inclusive-record-type-desc | exclusive-record-type-desc
@@ -140,6 +140,12 @@ inclusive-record-type-desc = "record" "{" field-desc* "}"
 exclusive-record-type-desc = "record" "{|" field-desc* [rest-field-desc] "|}"
 field-desc = type-desc identifier ";"
 rest-field-desc = type-desc "..." ";"
+
+tuple-type-desc = "[" tuple-member-type-desc-list "]"
+tuple-member-type-desc-list =
+   type-desc ("," type-desc)* ["," tuple-rest-desc]
+   | [ tuple-rest-desc ]
+tuple-rest-desc = type-desc "..."
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -352,11 +358,11 @@ CompoundAssignmentOperator = (as in Ballerina language spec)
 ```
 
 Language spec syntax references:
-* [string-literal](https://ballerina.io/spec/lang/2021R1/#string-literal)
-* [floating-point-literal](https://ballerina.io/spec/lang/2021R1/#floating-point-literal)
-* [int-literal](https://ballerina.io/spec/lang/2021R1/#int-literal)
-* [const-expr](https://ballerina.io/spec/lang/2021R1/#const-expr)
-* [CompoundAssignmentOperator](https://ballerina.io/spec/lang/2021R1/#CompoundAssignmentOperator)
+* [string-literal](https://ballerina.io/spec/lang/2022R1/#string-literal)
+* [floating-point-literal](https://ballerina.io/spec/lang/2022R1/#floating-point-literal)
+* [int-literal](https://ballerina.io/spec/lang/2022R1/#int-literal)
+* [const-expr](https://ballerina.io/spec/lang/2022R1/#const-expr)
+* [CompoundAssignmentOperator](https://ballerina.io/spec/lang/2022R1/#CompoundAssignmentOperator)
 
 ## Semantic restrictions
 
@@ -387,11 +393,9 @@ Two kinds of `import` are supported.
 * The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
 
-## Additions from subset 12
+## Additions from subset 13
 
-* Singleton types of boolean, int, float, decimal, string.
-* `byte` type
-* `&&` and `||` operators
+* Tuple types
 
 ## Implemented spec changes since 2022R1
 
