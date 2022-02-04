@@ -407,22 +407,29 @@ function bddMappingMemberType(Context cx, Bdd b, StringSubtype? key, SemType acc
 }
 
 function mappingAtomicMemberType(MappingAtomicType atomic, StringSubtype? key) returns SemType {
-    if key != () {
-        SemType m = NEVER;
+    SemType memberType = NEVER;
+    foreach SemType ty in mappingAtomicApplicableMemberTypes(atomic, key) {
+        memberType = union(memberType, ty);
+    }
+    return memberType;
+}
+
+function mappingAtomicApplicableMemberTypes(MappingAtomicType atomic, StringSubtype? key) returns SemType[] {
+    SemType[] memberTypes = [];
+    if key == () {
+        memberTypes.push(...atomic.types);
+        memberTypes.push(atomic.rest);
+    }
+    else {
         StringSubtypeListCoverage coverage = stringSubtypeListCoverage(key, atomic.names);
         foreach int index in coverage.indices {
-            m = union(m, atomic.types[index]);
+            memberTypes.push(atomic.types[index]);
         }
         if !coverage.isSubtype {
-            m = union(m, atomic.rest);
+            memberTypes.push(atomic.rest);
         }
-        return m;
     }
-    SemType m = atomic.rest;
-    foreach var ty in atomic.types {
-        m = union(m, ty);
-    }
-    return m;
+    return memberTypes;
 }
 
 function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean requiredOnPath) returns boolean {

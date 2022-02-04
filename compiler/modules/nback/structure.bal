@@ -372,9 +372,11 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
     t:SemType resultType = insn.result.semType;
     if isPotentiallyExact(resultType) {
         if !isMappingMemberTypeExact(scaffold.typeContext(), mappingReg.semType, keyOperand, resultType) {
+            // this clears the exact bit of member
             member = buildClearExact(builder, scaffold, member, resultType);
         }
         else {
+            // this clears the exact bit of `member` only if `mapping` is not exact
             member = buildMemberClearExact(builder, scaffold, mapping, member, resultType);
         }
     }
@@ -382,24 +384,25 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
 }
 
 // When this returns false, we need clear the exact bit on a member that we get from a mapping value.
+// Let M be mapping type and let K be the type of keyOperand.
+// If this function returns true, then it must be the case when a mappping value has as M as
+// its inherent type, then for any field name k in K, if M has a field k, then the type that M requires for k must be
+// equal to t:mappingMemberType(cx, M, K).
 function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand, t:SemType resultType) returns boolean {
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
     if mat == () {
         return false;
     }
-    else {
-        if t:singleStringShape(keyOperand.semType) != () || mat.names.length() == 0 {
-            return true;
-        }
-        // SUBSET singleton types
+    // don't need to check when the condition is false, because there can be only one applicable member type
+    else if t:singleStringShape(keyOperand.semType) == () && mat.names.length() != 0 {
         t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
-        foreach t:SemType ty in mat.types {
+        foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypes(tc, mat, keyOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
             }
         }
-        return isSameTypeWithin(tc, mat.rest, POTENTIALLY_EXACT, peResult);
     }
+    return true;
 }
 
 function isSameTypeWithin(t:Context tc, t:SemType semType, t:SemType within, t:SemType targetType) returns boolean {
@@ -475,6 +478,7 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
     return ();
 }
 
+// This clears the exact bit of the member if the structure is not exact.
 function buildMemberClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value structure, llvm:Value member, t:SemType sourceType) returns llvm:Value {
     RuntimeFunction rf = overloadsExactBit(sourceType) ? taggedMemberClearExactAnyFunction : taggedMemberClearExactPtrFunction;
     return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [structure, member]);

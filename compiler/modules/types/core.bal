@@ -984,6 +984,23 @@ public function mappingMemberRequired(Context cx, SemType t, SemType k) returns 
     }
 }
 
+public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
+    StringSubtype|boolean keyStringType;
+    if keyType is UniformTypeBitSet {
+        keyStringType = (keyType & STRING) != 0;
+    }
+    else {
+        keyStringType = stringSubtype(keyType);
+    }
+    if keyStringType == false {
+        return [];
+    }
+    else {
+        // JBUG doesn't work to use `keyStringType == true`
+        return mappingAtomicApplicableMemberTypes(atomic, keyStringType is boolean ? () : keyStringType).cloneReadOnly();
+    }
+}
+
 public type MappingAlternative record {|
     SemType semType;
     MappingAtomicType[] pos;
