@@ -1,7 +1,6 @@
 # Language subset 13
 
-For programs that are in the subset, the compiler should conform to the Ballerina Language Specification. For this subset,
-the target version of the Ballerina Language Specification is the [2022-01-06 draft](https://ballerina.io/spec/lang/master/).
+For programs that are in the subset, the compiler should conform to the Ballerina Language Specification [2022R1](https://ballerina.io/spec/lang/2022R1/).
 
 ## Summary
 
