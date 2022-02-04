@@ -296,7 +296,7 @@ function floatFromFpLiteral(err:SemanticContext cx, string digits, Position pos,
 // overflows should return an error.
 function decimalFromFpLiteral(err:SemanticContext cx, string decimalStr, Position pos, s:IntLiteralBase base = 10) returns decimal|err:Semantic {
     if base == 16 {
-        return cx.semanticErr("hexadecimal int cannot be assigned to decimal", pos=pos);
+        return cx.semanticErr("decimal values must not use hexadecimal literals", pos=pos);
     }
     decimal|error d = decimal:fromString(decimalStr);
     if d is error {
