@@ -364,6 +364,7 @@ There are the following additional restrictions:
 
  * member access `s[i]` is not supported when `s` has type `string`
  * relational operators are not supported when the static type of either of the operands includes nil
+ * a hexadecimal int cannot be assigned where a decimal is contextually expected. i.e. `decimal x = 0x1234` is not allowed.
 
 Method call syntax can be used for calling the following langlib functions:
 

@@ -257,10 +257,10 @@ function convertToDecimalEval(err:SemanticContext cx, Position pos, float|int va
 
 function fpLiteralValue(err:SemanticContext cx, t:SemType? expectedType, string untypedLiteral, string? typeSuffix, Position pos) returns float|decimal|err:Semantic {
     if typeSuffix != () {
-        return typeSuffix is s:FLOAT_TYPE_SUFFIX ? floatFromFpLiteral(untypedLiteral) : check decimalFromFpLiteral(cx, untypedLiteral, pos);
+        return typeSuffix is s:FLOAT_TYPE_SUFFIX ? floatFromFpLiteral(cx, untypedLiteral, pos) : check decimalFromFpLiteral(cx, untypedLiteral, pos);
     }
     else if expectedType == () || t:includesSome(expectedType, t:FLOAT) || !t:includesSome(expectedType, t:DECIMAL) {
-        return floatFromFpLiteral(untypedLiteral);
+        return floatFromFpLiteral(cx, untypedLiteral, pos);
     }
     else {
         return check decimalFromFpLiteral(cx, untypedLiteral, pos);
@@ -272,12 +272,10 @@ function intLiteralValue(err:SemanticContext cx, t:SemType? expectedType, s:IntL
         return check intFromLiteral(cx, base, digits, pos);
     }  
     else if t:includesSome(expectedType, t:FLOAT) {
-        // BUG base ignored
-        return floatFromFpLiteral(digits);
+        return floatFromFpLiteral(cx, digits, pos, base);
     }
     else if t:includesSome(expectedType, t:DECIMAL) {
-        // BUG base ignored
-        return check decimalFromFpLiteral(cx, digits, pos);
+        return check decimalFromFpLiteral(cx, digits, pos, base);
     }
     else {
         return check intFromLiteral(cx, base, digits, pos);
@@ -286,13 +284,20 @@ function intLiteralValue(err:SemanticContext cx, t:SemType? expectedType, s:IntL
 
 // Since the binary floating point literal is parsed correctly,
 // it is impossible to return an error.
-function floatFromFpLiteral(string digits) returns float {
-    return checkpanic float:fromString(digits);
+function floatFromFpLiteral(err:SemanticContext cx, string digits, Position pos, s:IntLiteralBase base = 10) returns float|err:Semantic {
+    float|error f = base == 10 ? float:fromString(digits) : float:fromHexString("0x" + digits + "p0");
+    if f is error {
+        return cx.semanticErr("invalid float literal", cause=f, pos=pos);
+    }
+    return f;
 }
 
 // Even if the decimal floating point literal is parsed correctly,
 // overflows should return an error.
-function decimalFromFpLiteral(err:SemanticContext cx, string decimalStr, Position pos) returns decimal|err:Semantic {
+function decimalFromFpLiteral(err:SemanticContext cx, string decimalStr, Position pos, s:IntLiteralBase base = 10) returns decimal|err:Semantic {
+    if base == 16 {
+        return cx.semanticErr("hexadecimal int cannot be assigned to decimal", pos=pos);
+    }
     decimal|error d = decimal:fromString(decimalStr);
     if d is error {
         return cx.semanticErr("invalid decimal floating point number", cause=d, pos=pos);
