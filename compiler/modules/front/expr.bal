@@ -115,6 +115,10 @@ class ExprContext {
         return bir:createBasicBlock(self.code, name);
     }
 
+    function discardBasicBlocksFrom(bir:BasicBlock toDiscard) {
+        return bir:discardBasicBlocksFrom(self.code, toDiscard);
+    }
+
     function stmtContext() returns StmtContext|CodeGenError {
         return <StmtContext>self.sc;
     }
@@ -585,8 +589,18 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     var [leftValue, leftFlags] = booleanOperandValue(lhs);
     if leftFlags != 0 {
         if leftValue == isOr {
-            // XXX not correct errors in `right` won't be found
-            // XXX previous code used bb not block1 here
+            // Only to check errors on rhs, result is discarded.
+            // JBUG #34944 can't use `is readonly`
+            if block1 === constBasicBlock {
+                // Generating a const, not allowed to create blocks.
+                _ = check codeGenExprForBoolean(cx, constBasicBlock, right);
+            }
+            else {
+                bir:BasicBlock fakeBlock = cx.createBasicBlock();
+                _ = check codeGenExprForBoolean(cx, fakeBlock, right);
+                cx.discardBasicBlocksFrom(fakeBlock);
+            }
+
             return constExprEffect(cx, block1, leftValue, leftFlags);
         }
         else {
@@ -594,7 +608,7 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
         }
     }
 
-    var evalRightBlock = cx.createBasicBlock();
+    bir:BasicBlock evalRightBlock = cx.createBasicBlock();
     var shortCircuitBlock = cx.createBasicBlock();
     // JBUG var instead tuple type doesn't work
     [bir:BasicBlock, bir:BasicBlock] [ifTrueBlock, ifFalseBlock] = isOr ? [shortCircuitBlock, evalRightBlock] : [evalRightBlock, shortCircuitBlock];
@@ -602,22 +616,37 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     block1.insns.push(condBranch);
     ExprContext rhsCx = cx.createNarrowedExprContext(evalRightBlock, isOr ? lhsIfFalse : lhsIfTrue, pos);
     var { result: rhs, block: evalRightBlock2, ifTrue: rhsIfTrue, ifFalse: rhsIfFalse } = check codeGenExprForBoolean(rhsCx, evalRightBlock, right);
-    // XXX need properly to deal with case when rhs is const or singleton boolean
+    var [rightValue, rightFlags] = booleanOperandValue(rhs);
+    if rightFlags != 0 {
+        bir:BasicBlock joinBlock = joinBlocks(cx, shortCircuitBlock, evalRightBlock2, pos);
+        if rightValue == isOr {
+            return constExprEffect(cx, joinBlock, rightValue, rightFlags);
+        }
+        else {
+            return { result: lhs, block: joinBlock, ifTrue: lhsIfTrue, ifFalse: lhsIfFalse };
+        }
+    }
+
     [NarrowingCombinator, NarrowingCombinator] [ifTrueCombinator, ifFalseCombinator] = isOr ? [unionNarrowing, intersectNarrowing]
                                                                                             : [intersectNarrowing, expandedUnionNarrowing];
     Narrowing[] ifTrue = combineNarrowings(lhsIfTrue, rhsIfTrue, ifTrueCombinator);
     Narrowing[] ifFalse = combineNarrowings(lhsIfFalse, rhsIfFalse, ifFalseCombinator);
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
-    bir:BasicBlock joinBlock = cx.createBasicBlock();
     bir:AssignInsn lhsAssignInsn = { result, operand: lhs, pos };
     shortCircuitBlock.insns.push(lhsAssignInsn);
-    bir:BranchInsn lhsBranchInsn = { dest: joinBlock.label, pos };
-    shortCircuitBlock.insns.push(lhsBranchInsn);
     bir:AssignInsn rhsAssignInsn = { result, operand: rhs, pos };
     evalRightBlock2.insns.push(rhsAssignInsn);
-    bir:BranchInsn rhsBranchInsn = { dest: joinBlock.label, pos };
-    evalRightBlock2.insns.push(rhsBranchInsn);
+    bir:BasicBlock joinBlock = joinBlocks(cx, shortCircuitBlock, evalRightBlock2, pos);
     return { result, block: joinBlock, ifFalse, ifTrue };
+}
+
+function joinBlocks(ExprContext cx, bir:BasicBlock b1, bir:BasicBlock b2, Position pos) returns bir:BasicBlock {
+    bir:BasicBlock joinBlock = cx.createBasicBlock();
+    bir:BranchInsn b1BranchInsn = { dest: joinBlock.label, pos };
+    b1.insns.push(b1BranchInsn);
+    bir:BranchInsn b2BranchInsn = { dest: joinBlock.label, pos };
+    b2.insns.push(b2BranchInsn);
+    return joinBlock;
 }
 
 function combineNarrowings(Narrowing[] lns, Narrowing[] rns, NarrowingCombinator combine) returns Narrowing[] {

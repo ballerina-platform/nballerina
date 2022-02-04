@@ -124,6 +124,10 @@ public function createBasicBlock(FunctionCode code, string? name = ()) returns B
     return bb;
 }
 
+public function discardBasicBlocksFrom(FunctionCode code, BasicBlock toDiscard) {
+    code.blocks.setLength(toDiscard.label);
+}
+
 public function lastInsnRef(BasicBlock bb) returns InsnRef {
     return { block: bb.label, index: bb.insns.length() - 1 };
 }
