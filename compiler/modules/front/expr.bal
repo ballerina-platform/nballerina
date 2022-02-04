@@ -115,8 +115,15 @@ class ExprContext {
         return bir:createBasicBlock(self.code, name);
     }
 
-    function discardBasicBlocksFrom(bir:BasicBlock toDiscard) {
-        return bir:discardBasicBlocksFrom(self.code, toDiscard);
+    function createDummyBasicBlock(bir:BasicBlock bb) returns bir:BasicBlock {
+        return bb === constBasicBlock ? bb : self.createBasicBlock();
+    }
+
+    function discardBasicBlocksFromDummy(bir:BasicBlock dummy) {
+        // JBUG #34944 can't use `is readonly`
+        if dummy !== constBasicBlock {
+             bir:discardBasicBlocksFrom(self.code, dummy);
+        }
     }
 
     function stmtContext() returns StmtContext|CodeGenError {
@@ -580,7 +587,7 @@ function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, 
     return { result, block: nextBlock, ifTrue, ifFalse };
 }
 
-// Nil represents having no narrowing, which is equivalent to being narrowed to it's binding's type
+// Nil represents having no narrowing, which is equivalent to being narrowed to its binding's type
 type NarrowingCombinator function(Narrowing?, Narrowing?) returns Narrowing?;
 
 function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLogicalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
@@ -590,17 +597,9 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     if leftFlags != 0 {
         if leftValue == isOr {
             // Only to check errors on rhs, result is discarded.
-            // JBUG #34944 can't use `is readonly`
-            if block1 === constBasicBlock {
-                // Generating a const, not allowed to create blocks.
-                _ = check codeGenExprForBoolean(cx, constBasicBlock, right);
-            }
-            else {
-                bir:BasicBlock fakeBlock = cx.createBasicBlock();
-                _ = check codeGenExprForBoolean(cx, fakeBlock, right);
-                cx.discardBasicBlocksFrom(fakeBlock);
-            }
-
+            bir:BasicBlock dummyBlock = cx.createDummyBasicBlock(block1);
+            _ = check codeGenExprForBoolean(cx, dummyBlock, right);
+            cx.discardBasicBlocksFromDummy(dummyBlock);
             return constExprEffect(cx, block1, leftValue, leftFlags);
         }
         else {
@@ -618,7 +617,7 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     var { result: rhs, block: evalRightBlock2, ifTrue: rhsIfTrue, ifFalse: rhsIfFalse } = check codeGenExprForBoolean(rhsCx, evalRightBlock, right);
     var [rightValue, rightFlags] = booleanOperandValue(rhs);
     if rightFlags != 0 {
-        bir:BasicBlock joinBlock = joinBlocks(cx, shortCircuitBlock, evalRightBlock2, pos);
+        bir:BasicBlock joinBlock = joinBlocks(cx, [shortCircuitBlock, evalRightBlock2], pos);
         if rightValue == isOr {
             return constExprEffect(cx, joinBlock, rightValue, rightFlags);
         }
@@ -636,16 +635,16 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     shortCircuitBlock.insns.push(lhsAssignInsn);
     bir:AssignInsn rhsAssignInsn = { result, operand: rhs, pos };
     evalRightBlock2.insns.push(rhsAssignInsn);
-    bir:BasicBlock joinBlock = joinBlocks(cx, shortCircuitBlock, evalRightBlock2, pos);
+    bir:BasicBlock joinBlock = joinBlocks(cx, [shortCircuitBlock, evalRightBlock2], pos);
     return { result, block: joinBlock, ifFalse, ifTrue };
 }
 
-function joinBlocks(ExprContext cx, bir:BasicBlock b1, bir:BasicBlock b2, Position pos) returns bir:BasicBlock {
+function joinBlocks(ExprContext cx, bir:BasicBlock[] blocks, Position pos) returns bir:BasicBlock {
     bir:BasicBlock joinBlock = cx.createBasicBlock();
-    bir:BranchInsn b1BranchInsn = { dest: joinBlock.label, pos };
-    b1.insns.push(b1BranchInsn);
-    bir:BranchInsn b2BranchInsn = { dest: joinBlock.label, pos };
-    b2.insns.push(b2BranchInsn);
+    foreach var b in blocks {
+        bir:BranchInsn branchInsn = { dest: joinBlock.label, pos };
+        b.insns.push(branchInsn);
+    }
     return joinBlock;
 }
 
