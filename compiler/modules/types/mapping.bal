@@ -406,15 +406,14 @@ function bddMappingMemberType(Context cx, Bdd b, StringSubtype? key, SemType acc
     }
 }
 
-
 function mappingAtomicMemberType(MappingAtomicType atomic, StringSubtype? key) returns SemType {
     if key != () {
         SemType m = NEVER;
-        StringSubtypeIntersectionResult intersection = stringSubtypeIntersection(key, atomic.names);
-        foreach int index in intersection.indices {
+        StringSubtypeListCoverage coverage = stringSubtypeListCoverage(key, atomic.names);
+        foreach int index in coverage.indices {
             m = union(m, atomic.types[index]);
         }
-        if !intersection.covered {
+        if !coverage.isSubtype {
             m = union(m, atomic.rest);
         }
         return m;

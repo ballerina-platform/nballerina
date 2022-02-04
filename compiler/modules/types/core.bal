@@ -959,7 +959,6 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // This computes the spec operation called "member type of K in T",
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
-// We will extend this to allow `key` to be a SemType, which will turn into a StringSubtype.
 public function mappingMemberType(Context cx, SemType t, SemType k = STRING) returns SemType {
     if t is UniformTypeBitSet {
         return (t & MAPPING) != 0 ? TOP : NEVER;
