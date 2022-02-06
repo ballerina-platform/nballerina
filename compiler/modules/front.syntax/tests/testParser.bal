@@ -40,12 +40,8 @@ function testParser(Kind k, ProductionRule rule, string[] subject, string[] expe
         panic err:impossible("can't normalize the actual tree");
     }
     SyntaxNode normalizedActualNode = normalizeSyntaxNode(actualNode);
-    SyntaxNode expectedNode = normalizeSyntaxNode(check syntaxNodeFromLines(k, rule, expected));
     string[] actualNodeLines = syntaxNodeToString(normalizedActualNode);
-    string[] expectedNodeLines = syntaxNodeToString(expectedNode);
-    string errMsg = "actual node : " + "\n".'join(...actualNodeLines) + " is not the same as expected node : " + "\n".'join(...expectedNodeLines);
-    test:assertTrue(validateNormalizedSyntaxNode(normalizedActualNode, expectedNode), errMsg);
-    test:assertEquals(actualNodeLines, expected);
+    test:assertEquals(actualNodeLines, expected, "wrong ast");
 }
 
 function syntaxNodeFromLines(Kind k, ProductionRule rule, string[] lines) returns err:Syntax|SyntaxNode {
@@ -61,10 +57,10 @@ function syntaxNodeFromLines(Kind k, ProductionRule rule, string[] lines) return
             node = syntaxNodeFromStmt(check parseStmt(tok));
         }
         else if rule == "expr" {
-            node = syntaxNodeFromExpr(check parseExpr(tok), false);
+            node = syntaxNodeFromExpr(check parseExpr(tok));
         }
         else {
-            node = syntaxNodeFromTypeDesc(check parseTypeDesc(tok), false);
+            node = syntaxNodeFromTypeDesc(check parseTypeDesc(tok));
         }
         if tok.current() != () {
             return err:syntax("superfluous input at end", d:location(file, tok.currentStartPos()));
@@ -75,7 +71,7 @@ function syntaxNodeFromLines(Kind k, ProductionRule rule, string[] lines) return
 
 function validateNormalizedSyntaxNode(SyntaxNode normalizedTreeNode, SyntaxNode expectedTreeNode) returns boolean {
     if normalizedTreeNode is TerminalSyntaxNode && expectedTreeNode is TerminalSyntaxNode {
-        return terminalSyntaxNodeToString(normalizedTreeNode) == terminalSyntaxNodeToString(expectedTreeNode);
+        return terminalSyntaxNodeToString(normalizedTreeNode, NONE) == terminalSyntaxNodeToString(expectedTreeNode, NONE);
     }
     if normalizedTreeNode is TerminalSyntaxNode || expectedTreeNode is TerminalSyntaxNode ||
        normalizedTreeNode.childNodes.length() != expectedTreeNode.childNodes.length() {
