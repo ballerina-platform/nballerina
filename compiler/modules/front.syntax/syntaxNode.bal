@@ -266,7 +266,7 @@ function syntaxNodeFromExpr(Expr expr) returns SubSyntaxNode {
         return syntaxNodeFromGroupingExpr(expr);
     }
     else if expr is FixedLiteralExpr {
-        return syntaxNodeFromTerminalExpr(expr);
+        return syntaxNodeFromFixedLiteralExpr(expr);
     }
     else if expr is BinaryExpr {
         return syntaxNodeFromBinaryExpr(expr);
@@ -407,7 +407,7 @@ function syntaxNodeFromUnaryExpr(UnaryExpr expr) returns NonTerminalSyntaxNode {
 }
 
 type FixedLiteralExpr LiteralExpr|NumericLiteralExpr;
-function syntaxNodeFromTerminalExpr(FixedLiteralExpr expr) returns TerminalSyntaxAstNode {
+function syntaxNodeFromFixedLiteralExpr(FixedLiteralExpr expr, SimpleConstNegateExpr? sign = ()) returns AstSyntaxNode {
     string token;
     if expr is LiteralExpr {
         token = expr.value != () ? expr.value.toString() : "()";
@@ -418,6 +418,9 @@ function syntaxNodeFromTerminalExpr(FixedLiteralExpr expr) returns TerminalSynta
     else {
         FpTypeSuffix? typeSuffix = expr.typeSuffix;
         token = expr.untypedLiteral + (typeSuffix ?: "");
+    }
+    if sign != () {
+        return nonTerminalSyntaxNode(sign, { token: "-" }, { literal: token });
     }
     return { token, astNode: expr };
 }
@@ -584,10 +587,10 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SubSyntaxNo
     else {
         ExtendedLiteralExpr valueExpr = td.valueExpr;
         if valueExpr is SimpleConstNegateExpr {
-            return syntaxNodeFromTerminalExpr(valueExpr.operand, valueExpr);
+            return syntaxNodeFromFixedLiteralExpr(valueExpr.operand, valueExpr);
         }
         else {
-            return syntaxNodeFromTerminalExpr(valueExpr);
+            return syntaxNodeFromFixedLiteralExpr(valueExpr);
         }
     }
 }
@@ -753,7 +756,7 @@ function terminalSyntaxNodeFlags(TerminalSyntaxNode node, SyntaxNode? parentNode
         }
     }
     if node is StringLiteralSyntaxNode {
-        if parent is SingletonTypeDesc && parent.value is int|float {
+        if parent is SimpleConstNegateExpr {
             return IGNORE_LITERAL_ESCAPE;
         }
     }
@@ -776,11 +779,10 @@ function terminalSyntaxNodeToString(TerminalSyntaxNode node, OutputFlags flags) 
     }
     else if node is TerminalSyntaxAstNode {
         AstNode astNode = node.astNode;
-        if astNode is NumericLiteralExpr|BuiltinTypeDesc ||
-           astNode is LiteralExpr|SingletonTypeDesc && astNode.value !is string {
-            return node.token;
+        if astNode is LiteralExpr && astNode.value is string {
+            return stringLiteral(node.token);
         }
-        return stringLiteral(node.token);
+        return node.token;
     }
     else {
         return node.token;
