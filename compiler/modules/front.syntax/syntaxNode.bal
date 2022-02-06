@@ -187,14 +187,14 @@ function syntaxNodeFromPanicStmt(PanicStmt stmt) returns NonTerminalSyntaxNode {
 function syntaxNodeFromAssignStmt(AssignStmt stmt) returns NonTerminalSyntaxNode {
     LExpr|WILDCARD lValue = stmt.lValue;
     return finishWithSemiColon(stmt,
-                               lValue is LExpr ? syntaxNodeFromLExpr(lValue) : { token: "_", pos: stmt.startPos },
+                               lValue is LExpr ? syntaxNodeFromExpr(lValue) : { token: "_", pos: stmt.startPos },
                                { token: "=", pos: stmt.opPos },
                                syntaxNodeFromExpr(stmt.expr));
 }
 
 function syntaxNodeFromCompoundAssignStmt(CompoundAssignStmt stmt) returns NonTerminalSyntaxNode {
     return finishWithSemiColon(stmt,
-                               syntaxNodeFromLExpr(stmt.lValue),
+                               syntaxNodeFromExpr(stmt.lValue),
                                { token: <FixedToken>(stmt.op + "="), pos: stmt.opPos },
                                syntaxNodeFromExpr(stmt.expr));
 }
@@ -306,23 +306,6 @@ function syntaxNodeFromExpr(Expr expr) returns SubSyntaxNode {
     }
     else {
         return syntaxNodeFromUnaryExpr(expr);
-    }
-}
-
-function syntaxNodeFromLExpr(LExpr expr) returns NonTerminalSyntaxNode {
-    if expr is MemberAccessLExpr {
-        return nonTerminalSyntaxNode(expr, syntaxNodeFromLExpr(expr.container),
-                                           { token: "[" },
-                                           syntaxNodeFromExpr(expr.index),
-                                           { token: "]"});
-    }
-    else if expr is FieldAccessLExpr {
-        return nonTerminalSyntaxNode(expr, syntaxNodeFromLExpr(expr.container),
-                                           { token: ".", pos: expr.opPos },
-                                           { name: expr.fieldName, pos: () });
-    }
-    else {
-        return syntaxNodeFromVarRefExpr(expr);
     }
 }
 

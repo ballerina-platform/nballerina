@@ -23,7 +23,7 @@ function normalizeSubSyntaxNode(SubSyntaxNode node) returns SubSyntaxNode {
     return normalizeChildNodes(node, false, ());
 }
 
-// if wrap == () then node is never wrapped (used for the lhs of assignment stmts
+// if wrap == () then node is never wrapped (used for the lhs of assignment stmts)
 function normalizeChildNodes(SubSyntaxNode node, boolean? wrap, SubSyntaxNode? parent) returns SubSyntaxNode {
     if node !is NonTerminalSyntaxNode {
         return node;

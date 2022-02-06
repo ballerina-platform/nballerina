@@ -37,7 +37,7 @@ function testParser(Kind k, ProductionRule rule, string[] subject, string[] expe
         return;
     }
     if actualNode is err:Syntax {
-        panic err:impossible("can't normalize the actual tree");
+        panic err:impossible("expected a syntax node");
     }
     SyntaxNode normalizedActualNode = normalizeSyntaxNode(actualNode);
     string[] actualNodeLines = syntaxNodeToString(normalizedActualNode);
@@ -67,24 +67,6 @@ function syntaxNodeFromLines(Kind k, ProductionRule rule, string[] lines) return
         }
     }
     return node;
-}
-
-function validateNormalizedSyntaxNode(SyntaxNode normalizedTreeNode, SyntaxNode expectedTreeNode) returns boolean {
-    if normalizedTreeNode is TerminalSyntaxNode && expectedTreeNode is TerminalSyntaxNode {
-        return terminalSyntaxNodeToString(normalizedTreeNode, NONE) == terminalSyntaxNodeToString(expectedTreeNode, NONE);
-    }
-    if normalizedTreeNode is TerminalSyntaxNode || expectedTreeNode is TerminalSyntaxNode ||
-       normalizedTreeNode.childNodes.length() != expectedTreeNode.childNodes.length() {
-        return false;
-    }
-    else {
-        foreach int i in 0 ..< normalizedTreeNode.childNodes.length() {
-            if !validateNormalizedSyntaxNode(normalizedTreeNode.childNodes[i], expectedTreeNode.childNodes[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
 }
 
 type TokenizerTestCase [string, string[]];
