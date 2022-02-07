@@ -180,7 +180,9 @@ function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:F
     s:Expr arg = callExpr.args[i];
     int n = callExpr is s:FunctionCallExpr ? i : i + 1;
     if n >= func.signature.paramTypes.length() {
-        check checkPrintln(cx, func, s:range(arg));
+        if func.symbol == { 'module: {org: "ballerina",names: ["io"]}, identifier: "println" } {
+            return cx.unimplementedErr("io:println can only take 1 argument", s:range(arg));
+        }
         return cx.semanticErr("too many arguments for call to function", s:range(arg)); 
     }
     var { result, block } = check codeGenExpr(cx, bb, func.signature.paramTypes[n], arg);
@@ -1180,14 +1182,10 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
     int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
     if nSuppliedArgs < func.signature.paramTypes.length() {
-        check checkPrintln(cx, func, call.closeParenPos);
+        if func.symbol == { 'module: {org: "ballerina",names: ["io"]}, identifier: "println" } {
+            return cx.unimplementedErr("io:println can only take 1 argument", call.closeParenPos);
+        }
         return cx.semanticErr("too few arguments for call to function", call.closeParenPos);
-    }
-}
-
-function checkPrintln(ExprContext cx, bir:FunctionRef func, Position|Range pos) returns err:Unimplemented? {
-    if func.symbol == { 'module: {org: "ballerina",names: ["io"]}, identifier: "println" } {
-        return cx.unimplementedErr("io:println can only take 1 argument", pos);
     }
 }
 
