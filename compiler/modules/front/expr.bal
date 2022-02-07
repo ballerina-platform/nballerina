@@ -1186,8 +1186,7 @@ function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallE
 }
 
 function checkPrintln(ExprContext cx, bir:FunctionRef func, Position|Range pos) returns err:Unimplemented? {
-    bir:ExternalSymbol symbol = { 'module: {org: "ballerina",names: ["io"]}, identifier: "println" }; 
-    if func.symbol == symbol {
+    if func.symbol == { 'module: {org: "ballerina",names: ["io"]}, identifier: "println" } {
         return cx.unimplementedErr("io:println can only take 1 argument", pos);
     }
 }
