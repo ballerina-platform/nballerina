@@ -176,12 +176,20 @@ function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) re
     return cx.semanticErr("expected string operand", s:range(expr));
 }
 
-function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, s:Expr expr, t:SemType semType) returns CodeGenError|ExprEffect {
-    var { result, block } = check codeGenExpr(cx, bb, semType, expr);
-    if operandHasType(cx.mod.tc, result, semType) {
+function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:FunctionCallExpr callExpr, bir:FunctionRef func, int i) returns ExprEffect|CodeGenError {
+    s:Expr arg = callExpr.args[i];
+    int n = callExpr is s:FunctionCallExpr ? i : i + 1;
+    if n >= func.signature.paramTypes.length() {
+        if symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol) == "io:println" {
+            return cx.unimplementedErr("io:println can only take 1 argument", s:range(arg));
+        }
+        return cx.semanticErr("too many arguments for call to function", s:range(arg)); 
+    }
+    var { result, block } = check codeGenExpr(cx, bb, func.signature.paramTypes[n], arg);
+    if operandHasType(cx.mod.tc, result, func.signature.paramTypes[n]) {
         return { result, block };
     }
-    return cx.semanticErr("wrong type in operand", s:range(expr));
+    return cx.semanticErr("incorrect type for argument", s:range(arg));
 }
 
 function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -1134,30 +1142,27 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     else {
         func = check genImportedFunctionRef(cx, prefix, expr.funcName, expr.qNamePos);
     }
-    check validArgumentCount(cx, func, expr);
-    t:SemType[] paramTypes = func.signature.paramTypes;
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
     foreach int i in 0 ..< expr.args.length() {
-        var { result: arg, block: nextBlock } = check codeGenExprForType(cx, curBlock, expr.args[i], paramTypes[i]);
+        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
         curBlock = nextBlock;
         args.push(arg);
     }
+    check sufficientArguments(cx, func, expr);
     return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, (), expr.target);
     bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
-    check validArgumentCount(cx, func, expr);
-
-    t:SemType[] paramTypes = func.signature.paramTypes;
     bir:Operand[] args = [target];
     foreach int i in 0 ..< expr.args.length() {
-        var { result: arg, block: nextBlock } = check codeGenExprForType(cx, curBlock, expr.args[i], paramTypes[i + 1]);
+        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
         curBlock = nextBlock;
         args.push(arg);
     }
+    check sufficientArguments(cx, func, expr);
     return codeGenCall(cx, curBlock, func, args, expr.namePos);
 }
 
@@ -1174,20 +1179,13 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
     return { result: constifyRegister(reg), block: curBlock };    
 }
 
-function validArgumentCount(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
-    int p = call is s:MethodCallExpr ? 1 : 0; 
-    s:Expr[] suppliedArgs = call.args;
-    int nExpectedArgs = func.signature.paramTypes.length();
-    int nSuppliedArgs = suppliedArgs.length() + p;
-
-    if nSuppliedArgs == nExpectedArgs {
-        return ();
-    }
-    if nSuppliedArgs < nExpectedArgs {
+function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
+    int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
+    if nSuppliedArgs < func.signature.paramTypes.length() {
+        if symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol) == "io:println" {
+            return cx.unimplementedErr("io:println can only take 1 argument", call.closeParenPos);
+        }
         return cx.semanticErr("too few arguments for call to function", call.closeParenPos);
-    }
-    else {
-        return cx.semanticErr("too many arguments for call to function", s:range(suppliedArgs[nExpectedArgs - p]));
     }
 }
 
