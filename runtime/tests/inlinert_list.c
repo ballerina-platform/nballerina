@@ -147,8 +147,8 @@ void testStringNilArr(TaggedPtr (*constructList)()) {
     pushString(e, "abc");
     pushNil(e);
     pushString(e, "abb");
-    assert(_bal_array_float_compare(a, e) == COMPARE_UN);
-    assert(_bal_array_float_compare(e, a) == COMPARE_UN);
+    assert(_bal_array_string_compare(a, e) == COMPARE_UN);
+    assert(_bal_array_string_compare(e, a) == COMPARE_UN);
 }
 
 void testFloatArr(TaggedPtr (*constructList)()) {
