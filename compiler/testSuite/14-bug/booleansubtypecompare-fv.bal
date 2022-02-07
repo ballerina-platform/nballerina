@@ -1,9 +1,9 @@
 import ballerina/io;
 
-type A 1.0|2.0|3.0;
+type A false;
 public function main() {
-    A[] a = [1.0, 2.0, 3.0];
-    float[] b = [4.0, 5.0, 6.0];
+    A[] a = [false, false];
+    boolean[] b = [true, true];
     io:println(a < b); //@output true
     io:println(a <= b); //@output true
     io:println(a > b); //@output false
@@ -14,3 +14,4 @@ public function main() {
     io:println(b > a); //@output true
     io:println(b >= a); //@output true
 }
+
