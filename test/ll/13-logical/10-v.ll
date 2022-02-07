@@ -47,13 +47,13 @@ define void @_B04rootmain() !dbg !5 {
   %26 = load i1, i1* %3
   br i1 %26, label %27, label %30
 27:
-  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
   store i8 addrspace(1)* %28, i8 addrspace(1)** %x.2
   %29 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
   store i8 addrspace(1)* %29, i8 addrspace(1)** %_
   ret void
 30:
-  %31 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %31 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
   store i8 addrspace(1)* %31, i8 addrspace(1)** %x.3
   %32 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
   store i8 addrspace(1)* %32, i8 addrspace(1)** %_.1

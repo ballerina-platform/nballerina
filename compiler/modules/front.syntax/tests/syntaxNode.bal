@@ -403,7 +403,7 @@ function syntaxNodeFromUnaryExpr(UnaryExpr expr) returns NonTerminalSyntaxNode {
 }
 
 type TerminalExpr LiteralExpr|NumericLiteralExpr;
-function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxAstNode {
+function syntaxNodeFromTerminalExpr(TerminalExpr expr, SimpleConstNegateExpr? sign = ()) returns AstSyntaxNode {
     string token;
     if expr is LiteralExpr {
         token = expr.value != () ? expr.value.toString() : "()";
@@ -414,6 +414,9 @@ function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxAst
     else {
         FpTypeSuffix? typeSuffix = expr.typeSuffix;
         token = expr.untypedLiteral + (typeSuffix ?: "");
+    }
+    if sign != () {
+        return nonTerminalSyntaxNode(sign, { token: "-" }, { literal: token });
     }
     return { token, astNode: expr };
 }
@@ -575,17 +578,17 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SyntaxNode 
     string token;
     if td is BuiltinTypeDesc {
         token = td.builtinTypeName == "null" ? "()" : td.builtinTypeName;
+        return { token, astNode: td };
     }
     else {
-        var value = td.value;
-        if (value is int && value < 0) || (value is float && value < 0.0) {
-            return nonTerminalSyntaxNode(td, { token: "-" }, { literal: (value * -1).toString() });
+        ExtendedLiteralExpr valueExpr = td.valueExpr;
+        if valueExpr is SimpleConstNegateExpr {
+            return syntaxNodeFromTerminalExpr(valueExpr.operand, valueExpr);
         }
         else {
-            token = td.value.toString();
+            return syntaxNodeFromTerminalExpr(valueExpr);
         }
     }
-    return { token, astNode: td };
 }
 
 function syntaxNodeFromFieldDesc(FieldDesc fd) returns SyntaxNode {

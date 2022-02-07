@@ -37,18 +37,17 @@ define void @_B04rootf(i8 addrspace(1)* %0) !dbg !7 {
   %x.2 = alloca i8 addrspace(1)*
   %_ = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
-  %x.3 = alloca i8 addrspace(1)*
   %6 = alloca i1
-  %x.4 = alloca i64
+  %x.3 = alloca i64
   %_.1 = alloca i64
   %7 = alloca i8 addrspace(1)*
-  %x.5 = alloca i8 addrspace(1)*
+  %x.4 = alloca i8 addrspace(1)*
   %_.2 = alloca i8 addrspace(1)*
   %8 = alloca i8 addrspace(1)*
   %9 = alloca i8
   %10 = load i8*, i8** @_bal_stack_guard
   %11 = icmp ult i8* %9, %10
-  br i1 %11, label %47, label %12
+  br i1 %11, label %46, label %12
 12:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %x
   %13 = load i8 addrspace(1)*, i8 addrspace(1)** %x
@@ -85,37 +84,35 @@ define void @_B04rootf(i8 addrspace(1)* %0) !dbg !7 {
   ret void
 31:
   %32 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  store i8 addrspace(1)* %32, i8 addrspace(1)** %x.3
-  %33 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
-  %34 = addrspacecast i8 addrspace(1)* %33 to i8*
-  %35 = ptrtoint i8* %34 to i64
-  %36 = and i64 %35, 2233785415175766016
-  %37 = icmp eq i64 %36, 504403158265495552
-  store i1 %37, i1* %6
-  %38 = load i1, i1* %6
-  br i1 %38, label %39, label %43
-39:
-  %40 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
-  %41 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %40)
-  store i64 %41, i64* %x.4
-  %42 = load i64, i64* %x.4
-  store i64 %42, i64* %_.1
+  %33 = addrspacecast i8 addrspace(1)* %32 to i8*
+  %34 = ptrtoint i8* %33 to i64
+  %35 = and i64 %34, 2233785415175766016
+  %36 = icmp eq i64 %35, 504403158265495552
+  store i1 %36, i1* %6
+  %37 = load i1, i1* %6
+  br i1 %37, label %38, label %42
+38:
+  %39 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %40 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %39)
+  store i64 %40, i64* %x.3
+  %41 = load i64, i64* %x.3
+  store i64 %41, i64* %_.1
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621754473)), !dbg !18
   store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !18
   ret void
+42:
+  br label %43
 43:
-  br label %44
-44:
-  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
-  store i8 addrspace(1)* %45, i8 addrspace(1)** %x.5
-  %46 = load i8 addrspace(1)*, i8 addrspace(1)** %x.5
-  store i8 addrspace(1)* %46, i8 addrspace(1)** %_.2
+  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  store i8 addrspace(1)* %44, i8 addrspace(1)** %x.4
+  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %x.4
+  store i8 addrspace(1)* %45, i8 addrspace(1)** %_.2
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [20 x i8]}* @.str4 to i8*) to i8 addrspace(1)*), i64 720575940379279360)), !dbg !19
   store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !19
   ret void
-47:
-  %48 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052), !dbg !15
-  call void @_bal_panic(i8 addrspace(1)* %48)
+46:
+  %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052), !dbg !15
+  call void @_bal_panic(i8 addrspace(1)* %47)
   unreachable
 }
 define internal i1 @_B_isEmpty(i8 addrspace(1)* %0) !dbg !9 {

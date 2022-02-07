@@ -338,7 +338,7 @@
     ["V", "stmt", "false FALSE = false;"],
     ["V", "stmt", "1 X = 1;"],
     ["V", "stmt", "1.0 X = 1.0;"],
-    ["V", "stmt", "0xF X = 0xF;", "15 X = 0xF;"],
+    ["V", "stmt", "0xF X = 0xF;"],
     ["V", "stmt", "(true) t = true;", "true t = true;"],
     ["V", "stmt", "false | true B = false;"],
     ["V", "stmt", "false & true B = ();"],

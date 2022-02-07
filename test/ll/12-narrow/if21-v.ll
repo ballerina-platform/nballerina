@@ -80,13 +80,13 @@ define void @_B04rootmain() !dbg !5 {
   store i64 %47, i64* %_.1
   br label %48
 48:
-  %49 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
+  %49 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   store i8 addrspace(1)* %49, i8 addrspace(1)** %x.5
   %50 = load i8 addrspace(1)*, i8 addrspace(1)** %x.5
   store i8 addrspace(1)* %50, i8 addrspace(1)** %_.2
   br label %51
 51:
-  %52 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
+  %52 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   store i8 addrspace(1)* %52, i8 addrspace(1)** %x.6
   %53 = load i8 addrspace(1)*, i8 addrspace(1)** %x.6, !dbg !8
   call void @_Bb02ioprintln(i8 addrspace(1)* %53), !dbg !8

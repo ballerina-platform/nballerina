@@ -497,7 +497,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     if t == "-" {
         Position opPos = tok.currentStartPos();
         check tok.advance();
-        IntLiteralExpr operand = check parseIntLiteralExpr(tok);
+        NumericLiteralExpr operand = check parseNumericLiteralExpr(tok);
         Position endPos = tok.previousEndPos();
         SimpleConstNegateExpr expr = { startPos, endPos, opPos, operand };
         return expr;
@@ -536,8 +536,9 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             return expr;
         }
         [DECIMAL_NUMBER, _]
-        | [HEX_INT_LITERAL, _] => {
-            return parseIntLiteralExpr(tok);
+        | [HEX_INT_LITERAL, _]
+        | [DECIMAL_FP_NUMBER, _, _] => {
+            return parseNumericLiteralExpr(tok);
         }
     }
     return parseError(tok);
