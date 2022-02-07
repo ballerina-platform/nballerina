@@ -7,7 +7,6 @@ declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* @_bal_list_construct({i32}*, i64)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
@@ -197,7 +196,7 @@ pattern.5:
   br i1 %59, label %clause.2, label %pattern.6
 pattern.6:
   %60 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %61 = call i1 @_bal_eq(i8 addrspace(1)* %60, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504))
+  %61 = icmp eq i8 addrspace(1)* %60, getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504)
   store i1 %61, i1* %9
   %62 = load i1, i1* %9
   br i1 %62, label %clause.3, label %pattern.7

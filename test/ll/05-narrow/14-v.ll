@@ -2,7 +2,6 @@
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
@@ -34,7 +33,7 @@ define internal i8 addrspace(1)* @_B_str(i8 addrspace(1)* %0) !dbg !7 {
 6:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
   %7 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %8 = call i1 @_bal_eq(i8 addrspace(1)* %7, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112))
+  %8 = icmp eq i8 addrspace(1)* %7, getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112)
   store i1 %8, i1* %2
   %9 = load i1, i1* %2
   br i1 %9, label %10, label %12

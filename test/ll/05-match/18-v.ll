@@ -1,7 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
@@ -35,7 +34,7 @@ define void @_B04rootfoo(i8 addrspace(1)* %0) !dbg !7 {
 10:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %x
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %12 = call i1 @_bal_eq(i8 addrspace(1)* %11, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621427046))
+  %12 = icmp eq i8 addrspace(1)* %11, getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621427046)
   store i1 %12, i1* %2
   %13 = load i1, i1* %2
   br i1 %13, label %clause.0, label %pattern.0
@@ -43,7 +42,7 @@ clause.0:
   %14 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   store i8 addrspace(1)* %14, i8 addrspace(1)** %x.1
   %15 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
-  %16 = call i1 @_bal_eq(i8 addrspace(1)* %15, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621427046))
+  %16 = icmp eq i8 addrspace(1)* %15, getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621427046)
   store i1 %16, i1* %5
   %17 = load i1, i1* %5
   br i1 %17, label %29, label %31

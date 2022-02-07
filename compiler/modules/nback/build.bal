@@ -27,6 +27,9 @@ const int TAG_BASIC_TYPE_MASK = 0xf << TAG_SHIFT;
 const int FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
 const int FLAG_EXACT = 0x4;
 
+const int IMMEDIATE_INT_MIN = -(1 << (TAG_SHIFT - 1));
+const int IMMEDIATE_INT_MAX = (1 << (TAG_SHIFT - 1)) - 1;
+
 const HEAP_ADDR_SPACE = 1;
 
 type ValueType llvm:IntegralType;

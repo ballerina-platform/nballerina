@@ -66,13 +66,10 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
-            if reprIsImmediate(lhsRepr) || reprIsImmediate(rhsRepr) {
+            if isTypeImmediate(t:intersect(insn.operands[0].semType, insn.operands[1].semType)) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
-                if isAnyOperandSmallString(insn.operands) {
-                    return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
-                }
                 return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
             else if reprIsDecimal(lhsRepr) && reprIsDecimal(rhsRepr) {
@@ -138,18 +135,53 @@ function buildEqualFloat(llvm:Builder builder, Scaffold scaffold, boolean exact,
     return buildStoreBoolean(builder, scaffold, b, reg);
 }
 
-function isAnyOperandSmallString(bir:Operand[] operands) returns boolean {
-    foreach var operand in operands {
-        if operand is bir:StringConstOperand {
-            string str = operand.value;
-            byte[] bytes = str.toBytes();
-            int nBytes = bytes.length();
-            if isSmallString(str.length(), bytes, nBytes) {
-                return true;
+function isTypeImmediate(t:SemType ty) returns boolean {
+    if t:isSubtypeSimple(ty, t:NIL|t:BOOLEAN) {
+        return true;
+    }
+
+    // SUBSET extend when singleton subtypes of float and decimal are supported
+    if ty is t:UniformTypeBitSet || !t:isSubtypeSimple(ty, t:NIL|t:BOOLEAN|t:INT|t:STRING) {
+        return false;
+    }
+    return isIntSubtypeImmediate(ty) && isStringSubtypeImmediate(ty);
+}
+
+function isIntSubtypeImmediate(t:ComplexSemType ty) returns boolean {
+    t:IntSubtype|boolean intSubtype = t:intSubtype(ty);
+    if intSubtype is t:IntSubtype {
+        foreach var r in intSubtype {
+            if r.min < IMMEDIATE_INT_MIN || IMMEDIATE_INT_MAX < r.max {
+                return false;
             }
         }
+        return true;
     }
-    return false;
+    else {
+        return !intSubtype;
+    }
+}
+
+function isStringSubtypeImmediate(t:ComplexSemType ty) returns boolean {
+    t:StringSubtype|boolean strSubtype = t:stringSubtype(ty);
+    if strSubtype is t:StringSubtype {
+        if strSubtype.nonChar.allowed == false {
+            return false;
+        }
+        else {
+            foreach var s in strSubtype.nonChar.values {
+                byte[] bytes = s.toBytes();
+                int nBytes = bytes.length();
+                if !isSmallString(s.length(), bytes, nBytes) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+    else {
+        return !strSubtype;
+    }
 }
 
 function reprIsNil(Repr repr) returns boolean {
@@ -162,10 +194,6 @@ function reprIsString(Repr repr) returns boolean {
 
 function reprIsDecimal(Repr repr) returns boolean {
     return repr is TaggedRepr && repr.subtype == t:DECIMAL;
-}
-
-function reprIsImmediate(Repr repr) returns boolean {
-    return repr !is TaggedRepr || (repr.subtype & ~(t:NIL|t:BOOLEAN)) == 0;
 }
 
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
