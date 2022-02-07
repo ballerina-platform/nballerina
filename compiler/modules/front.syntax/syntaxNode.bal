@@ -10,10 +10,14 @@ const NEWLINE_AFTER = 0x4;
 const NEWLINE_BEFORE = 0x8;
 const int NEWLINE = NEWLINE_BEFORE|NEWLINE_AFTER;
 const IGNORE_LITERAL_ESCAPE = 0x10;
+// used to mark ranges that should be in the same line
+const SINGLE_LINE_START = 0x20;
+const SINGLE_LINE_END = 0x40;
+
 const NONE = 0x0;
 type OutputFlags int;
 
-type Word string|CLING|NEWLINE;
+type Word string|CLING|NEWLINE|SINGLE_LINE_START|SINGLE_LINE_END;
 
 type TerminalSyntaxAstNode record {|
     AstNode astNode;
@@ -662,7 +666,13 @@ function syntaxNodeToWords(Word[] words, SyntaxNode node) {
                     // JBUG #33335 cast
                     words.push(<Word>NEWLINE);
                 }
+                if (flags & SINGLE_LINE_START) != 0 {
+                    words.push(<Word>SINGLE_LINE_START);
+                }
                 words.push(terminalSyntaxNodeToString(child, flags));
+                if (flags & SINGLE_LINE_END) != 0 {
+                    words.push(<Word>SINGLE_LINE_END);
+                }
                 if (flags & CLING_NEXT) != 0 {
                     // JBUG #33335 cast
                     words.push(<Word>CLING);
@@ -735,6 +745,16 @@ function terminalSyntaxNodeFlags(TerminalSyntaxNode node, SyntaxNode? parentNode
                 }
                 else if parent is TypeDesc {
                     return CLING_PREV;
+                }
+            }
+            "{" | "{|" => {
+                if parent is MappingConstructorExpr {
+                    return SINGLE_LINE_START;
+                }
+            }
+            "}" | "|}" => {
+                if parent is MappingConstructorExpr {
+                    return SINGLE_LINE_END;
                 }
             }
             "error" => {
@@ -822,32 +842,49 @@ function concat(Word... words) returns string[] {
     string[] parts = [];
     string[] lines = [];
     boolean skipSpace = true;
+    boolean ignoreNewLine = false;
     int indentSize = 0;
     foreach int i in 0 ..< words.length() {
         Word token = words[i];
         Word? nextToken = i < words.length() - 1 ? words[i + 1] : ();
         if token is string {
-            if token == "}" || token == "|}" {
-                indentSize -= 1;
-                parts = addNewLine(parts, lines, indentSize);
+            if (token == "}" || token == "|}") {
+                if !ignoreNewLine {
+                    indentSize -= 1;
+                    parts = addNewLine(parts, lines, indentSize);
+                }
+                else {
+                    parts.push(" ");
+                }
             }
             if !skipSpace && !omitSpaceBefore(token) {
                 parts.push(" ");
             }
             parts.push(token);
             skipSpace = omitSpaceAfter(token);
-            if token == "{" || token == "{|" {
-                indentSize += 1;
-                parts = addNewLine(parts, lines, indentSize);
+            if (token == "{" || token == "{|") {
+                if !ignoreNewLine {
+                    indentSize += 1;
+                    parts = addNewLine(parts, lines, indentSize);
+                }
+                else {
+                    parts.push(" ");
+                }
             }
-            if (token == "}" || token == "|}") && nextToken != ";" {
+            if (token == "}" || token == "|}") && nextToken != ";" && !ignoreNewLine {
                 parts = addNewLine(parts, lines, indentSize);
             }
         }
         else if token == CLING {
             skipSpace = true;
         }
-        else {
+        else if token is SINGLE_LINE_START{
+            ignoreNewLine = true;
+        }
+        else if token is SINGLE_LINE_END {
+            ignoreNewLine = false;
+        }
+        else if token == NEWLINE && !ignoreNewLine {
             skipSpace = true;
             parts = addNewLine(parts, lines, indentSize);
         }
