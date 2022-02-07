@@ -69,7 +69,9 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                     test:assertFail("unimplemented error on E test" + path);
                 }
             }
-            test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
+            else {
+                test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
+            }
             if kind == "e" || kind == "ue" {
                 check checkErrorLocation(err, path);
             }
