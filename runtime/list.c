@@ -4,9 +4,6 @@
 
 #define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
 
-typedef CompareResult (*TaggedPtrComparator)(TaggedPtr, TaggedPtr);
-static READONLY TaggedPtrComparator getArrayComparator(MemberType memberType);
-
 static inline Fillability arrayCreateFiller(ListDescPtr ldp, TaggedPtr *valuePtr) {
     return _bal_structure_create_filler(ldp->memberType, ldp->fillerDesc, valuePtr);
 }
@@ -389,6 +386,11 @@ CompareResult READONLY _bal_opt_list_compare(TaggedPtr tp1, TaggedPtr tp2) {
 #endif
 }
 
+#if 0
+
+typedef CompareResult (*TaggedPtrComparator)(TaggedPtr, TaggedPtr);
+static READONLY TaggedPtrComparator getArrayComparator(MemberType memberType);
+
 static READONLY TaggedPtrComparator getArrayComparator(MemberType memberType) {
     uint32_t bitSet;
     if ((memberType & 1) == 0) {
@@ -411,6 +413,7 @@ static READONLY TaggedPtrComparator getArrayComparator(MemberType memberType) {
         unreachable();
     }
 }
+#endif
 
 CompareResult READONLY _bal_array_int_compare(TaggedPtr tp1, TaggedPtr tp2) {
     return optListDoCompare(tp1, tp2, &optIntCompare);
