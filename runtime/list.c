@@ -4,6 +4,9 @@
 
 #define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
 
+typedef CompareResult (*TaggedPtrComparator)(TaggedPtr, TaggedPtr);
+static READONLY TaggedPtrComparator getArrayComparator(MemberType memberType);
+
 static inline Fillability arrayCreateFiller(ListDescPtr ldp, TaggedPtr *valuePtr) {
     return _bal_structure_create_filler(ldp->memberType, ldp->fillerDesc, valuePtr);
 }
@@ -308,127 +311,127 @@ bool _bal_array_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     return memberTypeIsSubtypeSimple(lp->desc->memberType, ((ArraySubtypePtr)stp)->bitSet);
 }
 
-int64_t READONLY _bal_array_exact_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
-    if (lhs == rhs) {
+CompareResult READONLY _bal_array_exact_int_compare(TaggedPtr tp1, TaggedPtr tp2) {
+    if (tp1 == tp2) {
         return COMPARE_EQ;
     }
-    ListPtr lhsLp = taggedToPtr(lhs);
-    ListPtr rhsLp = taggedToPtr(rhs);
-    int64_t lhsLen = lhsLp->iArray.length;
-    int64_t rhsLen = rhsLp->iArray.length;
-    int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
+    ListPtr lp1 = taggedToPtr(tp1);
+    ListPtr lp2 = taggedToPtr(tp2);
+    int64_t len1 = lp1->iArray.length;
+    int64_t len2 = lp2->iArray.length;
+    int64_t len = (len1 <= len2) ? len1 : len2;
 
-    GC int64_t *lhsArr = lhsLp->iArray.members;
-    GC int64_t *rhsArr = rhsLp->iArray.members;
-    for (int64_t i = 0; i < length; i++) {
-        int64_t l = lhsArr[i];
-        int64_t r = rhsArr[i];
-        if (l == r) {
-            continue;
-        }
-        else if (l > r) {
+    GC int64_t *arr1 = lp1->iArray.members;
+    GC int64_t *arr2 = lp2->iArray.members;
+    for (int64_t i = 0; i < len; i++) {
+        int64_t n1 = arr1[i];
+        int64_t n2 = arr2[i];
+        if (n1 > n2) {
             return COMPARE_GT;
         }
-        else {
+        if (n1 < n2) {
             return COMPARE_LT;
         }
     }
-    return COMPARE_TOTAL(lhsLen, rhsLen);
+    return intCompare(len1, len2);
 }
 
-typedef int64_t (*TaggedValueComparator)(TaggedPtr, TaggedPtr);
+static READONLY inline CompareResult optListDoCompare(TaggedPtr tp1, TaggedPtr tp2, int64_t (*compare)(TaggedPtr, TaggedPtr)) {
+    if (tp1 == tp2) {
+        return COMPARE_EQ;
+    }
+    if (tp1 == NIL || tp2 == NIL) {
+        return COMPARE_UN;
+    }
+    ListPtr lp1 = taggedToPtr(tp1);
+    ListPtr lp2 = taggedToPtr(tp2);
+    int64_t len1 = lp1->tpArray.length;
+    int64_t len2 = lp2->tpArray.length;
+    int64_t len = (len1 <= len2) ? len1 : len2;
+    TaggedPtr (*get1)(TaggedPtr lp, int64_t index) = lp1->desc->get;
+    TaggedPtr (*get2)(TaggedPtr lp, int64_t index) = lp2->desc->get;
+    for (int64_t i = 0; i < len; i++) {
+        int64_t result = (*compare)(get1(tp1, i), get2(tp2, i));
+        if (result != COMPARE_EQ) {
+            return result;
+        }
+    }
+    return intCompare(len1, len2);
+}
 
-static READONLY TaggedValueComparator getArrayComparator(MemberType memberType) {
-    uint32_t bitSet;
-    if ((memberType & 1) == 0) {
-        return &_bal_array_generic_compare;
+CompareResult READONLY _bal_opt_list_compare(TaggedPtr tp1, TaggedPtr tp2) {
+#if 0
+    if (tp1 == tp2) {
+        return COMPARE_EQ;
+    }
+    if (tp1 == NIL || tp2 == NIL) {
+        return COMPARE_UN;
+    }
+    ListPtr lp1 = taggedToPtr(tp1);
+    ListPtr lp2 = taggedToPtr(tp2);
+    ListDescPtr ldp1 = lp1->desc;
+    ListDescPtr ldp2 = lp2->desc;
+    ListDescPtr ldp;
+    if (ldp1->memberType == BITSET_MEMBER_TYPE(1 << TAG_NIL)) {
+        if (ldp2->memberType == BITSET_MEMBER_TYPE(1 << TAG_NIL)) {
+            return intCompare(lp1->tpArray.length, lp2->tpArray.length);
+        }
+        else {
+            ldp = ldp2;
+        }
     }
     else {
-        // Clear out the nil bit since comparators can handle both nillable and non-nillable of a given type
+        ldp = ldp1;
+    }
+    return optListDoCompare(tp1, tp2, getArrayComparator(ldp->memberType));
+#else
+    return optListDoCompare(tp1, tp2, &taggedPtrCompare);
+#endif
+}
+
+static READONLY TaggedPtrComparator getArrayComparator(MemberType memberType) {
+    uint32_t bitSet;
+    if ((memberType & 1) == 0) {
+        return &taggedPtrCompare;
+    }
+    else {
         bitSet = (uint32_t)(memberType >> 1) & ~((uint32_t)1 << TAG_NIL);
         switch (bitSet) {
             case (1 << TAG_BOOLEAN):
-                return &taggedBooleanCompare;
+                return &optBooleanCompare;
             case (1 << TAG_INT):
-                return &taggedIntCompare;
+                return &optIntCompare;
             case (1 << TAG_FLOAT):
-                return &taggedFloatCompare;
+                return &optFloatCompare;
             case (1 << TAG_STRING):
-                return &taggedStringCompare;
+                return &optStringCompare;
             case (1 << TAG_DECIMAL):
-                return &taggedDecimalCompare;
+                return &optDecimalCompare;
         }
         unreachable();
     }
 }
 
-static READONLY inline CompareResult arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
-    if (lhs == rhs) {
-        return COMPARE_EQ;
-    }
-    if (lhs == NIL || rhs == NIL) {
-        return COMPARE_UN;
-    }
-    ListPtr lhsListPtr = taggedToPtr(lhs);
-    ListPtr rhsListPtr = taggedToPtr(rhs);
-    int64_t lhsLen = lhsListPtr->tpArray.length;
-    int64_t rhsLen = rhsListPtr->tpArray.length;
-    int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
-    TaggedPtr (*lhsGet)(TaggedPtr lp, int64_t index) = lhsListPtr->desc->get;
-    TaggedPtr (*rhsGet)(TaggedPtr lp, int64_t index) = rhsListPtr->desc->get;
-    for (int64_t i = 0; i < length; i++) {
-        int64_t result = (*comparator)(lhsGet(lhs, i), rhsGet(rhs, i));
-        if (result != COMPARE_EQ) {
-            return result;
-        }
-    }
-    return COMPARE_TOTAL(lhsLen, rhsLen);
+CompareResult READONLY _bal_array_int_compare(TaggedPtr tp1, TaggedPtr tp2) {
+    return optListDoCompare(tp1, tp2, &optIntCompare);
 }
 
-CompareResult READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {
-    if (lhs == rhs) {
-        return COMPARE_EQ;
-    }
-    if (lhs == NIL || rhs == NIL) {
-        return COMPARE_UN;
-    }
-    ListPtr lhsLp = taggedToPtr(lhs);
-    ListPtr rhsLp = taggedToPtr(rhs);
-    ListDescPtr lhsLdp = lhsLp->desc;
-    ListDescPtr rhsLdp = rhsLp->desc;
-    ListDescPtr ldp;
-    if (lhsLdp->memberType == BITSET_MEMBER_TYPE(1 << TAG_NIL)) {
-        if (rhsLdp->memberType == BITSET_MEMBER_TYPE(1 << TAG_NIL)) {
-            int64_t lhsLen = lhsLp->gArray.length;
-            int64_t rhsLen = rhsLp->tpArray.length;
-            return COMPARE_TOTAL(lhsLen, rhsLen);
-        }
-        else{
-            ldp = rhsLdp;
-        }
-    }
-    else {
-        ldp = lhsLdp;
-    }
-    return arrayCompare(lhs, rhs, getArrayComparator(ldp->memberType));
+CompareResult READONLY _bal_array_float_compare(TaggedPtr tp1, TaggedPtr tp2) {
+    return optListDoCompare(tp1, tp2, &optFloatCompare);
 }
 
-CompareResult READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedIntCompare);
+CompareResult READONLY _bal_array_string_compare(TaggedPtr tp1, TaggedPtr tp2) {
+    return optListDoCompare(tp1, tp2, &optStringCompare);
 }
 
-CompareResult READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedFloatCompare);
+CompareResult READONLY _bal_array_boolean_compare(TaggedPtr tp1, TaggedPtr tp2) {
+    return optListDoCompare(tp1, tp2, &optBooleanCompare);
 }
 
-CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedStringCompare);
+CompareResult READONLY _bal_array_decimal_compare(TaggedPtr tp1, TaggedPtr tp2) {
+    return optListDoCompare(tp1, tp2, &optDecimalCompare);
 }
 
-CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedBooleanCompare);
-}
-
-CompareResult READONLY _bal_array_decimal_compare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedDecimalCompare);
+CompareResult READONLY _bal_array_list_compare(TaggedPtr tp1, TaggedPtr tp2) {
+    return optListDoCompare(tp1, tp2, &_bal_opt_list_compare);
 }

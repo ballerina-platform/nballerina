@@ -353,10 +353,13 @@ public final UniformTypeBitSet FLOAT = uniformType(UT_FLOAT);
 public final UniformTypeBitSet DECIMAL = uniformType(UT_DECIMAL);
 public final UniformTypeBitSet STRING = uniformType(UT_STRING);
 public final UniformTypeBitSet ERROR = uniformType(UT_ERROR);
+public final UniformTypeBitSet LIST_RO = uniformType(UT_LIST_RO);
 public final UniformTypeBitSet LIST_RW = uniformType(UT_LIST_RW);
 public final UniformTypeBitSet LIST = uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW));
+public final UniformTypeBitSet MAPPING_RO = uniformType(UT_MAPPING_RO);
 public final UniformTypeBitSet MAPPING_RW = uniformType(UT_MAPPING_RW);
 public final UniformTypeBitSet MAPPING = uniformTypeUnion((1 << UT_MAPPING_RO) | (1 << UT_MAPPING_RW));
+public final UniformTypeBitSet TABLE_RO = uniformType(UT_TABLE_RO);
 public final UniformTypeBitSet TABLE_RW = uniformType(UT_TABLE_RW);
 public final UniformTypeBitSet TABLE = uniformTypeUnion((1 << UT_TABLE_RO) | (1 << UT_TABLE_RW));
 
