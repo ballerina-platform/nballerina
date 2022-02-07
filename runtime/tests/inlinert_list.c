@@ -1,60 +1,14 @@
 #include "string_utils.h"
+#include "list_utils.h"
 #include "../balrt_inline.h"
 #include <stdio.h>
 
-ListDesc DESC_INT = {0,
-                     _bal_list_int_array_get_tagged,
-                     _bal_list_int_array_set_tagged,
-                     _bal_list_int_array_get_int,
-                     _bal_list_int_array_set_int,
-                     NULL,
-                     _bal_list_int_array_set_float,
-                     BITSET_MEMBER_TYPE(1 << TAG_INT)};
-
-ListDesc DESC_INT_NIL = {0,
-                         _bal_list_generic_get_tagged,
-                         _bal_list_generic_set_tagged,
-                         _bal_list_generic_get_int,
-                         _bal_list_generic_set_int,
-                         _bal_list_generic_get_float,
-                         _bal_list_generic_set_float,
-                         BITSET_MEMBER_TYPE(1 << TAG_INT | 1 << TAG_NIL)};
-
-ListDesc DESC_FLOAT = {4,
-                       _bal_list_float_array_get_tagged,
-                       _bal_list_float_array_set_tagged,
-                       NULL,
-                       _bal_list_float_array_set_int,
-                       _bal_list_float_array_get_float,
-                       _bal_list_float_array_set_float,
-                       BITSET_MEMBER_TYPE(1 << TAG_FLOAT)};
-
-ListDesc DESC_FLOAT_NIL = {12,
-                           _bal_list_generic_get_tagged,
-                           _bal_list_generic_set_tagged,
-                           _bal_list_generic_get_int,
-                           _bal_list_generic_set_int,
-                           _bal_list_generic_get_float,
-                           _bal_list_generic_set_float,
-                           BITSET_MEMBER_TYPE(1 << TAG_FLOAT | 1 << TAG_NIL)};
-
-ListDesc DESC_STRING = {100,
-                        _bal_list_generic_get_tagged,
-                        _bal_list_generic_set_tagged,
-                        _bal_list_generic_get_int,
-                        _bal_list_generic_set_int,
-                        _bal_list_generic_get_float,
-                        _bal_list_generic_set_float,
-                        BITSET_MEMBER_TYPE(1 << TAG_STRING)};
-
-ListDesc DESC_STRING_NIL = {150,
-                            _bal_list_generic_get_tagged,
-                            _bal_list_generic_set_tagged,
-                            _bal_list_generic_get_int,
-                            _bal_list_generic_set_int,
-                            _bal_list_generic_get_float,
-                            _bal_list_generic_set_float,
-                            BITSET_MEMBER_TYPE(1 << TAG_STRING | 1 << TAG_NIL)};
+ListDesc DESC_INT = LIST_DESC_INIT_INT_ARRAY(0);
+ListDesc DESC_INT_NIL = LIST_DESC_INIT_GENERIC(0, 1 << TAG_INT | 1 << TAG_NIL);
+ListDesc DESC_FLOAT = LIST_DESC_INIT_FLOAT_ARRAY(4);
+ListDesc DESC_FLOAT_NIL = LIST_DESC_INIT_GENERIC(12, 1 << TAG_FLOAT | 1 << TAG_NIL);
+ListDesc DESC_STRING = LIST_DESC_INIT_GENERIC(100, 1 << TAG_STRING);
+ListDesc DESC_STRING_NIL = LIST_DESC_INIT_GENERIC(150, 1 << TAG_STRING | 1 << TAG_NIL);
 
 TaggedPtr constructListWithDesc(ListDescPtr desc) {
     GC TaggedPtr *members =  _bal_alloc(sizeof(TaggedPtr));
