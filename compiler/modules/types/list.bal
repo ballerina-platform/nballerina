@@ -343,7 +343,10 @@ function fixedArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
     }
     int initLen = initial.length();
     int fixedLen = arr.fixedLength;
-    if fixedLen == 0 || initial[initLen - 1] != filler {
+    if fixedLen == 0 {
+        initial.push(filler);
+    }
+    else if initial[initLen - 1] != filler {
         SemType last = initial[initLen - 1];
         foreach int i in 0 ..< fixedLen - initLen {
             initial.push(last);
