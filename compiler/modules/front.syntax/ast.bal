@@ -66,7 +66,8 @@ public type CallExpr FunctionCallExpr|MethodCallExpr|CheckingCallExpr;
 public type Expr GroupingExpr|NumericLiteralExpr|LiteralExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
 public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
-public type SimpleConstExpr LiteralExpr|VarRefExpr|NumericLiteralExpr|SimpleConstNegateExpr;
+public type ExtendedLiteralExpr LiteralExpr|NumericLiteralExpr|SimpleConstNegateExpr;
+public type SimpleConstExpr ExtendedLiteralExpr|VarRefExpr;
 
 // L-value expression
 public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
@@ -240,7 +241,7 @@ public type SimpleConstNegateExpr record {|
     *UnaryExpr;
     // JBUG #33369 should be able to do `"-" op = "-";`
     NegateOp op = "-";
-    IntLiteralExpr|LiteralExpr operand;
+    NumericLiteralExpr|LiteralExpr operand;
 |};
 
 public type ErrorConstructorExpr record {|
@@ -505,7 +506,7 @@ public type TypeDescRef record {|
 
 public type SingletonTypeDesc record {|
     *PositionFields;
-    (string|float|int|boolean|decimal) value;
+    ExtendedLiteralExpr valueExpr;
 |};
 
 public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"byte"|"int"|"decimal"|"float"|"string"|"error";

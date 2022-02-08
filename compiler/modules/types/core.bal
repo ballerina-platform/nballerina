@@ -353,10 +353,13 @@ public final UniformTypeBitSet FLOAT = uniformType(UT_FLOAT);
 public final UniformTypeBitSet DECIMAL = uniformType(UT_DECIMAL);
 public final UniformTypeBitSet STRING = uniformType(UT_STRING);
 public final UniformTypeBitSet ERROR = uniformType(UT_ERROR);
+public final UniformTypeBitSet LIST_RO = uniformType(UT_LIST_RO);
 public final UniformTypeBitSet LIST_RW = uniformType(UT_LIST_RW);
 public final UniformTypeBitSet LIST = uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW));
+public final UniformTypeBitSet MAPPING_RO = uniformType(UT_MAPPING_RO);
 public final UniformTypeBitSet MAPPING_RW = uniformType(UT_MAPPING_RW);
 public final UniformTypeBitSet MAPPING = uniformTypeUnion((1 << UT_MAPPING_RO) | (1 << UT_MAPPING_RW));
+public final UniformTypeBitSet TABLE_RO = uniformType(UT_TABLE_RO);
 public final UniformTypeBitSet TABLE_RW = uniformType(UT_TABLE_RW);
 public final UniformTypeBitSet TABLE = uniformTypeUnion((1 << UT_TABLE_RO) | (1 << UT_TABLE_RW));
 
@@ -839,26 +842,50 @@ public function widenUnsigned(SemType t) returns SemType {
     }
 }
 
-public function booleanSubtype(ComplexSemType t) returns BooleanSubtype|boolean {
-    return <boolean|BooleanSubtype>getComplexSubtypeData(t, UT_BOOLEAN);
+public function booleanSubtype(SemType t) returns BooleanSubtype|boolean {
+    return <boolean|BooleanSubtype>subtypeData(t, UT_BOOLEAN);
 }
 
 // Describes the subtype of int included in the type: true/false mean all or none of string
-public function intSubtype(ComplexSemType t) returns IntSubtype|boolean {
-    return <boolean|IntSubtype>getComplexSubtypeData(t, UT_INT);
+public function intSubtype(SemType t) returns IntSubtype|boolean {
+    return <boolean|IntSubtype>subtypeData(t, UT_INT);
 }
 
-public function floatSubtype(ComplexSemType t) returns FloatSubtype|boolean {
-    return <boolean|FloatSubtype>getComplexSubtypeData(t, UT_FLOAT);
+public function floatSubtype(SemType t) returns FloatSubtype|boolean {
+    return <boolean|FloatSubtype>subtypeData(t, UT_FLOAT);
 }
 
-public function decimalSubtype(ComplexSemType t) returns DecimalSubtype|boolean {
-    return <boolean|DecimalSubtype>getComplexSubtypeData(t, UT_DECIMAL);
+public function decimalSubtype(SemType t) returns DecimalSubtype|boolean {
+    return <boolean|DecimalSubtype>subtypeData(t, UT_DECIMAL);
 }
 
 // Describes the subtype of string included in the type: true/false mean all or none of string
-public function stringSubtype(ComplexSemType t) returns StringSubtype|boolean {
-    return <boolean|StringSubtype>getComplexSubtypeData(t, UT_STRING);
+public function stringSubtype(SemType t) returns StringSubtype|boolean {
+    return <boolean|StringSubtype>subtypeData(t, UT_STRING);
+}
+
+// Constraints on a subtype of `int`.
+type IntSubtypeConstraints readonly & record {|
+    // all values in the subtype are >= min
+    int min;
+    // all values in the subtype are <= max
+    int max;
+    // does the subtype contain all values between min and max?
+    boolean all;
+|};
+
+// Returns `()` if `t` is not a proper, non-empty subtype of `int`.
+// i.e. returns `()` if `t` contains all or non of `int`.
+public function intSubtypeConstraints(SemType t) returns IntSubtypeConstraints? {
+    var intSubtype = intSubtype(t);
+    // JBUG can't flatten inner if-else
+    if intSubtype is boolean {
+        return ();
+    }
+    else {
+        int len = intSubtype.length();
+        return { min: intSubtype[0].min, max: intSubtype[len - 1].max, all: len == 1 };
+    } 
 }
 
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
@@ -963,7 +990,6 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // This computes the spec operation called "member type of K in T",
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
-// We will extend this to allow `key` to be a SemType, which will turn into a StringSubtype.
 public function mappingMemberType(Context cx, SemType t, SemType k = STRING) returns SemType {
     if t is UniformTypeBitSet {
         return (t & MAPPING) != 0 ? TOP : NEVER;
@@ -986,6 +1012,23 @@ public function mappingMemberRequired(Context cx, SemType t, SemType k) returns 
         StringSubtype stringSubType = <StringSubtype>getComplexSubtypeData(k, UT_STRING);
         return bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), stringSubType, false)
                && bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), stringSubType, false);
+    }
+}
+
+public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
+    StringSubtype|boolean keyStringType;
+    if keyType is UniformTypeBitSet {
+        keyStringType = (keyType & STRING) != 0;
+    }
+    else {
+        keyStringType = stringSubtype(keyType);
+    }
+    if keyStringType == false {
+        return [];
+    }
+    else {
+        // JBUG doesn't work to use `keyStringType == true`
+        return mappingAtomicApplicableMemberTypes(atomic, keyStringType is boolean ? () : keyStringType).cloneReadOnly();
     }
 }
 

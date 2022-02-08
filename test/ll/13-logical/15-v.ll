@@ -56,14 +56,14 @@ define void @_B04rootmain() !dbg !5 {
   %32 = load i1, i1* %5
   br i1 %32, label %33, label %37
 33:
-  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
   %35 = call double @_bal_tagged_to_float(i8 addrspace(1)* %34)
   store double %35, double* %x.2
   %36 = load double, double* %x.2
   store double %36, double* %_
   ret void
 37:
-  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
   store i8 addrspace(1)* %38, i8 addrspace(1)** %x.3
   %39 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
   store i8 addrspace(1)* %39, i8 addrspace(1)** %_.1

@@ -2,6 +2,9 @@
 /string_cmp
 /string_concat
 /inlinert_float
+/inlinert_int
+/inlinert_list
+/inlinert_string
 /immediate_string
 /string_len
 /tagged_ptr

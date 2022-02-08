@@ -1,3 +1,4 @@
+import wso2/nballerina.comm.err;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
@@ -20,8 +21,8 @@ final RuntimeFunction decimalCmpFunction = {
     attrs: ["readonly"]
 };
 
-final RuntimeFunction intCompareFunction = {
-    name: "int_compare",
+final RuntimeFunction optIntCompareFunction = {
+    name: "opt_int_compare",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -29,8 +30,8 @@ final RuntimeFunction intCompareFunction = {
     attrs: ["readonly"]
 };
 
-final RuntimeFunction floatCompareFunction = {
-    name: "float_compare",
+final RuntimeFunction optFloatCompareFunction = {
+    name: "opt_float_compare",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -38,8 +39,8 @@ final RuntimeFunction floatCompareFunction = {
     attrs: ["readonly"]
 };
 
-final RuntimeFunction stringCompareFunction = {
-    name: "string_compare",
+final RuntimeFunction optStringCompareFunction = {
+    name: "opt_string_compare",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -47,8 +48,8 @@ final RuntimeFunction stringCompareFunction = {
     attrs: ["readonly"]
 };
 
-final RuntimeFunction booleanCompareFunction = {
-    name: "boolean_compare",
+final RuntimeFunction optBooleanCompareFunction = {
+    name: "opt_boolean_compare",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -56,8 +57,17 @@ final RuntimeFunction booleanCompareFunction = {
     attrs: ["readonly"]
 };
 
-final RuntimeFunction decimalCompareFunction = {
-    name: "decimal_compare",
+final RuntimeFunction optDecimalCompareFunction = {
+    name: "opt_decimal_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction optListCompareFunction = {
+    name: "opt_list_compare",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -101,8 +111,8 @@ final RuntimeFunction arrayBooleanCompareFunction = {
     attrs: ["readonly"]
 };
 
-final RuntimeFunction arrayGenericCompareFunction = {
-    name: "array_generic_compare",
+final RuntimeFunction arrayListCompareFunction = {
+    name: "array_list_compare",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -129,17 +139,17 @@ final RuntimeFunction arrayDecimalCompareFunction = {
 };
 
 type TaggedCompareFunction readonly & record {|
-    t:UniformTypeCode utCode;
-    RuntimeFunction compareFunction;
+    t:UniformTypeBitSet utCode;
+    RuntimeFunction optCompareFunction;
     RuntimeFunction arrayCompareFunction;
 |};
 
 final readonly & table<TaggedCompareFunction> key(utCode) compareFunctions = table [
-    { utCode: t:UT_INT, compareFunction: intCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
-    { utCode: t:UT_FLOAT, compareFunction: floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
-    { utCode: t:UT_BOOLEAN, compareFunction: booleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
-    { utCode: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction },
-    { utCode: t:UT_DECIMAL, compareFunction: decimalCompareFunction, arrayCompareFunction: arrayDecimalCompareFunction }
+    { utCode: t:UT_INT, optCompareFunction: optIntCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
+    { utCode: t:UT_FLOAT, optCompareFunction: optFloatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
+    { utCode: t:UT_BOOLEAN, optCompareFunction: optBooleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
+    { utCode: t:UT_STRING, optCompareFunction: optStringCompareFunction, arrayCompareFunction: arrayStringCompareFunction },
+    { utCode: t:UT_DECIMAL, optCompareFunction: optDecimalCompareFunction, arrayCompareFunction: arrayDecimalCompareFunction }
 ];
 
 function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
@@ -150,75 +160,100 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
     bir:Register result = insn.result;
 
     if lhsRepr is TaggedRepr && rhsRepr is TaggedRepr {
-        if lhsRepr.subtype == t:STRING && rhsRepr.subtype == t:STRING {
+        t:UniformTypeBitSet subtype = lhsRepr.subtype | rhsRepr.subtype;
+        if subtype == t:STRING {
             buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
         }
-        else if lhsRepr.subtype == t:DECIMAL && rhsRepr.subtype == t:DECIMAL {
+        else if subtype == t:DECIMAL {
             buildCompareDecimal(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
         }
+        else if subtype == t:NIL {
+            buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, insn.op is "<="|">=" ? 1 : 0), insn.result);
+        }
         else {
-            t:UniformTypeBitSet OrderTyMinusNil = (lhsRepr.subtype | rhsRepr.subtype) & ~t:NIL;
-            t:UniformTypeCode?  OrderTyMinusNilCode = t:uniformTypeCode(OrderTyMinusNil);
-            if OrderTyMinusNilCode is t:UT_STRING|t:UT_INT|t:UT_FLOAT|t:UT_BOOLEAN|t:UT_DECIMAL {
-                RuntimeFunction comparator = compareFunctions.get(OrderTyMinusNilCode).compareFunction;
-                buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, comparator);
-            }
-            else if OrderTyMinusNil == t:LIST {
+            t:UniformTypeBitSet orderTypeMinusNil = subtype & ~t:NIL;
+            if t:isSubtypeSimple(orderTypeMinusNil, t:LIST) {
                 t:Context tc = scaffold.typeContext();
-                if isOperandIntSubtypeArray(tc, lhs) && isOperandIntSubtypeArray(tc, rhs) {
+                t:SemType lhsType = lhs.semType;
+                t:SemType rhsType = rhs.semType; 
+                if isPotentiallyExactIntArray(tc, lhsType) && isPotentiallyExactIntArray(tc, rhsType) {
                     buildCompareSpecializedIntList(builder, scaffold, insn, lhsValue, rhsValue);
                 }
                 else {
-                    buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, arrayGenericCompareFunction);
+                    buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue,
+                                      getArrayCompareFunction(tc, [lhsType, rhsType]));
                 }
             }
-            else if OrderTyMinusNil == t:NEVER {
-                buildStoreBoolean(builder, scaffold,  llvm:constInt(LLVM_BOOLEAN, insn.op is "<="|">=" ? 1 : 0), insn.result);
-            }
             else {
-                panic error("incomparable operands");
+                // Single uniform type code here should be guaranteed by comparability of operands
+                var orderTypeMinusNilCode = <t:UniformTypeCode>t:uniformTypeCode(orderTypeMinusNil);
+                RuntimeFunction compareFunc = compareFunctions.get(orderTypeMinusNilCode).optCompareFunction;
+                buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, compareFunc);
+            }    
+        }
+    }
+    else {
+        match [lhsRepr.base, rhsRepr.base] {
+            [BASE_REPR_TAGGED, BASE_REPR_INT] => {
+                buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            [BASE_REPR_INT, BASE_REPR_TAGGED] => {
+                buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
+            }
+            [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
+                buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
+                buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
+            }
+            [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
+                buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            [BASE_REPR_BOOLEAN, BASE_REPR_TAGGED] => {
+                buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
+            }
+            [BASE_REPR_INT, BASE_REPR_INT] => {
+                buildCompareInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN] => {
+                buildCompareInt(builder, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            [BASE_REPR_FLOAT, BASE_REPR_FLOAT] => {
+                buildCompareFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            _ => {
+                panic err:impossible(`no way to compare ${lhsRepr.base}/${rhsRepr.base}`);
             }
         }
-        return;
-    }
-
-    match [lhsRepr.base, rhsRepr.base] {
-        [BASE_REPR_TAGGED, BASE_REPR_INT] => {
-            buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
-        }
-        [BASE_REPR_INT, BASE_REPR_TAGGED] => {
-            buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
-        }
-        [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
-            buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
-        }
-        [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
-            buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
-        }
-        [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
-            buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
-        }
-        [BASE_REPR_BOOLEAN, BASE_REPR_TAGGED] => {
-            buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
-        }
-        [BASE_REPR_INT, BASE_REPR_INT] => {
-            buildCompareInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
-        }
-        [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN] => {
-            buildCompareInt(builder, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
-        }
-        [BASE_REPR_FLOAT, BASE_REPR_FLOAT] => {
-            buildCompareFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
-        }
     }
 }
 
-function isOperandIntSubtypeArray(t:Context tc, bir:Operand o) returns boolean {
-    return o is bir:Register && t:isSubtypeSimple(t:listMemberType(tc, o.semType ,()), t:INT);
+function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns RuntimeFunction {
+    t:UniformTypeBitSet memberType = 0;
+    foreach int i in 0 ..< 2 {
+        memberType |= t:widenToUniformTypes(t:listMemberType(tc, semTypes[i]));
+    }
+    if memberType != t:NIL {
+        memberType &= ~t:NIL;
+        t:UniformTypeCode? memberTypeCode = t:uniformTypeCode(memberType);
+        if memberTypeCode != () {
+             TaggedCompareFunction? tcf = compareFunctions[memberTypeCode];
+             if tcf != () {
+                 return tcf.arrayCompareFunction;
+             }
+        }
+        if t:isSubtypeSimple(memberType, t:LIST) {
+            return arrayListCompareFunction;
+        }
+    }
+    // This happens mostly with tuples.
+    // For arrays, this can only happen with arrays of ()
+    return optListCompareFunction;
 }
 
-function isOperandDecimalSubtypeArray(t:Context tc, bir:Operand o) returns boolean {
-    return o is bir:Register && t:isSubtypeSimple(t:listMemberType(tc, o.semType ,()), t:DECIMAL);
+function isPotentiallyExactIntArray(t:Context tc, t:SemType semType) returns boolean {
+    t:ListAtomicType? atomic = t:listAtomicTypeRw(tc, semType);
+    return atomic == () ? false : t:listAtomicSimpleArrayMemberType(atomic) == t:INT;
 }
 
 final readonly & map<bir:OrderOp> flippedOrderOps = {
@@ -244,7 +279,7 @@ function buildCompareSpecializedIntList(llvm:Builder builder, Scaffold scaffold,
     buildCompareStore(builder, scaffold, insn, lhs, rhs, arrayExactIntCompareFunction);
     builder.br(bbJoin);
     builder.positionAtEnd(bbInexact);
-    buildCompareStore(builder, scaffold, insn, lhs, rhs, arrayGenericCompareFunction);
+    buildCompareStore(builder, scaffold, insn, lhs, rhs, arrayIntCompareFunction);
     builder.br(bbJoin);
     builder.positionAtEnd(bbJoin);
 }

@@ -122,11 +122,14 @@ type ListRepr readonly & object {
     function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg);
 };
 
+// Index of first function in the list descriptor
+const LIST_DESC_FIRST_FUNCTION_INDEX = 1;
+
 final readonly & map<ListRepr> listReprs = {
     generic: object {
         llvm:Type memberType = LLVM_TAGGED_PTR;
-        int listDescGetIndex = 1;
-        int listDescSetIndex = 2;
+        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX;
+        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 1;
         boolean isSpecialized = false;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildWideRepr(builder, scaffold, member, REPR_ANY, memberType);
@@ -137,8 +140,8 @@ final readonly & map<ListRepr> listReprs = {
     },
     int_array: object {
         llvm:Type memberType = LLVM_INT;
-        int listDescGetIndex = 3;
-        int listDescSetIndex = 4;
+        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 2;
+        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 3;
         boolean isSpecialized = true;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildInt(builder, scaffold, <bir:IntOperand>member);
@@ -149,8 +152,8 @@ final readonly & map<ListRepr> listReprs = {
     },
     float_array: object {
         llvm:Type memberType = LLVM_DOUBLE;
-        int listDescGetIndex = 5;
-        int listDescSetIndex = 6;
+        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 4;
+        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 5;
         boolean isSpecialized = true;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildFloat(builder, scaffold, <bir:FloatOperand>member);
@@ -372,9 +375,11 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
     t:SemType resultType = insn.result.semType;
     if isPotentiallyExact(resultType) {
         if !isMappingMemberTypeExact(scaffold.typeContext(), mappingReg.semType, keyOperand, resultType) {
+            // this clears the exact bit of member
             member = buildClearExact(builder, scaffold, member, resultType);
         }
         else {
+            // this clears the exact bit of `member` only if `mapping` is not exact
             member = buildMemberClearExact(builder, scaffold, mapping, member, resultType);
         }
     }
@@ -382,24 +387,25 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
 }
 
 // When this returns false, we need clear the exact bit on a member that we get from a mapping value.
+// Let M be mapping type and let K be the type of keyOperand.
+// If this function returns true, then it must be the case when a mappping value has as M as
+// its inherent type, then for any field name k in K, if M has a field k, then the type that M requires for k must be
+// equal to t:mappingMemberType(cx, M, K).
 function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand, t:SemType resultType) returns boolean {
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
     if mat == () {
         return false;
     }
-    else {
-        if t:singleStringShape(keyOperand.semType) != () || mat.names.length() == 0 {
-            return true;
-        }
-        // SUBSET singleton types
+    // don't need to check when the condition is false, because there can be only one applicable member type
+    else if t:singleStringShape(keyOperand.semType) == () && mat.names.length() != 0 {
         t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
-        foreach t:SemType ty in mat.types {
+        foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypes(tc, mat, keyOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
             }
         }
-        return isSameTypeWithin(tc, mat.rest, POTENTIALLY_EXACT, peResult);
     }
+    return true;
 }
 
 function isSameTypeWithin(t:Context tc, t:SemType semType, t:SemType within, t:SemType targetType) returns boolean {
@@ -475,6 +481,7 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
     return ();
 }
 
+// This clears the exact bit of the member if the structure is not exact.
 function buildMemberClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value structure, llvm:Value member, t:SemType sourceType) returns llvm:Value {
     RuntimeFunction rf = overloadsExactBit(sourceType) ? taggedMemberClearExactAnyFunction : taggedMemberClearExactPtrFunction;
     return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [structure, member]);

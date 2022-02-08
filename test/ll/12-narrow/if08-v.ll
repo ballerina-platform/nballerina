@@ -70,7 +70,7 @@ define void @_B04rootmain() !dbg !5 {
 41:
   br label %42
 42:
-  %43 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
+  %43 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
   store i8 addrspace(1)* %43, i8 addrspace(1)** %x.5
   %44 = load i8 addrspace(1)*, i8 addrspace(1)** %x.5
   store i8 addrspace(1)* %44, i8 addrspace(1)** %bs

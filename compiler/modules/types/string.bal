@@ -17,11 +17,6 @@ public type NonCharStringSubtype readonly & record {|
     string[] values;
 |};
 
-type StringSubtypeIntersectionResult record {|
-    boolean covered;
-    int[] indices;
-|};
-
 public function stringConst(string value) returns ComplexSemType {
     CharStringSubtype char;
     NonCharStringSubtype nonChar;
@@ -71,20 +66,26 @@ function stringSubtypeContains(SubtypeData d, string s) returns boolean {
 }
 
 function stringSubtypeContainedIn(StringSubtype subtype, string[] values) returns boolean {
-    return stringSubtypeIntersection(subtype, values).covered;
+    return stringSubtypeListCoverage(subtype, values).isSubtype;
 }
 
-// `values` represents a subtype of string containing each of the members of the list.
-// `values` must be sorted.
-// returns { covered, indices }
-// Where `covered` is true if the first arg is a subtype of the type represented by the second arg
-// and `indices`` contains the index of each member of values that is a subtype of the first arg
-function stringSubtypeIntersection(StringSubtype subtype, string[] values) returns StringSubtypeIntersectionResult {
+// Describes the relationship between a StringSubtype and a list of strings
+// How the StringSubtype covers the list and vice versa.
+type StringSubtypeListCoverage record {|
+    // true if the StringSubtype is a subtype of the type containing the strings in the lists
+    boolean isSubtype;
+    // contains the index in order of each member of the list that is in the StringSubtype
+    int[] indices;
+|};
+
+// Returns a description of the relationship between a StringSubtype and a list of strings
+// `values` must be ordered.
+function stringSubtypeListCoverage(StringSubtype subtype, string[] values) returns StringSubtypeListCoverage {
     int[] indices = [];
     var { char, nonChar } = subtype;
     int stringConsts = 0;
     if char.allowed {
-        stringListIntersection(values, char.values, indices);
+        stringListIntersect(values, char.values, indices);
         stringConsts = char.values.length();
     }
     else if char.values.length() == 0 {
@@ -95,7 +96,7 @@ function stringSubtypeIntersection(StringSubtype subtype, string[] values) retur
         }
     }
     if nonChar.allowed {
-        stringListIntersection(values, nonChar.values, indices);
+        stringListIntersect(values, nonChar.values, indices);
         stringConsts += nonChar.values.length();
     }
     else if nonChar.values.length() == 0 {
@@ -105,10 +106,10 @@ function stringSubtypeIntersection(StringSubtype subtype, string[] values) retur
             }
         }
     }
-    return { covered: stringConsts == indices.length(), indices };
+    return { isSubtype: stringConsts == indices.length(), indices };
 }
 
-function stringListIntersection(string[] values, string[] target, int[] indices) {
+function stringListIntersect(string[] values, string[] target, int[] indices) {
     int i1 = 0;
     int i2 = 0;
     int len1 = values.length();

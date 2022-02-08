@@ -8,7 +8,7 @@ TESTPROG_PROF = test.profdata
 TESTPROG_EXE=$(addprefix -object ./, $(TESTPROGS))
 SHELL=/bin/bash
 TESTLIB=$(addprefix ../,$(LL_BCS) $(LIB))
-all: $(TESTPROGS)
+all: $(TESTPROGS) $(TESTINLINERTPROGS)
 
 test: $(TESTPROG_STAMPS)
 
@@ -51,6 +51,6 @@ $(filter-out error%, $(TESTPROGS)): %: %.c
 clean:
 	-rm -f $(TESTPROGS) $(TESTPROG_STAMPS) $(TESTPROG_PROF_RAW) $(TESTPROG_PROF)
 
-$(TESTPROGS): ../balrt.h $(TESTLIB)
+$(TESTPROGS) $(TESTINLINERTPROGS): ../balrt.h $(TESTLIB)
 
 .PHONY: all test clean

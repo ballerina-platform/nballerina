@@ -164,7 +164,7 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
         llType = llListDescType;        
     }
     else {
-        llType = createMappingDescType(cx.tc, tid, semType);        
+        llType = createMappingDescType(cx.tc, semType);        
     }
     // The initializer is set later, because of the possibility of
     // recursion via `getFillerDesc`.
@@ -194,7 +194,7 @@ function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) re
     return cx.llContext.constStruct(initStructValues);    
 }
 
-function createMappingDescType(t:Context tc, int tid, t:SemType semType) returns llvm:StructType {
+function createMappingDescType(t:Context tc, t:SemType semType) returns llvm:StructType {
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, semType);
     // tid, fieldCount, restField, individualFields...
     return llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, llStructureDescPtrType, llvm:arrayType(LLVM_MEMBER_TYPE, mat.names.length())]);
