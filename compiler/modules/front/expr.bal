@@ -499,12 +499,19 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
 function isNonPanicking(bir:Operand lhs, bir:Operand rhs, bir:ArithmeticBinaryOp op) returns boolean {
     t:IntSubtypeConstraints? lhsConstraints = t:intSubtypeConstraints(lhs.semType);
     t:IntSubtypeConstraints? rhsConstraints = t:intSubtypeConstraints(rhs.semType);
+    if lhsConstraints == () || rhsConstraints == () {
+        return false;
+    }
     match op {
+        "+"|"-" => {
+            // largest type that can't overflow is unsigned32 (positive) and signed32 (negative)
+            return lhsConstraints.max <= 0xffffffff && rhsConstraints.max <= 0xffffffff &&
+                   lhsConstraints.min >= -0x80000000 && rhsConstraints.min >= -0x80000000;
+        }
         "*" => {
-            // 3037000499 is the largest interger less than square root of int max (9223372036854775807)
-            return lhsConstraints != () && rhsConstraints != () &&
-                   lhsConstraints.max  < 3037000500 && rhsConstraints.max < 3037000500 &&
-                   lhsConstraints.min > -3037000500 && rhsConstraints.min > -3037000500;
+            // largest type that can't overflow is unsigned16 (positive) and signed16 (negative)
+            return lhsConstraints.max <= 0xffff && rhsConstraints.max <= 0xffff &&
+                   lhsConstraints.min >= -0x8000 && rhsConstraints.min >= -0x8000;
         }
         "/" => {
             return false;
