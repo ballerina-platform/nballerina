@@ -865,7 +865,7 @@ public function stringSubtype(SemType t) returns StringSubtype|boolean {
 }
 
 // Constraints on a subtype of `int`.
-type IntSubtypeConstraints record {|
+type IntSubtypeConstraints readonly & record {|
     // all values in the subtype are >= min
     int min;
     // all values in the subtype are <= max
