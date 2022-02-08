@@ -68,7 +68,7 @@ function listProjPath(Context cx, IntSubtype? k, Conjunction? pos, Conjunction? 
             rest = NEVER;
         }
     }
-    return listProjExclude(cx, k, members, rest, neg);
+    return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
 }
 
 // Precondition k >= 0 and members[i] not empty for all i
@@ -76,17 +76,23 @@ function listProjPath(Context cx, IntSubtype? k, Conjunction? pos, Conjunction? 
 // when the type of e is given by members and rest.
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
-function listProjExclude(Context cx, IntSubtype? k, FixedLengthArray members, SemType rest, Conjunction? neg) returns SemType {
+function listProjExclude(Context cx, IntSubtype? k, FixedLengthArray members, SemType rest, ListConjunction? neg) returns SemType {
     if neg == () {
         return listAtomicMemberTypeAt(members, rest, k);
     }
     else {
         int len = members.fixedLength;
-        ListAtomicType nt = cx.listAtomType(neg.atom);
+        ListAtomicType nt = neg.listType;
         int negLen = nt.members.fixedLength;
+        SemType p = NEVER;
         if len < negLen {
             if isNever(rest) {
                 return listProjExclude(cx, k, members, rest, neg.next);
+            }
+            foreach int i in members.initial.length() + 1 ..< nt.members.initial.length() {
+                FixedLengthArray s = fixedArrayShallowCopy(members);
+                fixedArrayFill(s, i, rest);
+                p = union(p, listProjExclude(cx, k, members, NEVER, neg.next));
             }
             fixedArrayFill(members, negLen, rest);
             len = negLen;
@@ -95,12 +101,11 @@ function listProjExclude(Context cx, IntSubtype? k, FixedLengthArray members, Se
             return listProjExclude(cx, k, members, rest, neg.next);
         }
         // now we have nt.members.length() <= len
-        SemType p = NEVER;
-        foreach int i in 0 ..< len {
-            SemType ntm = listMemberAt(nt.members, nt.rest, i);
-            SemType d = diff(fixedArrayGet(members, i), ntm);
+        foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
+            SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
+                fixedArrayFill(s, i - 1, rest);
                 fixedArraySet(s, i, d);
                 p = union(p, listProjExclude(cx, k, s, rest, neg.next));
             }     

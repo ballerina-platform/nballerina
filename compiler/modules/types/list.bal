@@ -262,7 +262,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             if listInhabited(cx, members, NEVER, neg.next) {
                 return true;
             }
-            foreach int i in len + 1 ..< negLen {
+            foreach int i in members.initial.length() + 1 ..< nt.members.initial.length() {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
                 if listInhabited(cx, s, NEVER, neg.next) {
@@ -341,7 +341,13 @@ function fixedArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
     if newLen <= initial.length() {
         return;
     }
-    if arr.fixedLength == 0 || initial[initial.length() - 1] != filler {
+    int initLen = initial.length();
+    int fixedLen = arr.fixedLength;
+    if fixedLen == 0 || initial[initLen - 1] != filler {
+        SemType last = initial[initLen - 1];
+        foreach int i in 0 ..< fixedLen - initLen {
+            initial.push(last);
+        }
         initial.push(filler);
     }
     arr.fixedLength = newLen;
