@@ -307,3 +307,27 @@ function testStringSubtypeSingleValue() {
     SemType intersect4 = intersect(a, STRING);  
     test:assertEquals(intersect4, a);
 }
+
+@test:Config{}
+function testIntSubtypeConstraints() {
+    IntSubtype i1 = [{ min: -1, max: 10 }];
+    SemType t1 = uniformSubtype(UT_INT, i1);
+
+    IntSubtype i2 = [{ min: 11, max: 12 }];
+    SemType t2 = uniformSubtype(UT_INT, i2);
+
+    SemType t12 = union(t1, t2);
+    var c12 = <IntSubtypeConstraints>intSubtypeConstraints(t12);
+    test:assertEquals(c12.min, -1);
+    test:assertEquals(c12.max, 12);
+    test:assertEquals(c12.all, true);
+
+    IntSubtype i3 = [{ min: 14, max: 15 }];
+    SemType t3 = uniformSubtype(UT_INT, i3);
+
+    SemType t13 = union(t1, t3);
+    var c13 = <IntSubtypeConstraints>intSubtypeConstraints(t13);
+    test:assertEquals(c13.min, -1);
+    test:assertEquals(c13.max, 15);
+    test:assertEquals(c13.all, false);
+}

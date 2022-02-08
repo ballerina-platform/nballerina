@@ -122,11 +122,14 @@ type ListRepr readonly & object {
     function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg);
 };
 
+// Index of first function in the list descriptor
+const LIST_DESC_FIRST_FUNCTION_INDEX = 1;
+
 final readonly & map<ListRepr> listReprs = {
     generic: object {
         llvm:Type memberType = LLVM_TAGGED_PTR;
-        int listDescGetIndex = 1;
-        int listDescSetIndex = 2;
+        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX;
+        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 1;
         boolean isSpecialized = false;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildWideRepr(builder, scaffold, member, REPR_ANY, memberType);
@@ -137,8 +140,8 @@ final readonly & map<ListRepr> listReprs = {
     },
     int_array: object {
         llvm:Type memberType = LLVM_INT;
-        int listDescGetIndex = 3;
-        int listDescSetIndex = 4;
+        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 2;
+        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 3;
         boolean isSpecialized = true;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildInt(builder, scaffold, <bir:IntOperand>member);
@@ -149,8 +152,8 @@ final readonly & map<ListRepr> listReprs = {
     },
     float_array: object {
         llvm:Type memberType = LLVM_DOUBLE;
-        int listDescGetIndex = 5;
-        int listDescSetIndex = 6;
+        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 4;
+        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 5;
         boolean isSpecialized = true;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildFloat(builder, scaffold, <bir:FloatOperand>member);

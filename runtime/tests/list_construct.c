@@ -1,22 +1,8 @@
 #include "string_utils.h"
+#include "list_utils.h"
 
-ListDesc DESC_INT = {10,
-                     _bal_list_int_array_get_tagged,
-                     _bal_list_int_array_set_tagged,
-                     _bal_list_int_array_get_int,
-                     _bal_list_int_array_set_int,
-                     NULL,
-                     _bal_list_int_array_set_float,
-                     BITSET_MEMBER_TYPE(1 << TAG_INT)};
-
-ListDesc DESC_STRING = {120,
-                        _bal_list_generic_get_tagged,
-                        _bal_list_generic_set_tagged,
-                        _bal_list_generic_get_int,
-                        _bal_list_generic_set_int,
-                        _bal_list_generic_get_float,
-                        _bal_list_generic_set_float,
-                        BITSET_MEMBER_TYPE(1 << TAG_STRING)};
+ListDesc DESC_INT = LIST_DESC_INIT_INT_ARRAY(10);
+ListDesc DESC_STRING = LIST_DESC_INIT_GENERIC(120, 1 << TAG_STRING);
 
 HASH_DEFINE_KEY;
 

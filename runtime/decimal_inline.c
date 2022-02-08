@@ -1,5 +1,5 @@
 #include "balrt.h"
 
-int64_t READONLY _bal_decimal_compare(TaggedPtr lhs, TaggedPtr rhs) {
-    return taggedDecimalCompare(lhs, rhs);
+CompareResult READONLY _bal_opt_decimal_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return optDecimalCompare(lhs, rhs);
 }

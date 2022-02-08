@@ -20,8 +20,6 @@
 // CompareResult is one of the above four COMPARE_* value.
 typedef int64_t CompareResult;
 
-#define COMPARE_TOTAL(l, r) (((l) > (r)) ? COMPARE_GT : (((l) < (r)) ? COMPARE_LT : COMPARE_EQ))
-
 #define HEAP_ALIGNMENT 8
 #define POINTER_MASK (((uint64_t)1 << TAG_SHIFT) - 1)
 #define ALIGN_MASK (~(uint64_t)(HEAP_ALIGNMENT - 1))
@@ -129,14 +127,33 @@ typedef GC struct {
 // i.e must start with tid
 typedef struct {
     Tid tid;
+#if 0
+    // the number of entries in memberTypes
+    uint32_t nMemberTypes;
+#endif
     TaggedPtr (*get)(TaggedPtr lp, int64_t index);
     PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
     int64_t (*getInt)(TaggedPtr lp, int64_t index);
     PanicCode (*setInt)(TaggedPtr lp, int64_t index, int64_t val);
     double (*getFloat)(TaggedPtr lp, int64_t index);
     PanicCode (*setFloat)(TaggedPtr lp, int64_t index, double val);
+#if 0
+    // the type of members with index >= minLength
+    MemberType restType;
+#else
     MemberType memberType;
+#endif
     StructureDescPtr fillerDesc;
+#if 0
+    // the minimum length of the list; always >= 0
+    // minLength is always >= nMemberTypes
+    int64_t minLength;
+    // The types of the members at the start of the list.
+    // For member with index i in 0 ..< nMemberTypes, the type is memberTypes[i]
+    // For member with index i in nMemberTypes ..< minLength, the type is memberTypes[nMemberTypes - 1]
+    // The number of members is nMemberTypes.
+    MemberType memberTypes[];
+#endif
 } ListDesc, *ListDescPtr;
 
 // Extends Structure
@@ -397,6 +414,9 @@ extern PanicCode _bal_list_float_array_set_float(TaggedPtr p, int64_t index, dou
 extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 extern READONLY bool _bal_list_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp);
 
+// Compare any two comparable values that are lists or nil
+extern CompareResult READONLY _bal_opt_list_compare(TaggedPtr tp1, TaggedPtr tp2);
+
 #define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
 
 extern TaggedPtr _bal_mapping_construct(MappingDescPtr desc, int64_t capacity);
@@ -440,13 +460,15 @@ extern TaggedPtr _bal_decimal_from_int(int64_t val);
 extern TaggedPtrPanicCode _bal_decimal_from_float(double val);
 extern IntWithOverflow _bal_decimal_to_int(TaggedPtr tp);
 
-extern CompareResult READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs);
 
-extern CompareResult READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs);
-extern CompareResult READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs);
-extern CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs);
-extern CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs);
-extern CompareResult READONLY _bal_array_decimal_compare(TaggedPtr lhs, TaggedPtr rhs);
+// These handle nil for both the list and members of list
+// In other words for int, the type must be `int?[]?`
+extern CompareResult READONLY _bal_array_int_compare(TaggedPtr tp1, TaggedPtr tp2);
+extern CompareResult READONLY _bal_array_float_compare(TaggedPtr tp1, TaggedPtr tp2);
+extern CompareResult READONLY _bal_array_string_compare(TaggedPtr tp1, TaggedPtr tp2);
+extern CompareResult READONLY _bal_array_boolean_compare(TaggedPtr tp1, TaggedPtr tp2);
+extern CompareResult READONLY _bal_array_decimal_compare(TaggedPtr tp1, TaggedPtr tp2);
+extern CompareResult READONLY _bal_array_list_compare(TaggedPtr tp1, TaggedPtr tp2);
 
 extern TaggedPtr READONLY _bal_convert_to_float(TaggedPtr tp);
 extern TaggedWithOverflow READONLY _bal_convert_to_int(TaggedPtr tp);
@@ -566,24 +588,29 @@ static READONLY inline int64_t taggedToInt(TaggedPtr p) {
     }
 }
 
-static READONLY inline CompareResult taggedPrimitiveCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
-    if (lhs == rhs) {
-        return COMPARE_EQ;
+static READONLY inline CompareResult optDoCompare(TaggedPtr tp1, TaggedPtr tp2, int64_t (*compare)(TaggedPtr, TaggedPtr)) {
+    if (tp1 == NIL) {
+        return tp2 == NIL ? COMPARE_EQ : COMPARE_UN;
     }
-    if (lhs == NIL || rhs == NIL) {
+    else if (tp2 == NIL) {
         return COMPARE_UN;
     }
-    return (*comparator)(lhs, rhs);
+    return (*compare)(tp1, tp2);
 }
 
-static READONLY inline CompareResult taggedIntComparator(TaggedPtr lhs, TaggedPtr rhs) {
-    int64_t lhsVal = taggedToInt(lhs);
-    int64_t rhsVal = taggedToInt(rhs);
-    return COMPARE_TOTAL(lhsVal, rhsVal);
+static READONLY inline CompareResult intCompare(int64_t n1, int64_t n2) {
+    if (n1 == n2) {
+        return COMPARE_EQ;
+    }
+    return n1 < n2 ? COMPARE_LT : COMPARE_GT;
 }
 
-static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return taggedPrimitiveCompare(lhs, rhs, &taggedIntComparator);
+static READONLY inline CompareResult taggedIntCompare(TaggedPtr tp1, TaggedPtr tp2) {
+    return intCompare(taggedToInt(tp1), taggedToInt(tp2));
+}
+
+static READONLY inline CompareResult optIntCompare(TaggedPtr tp1, TaggedPtr tp2) {
+    return optDoCompare(tp1, tp2, &taggedIntCompare);
 }
 
 static READONLY inline double taggedToFloat(TaggedPtr p) {
@@ -591,52 +618,84 @@ static READONLY inline double taggedToFloat(TaggedPtr p) {
     return *np;
 }
 
-static READONLY inline CompareResult taggedFloatComparator(TaggedPtr lhs, TaggedPtr rhs) {
-    double lhsVal = taggedToFloat(lhs);
-    double rhsVal = taggedToFloat(rhs);
-    if (lhsVal == rhsVal) {
+static READONLY inline CompareResult taggedFloatCompare(TaggedPtr tp1, TaggedPtr tp2) {
+    double v1 = taggedToFloat(tp1);
+    double v2 = taggedToFloat(tp2);
+    if (v1 == v2) {
         return COMPARE_EQ;
     }
-    if (lhsVal < rhsVal) {
+    if (v1 < v2) {
         return COMPARE_LT;
     }
-    if (lhsVal > rhsVal) {
+    if (v1 > v2) {
         return COMPARE_GT;
     }
     return COMPARE_UN;
 }
 
-static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return taggedPrimitiveCompare(lhs, rhs, &taggedFloatComparator);
+static READONLY inline int64_t optFloatCompare(TaggedPtr tp1, TaggedPtr tp2) {
+    return optDoCompare(tp1, tp2, &taggedFloatCompare);
 }
 
-static READONLY inline CompareResult taggedBooleanComparator(TaggedPtr lhs, TaggedPtr rhs) {
-    int lhsVal = taggedToBoolean(lhs);
-    int rhsVal = taggedToBoolean(rhs);
-    return COMPARE_TOTAL(lhsVal, rhsVal);
-}
-
-static READONLY inline int64_t taggedBooleanCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return taggedPrimitiveCompare(lhs, rhs, &taggedBooleanComparator);
-}
-
-static READONLY inline CompareResult taggedStringCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    if (lhs == rhs) {
+static READONLY inline CompareResult taggedBooleanCompare(TaggedPtr tp1, TaggedPtr tp2) {
+    if (tp1 == tp2) {
         return COMPARE_EQ;
     }
-    if (lhs == NIL || rhs == NIL) {
+    int b1 = taggedToBoolean(tp1);
+    int b2 = taggedToBoolean(tp2);
+    return b1 < b2 ? COMPARE_LT : COMPARE_GT;
+}
+
+static READONLY inline int64_t optBooleanCompare(TaggedPtr tp1, TaggedPtr tp2) {
+    return optDoCompare(tp1, tp2, &taggedBooleanCompare);
+}
+
+static READONLY inline CompareResult optStringCompare(TaggedPtr tp1, TaggedPtr tp2) {
+    if (tp1 == NIL) {
+        return tp2 == NIL ? COMPARE_EQ : COMPARE_UN;
+    }
+    else if (tp2 == NIL) {
         return COMPARE_UN;
     }
-    int64_t compareResult = _bal_string_cmp(lhs, rhs);
-    return COMPARE_TOTAL(compareResult, 0);
+    return intCompare(_bal_string_cmp(tp1, tp2), 0);
 }
 
-static READONLY inline CompareResult taggedDecimalCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    if (lhs == rhs) {
-        return COMPARE_EQ;
+static READONLY inline CompareResult optDecimalCompare(TaggedPtr tp1, TaggedPtr tp2) {
+    if (tp1 == NIL) {
+        return tp2 == NIL ? COMPARE_EQ : COMPARE_UN;
     }
-    int64_t compareResult = _bal_decimal_cmp(lhs, rhs);
-    return COMPARE_TOTAL(compareResult, 0);
+    else if (tp2 == NIL) {
+        return COMPARE_UN;
+    }   
+    return intCompare(_bal_decimal_cmp(tp1, tp2), 0);
+}
+
+// Precondition is that they are comparable
+static READONLY inline CompareResult taggedPtrCompare(TaggedPtr tp1, TaggedPtr tp2) {
+    //  `& 0xF` turns LIST_RW into LIST_RO
+    int tag1 = getTag(tp1) & 0xF;
+    int tag2 = getTag(tp2) & 0xF;
+    if (tag1 != tag2) {
+        // This can only happen if one is nil
+        return COMPARE_UN;
+    }
+    switch (tag1) {
+        case TAG_INT:
+            return taggedIntCompare(tp1, tp2);    
+        case TAG_BOOLEAN:
+            return taggedBooleanCompare(tp1, tp2);
+        case TAG_FLOAT:
+            return taggedFloatCompare(tp1, tp2);
+        case TAG_DECIMAL:
+            return intCompare(_bal_decimal_cmp(tp1, tp2), 0);
+        case TAG_STRING:
+            return intCompare(_bal_string_cmp(tp1, tp2), 0);
+        case TAG_LIST_RO:
+            return _bal_opt_list_compare(tp1, tp2);
+        default:
+            // This is NIL case
+            return COMPARE_EQ;
+    }
 }
 
 static READNONE inline StringLength immediateStringLength(uint64_t bits) {
