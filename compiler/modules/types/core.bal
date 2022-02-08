@@ -851,6 +851,32 @@ public function intSubtype(ComplexSemType t) returns IntSubtype|boolean {
     return <boolean|IntSubtype>getComplexSubtypeData(t, UT_INT);
 }
 
+public type IntConstraints record {|
+    int? min;
+    int? max;
+    boolean all;
+|};
+
+public function intConstraints(SemType t) returns IntConstraints {
+    var intSubtype = <boolean|IntSubtype>subtypeData(t, UT_INT);
+    // JBUG can't flatten inner if-else
+    if intSubtype is boolean {
+        if intSubtype {
+            return { min: int:MIN_VALUE, max: int:MAX_VALUE, all: true };
+        }
+        else {
+            return { min: (), max: (), all: true };
+        }
+    }
+    else {
+        int rangesLen = intSubtype.length();
+        if rangesLen == 0 {
+            panic error("impossible: empty list of int ranges in complex subtype");
+        }
+        return { min: intSubtype[0].min, max: intSubtype[rangesLen - 1].max, all: rangesLen == 1 };
+    }
+}
+
 public function floatSubtype(ComplexSemType t) returns FloatSubtype|boolean {
     return <boolean|FloatSubtype>getComplexSubtypeData(t, UT_FLOAT);
 }
