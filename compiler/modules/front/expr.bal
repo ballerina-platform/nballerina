@@ -496,6 +496,23 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
     return { result, block: nextBlock };
 }
 
+function isNonPanicking(bir:Operand lhs, bir:Operand rhs, bir:ArithmeticBinaryOp op) returns boolean {
+    t:IntSubtypeConstraints? lhsConstraints = t:intSubtypeConstraints(lhs.semType);
+    t:IntSubtypeConstraints? rhsConstraints = t:intSubtypeConstraints(rhs.semType);
+    match op {
+        "*" => {
+            // 3037000499 is the largest interger less than square root of int max (9223372036854775807)
+            return lhsConstraints != () && rhsConstraints != () &&
+                   lhsConstraints.max  < 3037000500 && rhsConstraints.max < 3037000500 &&
+                   lhsConstraints.min > -3037000500 && rhsConstraints.min > -3037000500;
+        }
+        "/" => {
+            return false;
+        }
+    }
+    return false;
+}
+
 function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, Position pos, bir:Operand lhs, bir:Operand rhs) returns CodeGenError|ExprEffect {
     ArithmeticOperandPair? pair = arithmeticOperandPair(lhs, rhs);
     bir:Register result;
@@ -510,8 +527,14 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
             return { result: { value, semType: resultType }, block: bb };
         }
         result = cx.createTmpRegister(t:INT, pos);
-        bir:IntArithmeticBinaryInsn insn = { op, pos, operands, result };
-        bb.insns.push(insn);
+        if isNonPanicking(operands[0], operands[1], op) {
+            bir:IntNoPanicArithmeticBinaryInsn insn = { op, pos, operands, result };
+            bb.insns.push(insn);
+        }
+        else {
+            bir:IntArithmeticBinaryInsn insn = { op, pos, operands, result };
+            bb.insns.push(insn);
+        }
     }
     else if pair is FloatOperandPair {
         readonly & bir:FloatOperand[2] operands = pair[1];
