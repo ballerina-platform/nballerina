@@ -309,7 +309,7 @@ function testStringSubtypeSingleValue() {
 }
 
 @test:Config{}
-function testIntConstraints() {
+function testIntSubtypeConstraints() {
     IntSubtype i1 = [{ min: -1, max: 10 }];
     SemType t1 = uniformSubtype(UT_INT, i1);
 
@@ -317,7 +317,7 @@ function testIntConstraints() {
     SemType t2 = uniformSubtype(UT_INT, i2);
 
     SemType t12 = union(t1, t2);
-    IntConstraints c12 = intConstraints(t12);
+    var c12 = <IntSubtypeConstraints>intSubtypeConstraints(t12);
     test:assertEquals(c12.min, -1);
     test:assertEquals(c12.max, 12);
     test:assertEquals(c12.all, true);
@@ -326,7 +326,7 @@ function testIntConstraints() {
     SemType t3 = uniformSubtype(UT_INT, i3);
 
     SemType t13 = union(t1, t3);
-    IntConstraints c13 = intConstraints(t13);
+    var c13 = <IntSubtypeConstraints>intSubtypeConstraints(t13);
     test:assertEquals(c13.min, -1);
     test:assertEquals(c13.max, 15);
     test:assertEquals(c13.all, false);
