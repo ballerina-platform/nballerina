@@ -496,30 +496,6 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
     return { result, block: nextBlock };
 }
 
-function isNonPanicking(bir:Operand lhs, bir:Operand rhs, bir:ArithmeticBinaryOp op) returns boolean {
-    t:IntSubtypeConstraints? lhsConstraints = t:intSubtypeConstraints(lhs.semType);
-    t:IntSubtypeConstraints? rhsConstraints = t:intSubtypeConstraints(rhs.semType);
-    if lhsConstraints == () || rhsConstraints == () {
-        return false;
-    }
-    match op {
-        "+"|"-" => {
-            // largest type that can't overflow is unsigned32 (positive) and signed32 (negative)
-            return lhsConstraints.max <= 0xffffffff && rhsConstraints.max <= 0xffffffff &&
-                   lhsConstraints.min >= -0x80000000 && rhsConstraints.min >= -0x80000000;
-        }
-        "*" => {
-            // largest type that can't overflow is unsigned16 (positive) and signed16 (negative)
-            return lhsConstraints.max <= 0xffff && rhsConstraints.max <= 0xffff &&
-                   lhsConstraints.min >= -0x8000 && rhsConstraints.min >= -0x8000;
-        }
-        "/" => {
-            return false;
-        }
-    }
-    return false;
-}
-
 function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, Position pos, bir:Operand lhs, bir:Operand rhs) returns CodeGenError|ExprEffect {
     ArithmeticOperandPair? pair = arithmeticOperandPair(lhs, rhs);
     bir:Register result;
@@ -534,14 +510,14 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
             return { result: { value, semType: resultType }, block: bb };
         }
         result = cx.createTmpRegister(t:INT, pos);
-        if isNonPanicking(operands[0], operands[1], op) {
-            bir:IntNoPanicArithmeticBinaryInsn insn = { op, pos, operands, result };
-            bb.insns.push(insn);
+        bir:Insn insn;
+        if isNonPanickingIntOp(operands[0], operands[1], op) {
+            insn = { op, pos, name: (bir:INSN_INT_NO_PANIC_ARITHMETIC_BINARY), operands, result };
         }
         else {
-            bir:IntArithmeticBinaryInsn insn = { op, pos, operands, result };
-            bb.insns.push(insn);
+            insn = { op, pos, name: (bir:INSN_INT_ARITHMETIC_BINARY), operands, result };
         }
+        bb.insns.push(insn);
     }
     else if pair is FloatOperandPair {
         readonly & bir:FloatOperand[2] operands = pair[1];
@@ -602,6 +578,29 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
         return cx.semanticErr(`${op} not supported for operand types`, pos);
     }
     return { result, block: bb };
+}
+
+function isNonPanickingIntOp(bir:Operand lhs, bir:Operand rhs, bir:ArithmeticBinaryOp op) returns boolean {
+    t:IntSubtypeConstraints? lhsConstraints = t:intSubtypeConstraints(lhs.semType);
+    t:IntSubtypeConstraints? rhsConstraints = t:intSubtypeConstraints(rhs.semType);
+    if lhsConstraints == () || rhsConstraints == () {
+        return false;
+    }
+    match op {
+        "+"|"-" => {
+            // largest type that can't overflow is unsigned32 (positive) and signed32 (negative)
+            return lhsConstraints.max <= 0xffffffff && rhsConstraints.max <= 0xffffffff &&
+                   lhsConstraints.min >= -0x80000000 && rhsConstraints.min >= -0x80000000;
+        }
+        "*" => {
+            // largest type that can't overflow is unsigned16 (positive) and signed16 (negative)
+            return lhsConstraints.max <= 0xffff && rhsConstraints.max <= 0xffff &&
+                   lhsConstraints.min >= -0x8000 && rhsConstraints.min >= -0x8000;
+        }
+        _ => {
+            return false;
+        }
+    }
 }
 
 function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, s:Expr expr) returns CodeGenError|ExprEffect {
