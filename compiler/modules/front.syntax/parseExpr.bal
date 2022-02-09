@@ -7,9 +7,9 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Position startPos = tok.currentStartPos();
     if t == "[" {
         check tok.advance();
-        [Expr[], Position] exprList  = check parseExprList(tok, "]");
+        var [members, _] = check parseExprList(tok, "]");
         Position endPos = tok.previousEndPos();
-        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members: exprList[0] };
+        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members };
         return expr;
     }
     else if t == "{" {
@@ -411,17 +411,17 @@ function parseIdentifierOrMethodName(Tokenizer tok) returns string|err:Syntax {
 function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position startPos, Position namePos, Position opPos) returns MethodCallExpr|err:Syntax {
     Position openParenPos = tok.currentStartPos();
     check tok.advance();
-    [Expr[], Position] exprList  = check parseExprList(tok, ")");
+    var [args, closeParenPos] = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, opPos, namePos, openParenPos, closeParenPos: exprList[1], target, methodName, args: exprList[0] };
+    return { startPos, endPos, opPos, namePos, openParenPos, closeParenPos, target, methodName, args };
 }
 
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position startPos) returns FunctionCallExpr|err:Syntax {
     Position openParenPos = tok.currentStartPos();
     check tok.advance();
-    [Expr[], Position] exprList  = check parseExprList(tok, ")");
+    var [args, closeParenPos] = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, openParenPos, closeParenPos: exprList[1], qNamePos: startPos, funcName, args: exprList[0], prefix };
+    return { startPos, endPos, openParenPos, closeParenPos, qNamePos: startPos, funcName, args, prefix };
 }
 
 function parseExprList(Tokenizer tok, "]"|")" terminator) returns [Expr[], Position]|err:Syntax {
