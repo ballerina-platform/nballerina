@@ -186,7 +186,7 @@ function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:F
     int n = callExpr is s:FunctionCallExpr ? i : i + 1;
     if n >= func.signature.paramTypes.length() {
         if func.symbol == IO_PRINTLN_SYMBOL {
-            return cx.unimplementedErr("io:println can only take 1 argument", s:range(arg));
+            return cx.unimplementedErr("multiple arguments for io:println not implemented", s:range(arg));
         }
         return cx.semanticErr("too many arguments for call to function", s:range(arg)); 
     }
@@ -1188,7 +1188,7 @@ function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallE
     int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
     if nSuppliedArgs < func.signature.paramTypes.length() {
         if func.symbol == IO_PRINTLN_SYMBOL {
-            return cx.unimplementedErr("io:println can only take 1 argument", call.closeParenPos);
+            return cx.unimplementedErr("io:println without arguments not implemented", call.closeParenPos);
         }
         return cx.semanticErr("too few arguments for call to function", call.closeParenPos);
     }
