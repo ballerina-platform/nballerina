@@ -220,7 +220,7 @@
     ["E", "expr", "[,1]", ""],
 
     { "comment" : "mapping constructor" },
-    ["V", "expr", "{ }", "{  }"],
+    ["V", "expr", "{ }"],
     ["V", "expr", "{x: 1, y: 2}", "{ x: 1, y: 2 }"],
     ["V", "expr", "{x: 1, y: 2, \"z\": 3}", "{ x: 1, y: 2, \"z\": 3 }"],
     ["V", "expr", "{value: 1+2}", "{ value: 1 + 2 }"],

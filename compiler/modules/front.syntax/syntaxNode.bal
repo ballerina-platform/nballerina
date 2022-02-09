@@ -867,7 +867,7 @@ function concat(Word... words) returns string[] {
                     indentSize += 1;
                     parts = addNewLine(parts, lines, indentSize);
                 }
-                else {
+                else if nextToken != "}" && nextToken != "|}" {
                     parts.push(" ");
                 }
             }
