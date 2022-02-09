@@ -7,9 +7,9 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Position startPos = tok.currentStartPos();
     if t == "[" {
         check tok.advance();
-        ExprList { exprs : members } = check parseExprList(tok, "]");
+        [Expr[], Position] exprList  = check parseExprList(tok, "]");
         Position endPos = tok.previousEndPos();
-        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members };
+        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members: exprList[0] };
         return expr;
     }
     else if t == "{" {
@@ -411,25 +411,20 @@ function parseIdentifierOrMethodName(Tokenizer tok) returns string|err:Syntax {
 function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position startPos, Position namePos, Position opPos) returns MethodCallExpr|err:Syntax {
     Position openParenPos = tok.currentStartPos();
     check tok.advance();
-    ExprList { exprs : args , closeTerminatorPos : closeParenPos } = check parseExprList(tok, ")");
+    [Expr[], Position] exprList  = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, opPos, namePos, openParenPos, closeParenPos, target, methodName, args };
+    return { startPos, endPos, opPos, namePos, openParenPos, closeParenPos: exprList[1], target, methodName, args: exprList[0] };
 }
 
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position startPos) returns FunctionCallExpr|err:Syntax {
     Position openParenPos = tok.currentStartPos();
     check tok.advance();
-    ExprList { exprs : args , closeTerminatorPos : closeParenPos } = check parseExprList(tok, ")");
+    [Expr[], Position] exprList  = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, openParenPos, closeParenPos, qNamePos: startPos, funcName, args, prefix };
+    return { startPos, endPos, openParenPos, closeParenPos: exprList[1], qNamePos: startPos, funcName, args: exprList[0], prefix };
 }
 
-type ExprList record {|
-    Expr[] exprs;
-    Position closeTerminatorPos;
-|};
-
-function parseExprList(Tokenizer tok, "]"|")" terminator) returns ExprList|err:Syntax {
+function parseExprList(Tokenizer tok, "]"|")" terminator) returns [Expr[], Position]|err:Syntax {
     Expr[] exprs = [];
     if tok.current() != terminator {
         while true {
@@ -449,7 +444,7 @@ function parseExprList(Tokenizer tok, "]"|")" terminator) returns ExprList|err:S
     }
     Position closeTerminatorPos = tok.currentStartPos();
     check tok.advance();
-    return {exprs, closeTerminatorPos};
+    return [exprs, closeTerminatorPos];
 }
 
 function parseFields(Tokenizer tok) returns Field[]|err:Syntax {
