@@ -817,7 +817,7 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     cx.comparableMemo.add(memo);
     // SUBSET need to iterate members when tuples are supported
     // following relies on the fact `listMemberType(cx, NIL, ()) = NEVER`
-    boolean result = comparable(cx, listMemberType(cx, t1, ()), listMemberType(cx, t2, ()));
+    boolean result = comparable(cx, listMemberType(cx, t1), listMemberType(cx, t2));
     memo.comparable = result;
     return result;
 }
@@ -884,7 +884,7 @@ public function intSubtypeConstraints(SemType t) returns IntSubtypeConstraints? 
     }
     else {
         int len = intSubtype.length();
-        return { min: intSubtype[0].min, max: intSubtype[len - 1].max, all: len == 1 };
+        return { min: intSubtypeMin(intSubtype), max: intSubtypeMax(intSubtype), all: len == 1 };
     } 
 }
 
@@ -945,17 +945,14 @@ function bddListAtomicType(Env env, Bdd bdd, ListAtomicType top) returns ListAto
 // This is what Castagna calls projection.
 // We will extend this to allow `key` to be a SemType, which will turn into an IntSubtype.
 // If `t` is not a list, NEVER is returned
-public function listMemberType(Context cx, SemType t, SemType? k = INT) returns SemType {
+public function listMemberType(Context cx, SemType t, SemType k = INT) returns SemType {
     if t is UniformTypeBitSet {
         return (t & LIST) != 0 ? TOP : NEVER;
     }
     else {
-        IntSubtype? intSubtype = ();
-        if k is ComplexSemType {
-            intSubtype = <IntSubtype>getComplexSubtypeData(k, UT_INT);
-        }
-        return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), intSubtype, TOP),
-                     bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), intSubtype, TOP));
+        IntSubtype|boolean keyData = intSubtype(k);
+        return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), keyData, TOP),
+                     bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), keyData, TOP));
     }
 }
 
@@ -995,12 +992,9 @@ public function mappingMemberType(Context cx, SemType t, SemType k = STRING) ret
         return (t & MAPPING) != 0 ? TOP : NEVER;
     }
     else {
-        StringSubtype? key = ();
-        if k is ComplexSemType {
-            key = <StringSubtype>getComplexSubtypeData(k, UT_STRING);
-        }
-        return union(bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), key, TOP),
-                     bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), key, TOP));
+        StringSubtype|boolean keyData = stringSubtype(k);
+        return union(bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), keyData, TOP),
+                     bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), keyData, TOP));
     }
 }
 
@@ -1027,8 +1021,7 @@ public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomic
         return [];
     }
     else {
-        // JBUG doesn't work to use `keyStringType == true`
-        return mappingAtomicApplicableMemberTypes(atomic, keyStringType is boolean ? () : keyStringType).cloneReadOnly();
+        return mappingAtomicApplicableMemberTypes(atomic, keyStringType).cloneReadOnly();
     }
 }
 

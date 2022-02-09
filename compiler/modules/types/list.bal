@@ -217,15 +217,13 @@ function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicTyp
     }
     int nonRepeatedLen = int:max(members.initial.length(), lt.members.initial.length());
     foreach int i in 0 ..< nonRepeatedLen {
-        fixedArraySet(members, i, intersect(
-                                        listMemberAt(members, rest, i),
-                                        listMemberAt(lt.members, lt.rest, i)));
+        fixedArraySet(members, i, intersect(listMemberAt(members, rest, i),
+                                            listMemberAt(lt.members, lt.rest, i)));
     }
     // Intersect the last member of initial array
     if nonRepeatedLen < members.fixedLength {
-        members.initial[nonRepeatedLen] =  intersect(
-                                                listMemberAt(members, rest, nonRepeatedLen), 
-                                                listMemberAt(lt.members, lt.rest, nonRepeatedLen));
+        members.initial[nonRepeatedLen] =  intersect(listMemberAt(members, rest, nonRepeatedLen), 
+                                                     listMemberAt(lt.members, lt.rest, nonRepeatedLen));
     }
     if ltLen < newLen {
         if isNever(lt.rest) {
@@ -301,9 +299,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArrayShallowCopy(members);
-                fixedArrayFill(s, i - 1, rest);
-                fixedArraySet(s, i, d);
+                FixedLengthArray s = fixedArraySetOnCopy(members, i, d, rest);
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
@@ -384,6 +380,13 @@ function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray 
     return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
 }
 
+function fixedArraySetOnCopy(FixedLengthArray array, int index, SemType t, SemType rest) returns FixedLengthArray {
+    FixedLengthArray copy = fixedArrayShallowCopy(array);
+    fixedArrayFill(copy, index - 1, rest);
+    fixedArraySet(copy, index, t);
+    return copy;
+}
+
 function listConjunction(Context cx, Conjunction? con) returns ListConjunction? {
     if con != () {
         ListAtomicType listType = cx.listAtomType(con.atom);
@@ -395,7 +398,7 @@ function listConjunction(Context cx, Conjunction? con) returns ListConjunction? 
     return ();
 }
 
-function bddListMemberType(Context cx, Bdd b, IntSubtype? key, SemType accum) returns SemType {
+function bddListMemberType(Context cx, Bdd b, IntSubtype|boolean key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
@@ -408,12 +411,12 @@ function bddListMemberType(Context cx, Bdd b, IntSubtype? key, SemType accum) re
     }
 }
 
-function listAtomicMemberType(ListAtomicType atomic, IntSubtype? key) returns SemType {
+function listAtomicMemberType(ListAtomicType atomic, IntSubtype|boolean key) returns SemType {
     return listAtomicMemberTypeAt(atomic.members, atomic.rest, key);
 }
 
-function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSubtype? key) returns SemType {
-    if key != () {
+function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSubtype|boolean key) returns SemType {
+    if key is IntSubtype {
         SemType m = NEVER;
         int initLen = fixedArray.initial.length();
         int fixedLen = fixedArray.fixedLength;
@@ -423,11 +426,11 @@ function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSu
                     m = union(m, fixedArrayGet(fixedArray, i));
                 }
             }
-            if intSubtypeOverlapRange(key, initLen, fixedLen - 1) {
+            if intSubtypeOverlapRange(key, { min: initLen, max: fixedLen - 1 }) {
                 m = union(m, fixedArrayGet(fixedArray, fixedLen - 1));
             }
         }
-        if fixedLen == 0 || intSubtypeContainsGreaterThan(key, fixedLen - 1) {
+        if fixedLen == 0 || intSubtypeMax(key) > fixedLen - 1 {
             m = union(m, rest);
         }
         return m;
