@@ -510,13 +510,15 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
             return { result: { value, semType: resultType }, block: bb };
         }
         result = cx.createTmpRegister(t:INT, pos);
-        var name = intArithmeticOpNeverPanics(op, operands);
         bir:Insn insn;
-        if name is bir:INSN_INT_NO_PANIC_ARITHMETIC_BINARY {
-            insn = { op, pos, name, operands, result };
+        // JBUG #34987: can't use a function to return the name directly
+        // var name = intArithmeticOpNeverPanics(op, operands);
+        // insn = { op, pos, name, operand, result };
+        if intArithmeticOpNeverPanics(op, operands) {
+            insn = { op, pos, name: bir:INSN_INT_NO_PANIC_ARITHMETIC_BINARY, operands, result };
         }
         else {
-            insn = { op, pos, name, operands, result };
+            insn = { op, pos, name: bir:INSN_INT_ARITHMETIC_BINARY, operands, result };
         }
         bb.insns.push(insn);
     }
@@ -581,12 +583,12 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
     return { result, block: bb };
 }
 
-function intArithmeticOpNeverPanics(bir:ArithmeticBinaryOp op, bir:Operand[] operands) returns bir:INSN_INT_NO_PANIC_ARITHMETIC_BINARY|bir:INSN_INT_ARITHMETIC_BINARY {
+function intArithmeticOpNeverPanics(bir:ArithmeticBinaryOp op, bir:Operand[] operands) returns boolean {
     t:IntSubtypeConstraints?[] operandConstraints = from bir:Operand operand in operands select t:intSubtypeConstraints(operand.semType);
     t:IntSubtypeConstraints[] constraints = [];
     foreach t:IntSubtypeConstraints? constraint in operandConstraints {
         if constraint == () {
-            return bir:INSN_INT_ARITHMETIC_BINARY;
+            return false;
         }
         constraints.push(constraint);
     }
@@ -603,14 +605,14 @@ function intArithmeticOpNeverPanics(bir:ArithmeticBinaryOp op, bir:Operand[] ope
         noPanicMin = int:SIGNED32_MIN_VALUE;
     }
     else {
-        return bir:INSN_INT_ARITHMETIC_BINARY;
+        return false;
     }
     foreach t:IntSubtypeConstraints constraint in constraints {
         if constraint.max > noPanicMax || constraint.min < noPanicMin {
-            return bir:INSN_INT_ARITHMETIC_BINARY;
+            return false;
         }
     }
-    return bir:INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
+    return true;
 }
 
 function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, s:Expr expr) returns CodeGenError|ExprEffect {
