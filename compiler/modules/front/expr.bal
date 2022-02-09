@@ -581,26 +581,35 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
 }
 
 function isNonPanickingIntOp(bir:Operand lhs, bir:Operand rhs, bir:ArithmeticBinaryOp op) returns boolean {
-    t:IntSubtypeConstraints? lhsConstraints = t:intSubtypeConstraints(lhs.semType);
-    t:IntSubtypeConstraints? rhsConstraints = t:intSubtypeConstraints(rhs.semType);
-    if lhsConstraints == () || rhsConstraints == () {
+    t:IntSubtypeConstraints?[] operandConstraints = [t:intSubtypeConstraints(lhs.semType), t:intSubtypeConstraints(rhs.semType)];
+    t:IntSubtypeConstraints[] constraints = [];
+    foreach t:IntSubtypeConstraints? constraint in operandConstraints {
+        if constraint == () {
+            return false;
+        }
+        constraints.push(constraint);
+    }
+    int noPanicMin;
+    int noPanicMax;
+    if op is "+"|"-" {
+        // largest type that can't overflow is unsigned32 (positive) and signed32 (negative)
+        noPanicMax = int:UNSIGNED32_MAX_VALUE;
+        noPanicMin = int:SIGNED32_MIN_VALUE;
+    }
+    else if op is "*" {
+        // largest type that can't overflow is signed32
+        noPanicMax = int:SIGNED32_MAX_VALUE;
+        noPanicMin = int:SIGNED32_MIN_VALUE;
+    }
+    else {
         return false;
     }
-    match op {
-        "+"|"-" => {
-            // largest type that can't overflow is unsigned32 (positive) and signed32 (negative)
-            return lhsConstraints.max <= 0xffffffff && rhsConstraints.max <= 0xffffffff &&
-                   lhsConstraints.min >= -0x80000000 && rhsConstraints.min >= -0x80000000;
-        }
-        "*" => {
-            // largest type that can't overflow is unsigned16 (positive) and signed16 (negative)
-            return lhsConstraints.max <= 0xffff && rhsConstraints.max <= 0xffff &&
-                   lhsConstraints.min >= -0x8000 && rhsConstraints.min >= -0x8000;
-        }
-        _ => {
+    foreach t:IntSubtypeConstraints constraint in constraints {
+        if constraint.max > noPanicMax || constraint.min < noPanicMin {
             return false;
         }
     }
+    return true;
 }
 
 function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, s:Expr expr) returns CodeGenError|ExprEffect {

@@ -1,10 +1,17 @@
 import ballerina/io;
 public function main() {
-    int:Unsigned16 a = 65535;
-    int:Unsigned16 b = 65535;
+    byte x = 5;
+    byte y = 3;
+    byte z = 0;
+    int i = x * y;
+    int j = x * z;
+    io:println(i); //@output 15
+    io:println(j); //@output 0
+    int:Signed32 a = 2147483647;
+    int:Signed32 b = 2147483647;
     int c = a * b;
-    io:println(c); //@output 4294836225
-    int:Signed16 d = -32767;
+    io:println(c); //@output 4611686014132420609
+    int:Signed32 d = -2147483647;
     int e = d * a;
-    io:println(e); //@output -2147385345
+    io:println(e); //@output -4611686014132420609
 }
