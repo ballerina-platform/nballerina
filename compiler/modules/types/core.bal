@@ -817,7 +817,61 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     cx.comparableMemo.add(memo);
     // SUBSET need to iterate members when tuples are supported
     // following relies on the fact `listMemberType(cx, NIL, ()) = NEVER`
-    boolean result = comparable(cx, listMemberType(cx, t1, INT), listMemberType(cx, t2, INT));
+    boolean result;
+    var members1 = listAllMemberTypes(cx, t1);
+    var members2 = listAllMemberTypes(cx, t2);
+    if members1 != () && members2 != () {
+        result = false;
+        int currentIndex = 0;
+        var currentMember = members2[currentIndex];
+        foreach var [range, ty] in members1 {
+            if currentMember[0].max >= range.max {
+                // pr-todo: refactor common code
+                result = comparable(cx, currentMember[1], ty);
+                if result == false {
+                    memo.comparable = false;
+                    return false;
+                }
+            }
+            while currentMember[0].max < range.max {
+                if currentMember[0].max > range.min {
+                    // pr-todo: refactor common code
+                    result = comparable(cx, currentMember[1], ty);
+                    if result == false {
+                        memo.comparable = false;
+                        return false;
+                    }
+                }
+                currentIndex += 1;
+                if currentIndex >= members2.length() {
+                    memo.comparable = false;
+                    return false;
+                }
+                currentMember = members2[currentIndex];
+            }
+            if currentMember[0].max == range.max {
+                // pr-todo: refactor common code
+                result = comparable(cx, currentMember[1], ty);
+                if result == false {
+                    memo.comparable = false;
+                    return false;
+                }
+            }
+        }
+        while currentIndex < members2.length() {
+            SemType ty2 = members2[currentIndex][1];
+            SemType ty1 = members1[members1.length() - 1][1];
+            result = comparable(cx, ty2, ty1);
+            if result == false {
+                memo.comparable = false;
+                return false;
+            }
+            currentIndex += 1;
+        }
+    }
+    else {
+        result = comparable(cx, listMemberType(cx, t1, INT), listMemberType(cx, t2, INT));
+    }
     memo.comparable = result;
     return result;
 }
@@ -914,6 +968,27 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 }
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
+
+// For each [r, s] in the return value, for an index i in r, the projection for t[i] is r
+public function listAllMemberTypes(Context cx, SemType t) returns [Range,SemType][]? {
+    ListAtomicType? atomicType = listAtomicTypeRw(cx, t);
+    if atomicType == () {
+        return ();
+    }
+    [Range, SemType][] memberTypes = [];
+    FixedLengthArray members = atomicType.members;
+    int fixedLength = members.fixedLength;
+    int currentLength = 0;
+    foreach SemType initialType in members.initial {
+        memberTypes.push([{ min: currentLength, max: currentLength + 1 }, initialType]);
+        currentLength += 1;
+    }
+    if currentLength < fixedLength {
+        memberTypes.push([{ min: currentLength, max: fixedLength }, members.initial[members.initial.length()-1]]);
+    }
+    memberTypes.push([{ min: fixedLength, max: int:MAX_VALUE }, atomicType.rest]);
+    return memberTypes;
+}
 
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {
