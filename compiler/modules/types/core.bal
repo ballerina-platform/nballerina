@@ -951,8 +951,11 @@ public function listMemberType(Context cx, SemType t, SemType k = INT) returns S
     }
     else {
         IntSubtype|boolean keyData = intSubtype(k);
-        return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), keyData, TOP),
-                     bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), keyData, TOP));
+        if keyData == false {
+            return NEVER;
+        }
+        return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), <IntSubtype|true>keyData, TOP),
+                     bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), <IntSubtype|true>keyData, TOP));
     }
 }
 
@@ -993,8 +996,11 @@ public function mappingMemberType(Context cx, SemType t, SemType k = STRING) ret
     }
     else {
         StringSubtype|boolean keyData = stringSubtype(k);
-        return union(bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), keyData, TOP),
-                     bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), keyData, TOP));
+        if keyData == false {
+            return NEVER;
+        }
+        return union(bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), <StringSubtype|true>keyData, TOP),
+                     bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), <StringSubtype|true>keyData, TOP));
     }
 }
 
@@ -1021,7 +1027,7 @@ public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomic
         return [];
     }
     else {
-        return mappingAtomicApplicableMemberTypes(atomic, keyStringType).cloneReadOnly();
+        return mappingAtomicApplicableMemberTypes(atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
     }
 }
 

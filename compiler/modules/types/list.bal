@@ -299,7 +299,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArraySetOnCopy(members, i, d, rest);
+                FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
@@ -380,7 +380,7 @@ function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray 
     return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
 }
 
-function fixedArraySetOnCopy(FixedLengthArray array, int index, SemType t, SemType rest) returns FixedLengthArray {
+function fixedArrayReplace(FixedLengthArray array, int index, SemType t, SemType rest) returns FixedLengthArray {
     FixedLengthArray copy = fixedArrayShallowCopy(array);
     fixedArrayFill(copy, index - 1, rest);
     fixedArraySet(copy, index, t);
@@ -398,7 +398,7 @@ function listConjunction(Context cx, Conjunction? con) returns ListConjunction? 
     return ();
 }
 
-function bddListMemberType(Context cx, Bdd b, IntSubtype|boolean key, SemType accum) returns SemType {
+function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
@@ -411,11 +411,11 @@ function bddListMemberType(Context cx, Bdd b, IntSubtype|boolean key, SemType ac
     }
 }
 
-function listAtomicMemberType(ListAtomicType atomic, IntSubtype|boolean key) returns SemType {
+function listAtomicMemberType(ListAtomicType atomic, IntSubtype|true key) returns SemType {
     return listAtomicMemberTypeAt(atomic.members, atomic.rest, key);
 }
 
-function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSubtype|boolean key) returns SemType {
+function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSubtype|true key) returns SemType {
     if key is IntSubtype {
         SemType m = NEVER;
         int initLen = fixedArray.initial.length();
