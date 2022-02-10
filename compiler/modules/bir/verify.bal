@@ -175,7 +175,6 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
 
 function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns Error? {
     t:SemType ty = insn.result.semType;
-    // XXX verify ty exactly
     if !vc.isSubtype(ty, t:LIST_RW) {
         return vc.invalidErr("inherent type of list construct is not a mutable list", insn.pos);
     }
@@ -183,25 +182,24 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns E
     if lat == () {
         return vc.invalidErr("inherent type of list is not atomic", insn.pos);
     }
-    else {
-        if lat.members.fixedLength > 0 {
-            return vc.invalidErr("tuples and fixed length arrays not supported as list inherent type", insn.pos);
-        }
-        foreach var operand in insn.operands {
-            check verifyOperandType(vc, operand, lat.rest, "type of list constructor member is not allowed by the list type", insn.pos);
-        }
+    Operand[] operands = insn.operands;
+    foreach int i in 0 ..< operands.length() {
+        check verifyOperandType(vc, operands[i], t:listAtomicTypeMemberAt(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
     }
 }
 
 function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns Error? {
     t:SemType ty = insn.result.semType;
-    // XXX verify ty exactly
     if !vc.isSubtype(ty, t:MAPPING_RW) {
         return vc.invalidErr("inherent type of mapping construct is not a mutable mapping", insn.pos);
     }
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(vc.typeContext(), ty);
+    if mat == () {
+        return vc.invalidErr("inherent type of map is not atomic", insn.pos);
+    }
     foreach int i in 0 ..< insn.operands.length() {
         t:Context cx = vc.typeContext();
+        // XXX should use something like listAtomicTypeMemberAt
         t:SemType memberType = t:mappingMemberType(cx, ty, t:singleton(cx, insn.fieldNames[i]));
         if memberType == t:NEVER {
             return vc.semanticErr(`field ${insn.fieldNames[i]} is not allowed by the type`, insn.pos);
@@ -209,10 +207,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
         check verifyOperandType(vc, insn.operands[i], memberType,
                                 "type of mapping constructor member is not allowed by the mapping type", insn.pos);
     }
-    if mat == () {
-        return vc.invalidErr("inherent type of map is not atomic", insn.pos);
-    }
-    else if insn.operands.length() < mat.names.length() {
+    if insn.operands.length() < mat.names.length() {
         return vc.semanticErr("missing record fields in mapping constructor", insn.pos);
     }
 }
