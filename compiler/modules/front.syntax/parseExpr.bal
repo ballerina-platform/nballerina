@@ -5,14 +5,7 @@ type SpecialMethodName "map";
 function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
-    if t == "[" {
-        check tok.advance();
-        var [members, _] = check parseExprList(tok, "]");
-        Position endPos = tok.previousEndPos();
-        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members };
-        return expr;
-    }
-    else if t == "{" {
+    if t == "{" {
         check tok.advance();
         Field[] fields = check parseFields(tok);
         Position endPos = tok.previousEndPos();
@@ -360,6 +353,13 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         Expr message  = check parseExpr(tok);
         endPos = check tok.expectEnd(")");
         return { startPos, endPos, message, kwPos };
+    }
+    else if t == "[" {
+        check tok.advance();
+        var [members, _] = check parseExprList(tok, "]");
+        endPos = tok.previousEndPos();
+        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members };
+        return expr;
     }
     else {
         return parseError(tok);

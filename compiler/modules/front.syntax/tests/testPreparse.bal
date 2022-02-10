@@ -22,7 +22,6 @@ function testPreparse(string src, PreparseTestResult expected, int minLookahead,
     TokenizerState state = tok.save();
 
     test:assertEquals(tok.current(), "(");
-    check tok.advance();
     var actual = preparseParenTypeDesc(tok);
     if expected != SYNTAX_ERROR {
         test:assertEquals(actual, expected);
