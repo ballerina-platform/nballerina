@@ -22,6 +22,16 @@ type ListConjunction record {|
     ListConjunction? next;
 |};
 
+public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
+    if i < atomic.members.fixedLength {
+        int initialLen = atomic.members.initial.length();
+        return atomic.members.initial[ i < initialLen ? i : initialLen - 1];
+    }
+    else {
+        return atomic.rest;
+    }
+}
+
 // This is atom index 0
 // Used by bddFixReadOnly
 final ListAtomicType LIST_SUBTYPE_RO = { members: { initial: [], fixedLength: 0 }, rest: READONLY };

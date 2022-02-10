@@ -14,19 +14,19 @@
     LIST_DESC_FUNC_SET(kind, float)
 
 #define LIST_DESC_INIT_GENERIC(tid, bitSet) {\
-    tid,\
+    tid, 0, 0,\
     LIST_DESC_VTABLE(generic),\
     BITSET_MEMBER_TYPE(bitSet)\
 }
 
 #define LIST_DESC_INIT_INT_ARRAY(tid) {\
-    tid,\
+    tid, 0, 0,\
     LIST_DESC_VTABLE(int_array),\
     BITSET_MEMBER_TYPE(1 << TAG_INT)\
 }
 
 #define LIST_DESC_INIT_FLOAT_ARRAY(tid) {\
-    tid,\
+    tid, 0, 0,\
     LIST_DESC_VTABLE(float_array),\
     BITSET_MEMBER_TYPE(1 << TAG_FLOAT)\
 }
