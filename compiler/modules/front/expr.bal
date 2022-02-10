@@ -510,7 +510,16 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
             return { result: { value, semType: resultType }, block: bb };
         }
         result = cx.createTmpRegister(t:INT, pos);
-        bir:IntArithmeticBinaryInsn insn = { op, pos, operands, result };
+        bir:Insn insn;
+        // JBUG #34987: can't use a function to return the name directly
+        // var name = intArithmeticOpNeverPanics(op, operands);
+        // insn = { op, pos, name, operand, result };
+        if intArithmeticOpNeverPanics(op, operands) {
+            insn = { op, pos, name: bir:INSN_INT_NO_PANIC_ARITHMETIC_BINARY, operands, result };
+        }
+        else {
+            insn = { op, pos, name: bir:INSN_INT_ARITHMETIC_BINARY, operands, result };
+        }
         bb.insns.push(insn);
     }
     else if pair is FloatOperandPair {
@@ -572,6 +581,38 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
         return cx.semanticErr(`${op} not supported for operand types`, pos);
     }
     return { result, block: bb };
+}
+
+function intArithmeticOpNeverPanics(bir:ArithmeticBinaryOp op, bir:Operand[] operands) returns boolean {
+    t:IntSubtypeConstraints?[] operandConstraints = from bir:Operand operand in operands select t:intSubtypeConstraints(operand.semType);
+    t:IntSubtypeConstraints[] constraints = [];
+    foreach t:IntSubtypeConstraints? constraint in operandConstraints {
+        if constraint == () {
+            return false;
+        }
+        constraints.push(constraint);
+    }
+    int noPanicMin;
+    int noPanicMax;
+    if op is "+"|"-" {
+        // largest type that can't overflow is unsigned32 (positive) and signed32 (negative)
+        noPanicMax = int:UNSIGNED32_MAX_VALUE;
+        noPanicMin = int:SIGNED32_MIN_VALUE;
+    }
+    else if op is "*" {
+        // largest type that can't overflow is signed32
+        noPanicMax = int:SIGNED32_MAX_VALUE;
+        noPanicMin = int:SIGNED32_MIN_VALUE;
+    }
+    else {
+        return false;
+    }
+    foreach t:IntSubtypeConstraints constraint in constraints {
+        if constraint.max > noPanicMax || constraint.min < noPanicMin {
+            return false;
+        }
+    }
+    return true;
 }
 
 function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, s:Expr expr) returns CodeGenError|ExprEffect {
