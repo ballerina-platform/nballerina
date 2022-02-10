@@ -271,8 +271,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
                                                heapPointerType(llListType));
     llvm:BasicBlock? bbJoin = ();
     t:SemType listType = insn.operands[0].semType;
-    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType,
-                                            t:singleIntShape(insn.operands[1].semType));
+    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
     llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
     ListRepr repr = listTypeToListRepr(scaffold.typeContext(), listType);
     if repr.isSpecialized {
