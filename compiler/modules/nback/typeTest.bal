@@ -95,7 +95,7 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
     }
     else if baseRepr == BASE_REPR_INT {
         t:IntSubtypeConstraints? intConstraints = t:intSubtypeConstraints(semType);
-        if intConstraints != () {
+        if intConstraints != () && intConstraints.all {
             llvm:Value hasType1 = builder.iCmp("sle", llvm:constInt(LLVM_INT, intConstraints.min), value);
             llvm:Value hasType2 = builder.iCmp("sge", llvm:constInt(LLVM_INT, intConstraints.max), value);
             hasType = builder.iBitwise("and", hasType1, hasType2);
