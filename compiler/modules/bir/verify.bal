@@ -162,14 +162,14 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
     if nSuppliedArgs != nExpectedArgs {
         string name = vc.symbolToString(func.symbol);
         if nSuppliedArgs < nExpectedArgs {
-            return vc.semanticErr(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
         else {
-            return vc.semanticErr(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
+        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos), true);
     }
 }
 
@@ -321,9 +321,9 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Interna
     }
 }
 
-function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
+function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos, boolean invalid = false) returns Error? {
     if !vc.operandHasType(operand, semType) {
-        return vc.semanticErr(msg, pos);
+        return invalid ? vc.invalidErr(msg, pos) : vc.semanticErr(msg, pos);
     }
 }
 
