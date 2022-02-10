@@ -93,17 +93,10 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             return parseVarDeclStmt(tok, startPos);
         }
         "(" => {
-            TokenizerState state = tok.save();
-            check tok.advance();
-            boolean isTypeDesc = check preparseParenTypeDesc(tok);
-            tok.restore(state);
-
-            if isTypeDesc {
+            if check savePreparseRestore(tok, preparseParenTypeDesc) {
                 return parseVarDeclStmt(tok, startPos);
             }
-            else {
-                return parseMethodCallStmt(tok);
-            }
+            return parseMethodCallStmt(tok);
         }
         [DECIMAL_NUMBER, _]
         | [STRING_LITERAL, _]
@@ -120,6 +113,12 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         }
         "-" => {
             return parseVarDeclStmt(tok, startPos);
+        }
+        "[" => {
+            if check savePreparseRestore(tok, preparseTupleTypeDesc) {
+                return parseVarDeclStmt(tok, startPos);
+            }
+            return parseMethodCallStmt(tok);
         }
     }
     return parseError(tok, "unhandled statement");

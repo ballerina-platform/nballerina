@@ -242,6 +242,9 @@
     ["V", "expr", "x[1].map()", "(x[1]).map()"],
     ["V", "expr", "x.y[z].map()", "((x.y)[z]).map()"],
     ["V", "stmt", "x.map();"],
+    ["V", "stmt", "[1, 2].length();"],
+    ["V", "stmt", "[1, 2][0].length();"],
+    ["V", "stmt", "[1, [2,3]][1][0].length();"],
 
     { "comment" : "field access" },
     ["V", "expr", "a.b"],
