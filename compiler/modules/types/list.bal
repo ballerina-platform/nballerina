@@ -215,35 +215,38 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, members, rest, listConjunction(cx, neg));
 }
 
-function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType lt) returns [FixedLengthArray, SemType]? {
-    int ltLen = lt.members.fixedLength;
-    int newLen = int:max(members.fixedLength, ltLen);
+function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType newType) returns [FixedLengthArray, SemType]? {
+    int newTypeLen = newType.members.fixedLength;
+    int intersectedLen = int:max(members.fixedLength, newTypeLen);
     // We can specifically handle the case where length of `initial` and `fixedLength` are the same 
-    if members.fixedLength < newLen {
+    if members.fixedLength < intersectedLen {
         if isNever(rest) {
             return ();
         }
-        fixedArrayFill(members, newLen, rest);
+        fixedArrayFill(members, intersectedLen, rest);
     }
-    int nonRepeatedLen = int:max(members.initial.length(), lt.members.initial.length());
-    foreach int i in 0 ..< nonRepeatedLen {
+    int maxInitialLen = int:max(members.initial.length(), newType.members.initial.length());
+    foreach int i in 0 ..< maxInitialLen {
         fixedArraySet(members, i, intersect(listMemberAt(members, rest, i),
-                                            listMemberAt(lt.members, lt.rest, i)));
+                                            listMemberAt(newType.members, newType.rest, i)));
     }
-    // Intersect the last member of initial array
-    if nonRepeatedLen < members.fixedLength {
-        members.initial[nonRepeatedLen] =  intersect(listMemberAt(members, rest, nonRepeatedLen), 
-                                                     listMemberAt(lt.members, lt.rest, nonRepeatedLen));
+    // If the last member is repeating we need to intersect the repeating member as it will have pushed backed in `initial` array
+    if maxInitialLen < members.fixedLength {
+        SemType repeatingMember = intersect(listMemberAt(members, rest, maxInitialLen), 
+                                            listMemberAt(newType.members, newType.rest, maxInitialLen));
+        if repeatingMember != members.initial[maxInitialLen] {
+            members.initial[maxInitialLen] = repeatingMember;
+        }
     }
-    if ltLen < newLen {
-        if isNever(lt.rest) {
+    if newTypeLen < intersectedLen {
+        if isNever(newType.rest) {
             return ();
         }
-        foreach int i in ltLen ..< newLen {
-            fixedArraySet(members, i, intersect(listMemberAt(members, rest, i), lt.rest));
+        foreach int i in newTypeLen ..< intersectedLen {
+            fixedArraySet(members, i, intersect(listMemberAt(members, rest, i), newType.rest));
         }
     }
-    return [members, intersect(rest, lt.rest)];
+    return [members, intersect(rest, newType.rest)];
 }
 
 // This function returns true if there is a list shape v such that
@@ -270,7 +273,12 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             if listInhabited(cx, members, NEVER, neg.next) {
                 return true;
             }
-            foreach int i in members.initial.length() + 1 ..< nt.members.initial.length() {
+            // If last member of neg repeats, just checking one repeating occurrence should suffice.
+            int negLenLimit = nt.members.initial.length();
+            if negLenLimit < negLen {
+                negLenLimit = int:max(negLenLimit, len + 2);
+            }
+            foreach int i in len + 1 ..< negLenLimit {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
                 if listInhabited(cx, s, NEVER, neg.next) {
