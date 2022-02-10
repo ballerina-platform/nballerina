@@ -50,7 +50,7 @@ function validateTerminalSyntaxNode(TerminalSyntaxNode node, Tokenizer tok) retu
     }
 }
 
-function validateSyntaxNode(SyntaxNode|RootSyntaxNode node, Tokenizer tok) returns PositionValidationError? {
+function validateSyntaxNode(SyntaxNode node, Tokenizer tok) returns PositionValidationError? {
     if node is AstSyntaxNode {
         check validateAstNodeRange(node, tok);
     }
@@ -59,7 +59,7 @@ function validateSyntaxNode(SyntaxNode|RootSyntaxNode node, Tokenizer tok) retur
     }
     else if node is RootSyntaxNode {
         checkpanic tok.advance();
-        foreach SyntaxNode child in node.childNodes {
+        foreach SubSyntaxNode child in node.childNodes {
             check validateSyntaxNode(child, tok);
         }
     }
@@ -69,7 +69,7 @@ function validateSyntaxNode(SyntaxNode|RootSyntaxNode node, Tokenizer tok) retur
         Range parentRange = { startPos: parentStart, endPos: parentEnd };
         boolean isTypeDesc = node.astNode is TypeDesc;
         d:Range|d:Position lastRange = parentStart;
-        foreach SyntaxNode child in node.childNodes {
+        foreach SubSyntaxNode child in node.childNodes {
             Position lastEnd = lastRange is Position ? lastRange : lastRange.endPos;
             if child !is AstSyntaxNode {
                 Position? pos = child.pos;
