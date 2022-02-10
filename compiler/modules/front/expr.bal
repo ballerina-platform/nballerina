@@ -168,6 +168,27 @@ function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) re
     return cx.semanticErr("expected string operand", s:range(expr));
 }
 
+final readonly & bir:ExternalSymbol IO_PRINTLN_SYMBOL = {
+    module: { org: "ballerina", names: ["io"] }, 
+    identifier: "println"
+};
+
+function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:FunctionCallExpr callExpr, bir:FunctionRef func, int i) returns ExprEffect|CodeGenError {
+    s:Expr arg = callExpr.args[i];
+    int n = callExpr is s:FunctionCallExpr ? i : i + 1;
+    if n >= func.signature.paramTypes.length() {
+        if func.symbol == IO_PRINTLN_SYMBOL {
+            return cx.unimplementedErr("multiple arguments for io:println not implemented", s:range(arg));
+        }
+        return cx.semanticErr("too many arguments for call to function", s:range(arg)); 
+    }
+    var { result, block } = check codeGenExpr(cx, bb, func.signature.paramTypes[n], arg);
+    if operandHasType(cx.mod.tc, result, func.signature.paramTypes[n]) {
+        return { result, block };
+    }
+    return cx.semanticErr("incorrect type for argument", s:range(arg));
+}
+
 function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
         var { innerExpr } => {
@@ -510,7 +531,16 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
             return { result: { value, semType: resultType }, block: bb };
         }
         result = cx.createTmpRegister(t:INT, pos);
-        bir:IntArithmeticBinaryInsn insn = { op, pos, operands, result };
+        bir:Insn insn;
+        // JBUG #34987: can't use a function to return the name directly
+        // var name = intArithmeticOpNeverPanics(op, operands);
+        // insn = { op, pos, name, operand, result };
+        if intArithmeticOpNeverPanics(op, operands) {
+            insn = { op, pos, name: bir:INSN_INT_NO_PANIC_ARITHMETIC_BINARY, operands, result };
+        }
+        else {
+            insn = { op, pos, name: bir:INSN_INT_ARITHMETIC_BINARY, operands, result };
+        }
         bb.insns.push(insn);
     }
     else if pair is FloatOperandPair {
@@ -572,6 +602,38 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
         return cx.semanticErr(`${op} not supported for operand types`, pos);
     }
     return { result, block: bb };
+}
+
+function intArithmeticOpNeverPanics(bir:ArithmeticBinaryOp op, bir:Operand[] operands) returns boolean {
+    t:IntSubtypeConstraints?[] operandConstraints = from bir:Operand operand in operands select t:intSubtypeConstraints(operand.semType);
+    t:IntSubtypeConstraints[] constraints = [];
+    foreach t:IntSubtypeConstraints? constraint in operandConstraints {
+        if constraint == () {
+            return false;
+        }
+        constraints.push(constraint);
+    }
+    int noPanicMin;
+    int noPanicMax;
+    if op is "+"|"-" {
+        // largest type that can't overflow is unsigned32 (positive) and signed32 (negative)
+        noPanicMax = int:UNSIGNED32_MAX_VALUE;
+        noPanicMin = int:SIGNED32_MIN_VALUE;
+    }
+    else if op is "*" {
+        // largest type that can't overflow is signed32
+        noPanicMax = int:SIGNED32_MAX_VALUE;
+        noPanicMin = int:SIGNED32_MIN_VALUE;
+    }
+    else {
+        return false;
+    }
+    foreach t:IntSubtypeConstraints constraint in constraints {
+        if constraint.max > noPanicMax || constraint.min < noPanicMin {
+            return false;
+        }
+    }
+    return true;
 }
 
 function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -1159,30 +1221,27 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     else {
         func = check genImportedFunctionRef(cx, prefix, expr.funcName, expr.qNamePos);
     }
-    check validArgumentCount(cx, func, expr.args.length(), expr.openParenPos);
-    t:SemType[] paramTypes = func.signature.paramTypes;
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
     foreach int i in 0 ..< expr.args.length() {
-        var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, paramTypes[i], expr.args[i]);
+        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
         curBlock = nextBlock;
         args.push(arg);
     }
+    check sufficientArguments(cx, func, expr);
     return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, (), expr.target);
     bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
-    check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
-
-    t:SemType[] paramTypes = func.signature.paramTypes;
     bir:Operand[] args = [target];
     foreach int i in 0 ..< expr.args.length() {
-        var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, paramTypes[i + 1], expr.args[i]);
+        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
         curBlock = nextBlock;
         args.push(arg);
     }
+    check sufficientArguments(cx, func, expr);
     return codeGenCall(cx, curBlock, func, args, expr.namePos);
 }
 
@@ -1199,17 +1258,13 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
     return { result: constifyRegister(reg), block: curBlock };    
 }
 
-function validArgumentCount(ExprContext cx, bir:FunctionRef func, int nSuppliedArgs, Position pos) returns CodeGenError? {
-    int nExpectedArgs = func.signature.paramTypes.length();
-    if nSuppliedArgs == nExpectedArgs {
-        return ();
-    }
-    string name = symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol);
-    if nSuppliedArgs < nExpectedArgs {
-        return cx.semanticErr(`too few arguments for call to function ${name}`, pos);
-    }
-    else {
-        return cx.semanticErr(`too many arguments for call to function ${name}`, pos);
+function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
+    int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
+    if nSuppliedArgs < func.signature.paramTypes.length() {
+        if func.symbol == IO_PRINTLN_SYMBOL {
+            return cx.unimplementedErr("io:println without arguments not implemented", call.closeParenPos);
+        }
+        return cx.semanticErr("too few arguments for call to function", call.closeParenPos);
     }
 }
 
@@ -1409,6 +1464,10 @@ function validIntOperand(ExprContext cx, bir:Operand operand, s:Expr expr) retur
 
 function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
     return operand is bir:Register ? () : { value: operand.value };
+}
+
+function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
+    return operand is bir:Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {

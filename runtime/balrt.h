@@ -127,33 +127,26 @@ typedef GC struct {
 // i.e must start with tid
 typedef struct {
     Tid tid;
-#if 0
     // the number of entries in memberTypes
     uint32_t nMemberTypes;
-#endif
+    // The minimum length of the list; always >= 0
+    // minLength is always >= nMemberTypes.
+    // If minLength > 0, then nMemberTypes > 0
+    int64_t minLength;
     TaggedPtr (*get)(TaggedPtr lp, int64_t index);
     PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
     int64_t (*getInt)(TaggedPtr lp, int64_t index);
     PanicCode (*setInt)(TaggedPtr lp, int64_t index, int64_t val);
     double (*getFloat)(TaggedPtr lp, int64_t index);
     PanicCode (*setFloat)(TaggedPtr lp, int64_t index, double val);
-#if 0
     // the type of members with index >= minLength
     MemberType restType;
-#else
-    MemberType memberType;
-#endif
     StructureDescPtr fillerDesc;
-#if 0
-    // the minimum length of the list; always >= 0
-    // minLength is always >= nMemberTypes
-    int64_t minLength;
     // The types of the members at the start of the list.
     // For member with index i in 0 ..< nMemberTypes, the type is memberTypes[i]
     // For member with index i in nMemberTypes ..< minLength, the type is memberTypes[nMemberTypes - 1]
     // The number of members is nMemberTypes.
     MemberType memberTypes[];
-#endif
 } ListDesc, *ListDescPtr;
 
 // Extends Structure

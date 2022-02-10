@@ -11,32 +11,62 @@ final int CASE_START_LENGTH = CASE_START.length();
 const CASE_END = "// @end";
 
 type Kind "V"|"E"|"UV"|"UE";
-type ParserTestCase [Kind, string, string[], string[]];
-type SingleStringParserTestCase [Kind, string, string, string];
+type ProductionRule "mod"|"stmt"|"expr"|"td";
+type ParserTestCase [Kind, ProductionRule, string[], string[]];
+type SingleStringParserTestCase [Kind, ProductionRule, string, string];
 @test:Config {
     dataProvider: readParserTests
 }
-function testParser(Kind k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
-    err:Syntax|Word[] parsed = reduceToWords(k, rule, subject);
+function testParser(Kind k, ProductionRule rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
+    err:Syntax|SyntaxNode actualNode = syntaxNodeFromLines(k, rule, subject);
     if k.includes("F") || k.includes("U") {
         if k.includes("V") {
-            test:assertTrue(parsed is err:Syntax, "test marked as unimplemented/failing but parsed");
+            test:assertTrue(actualNode is err:Syntax, "test marked as unimplemented/failing but parsed");
             return;
         }
         if k.includes("E") {
-            test:assertTrue(parsed is Word[], "test marked as unimplemented/failing but correctly got an error");
+            test:assertTrue(actualNode !is err:Syntax, "test marked as unimplemented/failing but correctly got an error");
             return;
         }
         panic err:impossible("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
-        if parsed !is error {
-            test:assertFail("expected a syntax error but got " + "\n".'join(...wordsToLines(parsed)));
+        if actualNode !is error {
+            test:assertFail("expected a syntax error but got " + "\n".'join(...syntaxNodeToString(actualNode)));
         }
         return;
     }
-    string[] actual = wordsToLines(check parsed);
-    test:assertEquals(actual, expected, "wrong ast");
+    if actualNode is err:Syntax {
+        panic err:impossible("expected a syntax node");
+    }
+    SyntaxNode normalizedActualNode = normalizeSyntaxNode(actualNode);
+    string[] actualNodeLines = syntaxNodeToString(normalizedActualNode);
+    test:assertEquals(actualNodeLines, expected, "wrong ast");
+}
+
+function syntaxNodeFromLines(Kind k, ProductionRule rule, string[] lines) returns err:Syntax|SyntaxNode {
+    SyntaxNode node;
+    SourceFile file = createSourceFile(lines, { filename: k });
+    if rule == "mod" {
+        node = rootSyntaxNode(check scanAndParseModulePart(file, 0));
+    }
+    else {
+        Tokenizer tok = new (file);
+        check tok.advance();
+        if rule == "stmt" {
+            node = syntaxNodeFromStmt(check parseStmt(tok));
+        }
+        else if rule == "expr" {
+            node = syntaxNodeFromExpr(check parseExpr(tok));
+        }
+        else {
+            node = syntaxNodeFromTypeDesc(check parseTypeDesc(tok));
+        }
+        if tok.current() != () {
+            return err:syntax("superfluous input at end", d:location(file, tok.currentStartPos()));
+        }
+    }
+    return node;
 }
 
 type TokenizerTestCase [string, string[]];
@@ -104,37 +134,6 @@ function tokenToString(Token t) returns string {
     return <string>t;
 }
 
-function reduceToWords(string k, string rule, string[] fragment) returns err:Syntax|Word[] {
-    Word[] w = [];
-    if rule == "mod" {
-        modulePartToWords(w, check scanAndParseModulePart(createSourceFile(fragment, { filename: k }), 0));
-    }
-    else {
-        SourceFile file = createSourceFile(fragment, { filename: k });
-        Tokenizer tok = new (file);
-        check tok.advance();
-        match rule {
-            "expr" => {
-                exprToWords(w, check parseExpr(tok));
-            }
-            "stmt" => {
-                stmtToWords(w, check parseStmt(tok));
-            }
-            "td" => {
-                typeDescToWords(w, check parseTypeDesc(tok));
-            }
-            _ => {
-                panic err:impossible("unknown production rule " + rule);
-            }
-        }
-        if tok.current() != () {
-            return err:syntax("superfluous input at end", d:location(file, tok.currentStartPos()));
-        }
-    }
-    return w;
-}
-
-
 function getTokenizerTests() returns map<TokenizerTestCase>|error {
      map<TokenizerTestCase> all = check invalidTokenSourceFragments();
      int invalidCases = all.length();
@@ -200,7 +199,13 @@ function readParserTests() returns map<ParserTestCase>|error {
             if tests.hasKey(subject) {
                 test:assertFail("duplicate test: " + subject);
             }
-            tests[subject] = [s[0], s[1], subjectLines, expected];
+            string rule = s[1];
+            if rule is ProductionRule {
+                tests[subject] = [s[0], rule, subjectLines, expected];
+            }
+            else {
+                test:assertFail("invalid rule: " + rule);
+            }
         }
     }
 
@@ -222,7 +227,13 @@ function readParserTests() returns map<ParserTestCase>|error {
         }
 
         [Kind, string] baseParts = check splitTestName(base);
-        tests["file:" + base] = [baseParts[0], baseParts[1], src, expected];
+        string rule = baseParts[1];
+        if rule is ProductionRule {
+            tests["file:" + base] = [baseParts[0], rule, src, expected];
+        }
+        else {
+            test:assertFail("invalid rule: " + rule);
+        }
     }
     return tests;
 }
