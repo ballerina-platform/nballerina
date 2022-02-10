@@ -27,6 +27,9 @@ const int TAG_BASIC_TYPE_MASK = 0xf << TAG_SHIFT;
 const int FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
 const int FLAG_EXACT = 0x4;
 
+const int IMMEDIATE_INT_MIN = -(1 << (TAG_SHIFT - 1));
+const int IMMEDIATE_INT_MAX = (1 << (TAG_SHIFT - 1)) - 1;
+
 const HEAP_ADDR_SPACE = 1;
 
 type ValueType llvm:IntegralType;
@@ -276,6 +279,13 @@ function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value valu
     return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(intToTaggedFunction), [value]);
 }
 
+// only use when compile time know that IMMEDIATE_INT_MIN <= value && value <= IMMEDIATE_INT_MAX
+function buildImmediateTaggedInt(llvm:Builder builder, llvm:Value value) returns llvm:PointerValue {
+    var low56 = builder.iBitwise("and", llvm:constInt(LLVM_INT, (1 << TAG_SHIFT) - 1), value);
+    var tagged = builder.iBitwise("or", llvm:constInt(LLVM_INT, FLAG_IMMEDIATE | TAG_INT), low56);
+    return builder.getElementPtr(llvm:constNull(LLVM_TAGGED_PTR), [tagged]);
+}
+
 function buildTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
     return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(floatToTaggedFunction), [value]);
 }
@@ -318,7 +328,11 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else {
         t:SingleValue value = operand.value;
         if value is string {
-            return [REPR_STRING, check buildConstString(builder, scaffold, value)];
+            byte[] bytes = value.toBytes();
+            int nBytes = bytes.length();
+            boolean alwaysImmediate = isSmallString(value.length(), bytes, nBytes);
+            TaggedRepr repr = { subtype: t:STRING, alwaysImmediate };
+            return [repr, check buildConstString(builder, scaffold, value)];
         }
         else if value == () {
             return [REPR_NIL, buildConstNil()];
@@ -327,7 +341,9 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
             return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, value ? 1 : 0)];
         }
         else if value is int {
-            return [REPR_INT, llvm:constInt(LLVM_INT, value)];
+            boolean alwaysInImmediateRange = IMMEDIATE_INT_MIN <= value && value <= IMMEDIATE_INT_MAX;
+            IntRepr repr = { constraints: { min: value, max: value, all: true }, alwaysInImmediateRange };
+            return [repr, llvm:constInt(LLVM_INT, value)];
         }
         else if value is float {
             return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, value)];
