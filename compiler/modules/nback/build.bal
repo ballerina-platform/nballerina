@@ -248,19 +248,22 @@ function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand,
 }
 
 function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value {
-    BaseRepr sourceBaseRepr = sourceRepr.base;
-    BaseRepr targetBaseRepr = targetRepr.base;
-    if sourceBaseRepr == targetBaseRepr {
+    if sourceRepr.base == targetRepr.base {
         return value;
     }
-    if targetBaseRepr == BASE_REPR_TAGGED {
-        if sourceBaseRepr == BASE_REPR_INT {
-            return buildTaggedInt(builder, scaffold, value);
+    if targetRepr is TaggedRepr {
+        if sourceRepr is IntRepr {
+            if sourceRepr.alwaysInImmediateRange {
+                return buildImmediateTaggedInt(builder, value);
+            }
+            else {
+                return buildTaggedInt(builder, scaffold, value);
+            }
         }
-        else if sourceBaseRepr == BASE_REPR_FLOAT {
+        else if sourceRepr is FloatRepr {
             return buildTaggedFloat(builder, scaffold, value);
         }
-        else if sourceBaseRepr == BASE_REPR_BOOLEAN {
+        else if sourceRepr is BooleanRepr {
             return buildTaggedBoolean(builder, value);
         }
     }
