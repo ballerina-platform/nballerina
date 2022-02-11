@@ -274,7 +274,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
                 return true;
             }
             // If last member of neg repeats, just checking one repeating occurrence should suffice.
-            int negLenLimit = nt.members.initial.length();
+            int negLenLimit = neg.maxInitialLen;
             if negLenLimit < negLen {
                 negLenLimit = int:max(negLenLimit, len + 2);
             }
@@ -285,10 +285,6 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
                     return true;
                 }
             }
-            // List shapes >= negLen need to take in account
-            // this neg type and are handled below.
-            fixedArrayFill(members, negLen, rest);
-            len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
             return listInhabited(cx, members, rest, neg.next);
@@ -385,9 +381,11 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
         members.initial[setIndex] = m;
         return;
     }
-    if initCount != 0 {
-        SemType lastMember = members.initial[initCount - 1]; 
-        foreach int i in initCount ... (setIndex + 1) {
+    if lastMemberRepeats {
+        int lastIndex = initCount - 1;
+        SemType lastMember = members.initial[lastIndex];
+        int pushBack = lastIndex == setIndex ? 1 : 0;
+        foreach int i in initCount ... setIndex + pushBack {
             members.initial.push(lastMember);
         }
     }
@@ -400,7 +398,7 @@ function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray 
 
 function fixedArrayReplace(FixedLengthArray array, int index, SemType t, SemType rest) returns FixedLengthArray {
     FixedLengthArray copy = fixedArrayShallowCopy(array);
-    fixedArrayFill(copy, index - 1, rest);
+    fixedArrayFill(copy, index + 1, rest);
     fixedArraySet(copy, index, t);
     return copy;
 }

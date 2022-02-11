@@ -19,3 +19,45 @@ type I10000A Int10000|(!Int10000 & IntArray);
 // @type IA = IntArray
 // @type IA < ISArray
 type IA Int14|NegInt14;
+
+type IS int|string;
+type EMPTY [];
+type IS1 IS[1];
+type IS2 IS[2];
+type IS3 IS[3];
+
+// @type ALL = ISArray
+type ALL EMPTY|IS1|IS2|IS3|[IS, IS, IS, IS, IS...];
+
+// @type ISArray < U
+type U EMPTY|[IS|float, IS...];
+
+// @type ISArray < V
+type V EMPTY|[IS]|[IS, IS|float, IS...];
+
+// @type ISArray < W
+type W EMPTY|[IS]|[IS, IS|float]|[IS, IS, IS|float, IS...];
+
+// @type ISArray < X
+type X EMPTY|[IS]|[IS, IS|float]|[IS, IS, IS|float]|[IS, IS, IS, IS|float, IS...];
+
+// @type ISArray < Y
+type Y EMPTY|[IS, IS, IS, IS|float, IS...]|[IS, IS, IS|float]|[IS, IS|float]|[IS];
+
+// @type ISArray < Z
+type Z [IS, IS, IS, IS|float, IS...]|[IS, IS, IS|float]|[IS, IS|float]|[IS]|EMPTY;
+
+// @type IntArray < P
+type P EMPTY|[int]|[IS, int]|[IS, IS, IS, IS...];
+
+// @type IntArray < Q
+type Q EMPTY|[int]|[IS, IS]|[IS, IS, IS|float, IS...];
+
+// @type IntArray < R
+type R EMPTY|[int]|[IS, IS]|[int, int, IS|float, IS...];
+
+// @type IntArray < S
+type S EMPTY|[int]|[IS, IS]|[int, int, int, IS...];
+
+// todo: add the subtype relationship when issue #918 is fixed
+//type T EMPTY|[int]|[IS, int]|[IS, IS, IS|float, IS...]; //  Error: IntArray is not a proper subtype of T
