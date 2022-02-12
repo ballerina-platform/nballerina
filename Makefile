@@ -16,6 +16,6 @@ test clean:
 test: all
 
 $(SUBDIRS):
-	$(MAKE) -C $(basename $@) $(target)
+	$(MAKE) -C $(basename $@) $(target) wat=$(wat)
 
 .PHONY: $(TARGETS) $(SUBDIRS)
