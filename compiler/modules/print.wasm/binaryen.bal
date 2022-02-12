@@ -11,6 +11,7 @@ final readonly & map<string> signedInt32Ops = {
     "LtSInt32": "i32.lt_s",
     "LeSInt32": "i32.le_s",
     "GtSInt32": "i32.gt_s",
+    "GeSInt32": "i32.ge_s",
     "EqInt32": "i32.eq",
     "NeInt32": "i32.ne",
     "OrInt32": "i32.or",
@@ -23,6 +24,7 @@ final readonly & map<string> signedInt32Ops = {
     "LtSInt64": "i64.lt_s",
     "LeSInt64": "i64.le_s",
     "GtSInt64": "i64.gt_s",
+    "GeSInt64": "i64.ge_s",
     "EqInt64": "i64.eq",
     "NeInt64": "i64.ne",
     "OrInt64": "i64.or",
@@ -258,6 +260,9 @@ public class Module {
             foreach int i in 0...func.params.length() - 1 {
                 funcParams += " (param $" + varCount.toString() + " " + func.params[i] + ")";
                 varCount += 1;
+            }
+            if func.results != "None" {
+                funcParams += " (result " + func.results.toString() + ")";
             }
             string funcDef = " (func $" + func.name + funcParams;
             module.push(funcDef);

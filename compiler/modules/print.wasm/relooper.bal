@@ -16,6 +16,7 @@ public type Branch record {
     Expression? condition =();
     FlowType ty = Direct;
     int ancestorId = 0;
+    boolean processed = false;
     readonly int toId;
 };
 
@@ -85,11 +86,12 @@ public class Relooper {
                 Block? next = self.blocks[nextId];
                 if next != () {
                     if index != () {
-                        nextEntries.push(nextId);
                         Branch? branch = entry.branchesOut[nextId];
-                        if branch is Branch {
+                        if branch is Branch && !branch.processed {
+                            nextEntries.push(nextId);
                             branch.ty = Br;
                             branch.ancestorId = self.shapeId;
+                            branch.processed = true;
                             entry.branchesOut.put(branch);
                         }
                     }
@@ -147,13 +149,14 @@ public class Relooper {
                         if validBlocks.indexOf(nextId) != () {
                             next.branchesIn = next.branchesIn.filter(b => innerBlocks.indexOf(b) == ());
                             Branch? branch = inner.branchesOut[nextId];
-                            if branch != () {
+                            if branch != () && !branch.processed {
                                 branch.ty = Br;
                                 branch.ancestorId = loopShapeId;
+                                branch.processed = true;
                                 inner.branchesOut.put(branch);
+                                nextEntries.push(nextId);
                             }
                             self.blocks.put(next);
-                            nextEntries.push(nextId);
                         }
                         if entries.indexOf(nextId) != () {
                             Branch? branch = inner.branchesOut[nextId];
@@ -202,7 +205,7 @@ public class Relooper {
         }
     }
 
-    function findIndependentBlocks(int[] entries) returns map<int[]> {
+    function findIndependentBlocks(int[] entries, int[] validBlocks) returns map<int[]> {
         map<int[]> independentGroups = {};
         map<int?> ownership = {};
         foreach int entry in entries {
@@ -225,7 +228,7 @@ public class Relooper {
                             queue.push(childId);
                             ownership[childId.toString()] = owner;
                             int[]? group = independentGroups[owner.toString()];
-                            if group != () {
+                            if group != () && validBlocks.indexOf(childId) != () {
                                 group.push(childId);
                                 independentGroups[owner.toString()] = group;
                             }
@@ -297,17 +300,18 @@ public class Relooper {
                         if currInner != () {
                             validBlocks = validBlocks.filter(b => b != currInnerId);
                             foreach int childId in currInner.branchesOut.keys() {
-                                if group.indexOf(childId) == () {
+                                if group.indexOf(childId) == () && blocks.indexOf(childId) != () {
                                     Block? curr = self.blocks[childId];
                                     if curr != () {
                                         curr.branchesIn = curr.branchesIn.filter(b => (<int[]>group).indexOf(b) == ());
-                                        if nextEntries.indexOf(childId) == () {
-                                            nextEntries.push(childId);
-                                        }
                                         Branch? branch = currInner.branchesOut[childId];
-                                        if branch != () {
+                                        if branch != () && !branch.processed {
                                             branch.ty = Br;
                                             branch.ancestorId = self.shapeId;
+                                            branch.processed = true;
+                                            if nextEntries.indexOf(childId) == () {
+                                                nextEntries.push(childId);
+                                            }
                                             currInner.branchesOut.put(branch);
                                         }
                                         self.blocks.put(curr);
@@ -475,7 +479,7 @@ public class Relooper {
             panic error("impossible");
         }
         else if entries.length() > 0 {
-            map<int[]> independentGroups = self.findIndependentBlocks(entries);
+            map<int[]> independentGroups = self.findIndependentBlocks(entries, validBlocks);
             if independentGroups.keys().length() > 0 {
                 return self.createMultipleShape(validBlocks, entries, independentGroups);
             }
