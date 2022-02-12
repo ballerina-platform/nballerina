@@ -11,6 +11,7 @@ type CompileError err:Diagnostic|io:Error|file:Error;
 public type Options record {
     boolean testJsonTypes = false;
     boolean showTypes = false;
+    boolean outWat = false;
     int? debugLevel;
     // outDir also implies treating each file as a separate module
     string? outDir = ();
@@ -59,7 +60,13 @@ public function main(string[] filenames, *Options opts) returns error? {
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            CompileError? err = ();
+            if opts.outWat {
+                err = compileBalFileToWat(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            }
+            else {
+                err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            }
             if err is err:Internal {
                 panic error(d:toString(err.detail()), err);
             }

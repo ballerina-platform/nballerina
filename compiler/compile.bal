@@ -2,6 +2,7 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
+import wso2/nballerina.wback;
 
 import ballerina/file;
 import ballerina/io;
@@ -27,7 +28,7 @@ class CompileContext {
     final t:Env env = new;
     final string basename;
     final OutputOptions outputOptions;
-    
+
     final table<Job> key(id) jobs = table [];
 
     function init(string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) {
@@ -37,7 +38,14 @@ class CompileContext {
         self.nbackOptions = nbackOptions;
     }
 
-    function buildModule(bir:ModuleId id, bir:Module birMod) returns LlvmModule|CompileError {
+    function buildWatModule(bir:ModuleId id, bir:Module birMod, string? outFilename) {
+        io:Error? err = wback:compileModule(birMod, outFilename);
+        if err != () {
+            io:println(err);
+        }
+    }
+
+    function buildLLVMModule(bir:ModuleId id, bir:Module birMod) returns LlvmModule|CompileError {
         var [llMod, typeUsage] = check nback:buildModule(birMod, self.nbackOptions);
         self.programModules.push({ id, typeUsage });
         return llMod;
@@ -59,12 +67,15 @@ class CompileContext {
         }
     }
 
-    function outputFilename(string suffix = "") returns string? {
+    function outputFilename(string suffix = "", boolean wat = false) returns string? {
         string? basename = self.outputBasename;
         if basename == () {
             return ();
         }
         else {
+            if wat {
+                return basename + suffix + WAT_OUTPUT_EXTENSION;
+            }
             return basename + suffix + OUTPUT_EXTENSION;
         }
     }
@@ -73,27 +84,41 @@ class CompileContext {
 // basename is filename without extension
 function compileBalFile(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
     CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions);
-    front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
+    front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename(), false);
     check mod.validMain();
     check generateInitModule(cx, mod);
 }
 
-function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename) returns front:ResolvedModule|CompileError {
+function compileBalFileToWat(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
+    CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions);
+    _ = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename("", true), true);
+}
+
+function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename, boolean wat) returns front:ResolvedModule|CompileError {
     front:ScannedModule scanned = check front:scanModule(sourceParts, id);
     // Fallowing doesn't properly pass the error back to the calling function if we get an error the import
     // ResolvedImport[] resolvedImports = from var mod in scanned.getImports() select check resolveImport(cx, mod);
     ResolvedImport[] resolvedImports = [];
-    foreach var mod in scanned.getImports() {
-        ResolvedImport ri = check resolveImport(cx, mod);
-        resolvedImports.push(ri);
+    if !wat {
+        foreach var mod in scanned.getImports() {
+            ResolvedImport ri = check resolveImport(cx, mod);
+            resolvedImports.push(ri);
+        }
     }
     front:ResolvedModule mod = check front:resolveModule(scanned, cx.env, resolvedImports);
-    LlvmModule llMod = check cx.buildModule(id, mod);
-    if outFilename != () {
-        check outputModule(llMod, outFilename, cx.outputOptions);
+    if wat {
+        cx.buildWatModule(id, mod, outFilename);
+        return mod;
     }
-    return mod;
+    else {
+        LlvmModule llMod = check cx.buildLLVMModule(id, mod);
+        if outFilename != () {
+            check outputModule(llMod, outFilename, cx.outputOptions);
+        }
+        return mod;
+    }
 }
+
 
 function resolveImport(CompileContext cx, bir:ModuleId id) returns CompileError|ResolvedImport {
     if id == DEFAULT_ROOT_MODULE_ID {
@@ -125,7 +150,7 @@ function processImport(CompileContext cx, bir:ModuleId id) returns CompileError|
     if parts.length() == 0 {
         return "no module parts found";
     }
-    front:ResolvedModule mod = check processModule(cx, id, parts, cx.outputFilename("." + subModuleSuffix(id)));
+    front:ResolvedModule mod = check processModule(cx, id, parts, cx.outputFilename("." + subModuleSuffix(id)), false);
     return mod.getExports();
 }
 
