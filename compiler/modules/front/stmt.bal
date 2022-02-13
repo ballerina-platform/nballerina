@@ -48,7 +48,6 @@ type LoopContext record {|
     LoopContext? enclosing;
     // will use this with while true to determine whether
     // following block is reachable
-    boolean breakUsed = false;
     Assignment[] onBreakAssignments = [];
     Assignment[] onContinueAssignments = [];
 |};
@@ -117,10 +116,6 @@ class StmtContext {
         self.loopContext = c;
     }
 
-    function loopUsedBreak() returns boolean {
-        return (<LoopContext>self.loopContext).breakUsed;
-    }
-
     function loopContinueBlock() returns bir:BasicBlock? {
         return (<LoopContext>self.loopContext).onContinue;
     }
@@ -145,7 +140,6 @@ class StmtContext {
         else {
             bir:BasicBlock b = c.onBreak ?: self.createBasicBlock();
             c.onBreak = b;
-            c.breakUsed = true;
             return b.label;
         }
     }
@@ -457,9 +451,10 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     // We won't used these if the exit isn't reachable
     assignments.push(...cx.onContinueAssignments());
     assignments.push(...cx.onBreakAssignments());
-    if cx.loopUsedBreak() {
+    bir:BasicBlock? breakBlock = cx.loopBreakBlock();
+    if breakBlock != () {
         exitReachable = true;
-        exit = cx.loopBreakBlock();
+        exit = breakBlock;
     }
     cx.popLoopContext();
    
