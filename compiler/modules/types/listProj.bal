@@ -1,21 +1,22 @@
 // Untested full implementation of list projection.
 
 // Based on listMemberType
-public function listProj(Context cx, SemType t, int k) returns SemType {
-    if k < 0 {
-        return NEVER;
-    }
+public function listProj(Context cx, SemType t, SemType k) returns SemType {
     if t is UniformTypeBitSet {
         return (t & LIST) != 0 ? TOP : NEVER;
     }
     else {
-        return union(listProjBdd(cx, k, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()),
-                     listProjBdd(cx, k, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
+        IntSubtype|boolean keyData = intSubtype(k);
+        if keyData == false {
+            return NEVER;
+        }
+        return union(listProjBdd(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()),
+                listProjBdd(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
     }
 }
 
 // Based on bddEvery
-function listProjBdd(Context cx, int k, Bdd b, Conjunction? pos, Conjunction? neg) returns SemType {
+function listProjBdd(Context cx, IntSubtype|true k, Bdd b, Conjunction? pos, Conjunction? neg) returns SemType {
     if b is boolean {
         return b ? listProjPath(cx, k, pos, neg) : NEVER;
     }
@@ -27,7 +28,7 @@ function listProjBdd(Context cx, int k, Bdd b, Conjunction? pos, Conjunction? ne
 }
 
 // Based on listFormulaIsEmpty
-function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) returns SemType {
+function listProjPath(Context cx, IntSubtype|true k, Conjunction? pos, Conjunction? neg) returns SemType {
     FixedLengthArray members;
     SemType rest;
     if pos == () {
@@ -67,7 +68,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
             rest = NEVER;
         }
     }
-    return listProjExclude(cx, k, members, rest, neg);
+    return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
 }
 
 // Precondition k >= 0 and members[i] not empty for all i
@@ -75,13 +76,13 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
 // when the type of e is given by members and rest.
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
-function listProjExclude(Context cx, int k, FixedLengthArray members, SemType rest, Conjunction? neg) returns SemType {
+function listProjExclude(Context cx, IntSubtype|true k, FixedLengthArray members, SemType rest, ListConjunction? neg) returns SemType {
     if neg == () {
-        return listMemberAt(members, rest, k);
+        return listAtomicMemberTypeAt(members, rest, k);
     }
     else {
         int len = members.fixedLength;
-        ListAtomicType nt = cx.listAtomType(neg.atom);
+        ListAtomicType nt = neg.listType;
         int negLen = nt.members.fixedLength;
         if len < negLen {
             if isNever(rest) {
@@ -95,12 +96,10 @@ function listProjExclude(Context cx, int k, FixedLengthArray members, SemType re
         }
         // now we have nt.members.length() <= len
         SemType p = NEVER;
-        foreach int i in 0 ..< len {
-            SemType ntm = listMemberAt(nt.members, nt.rest, i);
-            SemType d = diff(fixedArrayGet(members, i), ntm);
+        foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
+            SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArrayShallowCopy(members);
-                fixedArraySet(s, i, d);
+                FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
                 p = union(p, listProjExclude(cx, k, s, rest, neg.next));
             }     
         }

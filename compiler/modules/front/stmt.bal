@@ -1035,7 +1035,7 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
                                            s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                            Position pos) returns CodeGenError|StmtEffect {
     var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, env, lValue.index);
-    t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, t:singleIntShape(index.semType));
+    t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, index.semType);
     if t:isEmpty(cx.mod.tc, memberType) {
         return cx.semanticErr("type of member access is never", pos);
     }
