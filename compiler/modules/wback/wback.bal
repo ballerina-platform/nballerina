@@ -176,7 +176,7 @@ function buildAssign(wasm:Module module, bir:AssignInsn insn) returns wasm:Expre
         }
         return ();
     }
-    panic error("impossible");
+    return ();
 }
 
 function buildCondNarrow(wasm:Module module, bir:CondNarrowInsn insn) returns wasm:Expression {
