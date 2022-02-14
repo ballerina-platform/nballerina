@@ -198,14 +198,8 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
         return vc.invalidErr("inherent type of map is not atomic", insn.pos);
     }
     foreach int i in 0 ..< insn.operands.length() {
-        t:Context cx = vc.typeContext();
-        // XXX should use something like listAtomicTypeMemberAt
-        t:SemType memberType = t:mappingMemberType(cx, ty, t:singleton(cx, insn.fieldNames[i]));
-        if memberType == t:NEVER {
-            return vc.semanticErr(`field ${insn.fieldNames[i]} is not allowed by the type`, insn.pos);
-        }
-        check verifyOperandType(vc, insn.operands[i], memberType,
-                                "type of mapping constructor member is not allowed by the mapping type", insn.pos);
+        check verifyOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAt(mat, insn.fieldNames[i], i), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
+
     }
     if insn.operands.length() < mat.names.length() {
         return vc.semanticErr("missing record fields in mapping constructor", insn.pos);
