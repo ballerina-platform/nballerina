@@ -847,6 +847,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
     bir:Operand[] operands = [];
     string[] fieldNames = [];
     map<Position> fieldPos = {};
+    int i = 0;
     foreach s:Field f in expr.fields {
         string name = f.name;
         Position? prevPos = fieldPos[name];
@@ -862,11 +863,12 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
                 return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
             }
         }
-        t:SemType expectedMemberType = t:mappingMemberType(cx.mod.tc, resultType, t:stringConst(name));
+        t:SemType expectedMemberType = t:mappingAtomicTypeMemberAt(mat, name, i);
         bir:Operand operand;
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, expectedMemberType, f.value);
         operands.push(operand);
         fieldNames.push(name);
+        i = i + 1;
     }
     bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, pos: expr.opPos };
