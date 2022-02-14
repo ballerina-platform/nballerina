@@ -440,7 +440,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         rf = mappingIndexedSetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
-    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType);
+    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType, keyOperand.semType);
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.

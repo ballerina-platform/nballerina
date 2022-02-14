@@ -936,14 +936,11 @@ function codeGenLExpr(StmtContext cx, bir:BasicBlock startBlock, Environment env
 function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
     var { result: reg, block: block1 } = check codeGenLExpr(cx, startBlock, env, lValue.container);
     t:UniformTypeBitSet indexType;
-    t:SemType memberType;
     if t:isSubtypeSimple(reg.semType, t:MAPPING) {
         indexType = t:STRING;
-        memberType = t:mappingMemberType(cx.mod.tc, reg.semType);
     } 
     else if t:isSubtypeSimple(reg.semType, t:LIST) {
-        indexType = t:INT;
-        memberType = t:listMemberType(cx.mod.tc, reg.semType);
+        indexType = t:INT;      
     }
     else {
         return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.opPos);
@@ -955,6 +952,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Enviro
         }
         else {
             var { result: index, block: nextBlock } = check cx.codeGenExprForInt(block1, env, lValue.index);
+            t:SemType memberType = t:listMemberType(cx.mod.tc, reg.semType, index.semType);
             { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, env, memberType, expr);
             bir:ListSetInsn insn = { operands: [reg, index, operand], pos: lValue.opPos };
             nextBlock.insns.push(insn);
@@ -963,6 +961,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Enviro
     }
     else {
         var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, block1, env, lValue, reg.semType);
+        t:SemType memberType = t:mappingMemberType(cx.mod.tc, reg.semType, index.semType);
         { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, env, memberType, expr);
         bir:MappingSetInsn insn =  { operands: [ reg, index, operand], pos: lValue.opPos };
         nextBlock.insns.push(insn);

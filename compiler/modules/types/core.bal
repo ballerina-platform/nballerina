@@ -817,7 +817,7 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     cx.comparableMemo.add(memo);
     // SUBSET need to iterate members when tuples are supported
     // following relies on the fact `listMemberType(cx, NIL, ()) = NEVER`
-    boolean result = comparable(cx, listMemberType(cx, t1), listMemberType(cx, t2));
+    boolean result = comparable(cx, listMemberType(cx, t1, INT), listMemberType(cx, t2, INT));
     memo.comparable = result;
     return result;
 }
@@ -945,7 +945,7 @@ function bddListAtomicType(Env env, Bdd bdd, ListAtomicType top) returns ListAto
 // This is what Castagna calls projection.
 // We will extend this to allow `key` to be a SemType, which will turn into an IntSubtype.
 // If `t` is not a list, NEVER is returned
-public function listMemberType(Context cx, SemType t, SemType k = INT) returns SemType {
+public function listMemberType(Context cx, SemType t, SemType k) returns SemType {
     if t is UniformTypeBitSet {
         return (t & LIST) != 0 ? TOP : NEVER;
     }
@@ -990,7 +990,7 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // This computes the spec operation called "member type of K in T",
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
-public function mappingMemberType(Context cx, SemType t, SemType k = STRING) returns SemType {
+public function mappingMemberType(Context cx, SemType t, SemType k) returns SemType {
     if t is UniformTypeBitSet {
         return (t & MAPPING) != 0 ? TOP : NEVER;
     }

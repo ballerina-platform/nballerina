@@ -819,11 +819,10 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
 
     // SUBSET always have contextually expected type for list constructor
     t:SemType resultType = t:intersect(<t:SemType>expected, t:LIST_RW);
-    t:SemType? expectedMemberType = t:arrayMemberType(cx.mod.tc, resultType);
-
-    foreach var member in expr.members {
+    t:Context tc = cx.mod.tc;
+    foreach var [i, member] in expr.members.enumerate() {
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, expectedMemberType, member);
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, t:listMemberType(tc, resultType, t:singleton(tc, i)), member);
         operands.push(operand);
     }
     if t:isEmpty(cx.mod.tc, resultType) {
