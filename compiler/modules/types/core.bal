@@ -815,46 +815,43 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     }
     ComparableMemo memo = { semType1: t1, semType2: t2 };
     cx.comparableMemo.add(memo);
-    // SUBSET need to iterate members when tuples are supported
-    // following relies on the fact `listMemberType(cx, NIL, ()) = NEVER`
     boolean result;
     var members1 = listAllMemberTypes(cx, t1);
     var members2 = listAllMemberTypes(cx, t2);
     if members1 != () && members2 != () {
         result = false;
         int currentIndex = 0;
-        var currentMember = members2[currentIndex];
+        var [currentMemberRange, currentMemberTy] = members2[currentIndex];
         foreach var [range, ty] in members1 {
-            if currentMember[0].max >= range.max {
-                result = setComparableMemo(memo, comparable(cx, currentMember[1], ty));
+            if currentMemberRange.max >= range.max {
+                result = updateComparableMemo(cx, memo, currentMemberTy, ty);
                 if result == false {
                     return false;
                 }
+                continue;
             }
-            while currentMember[0].max < range.max {
-                if currentMember[0].max > range.min {
-                    result = setComparableMemo(memo, comparable(cx, currentMember[1], ty));
+            while currentMemberRange.max <= range.max {
+                if currentMemberRange.max > range.min {
+                    result = updateComparableMemo(cx, memo, currentMemberTy, ty);
                     if result == false {
                         return false;
                     }
                 }
+                if currentMemberRange.max != range.max {
+                    break;
+                }
                 currentIndex += 1;
                 if currentIndex >= members2.length() {
-                    return setComparableMemo(memo, false);
-                }
-                currentMember = members2[currentIndex];
-            }
-            if currentMember[0].max == range.max {
-                result = setComparableMemo(memo, comparable(cx, currentMember[1], ty));
-                if result == false {
+                    memo.comparable = false;
                     return false;
                 }
+                [currentMemberRange, currentMemberTy] = members2[currentIndex];
             }
         }
+        SemType lastMemberTy = members1[members1.length() - 1][1];
         while currentIndex < members2.length() {
-            SemType ty2 = members2[currentIndex][1];
-            SemType ty1 = members1[members1.length() - 1][1];
-            result = setComparableMemo(memo, comparable(cx, ty1, ty2));
+            [_, currentMemberTy] = members2[currentIndex];
+            result = updateComparableMemo(cx, memo, lastMemberTy, currentMemberTy);
             if result == false {
                 return false;
             }
@@ -864,10 +861,12 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     else {
         result = comparable(cx, listMemberType(cx, t1, INT), listMemberType(cx, t2, INT));
     }
-    return setComparableMemo(memo, result);
+    memo.comparable = result;
+    return result;
 }
 
-function setComparableMemo(ComparableMemo memo, boolean result) returns boolean {
+function updateComparableMemo(Context cx, ComparableMemo memo, SemType t1, SemType t2) returns boolean {
+    boolean result = comparable(cx, t1, t2);
     memo.comparable = result;
     return result;
 }
