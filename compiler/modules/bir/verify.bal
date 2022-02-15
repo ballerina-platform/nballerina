@@ -198,7 +198,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
         return vc.invalidErr("inherent type of map is not atomic", insn.pos);
     }
     foreach int i in 0 ..< insn.operands.length() {
-        check verifyOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAt(mat, insn.fieldNames[i], i), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
+        check verifyOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAt(mat, insn.fieldNames[i]), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
 
     }
     if insn.operands.length() < mat.names.length() {

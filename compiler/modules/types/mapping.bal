@@ -9,14 +9,9 @@ public type MappingAtomicType readonly & record {|
     SemType rest;
 |};
 
-public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string key, int i) returns SemType {
-    int? n = mat.names.indexOf(key, 0);
-    if n is int {
-        return mat.types[n];
-    }
-    else {
-        return mat.rest;
-    }
+public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) returns SemType {
+    int? i = mat.names.indexOf(k, 0);
+    return i is int ? mat.types[i] : mat.rest;
 }
 
 // This is mapping index 0
