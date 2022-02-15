@@ -13,22 +13,11 @@ if (process.argv.length > 2) {
     };
     WebAssembly.instantiate(wasmBuffer, importObject).then(obj => {
       obj.instance.exports.main()
-    });
+    }).catch(err => console.log(err.message));
   }
   else {
     WebAssembly.instantiate(wasmBuffer).then(obj => {
       obj.instance.exports.main()
-    });
+    }).catch(err => console.log("panic:" + err.message));
   }
 }
-
-
-
-
-// fetch('main.wasm').then(response =>
-//   response.arrayBuffer()
-// ).then(bytes => WebAssembly.instantiate(bytes, importObject)).then(obj => {
-//       obj.instance.exports.printNot(0)
-// }).catch(console.error);
-  
-  
