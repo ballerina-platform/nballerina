@@ -429,7 +429,7 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
     if l is bir:Register {
         if t:isSubtypeSimple(l.semType, t:LIST) {
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, index);
-            t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, t:singleIntShape(r.semType));
+            t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r.semType);
             if t:isEmpty(cx.mod.tc, memberType) {
                 return cx.semanticErr("type of member access is never", pos);
             }
@@ -819,11 +819,10 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
 
     // SUBSET always have contextually expected type for list constructor
     t:SemType resultType = t:intersect(<t:SemType>expected, t:LIST_RW);
-    t:SemType? expectedMemberType = t:arrayMemberType(cx.mod.tc, resultType);
-
-    foreach var member in expr.members {
+    t:Context tc = cx.mod.tc;
+    foreach var [i, member] in expr.members.enumerate() {
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, expectedMemberType, member);
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, t:listMemberType(tc, resultType, t:singleton(tc, i)), member);
         operands.push(operand);
     }
     if t:isEmpty(cx.mod.tc, resultType) {

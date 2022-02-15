@@ -271,8 +271,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
                                                heapPointerType(llListType));
     llvm:BasicBlock? bbJoin = ();
     t:SemType listType = insn.operands[0].semType;
-    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType,
-                                            t:singleIntShape(insn.operands[1].semType));
+    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
     llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
     ListRepr repr = listTypeToListRepr(scaffold.typeContext(), listType);
     if repr.isSpecialized {
@@ -441,7 +440,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         rf = mappingIndexedSetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
-    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType);
+    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType, keyOperand.semType);
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.

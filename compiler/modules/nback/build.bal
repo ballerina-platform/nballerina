@@ -27,6 +27,9 @@ const int TAG_BASIC_TYPE_MASK = 0xf << TAG_SHIFT;
 const int FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
 const int FLAG_EXACT = 0x4;
 
+const int IMMEDIATE_INT_MIN = -(1 << (TAG_SHIFT - 1));
+const int IMMEDIATE_INT_MAX = (1 << (TAG_SHIFT - 1)) - 1;
+
 const HEAP_ADDR_SPACE = 1;
 
 type ValueType llvm:IntegralType;
@@ -245,19 +248,22 @@ function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand,
 }
 
 function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value {
-    BaseRepr sourceBaseRepr = sourceRepr.base;
-    BaseRepr targetBaseRepr = targetRepr.base;
-    if sourceBaseRepr == targetBaseRepr {
+    if sourceRepr.base == targetRepr.base {
         return value;
     }
-    if targetBaseRepr == BASE_REPR_TAGGED {
-        if sourceBaseRepr == BASE_REPR_INT {
-            return buildTaggedInt(builder, scaffold, value);
+    if targetRepr is TaggedRepr {
+        if sourceRepr is IntRepr {
+            if sourceRepr.alwaysInImmediateRange {
+                return buildImmediateTaggedInt(builder, value);
+            }
+            else {
+                return buildTaggedInt(builder, scaffold, value);
+            }
         }
-        else if sourceBaseRepr == BASE_REPR_FLOAT {
+        else if sourceRepr is FloatRepr {
             return buildTaggedFloat(builder, scaffold, value);
         }
-        else if sourceBaseRepr == BASE_REPR_BOOLEAN {
+        else if sourceRepr is BooleanRepr {
             return buildTaggedBoolean(builder, value);
         }
     }
@@ -274,6 +280,13 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
     return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(intToTaggedFunction), [value]);
+}
+
+// only use when compile time know that IMMEDIATE_INT_MIN <= value && value <= IMMEDIATE_INT_MAX
+function buildImmediateTaggedInt(llvm:Builder builder, llvm:Value value) returns llvm:PointerValue {
+    var low56 = builder.iBitwise("and", llvm:constInt(LLVM_INT, (1 << TAG_SHIFT) - 1), value);
+    var tagged = builder.iBitwise("or", llvm:constInt(LLVM_INT, FLAG_IMMEDIATE | TAG_INT), low56);
+    return builder.getElementPtr(llvm:constNull(LLVM_TAGGED_PTR), [tagged]);
 }
 
 function buildTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
@@ -318,7 +331,11 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else {
         t:SingleValue value = operand.value;
         if value is string {
-            return [REPR_STRING, check buildConstString(builder, scaffold, value)];
+            byte[] bytes = value.toBytes();
+            int nBytes = bytes.length();
+            boolean alwaysImmediate = isSmallString(value.length(), bytes, nBytes);
+            TaggedRepr repr = { subtype: t:STRING, alwaysImmediate };
+            return [repr, check buildConstString(builder, scaffold, value)];
         }
         else if value == () {
             return [REPR_NIL, buildConstNil()];
@@ -327,7 +344,9 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
             return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, value ? 1 : 0)];
         }
         else if value is int {
-            return [REPR_INT, llvm:constInt(LLVM_INT, value)];
+            boolean alwaysInImmediateRange = IMMEDIATE_INT_MIN <= value && value <= IMMEDIATE_INT_MAX;
+            IntRepr repr = { constraints: { min: value, max: value, all: true }, alwaysInImmediateRange };
+            return [repr, llvm:constInt(LLVM_INT, value)];
         }
         else if value is float {
             return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, value)];

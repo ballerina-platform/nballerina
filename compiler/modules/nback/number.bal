@@ -214,7 +214,7 @@ function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertT
         buildConvertFloatToInt(builder, scaffold, val, insn);
         return;
     }
-    else if repr.base == BASE_REPR_TAGGED && repr.subtype == t:DECIMAL {
+    else if repr is TaggedRepr && repr.subtype == t:DECIMAL {
         buildConvertDecimalToInt(builder, scaffold, val, insn);
         return;
     }
@@ -250,7 +250,7 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
         buildConvertIntToFloat(builder, scaffold, val, insn);
         return;
     }
-    else if repr.base == BASE_REPR_TAGGED && repr.subtype == t:DECIMAL {
+    else if repr is TaggedRepr && repr.subtype == t:DECIMAL {
         buildConvertDecimalToFloat(builder, scaffold, val, insn);
         return;
     }
