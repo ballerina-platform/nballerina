@@ -820,43 +820,14 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     var members2 = listAllMemberTypes(cx, t2);
     // listAllMemberTypes return () if list type is not atomic
     if members1 != () && members2 != () {
+        var mergedMembers = mergeListMemberTypes(members1, members2);
         result = false;
-        int currentIndex = 0;
-        var [currentMemberRange, currentMemberTy] = members2[currentIndex];
-        foreach var [range, ty] in members1 {
-            if currentMemberRange.max >= range.max {
-                result = updateComparableMemo(cx, memo, currentMemberTy, ty);
-                if result == false {
-                    return false;
-                }
-                continue;
-            }
-            while currentMemberRange.max <= range.max {
-                if currentMemberRange.max > range.min {
-                    result = updateComparableMemo(cx, memo, currentMemberTy, ty);
-                    if result == false {
-                        return false;
-                    }
-                }
-                if currentMemberRange.max == range.max {
-                    break;
-                }
-                currentIndex += 1;
-                if currentIndex >= members2.length() {
-                    memo.comparable = false;
-                    return false;
-                }
-                [currentMemberRange, currentMemberTy] = members2[currentIndex];
-            }
-        }
-        SemType lastMemberTy = members1[members1.length() - 1][1];
-        while currentIndex < members2.length() {
-            [_, currentMemberTy] = members2[currentIndex];
-            result = updateComparableMemo(cx, memo, lastMemberTy, currentMemberTy);
+        foreach var [_, ty1, ty2] in mergedMembers {
+            result = comparable(cx, ty1, ty2);
+            memo.comparable = result;
             if result == false {
-                return false;
+                return result;
             }
-            currentIndex += 1;
         }
     }
     else {
@@ -866,10 +837,44 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     return result;
 }
 
-function updateComparableMemo(Context cx, ComparableMemo memo, SemType t1, SemType t2) returns boolean {
-    boolean result = comparable(cx, t1, t2);
-    memo.comparable = result;
-    return result;
+function mergeListMemberTypes([Range,SemType][] lhs, [Range,SemType][] rhs) returns [Range, SemType, SemType][] {
+    int lhsIndex = 0;
+    int rhsIndex = 0;
+    int currentStart = 0;
+    var [lhsRange, lhsTy] = lhs[lhsIndex];
+    var [rhsRange, rhsTy] = rhs[rhsIndex];
+    [Range, SemType, SemType][] mergedMembers = [];
+    while lhsIndex < lhs.length() && rhsIndex < rhs.length() {
+        [lhsRange, lhsTy] = lhs[lhsIndex];
+        [rhsRange, rhsTy] = rhs[rhsIndex];
+        if lhsRange.max <= rhsRange.max {
+            mergedMembers.push([{ min: currentStart, max: lhsRange.max }, lhsTy, rhsTy]);
+            currentStart = lhsRange.max;
+            lhsIndex += 1;
+            if lhsRange.max == rhsRange.max {
+                rhsIndex += 1;
+            }
+        }
+        else if rhsRange.max < lhsRange.max {
+            mergedMembers.push([{ min: currentStart, max: rhsRange.max }, lhsTy, rhsTy]);
+            currentStart = rhsRange.max;
+            rhsIndex += 1;
+        }
+    }
+    while lhsIndex < lhs.length() {
+        mergedMembers.push([{ min: currentStart, max: lhsRange.max }, lhsTy, rhsTy]);
+        currentStart = lhsRange.max;
+        lhsIndex += 1;
+        [lhsRange, lhsTy] = lhs[lhsIndex];
+    }
+    while rhsIndex < rhs.length() {
+        mergedMembers.push([{ min: currentStart, max: rhsRange.max }, lhsTy, rhsTy]);
+        currentStart = rhsRange.max;
+        rhsIndex += 1;
+        [rhsRange, rhsTy] = rhs[rhsIndex];
+
+    }
+    return mergedMembers;
 }
 
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),
