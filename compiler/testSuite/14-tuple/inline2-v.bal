@@ -24,4 +24,8 @@ public function main() {
     io:println(t8); // @output [2,"test"]
     [(T1|float), string...] t9 = [2, "test1", "test2"];
     io:println(t9); // @output [2,"test1","test2"]
+    [(T1|T2)] t10 = ["test"];
+    io:println(t10); // @output ["test"]
+    [(T1|T2)...] t11 = ["test", 2];
+    io:println(t11); // @output ["test",2]
 }
