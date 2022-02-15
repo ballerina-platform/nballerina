@@ -826,34 +826,27 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
         var currentMember = members2[currentIndex];
         foreach var [range, ty] in members1 {
             if currentMember[0].max >= range.max {
-                // pr-todo: refactor common code
-                result = comparable(cx, currentMember[1], ty);
+                result = setComparableMemo(memo, comparable(cx, currentMember[1], ty));
                 if result == false {
-                    memo.comparable = false;
                     return false;
                 }
             }
             while currentMember[0].max < range.max {
                 if currentMember[0].max > range.min {
-                    // pr-todo: refactor common code
-                    result = comparable(cx, currentMember[1], ty);
+                    result = setComparableMemo(memo, comparable(cx, currentMember[1], ty));
                     if result == false {
-                        memo.comparable = false;
                         return false;
                     }
                 }
                 currentIndex += 1;
                 if currentIndex >= members2.length() {
-                    memo.comparable = false;
-                    return false;
+                    return setComparableMemo(memo, false);
                 }
                 currentMember = members2[currentIndex];
             }
             if currentMember[0].max == range.max {
-                // pr-todo: refactor common code
-                result = comparable(cx, currentMember[1], ty);
+                result = setComparableMemo(memo, comparable(cx, currentMember[1], ty));
                 if result == false {
-                    memo.comparable = false;
                     return false;
                 }
             }
@@ -861,9 +854,8 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
         while currentIndex < members2.length() {
             SemType ty2 = members2[currentIndex][1];
             SemType ty1 = members1[members1.length() - 1][1];
-            result = comparable(cx, ty2, ty1);
+            result = setComparableMemo(memo, comparable(cx, ty1, ty2));
             if result == false {
-                memo.comparable = false;
                 return false;
             }
             currentIndex += 1;
@@ -872,6 +864,10 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     else {
         result = comparable(cx, listMemberType(cx, t1, INT), listMemberType(cx, t2, INT));
     }
+    return setComparableMemo(memo, result);
+}
+
+function setComparableMemo(ComparableMemo memo, boolean result) returns boolean {
     memo.comparable = result;
     return result;
 }
