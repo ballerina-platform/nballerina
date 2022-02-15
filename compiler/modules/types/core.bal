@@ -818,6 +818,7 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     boolean result;
     var members1 = listAllMemberTypes(cx, t1);
     var members2 = listAllMemberTypes(cx, t2);
+    // listAllMemberTypes return () if list type is not atomic
     if members1 != () && members2 != () {
         result = false;
         int currentIndex = 0;
@@ -964,7 +965,7 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
 
-// For each [r, s] in the return value, for an index i in r, the projection for t[i] is r
+// placeholder for #924 return () if t is not atomic
 public function listAllMemberTypes(Context cx, SemType t) returns [Range,SemType][]? {
     ListAtomicType? atomicType = listAtomicTypeRw(cx, t);
     if atomicType == () {
