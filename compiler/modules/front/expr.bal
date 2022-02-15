@@ -846,7 +846,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
     bir:Operand[] operands = [];
     string[] fieldNames = [];
     map<Position> fieldPos = {};
-    foreach  s:Field f in expr.fields {
+    foreach s:Field f in expr.fields {
         string name = f.name;
         Position? prevPos = fieldPos[name];
         if prevPos != () {
