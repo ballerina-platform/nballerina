@@ -838,7 +838,7 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
                         return false;
                     }
                 }
-                if currentMemberRange.max != range.max {
+                if currentMemberRange.max == range.max {
                     break;
                 }
                 currentIndex += 1;
