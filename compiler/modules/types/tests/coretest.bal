@@ -334,20 +334,20 @@ function testIntSubtypeConstraints() {
 
 @test:Config{}
 function testComparableNillableList() {
-    [Range, SemType][] members1 = [[{ min: 0, max: 10}, INT], [{ min: 10, max: int:MAX_VALUE }, STRING]];
-    [Range, SemType][] members2 = [[{ min: 0, max: 5}, INT], [{ min: 5, max: 15 }, BYTE], [{ min: 15, max: int:MAX_VALUE}, FLOAT]];
-    [Range, SemType][] members3 = [[{ min: 0, max: 10}, FLOAT], [{ min: 10, max: 15 }, FLOAT], [{ min: 15, max: int:MAX_VALUE}, FLOAT]];
+    [Range, SemType][] members1 = [[{ min: 0, max: 10 }, INT], [{ min: 10, max: int:MAX_VALUE }, STRING]];
+    [Range, SemType][] members2 = [[{ min: 0, max: 5 }, INT], [{ min: 5, max: 15 }, BYTE], [{ min: 15, max: int:MAX_VALUE }, FLOAT]];
+    [Range, SemType][] members3 = [[{ min: 0, max: 10 }, FLOAT], [{ min: 10, max: 15 }, FLOAT], [{ min: 15, max: int:MAX_VALUE }, FLOAT]];
     [Range, SemType, SemType][] merge1 = [
-        [{ min: 0, max: 5}, INT, INT],
-        [{ min: 5, max: 10}, INT, BYTE],
-        [{ min: 10, max: 15}, STRING, BYTE],
-        [{ min: 15, max: int:MAX_VALUE}, STRING, FLOAT]
+        [{ min: 0, max: 5 }, INT, INT],
+        [{ min: 5, max: 10 }, INT, BYTE],
+        [{ min: 10, max: 15 }, STRING, BYTE],
+        [{ min: 15, max: int:MAX_VALUE }, STRING, FLOAT]
     ];
     test:assertEquals(mergeListMemberTypes(members1, members2), merge1);
     [Range, SemType, SemType][] merge2 = [
-        [{ min: 0, max: 10}, INT, FLOAT],
-        [{ min: 10, max: 15}, STRING, FLOAT],
-        [{ min: 15, max: int:MAX_VALUE}, STRING, FLOAT]
+        [{ min: 0, max: 10 }, INT, FLOAT],
+        [{ min: 10, max: 15 }, STRING, FLOAT],
+        [{ min: 15, max: int:MAX_VALUE }, STRING, FLOAT]
     ];
     test:assertEquals(mergeListMemberTypes(members1, members3), merge2);
 }

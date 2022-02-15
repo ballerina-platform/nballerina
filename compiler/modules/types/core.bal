@@ -837,42 +837,41 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     return result;
 }
 
-function mergeListMemberTypes([Range,SemType][] lhs, [Range,SemType][] rhs) returns [Range, SemType, SemType][] {
-    int lhsIndex = 0;
-    int rhsIndex = 0;
+function mergeListMemberTypes([Range,SemType][] list1, [Range,SemType][] list2) returns [Range, SemType, SemType][] {
+    int index1 = 0;
+    int index2 = 0;
     int currentStart = 0;
-    var [lhsRange, lhsTy] = lhs[lhsIndex];
-    var [rhsRange, rhsTy] = rhs[rhsIndex];
+    var [rng1, ty1] = list1[index1];
+    var [rng2, ty2] = list2[index2];
     [Range, SemType, SemType][] mergedMembers = [];
-    while lhsIndex < lhs.length() && rhsIndex < rhs.length() {
-        [lhsRange, lhsTy] = lhs[lhsIndex];
-        [rhsRange, rhsTy] = rhs[rhsIndex];
-        if lhsRange.max <= rhsRange.max {
-            mergedMembers.push([{ min: currentStart, max: lhsRange.max }, lhsTy, rhsTy]);
-            currentStart = lhsRange.max;
-            lhsIndex += 1;
-            if lhsRange.max == rhsRange.max {
-                rhsIndex += 1;
+    while index1 < list1.length() && index2 < list2.length() {
+        [rng1, ty1] = list1[index1];
+        [rng2, ty2] = list2[index2];
+        if rng1.max <= rng2.max {
+            mergedMembers.push([{ min: currentStart, max: rng1.max }, ty1, ty2]);
+            currentStart = rng1.max;
+            index1 += 1;
+            if rng1.max == rng2.max {
+                index2 += 1;
             }
         }
-        else if rhsRange.max < lhsRange.max {
-            mergedMembers.push([{ min: currentStart, max: rhsRange.max }, lhsTy, rhsTy]);
-            currentStart = rhsRange.max;
-            rhsIndex += 1;
+        else if rng2.max < rng1.max {
+            mergedMembers.push([{ min: currentStart, max: rng2.max }, ty1, ty2]);
+            currentStart = rng2.max;
+            index2 += 1;
         }
     }
-    while lhsIndex < lhs.length() {
-        mergedMembers.push([{ min: currentStart, max: lhsRange.max }, lhsTy, rhsTy]);
-        currentStart = lhsRange.max;
-        lhsIndex += 1;
-        [lhsRange, lhsTy] = lhs[lhsIndex];
+    while index1 < list1.length() {
+        mergedMembers.push([{ min: currentStart, max: rng1.max }, ty1, ty2]);
+        currentStart = rng1.max;
+        index1 += 1;
+        [rng1, ty1] = list1[index1];
     }
-    while rhsIndex < rhs.length() {
-        mergedMembers.push([{ min: currentStart, max: rhsRange.max }, lhsTy, rhsTy]);
-        currentStart = rhsRange.max;
-        rhsIndex += 1;
-        [rhsRange, rhsTy] = rhs[rhsIndex];
-
+    while index2 < list2.length() {
+        mergedMembers.push([{ min: currentStart, max: rng2.max }, ty1, ty2]);
+        currentStart = rng2.max;
+        index2 += 1;
+        [rng2, ty2] = list2[index2];
     }
     return mergedMembers;
 }
@@ -985,7 +984,7 @@ public function listAllMemberTypes(Context cx, SemType t) returns [Range,SemType
         currentLength += 1;
     }
     if currentLength < fixedLength {
-        memberTypes.push([{ min: currentLength, max: fixedLength }, members.initial[members.initial.length()-1]]);
+        memberTypes.push([{ min: currentLength, max: fixedLength }, members.initial[members.initial.length() - 1]]);
     }
     memberTypes.push([{ min: fixedLength, max: int:MAX_VALUE }, atomicType.rest]);
     return memberTypes;
