@@ -99,6 +99,10 @@ function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
             return false;
         }
         check tok.advance();
+        if tok.current() != "]" {
+            return false;
+        }
+        check tok.advance();
     }
     return tok.current() is [IDENTIFIER, string];
 }
