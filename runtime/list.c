@@ -5,7 +5,20 @@
 #define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
 
 static inline Fillability arrayCreateFiller(ListDescPtr ldp, TaggedPtr *valuePtr) {
-    return _bal_structure_create_filler(ldp->memberType, ldp->fillerDesc, valuePtr);
+    return _bal_structure_create_filler(ldp->restType, ldp->fillerDesc, valuePtr);
+}
+
+static inline bool listDescAllowsTaggedAt(ListDescPtr ldp, int64_t index, TaggedPtr val) {
+    MemberType mt;
+    // If we get a negative index here, we treat it as having the rest type.
+    if ((uint64_t)index < (uint64_t)ldp->minLength) {
+        uint32_t nMemberTypes = ldp->nMemberTypes;
+        mt = ldp->memberTypes[index < nMemberTypes ? index : nMemberTypes - 1];
+    }
+    else {
+        mt = ldp->restType;
+    }
+    return memberTypeContainsTagged(mt, val);
 }
 
 ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
@@ -66,7 +79,7 @@ double _bal_list_float_array_get_float(TaggedPtr p, int64_t index) {
 PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     ListDescPtr ldp = lp->desc;
-    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
+    if (!listDescAllowsTaggedAt(ldp, index, val)) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     GC TaggedPtrArray *ap = &(lp->tpArray);
@@ -163,7 +176,7 @@ PanicCode _bal_list_generic_set_int(TaggedPtr p, int64_t index, int64_t val) {
 
 PanicCode _bal_list_int_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
-    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
+    if (!listDescAllowsTaggedAt(lp->desc, index, val)) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     return _bal_list_int_array_set_int(p, index, taggedToInt(val));
@@ -202,7 +215,7 @@ PanicCode _bal_list_int_array_set_float(TaggedPtr p, UNUSED int64_t index, UNUSE
 
 PanicCode _bal_list_float_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
-    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
+    if (!listDescAllowsTaggedAt(lp->desc, index, val)) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     return _bal_list_float_array_set_float(p, index, taggedToFloat(val));
@@ -304,8 +317,16 @@ bool _bal_list_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp) {
 }
 
 bool _bal_array_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
-    ListPtr lp = taggedToPtr(p);   
-    return memberTypeIsSubtypeSimple(lp->desc->memberType, ((ArraySubtypePtr)stp)->bitSet);
+    ListPtr lp = taggedToPtr(p);
+    ListDescPtr ldp = lp->desc;
+    uint32_t typeBitSet = ((ArraySubtypePtr)stp)->bitSet;
+    uint32_t nMemberTypes = ldp->nMemberTypes;
+    for (int64_t i = 0; i < nMemberTypes; i++) {
+        if (!memberTypeIsSubtypeSimple(ldp->memberTypes[i], typeBitSet)) {
+            return false;
+        }
+    }
+    return memberTypeIsSubtypeSimple(ldp->restType, typeBitSet);
 }
 
 CompareResult READONLY _bal_array_exact_int_compare(TaggedPtr tp1, TaggedPtr tp2) {

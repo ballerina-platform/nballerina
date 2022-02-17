@@ -48,7 +48,6 @@ type LoopContext record {|
     LoopContext? enclosing;
     // will use this with while true to determine whether
     // following block is reachable
-    boolean breakUsed = false;
     Assignment[] onBreakAssignments = [];
     Assignment[] onContinueAssignments = [];
 |};
@@ -117,10 +116,6 @@ class StmtContext {
         self.loopContext = c;
     }
 
-    function loopUsedBreak() returns boolean {
-        return (<LoopContext>self.loopContext).breakUsed;
-    }
-
     function loopContinueBlock() returns bir:BasicBlock? {
         return (<LoopContext>self.loopContext).onContinue;
     }
@@ -145,7 +140,6 @@ class StmtContext {
         else {
             bir:BasicBlock b = c.onBreak ?: self.createBasicBlock();
             c.onBreak = b;
-            c.breakUsed = true;
             return b.label;
         }
     }
@@ -457,9 +451,10 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     // We won't used these if the exit isn't reachable
     assignments.push(...cx.onContinueAssignments());
     assignments.push(...cx.onBreakAssignments());
-    if cx.loopUsedBreak() {
+    bir:BasicBlock? breakBlock = cx.loopBreakBlock();
+    if breakBlock != () {
         exitReachable = true;
-        exit = cx.loopBreakBlock();
+        exit = breakBlock;
     }
     cx.popLoopContext();
    
@@ -941,14 +936,11 @@ function codeGenLExpr(StmtContext cx, bir:BasicBlock startBlock, Environment env
 function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
     var { result: reg, block: block1 } = check codeGenLExpr(cx, startBlock, env, lValue.container);
     t:UniformTypeBitSet indexType;
-    t:SemType memberType;
     if t:isSubtypeSimple(reg.semType, t:MAPPING) {
         indexType = t:STRING;
-        memberType = t:mappingMemberType(cx.mod.tc, reg.semType);
     } 
     else if t:isSubtypeSimple(reg.semType, t:LIST) {
-        indexType = t:INT;
-        memberType = t:listMemberType(cx.mod.tc, reg.semType);
+        indexType = t:INT;      
     }
     else {
         return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.opPos);
@@ -960,6 +952,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Enviro
         }
         else {
             var { result: index, block: nextBlock } = check cx.codeGenExprForInt(block1, env, lValue.index);
+            t:SemType memberType = t:listMemberType(cx.mod.tc, reg.semType, index.semType);
             { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, env, memberType, expr);
             bir:ListSetInsn insn = { operands: [reg, index, operand], pos: lValue.opPos };
             nextBlock.insns.push(insn);
@@ -968,6 +961,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Enviro
     }
     else {
         var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, block1, env, lValue, reg.semType);
+        t:SemType memberType = t:mappingMemberType(cx.mod.tc, reg.semType, index.semType);
         { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, env, memberType, expr);
         bir:MappingSetInsn insn =  { operands: [ reg, index, operand], pos: lValue.opPos };
         nextBlock.insns.push(insn);
@@ -1035,7 +1029,7 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
                                            s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                            Position pos) returns CodeGenError|StmtEffect {
     var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, env, lValue.index);
-    t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, t:singleIntShape(index.semType));
+    t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, index.semType);
     if t:isEmpty(cx.mod.tc, memberType) {
         return cx.semanticErr("type of member access is never", pos);
     }

@@ -80,25 +80,28 @@ function createInitTypes(llvm:Context cx) returns InitTypes {
     return { uniformSubtype, uniformSubtypePtr, subtypeContainsFunction, subtypeContainsFunctionPtr };
 }
 
-// When Ballerina gets the spread operator in list constructors,
-// we can inline the one use of this.
-function createLlListDescType() returns llvm:StructType {
-    llvm:Type[] types = [LLVM_TID];
+function createLlListDescType(int nMemberTypes = 0) returns llvm:StructType {
+    // TID, nMemberTypes, minLength
+    llvm:Type[] types = [LLVM_TID, "i32", "i64"];
     foreach var ty in llListDescFuncTypes {
         types.push(llvm:pointerType(ty));
     }
     // JBUG cast
     types.push(<llvm:Type>LLVM_MEMBER_TYPE);
     types.push(llStructureDescPtrType);
+    types.push(llvm:arrayType(LLVM_MEMBER_TYPE, nMemberTypes));
     return llvm:structType(types);
 }
 
-function memberTypeToListReprPrefix(t:SemType memberType) returns ListReprPrefix {
-    if memberType == t:INT {
-        return "int_array";
-    }
-    else if memberType == t:FLOAT {
-        return "float_array";
+function listAtomicTypeToListReprPrefix(t:ListAtomicType? atomic) returns ListReprPrefix {
+    if atomic != () && atomic.members.fixedLength == 0 {
+        t:SemType rest = atomic.rest;
+        if rest == t:INT {
+            return "int_array";
+        }
+        else if rest == t:FLOAT {
+            return "float_array";
+        }
     }
     return "generic";
 }

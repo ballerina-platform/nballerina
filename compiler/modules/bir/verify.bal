@@ -162,20 +162,19 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
     if nSuppliedArgs != nExpectedArgs {
         string name = vc.symbolToString(func.symbol);
         if nSuppliedArgs < nExpectedArgs {
-            return vc.semanticErr(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
         else {
-            return vc.semanticErr(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
+        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos), true);
     }
 }
 
 function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns Error? {
     t:SemType ty = insn.result.semType;
-    // XXX verify ty exactly
     if !vc.isSubtype(ty, t:LIST_RW) {
         return vc.invalidErr("inherent type of list construct is not a mutable list", insn.pos);
     }
@@ -183,46 +182,37 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns E
     if lat == () {
         return vc.invalidErr("inherent type of list is not atomic", insn.pos);
     }
-    else {
-        if lat.members.fixedLength > 0 {
-            return vc.invalidErr("tuples and fixed length arrays not supported as list inherent type", insn.pos);
-        }
-        foreach var operand in insn.operands {
-            check verifyOperandType(vc, operand, lat.rest, "type of list constructor member is not allowed by the list type", insn.pos);
-        }
+    Operand[] operands = insn.operands;
+    foreach int i in 0 ..< operands.length() {
+        check verifyOperandType(vc, operands[i], t:listAtomicTypeMemberAt(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
     }
 }
 
 function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns Error? {
     t:SemType ty = insn.result.semType;
-    // XXX verify ty exactly
     if !vc.isSubtype(ty, t:MAPPING_RW) {
         return vc.invalidErr("inherent type of mapping construct is not a mutable mapping", insn.pos);
     }
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(vc.typeContext(), ty);
-    foreach int i in 0 ..< insn.operands.length() {
-        t:Context cx = vc.typeContext();
-        t:SemType memberType = t:mappingMemberType(cx, ty, t:singleton(cx, insn.fieldNames[i]));
-        if memberType == t:NEVER {
-            return vc.semanticErr(`field ${insn.fieldNames[i]} is not allowed by the type`, insn.pos);
-        }
-        check verifyOperandType(vc, insn.operands[i], memberType,
-                                "type of mapping constructor member is not allowed by the mapping type", insn.pos);
-    }
     if mat == () {
         return vc.invalidErr("inherent type of map is not atomic", insn.pos);
     }
-    else if insn.operands.length() < mat.names.length() {
+    foreach int i in 0 ..< insn.operands.length() {
+        check verifyOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAt(mat, insn.fieldNames[i]), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
+
+    }
+    if insn.operands.length() < mat.names.length() {
         return vc.semanticErr("missing record fields in mapping constructor", insn.pos);
     }
 }
 
 function verifyListGet(VerifyContext vc, ListGetInsn insn) returns Error? {
-    check verifyOperandInt(vc, insn.name, insn.operands[1], insn.pos);
+    IntOperand indexOperand = insn.operands[1];
+    check verifyOperandInt(vc, insn.name, indexOperand, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.semanticErr("list get applied to non-list", insn.pos);
     }
-    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType, indexOperand.semType);
     if !vc.isSameType(memberType, insn.result.semType) {
         return vc.invalidErr("ListGet result type is not same as member type", pos=insn.pos);
     }
@@ -234,7 +224,7 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns Error? {
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.semanticErr("list set applied to non-list", insn.pos);
     }
-    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type", insn.pos);
 }
 
@@ -321,9 +311,9 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Interna
     }
 }
 
-function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
+function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos, boolean invalid = false) returns Error? {
     if !vc.operandHasType(operand, semType) {
-        return vc.semanticErr(msg, pos);
+        return invalid ? vc.invalidErr(msg, pos) : vc.semanticErr(msg, pos);
     }
 }
 

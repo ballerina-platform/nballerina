@@ -55,9 +55,8 @@ function testParserOnTestSuite(string filename) returns err:Syntax|io:Error|file
 }
 
 function partToLines(ModulePart part) returns string[] {
-    Word[] w = [];
-    modulePartToWords(w, part);
-    return wordsToLines(w);
+    RootSyntaxNode root = rootSyntaxNode(part);
+    return syntaxNodeToString(root);
 }
 
 function scanAndParseModulePart(SourceFile sourceFile, int partIndex) returns ModulePart|err:Syntax {

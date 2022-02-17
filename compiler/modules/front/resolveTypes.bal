@@ -144,9 +144,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     if td is s:TupleTypeDesc {
         t:ListDefinition? defn = td.defn;
         if defn == () {
-            if !mod.allowAllTypes && td.members.length() > 0 {
-                return err:unimplemented("tuple types not implemented", s:locationInDefn(modDefn, td.startPos));
-            }
             t:ListDefinition d = new;
             td.defn = d;
             t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);

@@ -69,8 +69,7 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                     test:assertFail("unimplemented error on E test" + path);
                 }
             }
-            // io:println U errors are reported as semantic errors
-            else if !err.detail().message.includes("'io:println'") {
+            else {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
             if kind == "e" || kind == "ue" {
@@ -229,18 +228,14 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
         int|s:Identifier index = tn.index;
         if t:isSubtypeSimple(t, t:LIST) {
             if index is int {
-                return testListProj(tc, t, index);
+                return testListProj(tc, t, t:intConst(index));
             }
             else {
                 t:SemType kt = lookupSemtype(m, index);
-                if kt == t:INT {
-                    return t:listMemberType(tc, t, ());
+                if t:isSubtypeSimple(kt, t:INT) {
+                    return testListProj(tc, t, kt);
                 }
-                int? i = t:singleIntShape(kt);
-                if i != () {
-                    return testListProj(tc, t, i);
-                }
-                test:assertFail("index for list projection must be an int");
+                test:assertFail("index for list projection must be a subtype of int");
             }
         }
         else if t:isSubtypeSimple(t, t:MAPPING) {
@@ -248,7 +243,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 t:SemType kt = lookupSemtype(m, index);
                 return t:mappingMemberType(tc, t, kt);
             }
-            test:assertFail("index for mapping projection must be a string");
+            test:assertFail("index for mapping projection must be a subtype of string");
         }
         else {
             test:assertFail(tn.identifier + " is not a list or a mapping type");
@@ -256,7 +251,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
     }
 }
 
-function testListProj(t:Context tc, t:SemType t, int index) returns t:SemType {
+function testListProj(t:Context tc, t:SemType t, t:SemType index) returns t:SemType {
     t:SemType s1 = t:listProj(tc, t, index);
     t:SemType s2 = t:listMemberType(tc, t, index);
     if !t:isSubtype(tc, s1, s2) {

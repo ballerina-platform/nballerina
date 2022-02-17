@@ -94,7 +94,14 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
         }
     }
     else if baseRepr == BASE_REPR_INT {
-        hasType = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsIntFunction), [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
+        t:IntSubtypeConstraints? intConstraints = t:intSubtypeConstraints(semType);
+        if intConstraints != () && intConstraints.all {
+            hasType = builder.iBitwise("and", builder.iCmp("sle", llvm:constInt(LLVM_INT, intConstraints.min), value),
+                builder.iCmp("sge", llvm:constInt(LLVM_INT, intConstraints.max), value));
+        }
+        else {
+            hasType = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsIntFunction), [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
+        }
     }
     else if baseRepr == BASE_REPR_FLOAT {
         hasType = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFloatFunction), [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);

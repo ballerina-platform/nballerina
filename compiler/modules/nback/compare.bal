@@ -231,7 +231,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
 function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns RuntimeFunction {
     t:UniformTypeBitSet memberType = 0;
     foreach int i in 0 ..< 2 {
-        memberType |= t:widenToUniformTypes(t:listMemberType(tc, semTypes[i]));
+        memberType |= t:widenToUniformTypes(t:listMemberType(tc, semTypes[i], t:INT));
     }
     if memberType != t:NIL {
         memberType &= ~t:NIL;

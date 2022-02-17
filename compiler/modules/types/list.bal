@@ -22,6 +22,16 @@ type ListConjunction record {|
     ListConjunction? next;
 |};
 
+public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
+    if i < atomic.members.fixedLength {
+        int initialLen = atomic.members.initial.length();
+        return atomic.members.initial[ i < initialLen ? i : initialLen - 1];
+    }
+    else {
+        return atomic.rest;
+    }
+}
+
 // This is atom index 0
 // Used by bddFixReadOnly
 final ListAtomicType LIST_SUBTYPE_RO = { members: { initial: [], fixedLength: 0 }, rest: READONLY };
@@ -205,30 +215,38 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, members, rest, listConjunction(cx, neg));
 }
 
-function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType lt) returns [FixedLengthArray, SemType]? {
-    int ltLen = lt.members.fixedLength;
-    int newLen = int:max(members.fixedLength, ltLen);
+function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType newType) returns [FixedLengthArray, SemType]? {
+    int newTypeLen = newType.members.fixedLength;
+    int intersectedLen = int:max(members.fixedLength, newTypeLen);
     // We can specifically handle the case where length of `initial` and `fixedLength` are the same 
-    if members.fixedLength < newLen {
+    if members.fixedLength < intersectedLen {
         if isNever(rest) {
             return ();
         }
-        fixedArrayFill(members, newLen, rest);
+        fixedArrayFill(members, intersectedLen, rest);
     }
-    int nonRepeatedLen = int:max(members.initial.length(), lt.members.initial.length());
-    foreach int i in 0 ..< nonRepeatedLen {
-        fixedArraySet(members, i, 
-            intersect(listMemberAt(members, rest, i), listMemberAt(lt.members, lt.rest, i)));
-    } 
-    if ltLen < newLen {
-        if isNever(lt.rest) {
+    int maxInitialLen = int:max(members.initial.length(), newType.members.initial.length());
+    foreach int i in 0 ..< maxInitialLen {
+        fixedArraySet(members, i, intersect(listMemberAt(members, rest, i),
+                                            listMemberAt(newType.members, newType.rest, i)));
+    }
+    // If the last member is repeating we need to intersect the repeating member as it will have pushed backed in `initial` array
+    if maxInitialLen < members.fixedLength {
+        SemType repeatingMember = intersect(listMemberAt(members, rest, maxInitialLen), 
+                                            listMemberAt(newType.members, newType.rest, maxInitialLen));
+        if repeatingMember != members.initial[maxInitialLen] {
+            members.initial[maxInitialLen] = repeatingMember;
+        }
+    }
+    if newTypeLen < intersectedLen {
+        if isNever(newType.rest) {
             return ();
         }
-        foreach int i in ltLen ..< newLen {
-            fixedArraySet(members, i, intersect(listMemberAt(members, rest, i), lt.rest));
+        foreach int i in newTypeLen ..< intersectedLen {
+            fixedArraySet(members, i, intersect(listMemberAt(members, rest, i), newType.rest));
         }
     }
-    return [members, intersect(rest, lt.rest)];
+    return [members, intersect(rest, newType.rest)];
 }
 
 // This function returns true if there is a list shape v such that
@@ -255,17 +273,18 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             if listInhabited(cx, members, NEVER, neg.next) {
                 return true;
             }
-            foreach int i in len + 1 ..< negLen {
+            // If last member of neg repeats, just checking one repeating occurrence should suffice.
+            int negLenLimit = neg.maxInitialLen;
+            if negLenLimit < negLen {
+                negLenLimit = int:max(negLenLimit, len + 2);
+            }
+            foreach int i in len + 1 ..< negLenLimit {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
                 if listInhabited(cx, s, NEVER, neg.next) {
                     return true;
                 }
             }
-            // List shapes >= negLen need to take in account
-            // this neg type and are handled below.
-            fixedArrayFill(members, negLen, rest);
-            len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
             return listInhabited(cx, members, rest, neg.next);
@@ -294,9 +313,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArrayShallowCopy(members);
-                fixedArrayFill(s, i - 1, rest);
-                fixedArraySet(s, i, d);
+                FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
@@ -334,7 +351,16 @@ function fixedArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
     if newLen <= initial.length() {
         return;
     }
-    if arr.fixedLength == 0 || initial[initial.length() - 1] != filler {
+    int initLen = initial.length();
+    int fixedLen = arr.fixedLength;
+    if fixedLen == 0 {
+        initial.push(filler);
+    }
+    else if initial[initLen - 1] != filler {
+        SemType last = initial[initLen - 1];
+        foreach int i in 0 ..< fixedLen - initLen {
+            initial.push(last);
+        }
         initial.push(filler);
     }
     arr.fixedLength = newLen;
@@ -351,19 +377,30 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
     boolean lastMemberRepeats = members.fixedLength > initCount;
 
     // No need to expand
-    if setIndex == 0 || setIndex < initCount - (lastMemberRepeats ? 1 : 0) {
+    if setIndex < initCount - (lastMemberRepeats ? 1 : 0) {
         members.initial[setIndex] = m;
         return;
     }
-    SemType lastMember = members.initial[initCount - 1]; 
-    foreach int i in initCount ..< setIndex + 1 {
-        members.initial.push(lastMember);
+    if lastMemberRepeats {
+        int lastIndex = initCount - 1;
+        SemType lastMember = members.initial[lastIndex];
+        int pushBack = lastIndex == setIndex ? 1 : 0;
+        foreach int i in initCount ... setIndex + pushBack {
+            members.initial.push(lastMember);
+        }
     }
     members.initial[setIndex] = m;
 }
 
 function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {
     return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
+}
+
+function fixedArrayReplace(FixedLengthArray array, int index, SemType t, SemType rest) returns FixedLengthArray {
+    FixedLengthArray copy = fixedArrayShallowCopy(array);
+    fixedArrayFill(copy, index + 1, rest);
+    fixedArraySet(copy, index, t);
+    return copy;
 }
 
 function listConjunction(Context cx, Conjunction? con) returns ListConjunction? {
@@ -377,7 +414,7 @@ function listConjunction(Context cx, Conjunction? con) returns ListConjunction? 
     return ();
 }
 
-function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns SemType {
+function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
@@ -390,19 +427,33 @@ function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns S
     }
 }
 
-function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
-    if key != () {
-        if key < 0 {
-            return NEVER;
+function listAtomicMemberType(ListAtomicType atomic, IntSubtype|true key) returns SemType {
+    return listAtomicMemberTypeAt(atomic.members, atomic.rest, key);
+}
+
+function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSubtype|true key) returns SemType {
+    if key is IntSubtype {
+        SemType m = NEVER;
+        int initLen = fixedArray.initial.length();
+        int fixedLen = fixedArray.fixedLength;
+        if fixedLen != 0 {
+            foreach var i in 0 ..< initLen {
+                if intSubtypeContains(key, i) {
+                    m = union(m, fixedArrayGet(fixedArray, i));
+                }
+            }
+            if intSubtypeOverlapRange(key, { min: initLen, max: fixedLen - 1 }) {
+                m = union(m, fixedArrayGet(fixedArray, fixedLen - 1));
+            }
         }
-        else if key < atomic.members.fixedLength {
-            return fixedArrayGet(atomic.members, key);
+        if fixedLen == 0 || intSubtypeMax(key) > fixedLen - 1 {
+            m = union(m, rest);
         }
-        return atomic.rest;
+        return m;
     }
-    SemType m = atomic.rest;
-    if atomic.members.fixedLength > 0 {
-        foreach var ty in atomic.members.initial {
+    SemType m = rest;
+    if fixedArray.fixedLength > 0 {
+        foreach var ty in fixedArray.initial {
             m = union(m, ty);
         }
     }

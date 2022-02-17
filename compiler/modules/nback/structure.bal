@@ -123,7 +123,8 @@ type ListRepr readonly & object {
 };
 
 // Index of first function in the list descriptor
-const LIST_DESC_FIRST_FUNCTION_INDEX = 1;
+// Have tid, nMemberTypes, minLength before function pointers
+const LIST_DESC_FIRST_FUNCTION_INDEX = 3;
 
 final readonly & map<ListRepr> listReprs = {
     generic: object {
@@ -164,8 +165,12 @@ final readonly & map<ListRepr> listReprs = {
     }
 };
 
-function memberTypeToListRepr(t:SemType memberType) returns ListRepr {
-    return listReprs.get(memberTypeToListReprPrefix(memberType));
+function listTypeToListRepr(t:Context tc, t:SemType listType) returns ListRepr {
+    return listAtomicTypeToListRepr(t:listAtomicTypeRw(tc, listType));
+}
+
+function listAtomicTypeToListRepr(t:ListAtomicType? atomic) returns ListRepr {
+    return listReprs.get(listAtomicTypeToListReprPrefix(atomic));
 }
 
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
@@ -182,12 +187,12 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
                                                                                         "inbounds"),
                                                                   ALIGN_HEAP);
 
-        // Cases that are not arrays should have been filtered out before
-        t:SemType memberType = <t:SemType>t:arrayMemberType(scaffold.typeContext(), listType);
-        ListRepr repr = memberTypeToListRepr(memberType);
+        var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.typeContext(), listType);
+        ListRepr repr = listAtomicTypeToListRepr(atomic);
         array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberType, 0)));
         foreach int i in 0 ..< length {
-            builder.store(check repr.buildMember(builder, scaffold, insn.operands[i], memberType),
+            builder.store(check repr.buildMember(builder, scaffold, insn.operands[i],
+                                                 t:listAtomicTypeMemberAt(atomic, i)),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
         }
         builder.store(llvm:constInt(LLVM_INT, length),
@@ -197,8 +202,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 }
 
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
-    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
-    ListRepr repr = memberTypeToListRepr(memberType);
+    ListRepr repr = listTypeToListRepr(scaffold.typeContext(), insn.operands[0].semType);
     llvm:Value taggedStruct = builder.load(scaffold.address(insn.operands[0]));
     llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
     llvm:BasicBlock? bbJoin = ();
@@ -266,9 +270,10 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
                                                                                [taggedStruct, llvm:constInt(LLVM_INT, POINTER_MASK)]),
                                                heapPointerType(llListType));
     llvm:BasicBlock? bbJoin = ();
-    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
+    t:SemType listType = insn.operands[0].semType;
+    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
     llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
-    ListRepr repr = memberTypeToListRepr(memberType);
+    ListRepr repr = listTypeToListRepr(scaffold.typeContext(), listType);
     if repr.isSpecialized {
         llvm:Value val = check repr.buildMember(builder, scaffold, insn.operands[2], memberType);
         bbJoin = check buildSpecializedListSet(builder, scaffold, taggedStruct, struct, index, repr.memberType, val);
@@ -435,7 +440,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         rf = mappingIndexedSetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
-    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType);
+    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType, keyOperand.semType);
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
