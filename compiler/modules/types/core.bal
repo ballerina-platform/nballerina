@@ -816,12 +816,13 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     ComparableMemo memo = { semType1: t1, semType2: t2 };
     cx.comparableMemo.add(memo);
     boolean result;
-    var members1 = listAllMemberTypes(cx, t1);
-    var members2 = listAllMemberTypes(cx, t2);
-    // listAllMemberTypes return () if list type is not atomic
-    if members1 != () && members2 != () {
+    if listAtomicTypeRw(cx, t1) == () || listAtomicTypeRw(cx, t2) == () {
+        result = comparable(cx, listMemberType(cx, t1, INT), listMemberType(cx, t2, INT));
+    }
+    else {
+        MemberTypes members1 = listAllMemberTypes(cx, t1);
+        MemberTypes members2 = listAllMemberTypes(cx, t2);
         var mergedMembers = mergeListMemberTypes(members1, members2);
-        result = false;
         foreach var [_, ty1, ty2] in mergedMembers {
             result = comparable(cx, ty1, ty2);
             memo.comparable = result;
@@ -830,21 +831,20 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
             }
         }
     }
-    else {
-        result = comparable(cx, listMemberType(cx, t1, INT), listMemberType(cx, t2, INT));
-    }
     memo.comparable = result;
     return result;
 }
 
-function mergeListMemberTypes([Range,SemType][] list1, [Range,SemType][] list2) returns [Range, SemType, SemType][] {
+function mergeListMemberTypes(MemberTypes list1, MemberTypes list2) returns [Range, SemType, SemType][] {
     int index1 = 0;
     int index2 = 0;
     int currentStart = 0;
     var [rng1, ty1] = list1[index1];
     var [rng2, ty2] = list2[index2];
     [Range, SemType, SemType][] mergedMembers = [];
-    while index1 < list1.length() && index2 < list2.length() {
+    int len1 = list1.length();
+    int len2 = list2.length();
+    while index1 < len1 && index2 < len2 {
         [rng1, ty1] = list1[index1];
         [rng2, ty2] = list2[index2];
         if rng1.max <= rng2.max {
@@ -969,13 +969,14 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
 
-// placeholder for #924 return () if t is not atomic
-public function listAllMemberTypes(Context cx, SemType t) returns [Range,SemType][]? {
+public type MemberTypes [Range,SemType][];
+// placeholder for #924
+public function listAllMemberTypes(Context cx, SemType t) returns MemberTypes {
     ListAtomicType? atomicType = listAtomicTypeRw(cx, t);
     if atomicType == () {
-        return ();
+        panic error("expected atomic list type");
     }
-    [Range, SemType][] memberTypes = [];
+    MemberTypes memberTypes = [];
     FixedLengthArray members = atomicType.members;
     int fixedLength = members.fixedLength;
     int currentLength = 0;
