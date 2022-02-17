@@ -402,6 +402,12 @@
     ["E", "stmt", "T[2 n = [2, 1.5];"],
     ["E", "stmt", "T2] n = [2, 1.5];"],
     ["E", "stmt", "T[][2 n = [2, 1.5];"],
+    ["V", "stmt", "[int, [int, int], int] T = [1, [2, 3], 4];"],
+    ["V", "stmt", "[T1, [T2, T3]] T = [1, [x, \"3\"]];"],
+    ["E", "stmt", "[int, string T = [2, \"test\"];"],
+    ["E", "stmt", "int, string] T = [2, \"test\"];"],
+    ["E", "stmt", "[int, string] T = [2, \"test\";"],
+    ["E", "stmt", "[int..., string] T = [2, \"test\";"],
 
     { "comment" : "statement var decl wildcard" },
     ["V", "stmt", "Int | String _ = x;"],

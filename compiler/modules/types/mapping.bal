@@ -9,6 +9,11 @@ public type MappingAtomicType readonly & record {|
     SemType rest;
 |};
 
+public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) returns SemType {
+    int? i = mat.names.indexOf(k, 0);
+    return i is int ? mat.types[i] : mat.rest;
+}
+
 // This is mapping index 0
 // Used by bddFixReadOnly
 final MappingAtomicType MAPPING_SUBTYPE_RO = { names: [], types: [], rest: READONLY };

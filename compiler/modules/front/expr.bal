@@ -861,9 +861,8 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
                 return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
             }
         }
-        t:SemType expectedMemberType = t:mappingMemberType(cx.mod.tc, resultType, t:stringConst(name));
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, expectedMemberType, f.value);
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, t:mappingAtomicTypeMemberAt(mat, name), f.value);
         operands.push(operand);
         fieldNames.push(name);
     }
