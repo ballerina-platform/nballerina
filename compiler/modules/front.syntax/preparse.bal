@@ -80,8 +80,15 @@ function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
         check tok.advance();
         _ = check tok.expectIdentifier();
     }
-    check tok.expect("[");
-
-    // SUBSET fixed length array types / tuples are not supported, is a td only if no token between `[` `]`
-    return tok.current() == "]";
+    while tok.current() == "[" {
+        check tok.advance();
+        if tok.current() == "]" {
+            return true;
+        }
+        while tok.current() != "]" {
+            check tok.advance();
+        }
+        check tok.advance();
+    }
+    return tok.current() is [IDENTIFIER, string];
 }
