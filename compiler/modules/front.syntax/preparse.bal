@@ -94,7 +94,7 @@ function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
         if tok.current() == "]" {
             return true;
         }
-        SimpleConstExpr|err:Syntax expr = check parseSimpleConstExpr(tok);
+        SimpleConstExpr|err:Syntax expr = parseSimpleConstExpr(tok);
         if expr is err:Syntax {
             return false;
         }
