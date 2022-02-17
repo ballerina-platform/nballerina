@@ -15,6 +15,7 @@ public type FixedLengthArray record {|
     int fixedLength;
 |};
 
+// Sorted list of ListAtomicTypes, sorted from largest fixedLength to smallest.
 type ListConjunction record {|
     ListAtomicType listType;
     // Maximum number of members found in `initial` array of `listType` field in all the conjunctions onwards this.
@@ -406,12 +407,30 @@ function fixedArrayReplace(FixedLengthArray array, int index, SemType t, SemType
 function listConjunction(Context cx, Conjunction? con) returns ListConjunction? {
     if con != () {
         ListAtomicType listType = cx.listAtomType(con.atom);
-        int len = listType.members.initial.length();
+        int initialLen = listType.members.initial.length();
         ListConjunction? next = listConjunction(cx, con.next);
-        int maxInitialLen = next == () ? len : int:max(len, next.maxInitialLen);
-        return { listType, maxInitialLen, next };
+        if next == () {
+            return  { listType, maxInitialLen: initialLen, next };
+        }
+        ListConjunction thisCon = { listType, maxInitialLen: int:max(initialLen, next.maxInitialLen), next: () };
+        return listConjunctionSet(next, thisCon);
     }
     return ();
+}
+
+function listConjunctionSet(ListConjunction con, ListConjunction candidate) returns ListConjunction? {
+    int candidateLen = candidate.listType.members.fixedLength;
+    if candidateLen < con.listType.members.fixedLength {
+        ListConjunction? next = con.next;
+        if next == () {
+            con.next = candidate;
+            return con;
+        }
+        con.next = listConjunctionSet(next, candidate);
+        return con;
+    }
+    candidate.next = con;
+    return candidate;
 }
 
 function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {
