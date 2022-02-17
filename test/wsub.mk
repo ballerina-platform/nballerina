@@ -65,7 +65,7 @@ result/%.diff: result/%.wasm expect/%.txt
 
 expect/%.txt: ../../../compiler/testSuite/$(tdir)/%.bal
 	@mkdir -p expect
-	../../expect.sh $< >$@
+	../../wexpect.sh $< >$@
 
 clean:
 	-rm -rf actual compile.stamp expect fail.txt wat result

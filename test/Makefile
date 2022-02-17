@@ -1,6 +1,6 @@
 TARGETS=test all compile testll
 
-TDIRS= $(sort $(basename $(notdir $(wildcard ../compiler/testSuite/*))))
+TDIRS= $(sort $(basename $(notdir $(wildcard ../compiler/testSuite/01-*))))
 
 $(TARGETS): $(TDIRS)
 
