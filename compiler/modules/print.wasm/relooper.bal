@@ -647,6 +647,34 @@ public class Relooper {
                 currStr.push(curr.label);
                 currStr.push(")");
             }
+            else if curr is WasmTry {
+                string? name = curr.name;
+                if name != () {
+                    currStr.push("(try ");
+                    currStr.push(name);
+                }
+                else {
+                    currStr.push("(try ");
+                }
+                currStr.push("(do");
+                currStr.push(self.makeBlockText([curr.body], spacesCount + 1));
+                currStr.push(")");
+                foreach int i in 0..<curr.catchBodies.length() {
+                    if curr.catchBodies.length() == i + 1 {
+                        currStr.push("(catch $" + curr.catchTags[i]);
+                    }
+                    else {
+                        currStr.push("(catch_all ");
+                    }
+                    currStr.push(self.makeBlockText([curr.catchBodies[i]], spacesCount + 1));
+                    currStr.push(")");
+                }
+                string? delegateTarget = curr.delegateTarget;
+                if delegateTarget != () {
+                    currStr.push("(delegate " + delegateTarget + ")");
+                }
+                currStr.push(")");
+            }
             else {
                 string? code = curr.code;
                 if code != () {

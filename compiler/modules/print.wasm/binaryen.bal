@@ -1,6 +1,6 @@
 public type IntType "i64"|"i32";
 public type Type "None"|IntType;
-public type Op "AddInt32"|"SubInt32"|"MulInt32"|"DivSInt32"|"DivUInt32"|"RemSInt32"|"RemUInt32"|"EqInt32"|"NeInt32"|"LtSInt32"|"LtUInt32"|"LeSInt32"|"LeUInt32"|"GtSInt32"|"GtUInt32"|"GeSInt32"|"GeUInt32"|"OrInt32"|"XorInt32"|"AddInt64"|"SubInt64"|"MulInt64"|"DivSInt64"|"DivUInt64"|"RemSInt64"|"RemUInt64"|"EqInt64"|"NeInt64"|"LtSInt64"|"LtUInt64"|"LeSInt64"|"LeUInt64"|"GtSInt64"|"GtUInt64"|"GeSInt64"|"GeUInt64"|"OrInt64"|"XorInt64";
+public type Op "AddInt32"|"SubInt32"|"MulInt32"|"DivSInt32"|"DivUInt32"|"RemSInt32"|"RemUInt32"|"EqInt32"|"NeInt32"|"LtSInt32"|"LtUInt32"|"LeSInt32"|"LeUInt32"|"GtSInt32"|"GtUInt32"|"GeSInt32"|"GeUInt32"|"OrInt32"|"XorInt32"|"AddInt64"|"SubInt64"|"MulInt64"|"DivSInt64"|"DivUInt64"|"RemSInt64"|"RemUInt64"|"EqInt64"|"NeInt64"|"LtSInt64"|"LtUInt64"|"LeSInt64"|"LeUInt64"|"GtSInt64"|"GtUInt64"|"GeSInt64"|"GeUInt64"|"OrInt64"|"XorInt64"|"AndInt64"|"AndInt32";
 
 final readonly & map<string> signedInt32Ops = {
     "AddInt32": "i32.add",
@@ -16,6 +16,7 @@ final readonly & map<string> signedInt32Ops = {
     "NeInt32": "i32.ne",
     "OrInt32": "i32.or",
     "XorInt32": "i32.xor",
+    "AndInt32": "i32.and",
     "AddInt64": "i64.add",
     "SubInt64": "i64.sub",
     "MulInt64": "i64.mul",
@@ -28,7 +29,8 @@ final readonly & map<string> signedInt32Ops = {
     "EqInt64": "i64.eq",
     "NeInt64": "i64.ne",
     "OrInt64": "i64.or",
-    "XorInt64": "i64.xor"
+    "XorInt64": "i64.xor",
+    "AndInt64": "i64.and"
 };
 
 public type Function record {
@@ -41,47 +43,23 @@ public type Function record {
     Type? results = ();
 };
 
-public type Export record {
-    string value;
-    string name;
-};
-
 public type Expression record {
     string? code = ();
-};
-
-public type Call record {
-    *Expression;
-    Expression[] operands;
-    string target;
-    boolean isReturn = false;
-    Type ty;
-};
-
-public type LocalGet record {
-    *Expression;
-    int index;
-    Type ty;
-};
-
-public type Const record {
-    *Expression;
-    Literal value;
-};
-
-public type Return record {
-    *Expression;
-    Expression? value = ();
-};
-
-public type Nop record {
-    *Expression;
 };
 
 public type WasmBlock record {
     *Expression;
     Expression[] body = [];
     string? name = ();
+};
+
+public type WasmTry record {
+    *Expression;
+    string? name = ();
+    Expression body;
+    string[] catchTags = [];
+    Expression[] catchBodies = [];
+    string? delegateTarget = ();
 };
 
 public type If record {
@@ -116,6 +94,7 @@ public class Module {
     private Function[] functions = [];
     private string[] imports = [];
     private string[] exports = [];
+    private string[] tags = [];
 
     public function call(string target, Expression[] operands, int numOperands, Type returnType) returns Expression {
         string[] callInst = ["(call $", target];
@@ -243,28 +222,68 @@ public class Module {
         return block;
     }
 
+    public function addIf(Expression condition, Expression ifTrue, Expression? ifFalse = ()) returns Expression {
+        WasmBlock ifBody ={
+            body: [ifTrue]
+        };
+        WasmBlock? elseBody = ();
+        if ifFalse != () {
+            elseBody = {
+                body: [ifFalse]
+            };
+        }
+        If ifExpr = {
+            condition: condition,
+            ifBody: ifBody,
+            elseBody: elseBody
+        };
+        return ifExpr;
+    }
+
+    public function throw(string tag, Expression[] operands, int numOperands) returns Expression {
+        return { code: "(throw $" + tag + ")" };
+    }
+
+    public function try(string? name, Expression body, string[] catchTags, int numCatchTags, Expression[] catchBodies, int numCatchBodies, string? delegateTarget = ()) returns Expression {
+        WasmTry tryExpr = {
+            name: name,
+            body: body,
+            catchTags: catchTags,
+            catchBodies: catchBodies,
+            delegateTarget: delegateTarget
+        };
+        return tryExpr;
+    }
+
+    public function addTag(string name, Type params, Type results) {
+        self.tags.push("(tag $" + name + ")");
+    }
+
     // BinaryenModuleDispose and BinaryenModulePrint
     public function finish() returns string[] {
         string[] module = [];
         module.push("(module ");
         foreach string imp in self.imports {
-            module.push(" " + imp);
+            module.push("  " + imp);
+        }
+        foreach string tag in self.tags {
+            module.push("  " + tag);
         }
         foreach string exp in self.exports {
-            module.push(" " + exp);
+            module.push("  " + exp);
         }
         foreach Function func in self.functions {
             string funcParams = "";
             string localParam = "";
             int varCount = 0;
             foreach int i in 0...func.params.length() - 1 {
-                funcParams += " (param $" + varCount.toString() + " " + func.params[i] + ")";
+                funcParams += "  (param $" + varCount.toString() + " " + func.params[i] + ")";
                 varCount += 1;
             }
             if func.results != "None" {
                 funcParams += " (result " + func.results.toString() + ")";
             }
-            string funcDef = " (func $" + func.name + funcParams;
+            string funcDef = "  (func $" + func.name + funcParams;
             module.push(funcDef);
             foreach int i in 0...func.vars.length() - 1 {
                 localParam = "  (local $" + varCount.toString() + " " + func.vars[i] + ")";
