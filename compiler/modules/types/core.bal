@@ -823,6 +823,7 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
         MemberTypes members1 = listAllMemberTypes(cx, t1);
         MemberTypes members2 = listAllMemberTypes(cx, t2);
         var mergedMembers = mergeListMemberTypes(members1, members2);
+        result = true;
         foreach var [_, ty1, ty2] in mergedMembers {
             result = comparable(cx, ty1, ty2);
             memo.comparable = result;
@@ -839,14 +840,12 @@ function mergeListMemberTypes(MemberTypes list1, MemberTypes list2) returns [Ran
     int index1 = 0;
     int index2 = 0;
     int currentStart = 0;
-    var [rng1, ty1] = list1[index1];
-    var [rng2, ty2] = list2[index2];
     [Range, SemType, SemType][] mergedMembers = [];
     int len1 = list1.length();
     int len2 = list2.length();
     while index1 < len1 && index2 < len2 {
-        [rng1, ty1] = list1[index1];
-        [rng2, ty2] = list2[index2];
+        var [rng1, ty1] = list1[index1];
+        var [rng2, ty2] = list2[index2];
         if rng1.max <= rng2.max {
             mergedMembers.push([{ min: currentStart, max: rng1.max }, ty1, ty2]);
             currentStart = rng1.max;
@@ -862,16 +861,16 @@ function mergeListMemberTypes(MemberTypes list1, MemberTypes list2) returns [Ran
         }
     }
     while index1 < list1.length() {
-        mergedMembers.push([{ min: currentStart, max: rng1.max }, ty1, ty2]);
+        var [rng1, ty1] = list1[index1];
+        mergedMembers.push([{ min: currentStart, max: rng1.max }, ty1, NEVER]);
         currentStart = rng1.max;
         index1 += 1;
-        [rng1, ty1] = list1[index1];
     }
     while index2 < list2.length() {
-        mergedMembers.push([{ min: currentStart, max: rng2.max }, ty1, ty2]);
+        var [rng2, ty2] = list2[index2];
+        mergedMembers.push([{ min: currentStart, max: rng2.max }, NEVER, ty2]);
         currentStart = rng2.max;
         index2 += 1;
-        [rng2, ty2] = list2[index2];
     }
     return mergedMembers;
 }
@@ -987,7 +986,9 @@ public function listAllMemberTypes(Context cx, SemType t) returns MemberTypes {
     if currentLength < fixedLength {
         memberTypes.push([{ min: currentLength, max: fixedLength }, members.initial[members.initial.length() - 1]]);
     }
-    memberTypes.push([{ min: fixedLength, max: int:MAX_VALUE }, atomicType.rest]);
+    if atomicType.rest != NEVER {
+        memberTypes.push([{ min: fixedLength, max: int:MAX_VALUE }, atomicType.rest]);
+    }
     return memberTypes;
 }
 
