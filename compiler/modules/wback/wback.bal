@@ -43,6 +43,12 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         }
     }
     module.addFunctionImport("println", "console", "log", ["i64"], "None");
+    foreach string op in scaffold.getOverflowOps() {
+        string? overflowFunc = overflowCall[op];
+        if overflowFunc != () {
+            module.addFunctionImport(overflowFunc, "overflow", overflowFunc.substring(0, 3), ["i64", "i64"], "None");
+        }
+    }
     return module.finish();
 }
 
@@ -60,7 +66,7 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, wasm:Relooper re
     wasm:Expression[] body = [];
     foreach var insn in block.insns {
         if insn is bir:IntArithmeticBinaryInsn {
-            body.push(buildArithmeticBinary(module, insn));
+            body.push(buildArithmeticBinary(module, scaffold, insn));
         }
         else if insn is bir:CompareInsn {
             body.push(buildCompare(module, insn));
@@ -208,12 +214,19 @@ function buildCompare(wasm:Module module, bir:CompareInsn insn) returns wasm:Exp
     panic error("unknown operation");
 }
 
-function buildArithmeticBinary(wasm:Module module, bir:IntArithmeticBinaryInsn insn) returns wasm:Expression {
+function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntArithmeticBinaryInsn insn) returns wasm:Expression {
     wasm:Op? operation = signedInt64ArithmeticOps[insn.op];
     if operation != () {
         wasm:Expression? operand1 = getOperand(module, insn.operands[0]);
         wasm:Expression? operand2 = getOperand(module, insn.operands[1]);
         if operand1 != () && operand2 != () {
+            string? overflow = overflowCall[insn.op];
+            if overflow != () {
+                scaffold.addOverflowOps(insn.op);
+                wasm:Expression overflowCheck = module.call(overflow, [operand1, operand2], 2, "None");
+                wasm:Expression oper = module.localSet(insn.result.number, module.binary(operation, operand1, operand2));
+                return module.block("", [overflowCheck, oper], 2, "None");
+            }
             return module.localSet(insn.result.number, module.binary(operation, operand1, operand2));
         }
     }
@@ -268,7 +281,6 @@ function operandType(bir:SemType operand) returns wasm:Type? {
     }
     return ();
 }
-
 
 function getOperand(wasm:Module module, bir:Operand operand) returns wasm:Expression? {
     wasm:Type? ty = operandType(operand.semType);
@@ -349,4 +361,11 @@ final readonly & map<wasm:Op> signedInt64CompareOps = {
     ">=": "GeSInt64",
     "==": "EqInt64",
     "!=": "NeInt64"
+};
+
+final readonly & map<string> overflowCall = {
+    "+": "addOverflow",
+    "-": "subOverflow",
+    "*": "mulOverflow",
+    "/": "divOverflow"
 };

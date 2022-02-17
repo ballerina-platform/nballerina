@@ -16,6 +16,7 @@ public type CondBranch record {
 class Scaffold {
     private Branch[] branchInsns = [];
     private CondBranch[] condBranchInsns = [];
+    private string[] overflowOps = [];
 
     public function addCondBranchInsn(bir:CondBranchInsn insn, int index) {
         self.condBranchInsns.push({ insn: insn, fromIndex: index });
@@ -31,6 +32,16 @@ class Scaffold {
 
     public function getCondBranchInsns() returns CondBranch[] {
         return self.condBranchInsns;
+    }
+
+    public function addOverflowOps(string op) {
+        if self.overflowOps.indexOf(op) == () {
+            self.overflowOps.push(op);
+        }
+    }
+
+    public function getOverflowOps() returns string[] {
+        return self.overflowOps;
     }
 
     public function reset() {
