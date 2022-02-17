@@ -98,7 +98,6 @@ function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
         if expr is err:Syntax {
             return false;
         }
-        check tok.advance();
         if tok.current() != "]" {
             return false;
         }
