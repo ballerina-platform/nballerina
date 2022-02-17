@@ -321,7 +321,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             // We have checked the posibilities of existance of a shape in list with fixedLength from 0 to maxInitialLen (exclusive).
             // Check existance of a shape with more than `maxInitialLen` numuber of members.
             FixedLengthArray s = fixedArrayShallowCopy(members);
-            fixedArrayFill(s, maxInitialLen, rest);
+            fixedArrayFill(s, int:max(len, maxInitialLen), rest);
             if listInhabited(cx, s, rd, neg.next) {
                 return true;
             }

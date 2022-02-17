@@ -61,3 +61,6 @@ type S EMPTY|[int]|[IS, IS]|[int, int, int, IS...];
 
 // @type IntArray < T
 type T EMPTY|[int]|[IS, int]|[IS, IS, IS|float, IS...];
+
+// @type IntArray < T1
+type T1 EMPTY|[int]|[IS, IS, string...]|[IS, IS, IS, IS...];
