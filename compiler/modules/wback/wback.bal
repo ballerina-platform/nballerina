@@ -12,12 +12,21 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     wasm:Module module = new;
     wasm:Relooper relooper = new(module);
+    boolean tagAdded = false;
     foreach int i in 0 ..< functionDefns.length() {
         relooper.reset();
         scaffold.reset();
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
         wasm:Expression body = buildFunctionBody(scaffold, module, relooper, code);
+        if scaffold.getOverflowOps() {
+            wasm:Expression tryBody = module.try((), body, [], 0, [], 0);
+            body = tryBody;
+            if !tagAdded {
+                module.addTag("overflow", "None", "None");
+                tagAdded = true;
+            }
+        }
         string funcName = functionDefns[i].symbol.identifier;
         wasm:Type[] params = [];
         wasm:Type[] locals = [];
@@ -43,12 +52,6 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         }
     }
     module.addFunctionImport("println", "console", "log", ["i64"], "None");
-    foreach string op in scaffold.getOverflowOps() {
-        string? overflowFunc = overflowCall[op];
-        if overflowFunc != () {
-            module.addFunctionImport(overflowFunc, "overflow", overflowFunc.substring(0, 3), ["i64", "i64"], "None");
-        }
-    }
     return module.finish();
 }
 
@@ -220,14 +223,16 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
         wasm:Expression? operand1 = getOperand(module, insn.operands[0]);
         wasm:Expression? operand2 = getOperand(module, insn.operands[1]);
         if operand1 != () && operand2 != () {
-            string? overflow = overflowCall[insn.op];
-            if overflow != () {
-                scaffold.addOverflowOps(insn.op);
-                wasm:Expression overflowCheck = module.call(overflow, [operand1, operand2], 2, "None");
-                wasm:Expression oper = module.localSet(insn.result.number, module.binary(operation, operand1, operand2));
-                return module.block("", [overflowCheck, oper], 2, "None");
+            wasm:Expression oper = module.localSet(insn.result.number, module.binary(operation, operand1, operand2));
+            if ["AddInt64", "SubInt64", "MulInt64", "DivInt64"].indexOf(operation) != () {
+                scaffold.setOverflowOps();
+                wasm:Expression? overflowCheck = checkOverflow(module, operation, operand1, operand2);
+                if overflowCheck != () {
+                    return module.block("", [overflowCheck, oper], 2, "None");
+                }
+                return oper;
             }
-            return module.localSet(insn.result.number, module.binary(operation, operand1, operand2));
+            return oper;
         }
     }
     panic error("unimplemented");
@@ -266,6 +271,68 @@ function buildEquality(wasm:Module module, bir:EqualityInsn insn) returns wasm:E
 function buildBooleanNotInsn(wasm:Module module, bir:BooleanNotInsn insn) returns wasm:Expression {
     int op1 = insn.operand.number;
     return module.localSet(insn.result.number, module.binary("XorInt32", module.localGet(op1, "i32"), module.addConst({ i32: 1 })));
+}
+
+
+function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm:Expression op2) returns wasm:Expression? {
+    wasm:Expression MAX_INT = module.addConst({ i64: 9223372036854775807 });
+    wasm:Expression MIN_INT = module.addConst({ i64: -9223372036854775808 });
+    wasm:Expression op1GZ = module.binary("GtSInt64", op1, module.addConst({ i64: 0 }));
+    wasm:Expression op2GZ = module.binary("GtSInt64", op2, module.addConst({ i64: 0 }));
+    wasm:Expression op1LZ = module.binary("LtSInt64", op1, module.addConst({ i64: 0 }));
+    wasm:Expression op2LZ = module.binary("LtSInt64", op2, module.addConst({ i64: 0 }));
+    wasm:Expression throw = module.throw("overflow", [], 0);
+    if op == "AddInt64" {
+        wasm:Expression maxSOp2 = module.binary("SubInt64", MAX_INT, op2);
+        wasm:Expression minSOp2 = module.binary("SubInt64", MIN_INT, op2);
+        wasm:Expression cond1 = module.binary("AndInt32", op1GZ, op2GZ);
+        wasm:Expression cond1Inner = module.binary("GtSInt64", op1, maxSOp2);
+        wasm:Expression cond2 = module.binary("AndInt32", op1LZ, op2LZ);
+        wasm:Expression cond2Inner = module.binary("LtSInt64", op1, minSOp2);
+        wasm:Expression elseIfInner = module.addIf(cond2Inner, throw);
+        wasm:Expression elseIf = module.addIf(cond2, elseIfInner);
+        wasm:Expression ifInner = module.addIf(cond1Inner, throw);
+        return module.addIf(cond1, ifInner, elseIf);
+    }
+    else if op == "SubInt64" {
+        wasm:Expression maxAOp2 = module.binary("AddInt64", MAX_INT, op2);
+        wasm:Expression minAOp2 = module.binary("AddInt64", MIN_INT, op2);
+        wasm:Expression cond1 = module.binary("AndInt32", op1GZ, op2LZ);
+        wasm:Expression cond1Inner = module.binary("GtSInt64", op1, maxAOp2);
+        wasm:Expression cond2 = module.binary("AndInt32", op1LZ, op2GZ);
+        wasm:Expression cond2Inner = module.binary("LtSInt64", op1, minAOp2);
+        wasm:Expression elseIfInner = module.addIf(cond2Inner, throw);
+        wasm:Expression elseIf = module.addIf(cond2, elseIfInner);
+        wasm:Expression ifInner = module.addIf(cond1Inner, throw);
+        return module.addIf(cond1, ifInner, elseIf);
+    }
+    else if op == "MulInt64" {
+        wasm:Expression maxDOp1 = module.binary("DivSInt64", MAX_INT, op1);
+        wasm:Expression minDOp1 = module.binary("DivSInt64", MIN_INT, op1);
+        wasm:Expression cond1 = module.binary("AndInt32", op1GZ, op2GZ);
+        wasm:Expression cond2 = module.binary("AndInt32", op1LZ, op2LZ);
+        wasm:Expression cond3 = module.binary("AndInt32", module.binary("LtSInt64", op1, module.addConst({ i64: -1 })), op2GZ);
+        wasm:Expression cond4 = module.binary("AndInt32", op1GZ, op2LZ);
+        wasm:Expression cond1Inner = module.binary("GtSInt64", op2, maxDOp1);
+        wasm:Expression cond2Inner = module.binary("LtSInt64", op2, maxDOp1);
+        wasm:Expression cond3Inner = module.binary("GtSInt64", op2, minDOp1);
+        wasm:Expression cond4Inner = module.binary("LtSInt64", op2, minDOp1);
+        wasm:Expression elseIf3Inner = module.addIf(cond4Inner, throw);
+        wasm:Expression elseIf3 = module.addIf(cond4, elseIf3Inner);
+        wasm:Expression elseIf2Inner = module.addIf(cond3Inner, throw);
+        wasm:Expression elseIf2 = module.addIf(cond3, elseIf2Inner, elseIf3);
+        wasm:Expression elseIf1Inner = module.addIf(cond2Inner, throw);
+        wasm:Expression elseIf1 = module.addIf(cond2, elseIf1Inner, elseIf2);
+        wasm:Expression ifInner = module.addIf(cond1Inner, throw);
+        return module.addIf(cond1, ifInner, elseIf1);
+    }
+    else if op == "DivInt64" {
+        wasm:Expression minEOp2 = module.binary("EqInt64", MIN_INT, op1);
+        wasm:Expression nEOp2 = module.binary("EqInt64", module.addConst({ i64: -1 }), op2);
+        wasm:Expression cond1 = module.binary("AndInt32", nEOp2, minEOp2);
+        return module.addIf(cond1, throw);
+    }
+    return ();
 }
 
 function operandType(bir:SemType operand) returns wasm:Type? {

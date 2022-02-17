@@ -245,14 +245,7 @@ public class Module {
     }
 
     public function try(string? name, Expression body, string[] catchTags, int numCatchTags, Expression[] catchBodies, int numCatchBodies, string? delegateTarget = ()) returns Expression {
-        WasmTry tryExpr = {
-            name: name,
-            body: body,
-            catchTags: catchTags,
-            catchBodies: catchBodies,
-            delegateTarget: delegateTarget
-        };
-        return tryExpr;
+        return { code:"(try (do " + <string>body.code + "))" };
     }
 
     public function addTag(string name, Type params, Type results) {

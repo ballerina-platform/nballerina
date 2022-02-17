@@ -75,4 +75,4 @@ clean:
 .SECONDEXPANSION:
 $(wasm_files):
 	@echo $@
-	$(BINARYEN) -O3 wat/$(addsuffix .wat, $(basename $(notdir $@))) -o $@
+	$(BINARYEN) -O3 wat/$(addsuffix .wat, $(basename $(notdir $@))) -o $@ -all
