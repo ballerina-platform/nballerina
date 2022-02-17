@@ -59,5 +59,5 @@ type R EMPTY|[int]|[IS, IS]|[int, int, IS|float, IS...];
 // @type IntArray < S
 type S EMPTY|[int]|[IS, IS]|[int, int, int, IS...];
 
-// todo: add the subtype relationship when issue #918 is fixed
-//type T EMPTY|[int]|[IS, int]|[IS, IS, IS|float, IS...]; //  Error: IntArray is not a proper subtype of T
+// @type IntArray < T
+type T EMPTY|[int]|[IS, int]|[IS, IS, IS|float, IS...];

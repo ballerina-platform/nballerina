@@ -273,12 +273,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             if listInhabited(cx, members, NEVER, neg.next) {
                 return true;
             }
-            // If last member of neg repeats, just checking one repeating occurrence should suffice.
-            int negLenLimit = neg.maxInitialLen;
-            if negLenLimit < negLen {
-                negLenLimit = int:max(negLenLimit, len + 2);
-            }
-            foreach int i in len + 1 ..< negLenLimit {
+            foreach int i in len ..< int:min(negLen, neg.maxInitialLen + 1) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
                 if listInhabited(cx, s, NEVER, neg.next) {
@@ -310,7 +305,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-        foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
+        int maxInitialLen = int:max(members.initial.length(), neg.maxInitialLen);
+        foreach int i in 0 ..< maxInitialLen {
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
@@ -320,8 +316,12 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             }
         }
         SemType rd = diff(rest, nt.rest);
-        if !isEmpty(cx, rd) && listInhabited(cx, members, rd, neg.next) {
-            return true;
+        if !isEmpty(cx, rd) {
+            FixedLengthArray s = fixedArrayShallowCopy(members);
+            fixedArrayFill(s, maxInitialLen, rest);
+            if listInhabited(cx, s, rd, neg.next) {
+                return true;
+            }
         }
         // This is correct for length 0, because we know that the length of the
         // negative is 0, and [] - [] is empty.
