@@ -888,21 +888,6 @@ public function intSubtypeConstraints(SemType t) returns IntSubtypeConstraints? 
     } 
 }
 
-// This is a temporary API that identifies when a SemType corresponds to a type T[]
-// where T is a union of complete basic types.
-public function simpleArrayMemberType(Context cx, SemType t) returns UniformTypeBitSet? {
-    return listAtomicSimpleArrayMemberType(listAtomicTypeRw(cx, t));
-}
-
-// This is a temporary API that identifies when a SemType corresponds to a type T[]
-public function arrayMemberType(Context cx, SemType t) returns SemType? {
-    ListAtomicType? atomic = listAtomicTypeRw(cx, t);
-    if atomic != () && atomic.members.fixedLength == 0 {
-        return atomic.rest;
-    }
-    return ();
-}
-
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
     if atomic != () && atomic.members.fixedLength == 0 {
         SemType memberType = atomic.rest;

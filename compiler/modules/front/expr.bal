@@ -1315,14 +1315,27 @@ type Counter record {|
     int n = 0;
 |};
 
-function instantiateArrayFunctionSignature(t:Context tc, bir:FunctionSignature sig, t:SemType arrayType) returns bir:FunctionSignature {
-    t:SemType memberType = <t:SemType>t:arrayMemberType(tc, arrayType);
+function instantiateArrayFunctionSignature(t:Context tc, bir:FunctionSignature sig, t:SemType listType) returns bir:FunctionSignature {
+    var [memberType, arrayType] = arraySupertype(tc, listType); 
     Counter counter = {};
     bir:FunctionSignature inst = instantiateSignature(sig, memberType, arrayType, counter);
     if counter.n > 1 {
         return inst;
     }
     return sig;
+}
+
+function arraySupertype(t:Context tc, t:SemType listType) returns [t:SemType, t:SemType] {
+    t:ListAtomicType? atomic = t:listAtomicTypeRw(tc, listType);
+    if atomic != () && atomic.members.fixedLength == 0 {
+        // simple case
+        return [atomic.rest, listType];
+    }
+    else {
+        t:SemType memberType = t:listMemberType(tc, listType, t:INT);
+        t:ListDefinition def = new;
+        return [memberType, def.define(tc.env, rest = memberType)];
+    }
 }
 
 function instantiateSignature(bir:FunctionSignature sig, t:SemType memberType, t:SemType containerType, Counter counter) returns bir:FunctionSignature {
