@@ -89,12 +89,19 @@ function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
         check tok.advance();
         _ = check tok.expectIdentifier();
     }
-    while tok.current() == "[" {
-        check tok.advance();
+    check tok.expect("[");
+    while true {
         Token? t = tok.current();
         match t {
             "]" => {
-                return true;
+                return PREPARSE_TYPE_DESC;
+            }
+            "(" => {
+                check tok.advance();
+                if tok.current() != ")" {
+                    return PREPARSE_EXPR;
+                }
+                check tok.advance();
             }
             [IDENTIFIER, _]
             | [STRING_LITERAL, _]
@@ -104,16 +111,19 @@ function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
             | [HEX_INT_LITERAL, _]
             | [DECIMAL_FP_NUMBER, _, _] => {
                 check tok.advance();
-                if tok.current() != "]" {
-                    return false;
-                }
-                check tok.advance();
-                continue;
             }
             _ => {
-                return false;
+                return PREPARSE_EXPR;
             }
         }
+        if tok.current() != "]" {
+            return false;
+        }
+        check tok.advance();
+        if tok.current() == "[" {
+            check tok.advance();
+            continue;
+        }
+        return tok.current() is [IDENTIFIER, string];
     }
-    return tok.current() is [IDENTIFIER, string];
 }
