@@ -69,9 +69,13 @@ class StmtContext {
         self.returnType = returnType;
     }
 
-    function createVarRegister(bir:SemType t, string varName, Position pos) returns bir:VarRegister {
-        bir:VarRegister reg = bir:createVarRegister(self.code, t, varName, pos);
+    function createVarRegister(bir:SemType t, string name, Position pos) returns bir:VarRegister {
+        bir:VarRegister reg = bir:createVarRegister(self.code, t, name, pos);
         return reg;
+    }
+
+    function createNarrowedRegister(bir:SemType t, string? name, Position? pos) returns bir:NarrowedRegister {
+        return bir:createNarrrowedRegister(self.code, t, name, pos);
     }
 
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TempRegister {
@@ -212,7 +216,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     Binding? bindings = ();
     foreach int i in 0 ..< defn.params.length() {
         var param = defn.params[i];
-        bir:Register reg = cx.createVarRegister(signature.paramTypes[i], param.name, param.namePos);
+        bir:NarrowedRegister reg = cx.createNarrowedRegister(signature.paramTypes[i], param.name, param.namePos);
         bindings = { name: <string>param.name, reg, prev: bindings, isFinal: true };
     }
     var { block: endBlock } = check codeGenScope(cx, startBlock, { bindings }, defn.body);
@@ -779,7 +783,7 @@ function addNarrowings(StmtContext cx, bir:BasicBlock bb, Environment env, Narro
         if ty === t:NEVER {
             panic err:impossible("narrowed to never type");
         }
-        bir:Register narrowed = cx.createVarRegister(ty, binding.name, pos);
+        bir:NarrowedRegister narrowed = cx.createNarrowedRegister(ty, binding.name, pos);
         bir:CondNarrowInsn insn = {
             result: narrowed,
             operand: binding.reg,
@@ -1129,7 +1133,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     bir:BasicBlock errorBlock = cx.createBasicBlock();
     bir:CondBranchInsn condBranch = { operand: isError, ifTrue: errorBlock.label, ifFalse: okBlock.label, pos };
     bb.insns.push(condBranch);
-    bir:Register errorReg = cx.createTmpRegister(errorType, pos);
+    bir:NarrowedRegister errorReg = cx.createNarrowedRegister(errorType, (), pos);
     bir:CondNarrowInsn narrowToError = {
         result: errorReg,
         operand,
@@ -1138,7 +1142,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     };
     errorBlock.insns.push(narrowToError);
     codeGenCheckingTerminator(errorBlock, checkingKeyword, errorReg, pos);
-    bir:Register result = cx.createTmpRegister(okType, pos);
+    bir:NarrowedRegister result = cx.createNarrowedRegister(okType, (), pos);
     bir:CondNarrowInsn narrowToOk = {
         result,
         operand,

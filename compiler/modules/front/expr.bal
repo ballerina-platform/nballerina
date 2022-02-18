@@ -111,6 +111,11 @@ class ExprContext {
         return reg;
     }
 
+    function createNarrowedRegister(bir:SemType t, Position? pos = ()) returns bir:NarrowedRegister {
+        bir:NarrowedRegister reg = bir:createNarrrowedRegister(self.code, t, (), pos);
+        return reg;
+    }
+
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {
         return bir:createBasicBlock(self.code, name);
     }
@@ -370,7 +375,7 @@ function codeGenNilLift(ExprContext cx, t:SemType? expected, s:Expr[] operands, 
             nextBlock = cx.createBasicBlock();
             bir:InsnRef testInsnRef = bir:lastInsnRef(currentBlock);
             t:SemType baseType = t:diff(operand.semType, t:NIL);
-            bir:Register newOperand = cx.createTmpRegister(baseType);
+            bir:NarrowedRegister newOperand = cx.createNarrowedRegister(baseType);
             bir:CondNarrowInsn narrowToBase = {
                 result: newOperand,
                 operand,

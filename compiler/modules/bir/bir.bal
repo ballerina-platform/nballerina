@@ -136,7 +136,7 @@ public enum RegisterKind {
     PARAM_REGISTER_KIND,
     VAR_REGISTER_KIND,
     FINAL_REGISTER_KIND,
-    NARRROW_REGISTER_KIND,
+    NARRROWED_REGISTER_KIND,
     TEMP_REGISTER_KIND
 }
 
@@ -150,8 +150,8 @@ public type RegisterBase record {|
     RegisterKind kind;
 |};
 
-public type Register TempRegister|ParamRegister|VarRegister|FinalRegister;
-public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND|NARRROW_REGISTER_KIND;
+public type Register TempRegister|ParamRegister|VarRegister|FinalRegister|NarrowedRegister;
+public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
 
 public type DeclRegister record {|
     *RegisterBase;
@@ -163,6 +163,12 @@ public type DeclRegister record {|
 public type TempRegister readonly & record {|
     *RegisterBase;
     TEMP_REGISTER_KIND kind;
+|};
+
+public type NarrowedRegister readonly & record {|
+    *RegisterBase;
+    Position? pos;
+    NARRROWED_REGISTER_KIND kind;
 |};
 
 // pr-todo: see if we need this
@@ -181,14 +187,16 @@ public type FinalRegister readonly & record {|
     FINAL_REGISTER_KIND kind;
 |};
 
-public type NarrowRegister readonly & record {|
-    *DeclRegister;
-    NARRROW_REGISTER_KIND kind;
-|};
-
 public function createVarRegister(FunctionCode code, SemType semType, string name, Position pos) returns VarRegister {
     int number = code.registers.length();
     VarRegister r = { number, semType, name, pos, kind: VAR_REGISTER_KIND };
+    code.registers.push(r);
+    return r;
+}
+
+public function createNarrrowedRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns NarrowedRegister {
+    int number = code.registers.length();
+    NarrowedRegister r = { number, semType, name, pos, kind: NARRROWED_REGISTER_KIND };
     code.registers.push(r);
     return r;
 }
@@ -609,7 +617,7 @@ public type TypeTestInsn readonly & record {|
 public type CondNarrowInsn readonly & record {|
     *InsnBase;
     INSN_COND_NARROW name = INSN_COND_NARROW;
-    Register result;
+    NarrowedRegister result;
     Register operand;
     Result basis;
 |};
