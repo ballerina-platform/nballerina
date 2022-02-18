@@ -106,8 +106,8 @@ class ExprContext {
         return resolveSubsetTypeDesc(self.mod, self.defn, td);
     }
 
-    function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:Register {
-        bir:Register reg = bir:createRegister(self.code, t, (), pos);
+    function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TempRegister {
+        bir:TempRegister reg = bir:createTempRegister(self.code, t, (), pos);
         return reg;
     }
 

@@ -132,18 +132,70 @@ public function lastInsnRef(BasicBlock bb) returns InsnRef {
     return { block: bb.label, index: bb.insns.length() - 1 };
 }
 
-public type Register readonly & record {|
+public enum RegisterKind {
+    PARAM_REGISTER_KIND,
+    VAR_REGISTER_KIND,
+    FINAL_REGISTER_KIND,
+    NARRROW_REGISTER_KIND,
+    TEMP_REGISTER_KIND
+}
+
+public type RegisterBase record {|
     # Unique identifier within a function
     # Always >= 0
     int number;
     SemType semType;
-    string? varName;
+    string? name;
     Position? pos;
+    RegisterKind kind;
 |};
 
-public function createRegister(FunctionCode code, SemType semType, string? varName = (), Position? pos = ()) returns Register {
+public type Register TempRegister|ParamRegister|VarRegister|FinalRegister;
+public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND|NARRROW_REGISTER_KIND;
+
+public type DeclRegister record {|
+    *RegisterBase;
+    string name;
+    Position pos;
+    DeclRegisterKind kind;
+|};
+
+public type TempRegister readonly & record {|
+    *RegisterBase;
+    TEMP_REGISTER_KIND kind;
+|};
+
+// pr-todo: see if we need this
+public type ParamRegister readonly & record {|
+    *DeclRegister;
+    PARAM_REGISTER_KIND kind;
+|};
+
+public type VarRegister readonly & record {|
+    *DeclRegister;
+    VAR_REGISTER_KIND kind;
+|};
+
+public type FinalRegister readonly & record {|
+    *DeclRegister;
+    FINAL_REGISTER_KIND kind;
+|};
+
+public type NarrowRegister readonly & record {|
+    *DeclRegister;
+    NARRROW_REGISTER_KIND kind;
+|};
+
+public function createVarRegister(FunctionCode code, SemType semType, string name, Position pos) returns VarRegister {
     int number = code.registers.length();
-    Register r = { number, semType, varName, pos };
+    VarRegister r = { number, semType, name, pos, kind: VAR_REGISTER_KIND };
+    code.registers.push(r);
+    return r;
+}
+
+public function createTempRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns TempRegister {
+    int number = code.registers.length();
+    TempRegister r = { number, semType, name, pos, kind: TEMP_REGISTER_KIND };
     code.registers.push(r);
     return r;
 }

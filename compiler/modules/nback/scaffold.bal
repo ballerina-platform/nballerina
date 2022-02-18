@@ -188,7 +188,7 @@ class Scaffold {
         self.addresses = [];
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
-            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.varName));
+            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.name));
         }
     }
 

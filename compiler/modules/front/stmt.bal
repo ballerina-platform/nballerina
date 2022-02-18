@@ -69,13 +69,13 @@ class StmtContext {
         self.returnType = returnType;
     }
 
-    function createVarRegister(bir:SemType t, string varName, Position pos) returns bir:Register {
-        bir:Register reg = bir:createRegister(self.code, t, varName, pos);
+    function createVarRegister(bir:SemType t, string varName, Position pos) returns bir:VarRegister {
+        bir:VarRegister reg = bir:createVarRegister(self.code, t, varName, pos);
         return reg;
     }
 
-    function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:Register {
-        bir:Register reg = bir:createRegister(self.code, t, (), pos);
+    function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TempRegister {
+        bir:TempRegister reg = bir:createTempRegister(self.code, t, (), pos);
         return reg;
     }
 
@@ -84,7 +84,7 @@ class StmtContext {
     }
 
     function registerVarName(int registerNumber) returns string? {
-        return bir:getRegister(self.code, registerNumber).varName;
+        return bir:getRegister(self.code, registerNumber).name;
     }
 
     function registerPosition(int registerNumber) returns Position? {
