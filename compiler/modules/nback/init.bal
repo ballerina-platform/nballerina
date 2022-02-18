@@ -467,7 +467,7 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
     t:ListAtomicType? lat = t:listAtomicTypeRw(cx.tc, semType);
     if lat != () {
         t:SemType rest = lat.rest;
-        if rest is t:UniformTypeBitSet {
+        if rest is t:UniformTypeBitSet && lat.members.fixedLength == 0 {
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_ARRAY);
         }
     }
