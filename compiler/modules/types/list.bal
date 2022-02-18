@@ -273,7 +273,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             if listInhabited(cx, members, NEVER, neg.next) {
                 return true;
             }
-            // Check list types with fixedLength between `len` and `negLen`
+            // Check list types with fixedLength >= `len` and  < `negLen`
             foreach int i in len ..< int:min(negLen, neg.maxInitialLen + 1) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
@@ -285,7 +285,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         else if negLen < len && isNever(nt.rest) {
             return listInhabited(cx, members, rest, neg.next);
         }
-        // now we have nt.members.length() <= len
+        // Now we have negLen <= len.
 
         // This is the heart of the algorithm.
         // For [v0, v1] not to be in [t0,t1], there are two possibilities
@@ -318,10 +318,13 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         }
         SemType rd = diff(rest, nt.rest);
         if !isEmpty(cx, rd) {
-            // We have checked the posibilities of existance of a shape in list with fixedLength from 0 to maxInitialLen (exclusive).
-            // Check existance of a shape with more than `maxInitialLen` numuber of members.
-            FixedLengthArray s = fixedArrayShallowCopy(members);
-            fixedArrayFill(s, int:max(len, maxInitialLen), rest);
+            // We have checked the posibilities of existance of a shape in list with fixedLength >= 0 and < maxInitialLen.
+            // Now check the existance of a shape with at least `maxInitialLen` members.
+            FixedLengthArray s = members;
+            if len < maxInitialLen {
+                s = fixedArrayShallowCopy(members);
+                fixedArrayFill(s, maxInitialLen, rest);
+            }
             if listInhabited(cx, s, rd, neg.next) {
                 return true;
             }
