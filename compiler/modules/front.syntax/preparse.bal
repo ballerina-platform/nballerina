@@ -91,14 +91,29 @@ function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
     }
     while tok.current() == "[" {
         check tok.advance();
-        if tok.current() == "]" {
-            return true;
+        Token? t = tok.current();
+        match t {
+            "]" => {
+                return true;
+            }
+            [IDENTIFIER, _]
+            | [STRING_LITERAL, _]
+            | "null"
+            | "true"|"false"
+            | [DECIMAL_NUMBER, _]
+            | [HEX_INT_LITERAL, _]
+            | [DECIMAL_FP_NUMBER, _, _] => {
+                check tok.advance();
+                if tok.current() != "]" {
+                    return false;
+                }
+                check tok.advance();
+                continue;
+            }
+            _ => {
+                return false;
+            }
         }
-        SimpleConstExpr|err:Syntax expr = parseSimpleConstExpr(tok);
-        if expr is err:Syntax || tok.current() != "]" {
-            return false;
-        }
-        check tok.advance();
     }
     return tok.current() is [IDENTIFIER, string];
 }
