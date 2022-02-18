@@ -815,21 +815,15 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     }
     ComparableMemo memo = { semType1: t1, semType2: t2 };
     cx.comparableMemo.add(memo);
-    boolean result;
-    if listAtomicTypeRw(cx, t1) == () || listAtomicTypeRw(cx, t2) == () {
-        result = comparable(cx, listMemberType(cx, t1, INT), listMemberType(cx, t2, INT));
-    }
-    else {
-        MemberTypes members1 = listAllMemberTypes(cx, t1);
-        MemberTypes members2 = listAllMemberTypes(cx, t2);
-        var mergedMembers = mergeListMemberTypes(members1, members2);
-        result = true;
-        foreach var [_, ty1, ty2] in mergedMembers {
-            result = comparable(cx, ty1, ty2);
-            memo.comparable = result;
-            if result == false {
-                return result;
-            }
+    MemberTypes members1 = listAllMemberTypes(cx, t1);
+    MemberTypes members2 = listAllMemberTypes(cx, t2);
+    var mergedMembers = mergeListMemberTypes(members1, members2);
+    boolean result = true;
+    foreach var [_, ty1, ty2] in mergedMembers {
+        result = comparable(cx, ty1, ty2);
+        memo.comparable = result;
+        if result == false {
+            return result;
         }
     }
     memo.comparable = result;
