@@ -341,7 +341,7 @@ public class Relooper {
     }
 
     function renderBranch(Branch branch, Block target, boolean setLabel) returns Expression {
-        Expression[] body = []; 
+        Expression[] body = [];
         if branch.ty == Br {
             body.push(self.module.br(self.getLabel(target.id, "break")));
         }

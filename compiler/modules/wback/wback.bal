@@ -4,7 +4,6 @@ import wso2/nballerina.comm.err;
 import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
 
-
 type BuildError err:Semantic|err:Unimplemented|err:Internal;
 
 function buildModule(bir:Module mod) returns string[]|BuildError {
@@ -224,7 +223,7 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
         wasm:Expression? operand2 = getOperand(module, insn.operands[1]);
         if operand1 != () && operand2 != () {
             wasm:Expression oper = module.localSet(insn.result.number, module.binary(operation, operand1, operand2));
-            if ["AddInt64", "SubInt64", "MulInt64", "DivInt64"].indexOf(operation) != () {
+            if ["i64.add", "i64.sub", "i64.mul", "i64.div_s"].indexOf(operation) != () {
                 scaffold.setOverflowOps();
                 wasm:Expression? overflowCheck = checkOverflow(module, operation, operand1, operand2);
                 if overflowCheck != () {
@@ -247,16 +246,16 @@ function buildEquality(wasm:Module module, bir:EqualityInsn insn) returns wasm:E
         }
         if operand1 != ()  && operand2 != () {
             bir:EqualityOp operation = insn.op;
-            wasm:Op op = "EqInt32";
+            wasm:Op op = "i32.eq";
             if operation == "==" {
                 if ty == "i64" {
-                    op = "EqInt64";
+                    op = "i64.eq";
                 }
             }
             else if operation == "!=" {
-                op = "NeInt32";
+                op = "i32.ne";
                 if ty == "i64" {
-                    op = "NeInt64";
+                    op = "i64.ne";
                 }
             }
             wasm:Type? retType = operandType(insn.result.semType);
@@ -270,53 +269,53 @@ function buildEquality(wasm:Module module, bir:EqualityInsn insn) returns wasm:E
 
 function buildBooleanNotInsn(wasm:Module module, bir:BooleanNotInsn insn) returns wasm:Expression {
     int op1 = insn.operand.number;
-    return module.localSet(insn.result.number, module.binary("XorInt32", module.localGet(op1, "i32"), module.addConst({ i32: 1 })));
+    return module.localSet(insn.result.number, module.binary("i32.xor", module.localGet(op1, "i32"), module.addConst({ i32: 1 })));
 }
 
 
 function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm:Expression op2) returns wasm:Expression? {
     wasm:Expression MAX_INT = module.addConst({ i64: 9223372036854775807 });
     wasm:Expression MIN_INT = module.addConst({ i64: -9223372036854775808 });
-    wasm:Expression op1GZ = module.binary("GtSInt64", op1, module.addConst({ i64: 0 }));
-    wasm:Expression op2GZ = module.binary("GtSInt64", op2, module.addConst({ i64: 0 }));
-    wasm:Expression op1LZ = module.binary("LtSInt64", op1, module.addConst({ i64: 0 }));
-    wasm:Expression op2LZ = module.binary("LtSInt64", op2, module.addConst({ i64: 0 }));
+    wasm:Expression op1GZ = module.binary("i64.gt_s", op1, module.addConst({ i64: 0 }));
+    wasm:Expression op2GZ = module.binary("i64.gt_s", op2, module.addConst({ i64: 0 }));
+    wasm:Expression op1LZ = module.binary("i64.lt_s", op1, module.addConst({ i64: 0 }));
+    wasm:Expression op2LZ = module.binary("i64.lt_s", op2, module.addConst({ i64: 0 }));
     wasm:Expression throw = module.throw("overflow", [], 0);
-    if op == "AddInt64" {
-        wasm:Expression maxSOp2 = module.binary("SubInt64", MAX_INT, op2);
-        wasm:Expression minSOp2 = module.binary("SubInt64", MIN_INT, op2);
-        wasm:Expression cond1 = module.binary("AndInt32", op1GZ, op2GZ);
-        wasm:Expression cond1Inner = module.binary("GtSInt64", op1, maxSOp2);
-        wasm:Expression cond2 = module.binary("AndInt32", op1LZ, op2LZ);
-        wasm:Expression cond2Inner = module.binary("LtSInt64", op1, minSOp2);
+    if op == "i64.add" {
+        wasm:Expression maxSOp2 = module.binary("i64.sub", MAX_INT, op2);
+        wasm:Expression minSOp2 = module.binary("i64.sub", MIN_INT, op2);
+        wasm:Expression cond1 = module.binary("i32.and", op1GZ, op2GZ);
+        wasm:Expression cond1Inner = module.binary("i64.gt_s", op1, maxSOp2);
+        wasm:Expression cond2 = module.binary("i32.and", op1LZ, op2LZ);
+        wasm:Expression cond2Inner = module.binary("i64.lt_s", op1, minSOp2);
         wasm:Expression elseIfInner = module.addIf(cond2Inner, throw);
         wasm:Expression elseIf = module.addIf(cond2, elseIfInner);
         wasm:Expression ifInner = module.addIf(cond1Inner, throw);
         return module.addIf(cond1, ifInner, elseIf);
     }
-    else if op == "SubInt64" {
-        wasm:Expression maxAOp2 = module.binary("AddInt64", MAX_INT, op2);
-        wasm:Expression minAOp2 = module.binary("AddInt64", MIN_INT, op2);
-        wasm:Expression cond1 = module.binary("AndInt32", op1GZ, op2LZ);
-        wasm:Expression cond1Inner = module.binary("GtSInt64", op1, maxAOp2);
-        wasm:Expression cond2 = module.binary("AndInt32", op1LZ, op2GZ);
-        wasm:Expression cond2Inner = module.binary("LtSInt64", op1, minAOp2);
+    else if op == "i64.sub" {
+        wasm:Expression maxAOp2 = module.binary("i64.add", MAX_INT, op2);
+        wasm:Expression minAOp2 = module.binary("i64.add", MIN_INT, op2);
+        wasm:Expression cond1 = module.binary("i32.and", op1GZ, op2LZ);
+        wasm:Expression cond1Inner = module.binary("i64.gt_s", op1, maxAOp2);
+        wasm:Expression cond2 = module.binary("i32.and", op1LZ, op2GZ);
+        wasm:Expression cond2Inner = module.binary("i64.lt_s", op1, minAOp2);
         wasm:Expression elseIfInner = module.addIf(cond2Inner, throw);
         wasm:Expression elseIf = module.addIf(cond2, elseIfInner);
         wasm:Expression ifInner = module.addIf(cond1Inner, throw);
         return module.addIf(cond1, ifInner, elseIf);
     }
-    else if op == "MulInt64" {
-        wasm:Expression maxDOp1 = module.binary("DivSInt64", MAX_INT, op1);
-        wasm:Expression minDOp1 = module.binary("DivSInt64", MIN_INT, op1);
-        wasm:Expression cond1 = module.binary("AndInt32", op1GZ, op2GZ);
-        wasm:Expression cond2 = module.binary("AndInt32", op1LZ, op2LZ);
-        wasm:Expression cond3 = module.binary("AndInt32", module.binary("LtSInt64", op1, module.addConst({ i64: -1 })), op2GZ);
-        wasm:Expression cond4 = module.binary("AndInt32", op1GZ, op2LZ);
-        wasm:Expression cond1Inner = module.binary("GtSInt64", op2, maxDOp1);
-        wasm:Expression cond2Inner = module.binary("LtSInt64", op2, maxDOp1);
-        wasm:Expression cond3Inner = module.binary("GtSInt64", op2, minDOp1);
-        wasm:Expression cond4Inner = module.binary("LtSInt64", op2, minDOp1);
+    else if op == "i64.mul" {
+        wasm:Expression maxDOp1 = module.binary("i64.div_s", MAX_INT, op1);
+        wasm:Expression minDOp1 = module.binary("i64.div_s", MIN_INT, op1);
+        wasm:Expression cond1 = module.binary("i32.and", op1GZ, op2GZ);
+        wasm:Expression cond2 = module.binary("i32.and", op1LZ, op2LZ);
+        wasm:Expression cond3 = module.binary("i32.and", module.binary("i64.lt_s", op1, module.addConst({ i64: -1 })), op2GZ);
+        wasm:Expression cond4 = module.binary("i32.and", op1GZ, op2LZ);
+        wasm:Expression cond1Inner = module.binary("i64.gt_s", op2, maxDOp1);
+        wasm:Expression cond2Inner = module.binary("i64.lt_s", op2, maxDOp1);
+        wasm:Expression cond3Inner = module.binary("i64.gt_s", op2, minDOp1);
+        wasm:Expression cond4Inner = module.binary("i64.lt_s", op2, minDOp1);
         wasm:Expression elseIf3Inner = module.addIf(cond4Inner, throw);
         wasm:Expression elseIf3 = module.addIf(cond4, elseIf3Inner);
         wasm:Expression elseIf2Inner = module.addIf(cond3Inner, throw);
@@ -326,10 +325,10 @@ function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm
         wasm:Expression ifInner = module.addIf(cond1Inner, throw);
         return module.addIf(cond1, ifInner, elseIf1);
     }
-    else if op == "DivInt64" {
-        wasm:Expression minEOp2 = module.binary("EqInt64", MIN_INT, op1);
-        wasm:Expression nEOp2 = module.binary("EqInt64", module.addConst({ i64: -1 }), op2);
-        wasm:Expression cond1 = module.binary("AndInt32", nEOp2, minEOp2);
+    else if op == "i64.div_s" {
+        wasm:Expression minEOp2 = module.binary("i64.eq", MIN_INT, op1);
+        wasm:Expression nEOp2 = module.binary("i64.eq", module.addConst({ i64: -1 }), op2);
+        wasm:Expression cond1 = module.binary("i32.and", nEOp2, minEOp2);
         return module.addIf(cond1, throw);
     }
     return ();
@@ -396,43 +395,28 @@ public function compileModule(bir:Module mod, string? outputFilename) returns io
     }
 }
 
-final readonly & map<wasm:Op> signedInt32ArithmeticOps = {
-    "+": "AddInt32",
-    "-": "SubInt32",
-    "*": "MulInt32",
-    "/": "DivSInt32",
-    "%": "RemSInt32"
-};
-
 final readonly & map<wasm:Op> signedInt64ArithmeticOps = {
-    "+": "AddInt64",
-    "-": "SubInt64",
-    "*": "MulInt64",
-    "/": "DivSInt64",
-    "%": "RemSInt64"
+    "+": "i64.add",
+    "-": "i64.sub",
+    "*": "i64.mul",
+    "/": "i64.div_s",
+    "%": "i64.rem_s"
 };
 
 final readonly & map<wasm:Op> signedInt32CompareOps = {
-    "<": "LtSInt32",
-    "<=": "LeSInt32",
-    ">": "GtSInt32",
-    ">=": "GeSInt32",
-    "==": "EqInt32",
-    "!=": "NeInt32"
+    "<": "i32.lt_s",
+    "<=": "i32.le_s",
+    ">": "i32.gt_s",
+    ">=": "i32.ge_s",
+    "==": "i32.eq",
+    "!=": "i32.ne"
 };
 
 final readonly & map<wasm:Op> signedInt64CompareOps = {
-    "<": "LtSInt64",
-    "<=": "LeSInt64",
-    ">": "GtSInt64",
-    ">=": "GeSInt64",
-    "==": "EqInt64",
-    "!=": "NeInt64"
-};
-
-final readonly & map<string> overflowCall = {
-    "+": "addOverflow",
-    "-": "subOverflow",
-    "*": "mulOverflow",
-    "/": "divOverflow"
+    "<": "i64.lt_s",
+    "<=": "i64.le_s",
+    ">": "i64.gt_s",
+    ">=": "i64.ge_s",
+    "==": "i64.eq",
+    "!=": "i64.ne"
 };
