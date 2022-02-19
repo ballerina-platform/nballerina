@@ -33,7 +33,7 @@ type MultipleShape record {
 };
 
 type LoopShape record {
-    Shape? inner;
+    Shape inner;
     Shape? next;
     int[] entries = [];
     int shapeId;
@@ -122,12 +122,11 @@ public class Relooper {
                     if innerBlocks.indexOf(prev) == () {
                         queue.push(prev);
                         innerBlocks.push(prev);
-                        validBlocks = validBlocks.filter(b => b != prev);
                     }
                 }
-                validBlocks = validBlocks.filter(b => b != currId);
             }
         }
+        validBlocks = validBlocks.filter(b => innerBlocks.indexOf(b) == ());
         foreach int entryId in entries {
             Block? entry = self.blocks[entryId];
             if entry != () {
@@ -166,13 +165,17 @@ public class Relooper {
                 self.blocks.put(inner);
             }
         }
-        LoopShape loop = {
-            inner: self.calculate(innerBlocks, entries),
-            next : self.calculate(validBlocks, nextEntries),
-            shapeId: loopShapeId
-        };
-        loop.entries = entries;
-        return loop;
+        Shape? innerSh = self.calculate(innerBlocks, entries);
+        if innerSh != () {
+            LoopShape loop = {
+                inner: innerSh,
+                next : self.calculate(validBlocks, nextEntries),
+                shapeId: loopShapeId
+            };
+            loop.entries = entries;
+            return loop;
+        }
+        panic error("loop inner cannot be null");
     }
 
     function invalidateChildren(int block, map<int?> ownership, map<int[]?> independentGroups) {
@@ -338,24 +341,21 @@ public class Relooper {
     }
 
     function renderBranch(Branch branch, Block target, boolean setLabel) returns Expression {
-        WasmBlock block = {};
-        // if setLabel {
-        //     block.name = self.getLabel(target.id, "break");
-        // }
+        Expression[] body = []; 
         if branch.ty == Br {
-            block.body.push(<Break>{ label: self.getLabel(target.id, "break") });
+            body.push(self.module.br(self.getLabel(target.id, "break")));
         }
         else if branch.ty == Continue {
-            block.body.push(<Break>{ label: self.getLabel(branch.ancestorId, "continue") });
+            body.push(self.module.br(self.getLabel(branch.ancestorId, "continue")));
         }
-        return block;
+        return self.module.block((), body, body.length());
     }
 
     function renderBlock(Block block) returns Expression {
-        WasmBlock ret = {};
-        ret.body.push(block.code);
+        Expression[] ret = [];
+        ret.push(block.code);
         if block.branchesOut.length() == 0 {
-            return ret;
+            return self.module.block((), ret, block.code.length());
         }
         boolean setLabel = true;
         boolean fused = false;
@@ -373,8 +373,8 @@ public class Relooper {
             }
         }
         Expression? condition = ();
-        WasmBlock ifBody = {};
-        WasmBlock elseBody = {};
+        Expression[] ifBody = [];
+        Expression[] elseBody = [];
         Expression[] root = [];
         foreach int outId in block.branchesOut.keys() {
             boolean isDefault = false;
@@ -400,64 +400,49 @@ public class Relooper {
                         Shape? sh = fusedShape.handledBlocks[target.id.toString()];
                         if sh != () {
                             Expression[] body = self.renderShape(sh);
-                            foreach Expression expr in body {
-                                currContent.push(expr);
-                            }
+                            currContent.push(...body);
                         }
                     }
                 }
                 if currContent.length() > 0 {
                     if isDefault {
-                        if ifBody.body.length() == 0 {
+                        if ifBody.length() == 0 {
                             root = currContent;
                         }
                         else {
-                            if currContent.length() == 1 {
-                                Expression body = currContent[0];
-                                if body is WasmBlock {
-                                    elseBody = body;
-                                }
-                                else {
-                                    elseBody.body = currContent;
-                                }
-                            }
-                            else {
-                                elseBody.body = currContent;
-                            }
+                            elseBody = currContent;
                         }
                     }
                     else {
-                        if currContent.length() == 1 {
-                            Expression body = currContent[0];
-                            if body is WasmBlock {
-                                ifBody = body;
-                            }
-                            else {
-                                ifBody.body = currContent;
-                            }
-                        }
-                        else {
-                            ifBody.body = currContent;
-                        }
+                        ifBody = currContent;
                         condition = details.condition;
                     }
                 }
             }
         }
         if condition != () {
-            If ifExpr = {
-                ifBody: ifBody,
-                elseBody: elseBody,
-                condition: condition
-            };
-            ret.body.push(ifExpr);
-        }
-        else {
-            foreach Expression expr in root {
-                ret.body.push(expr);
+            Expression? thenExpr = ();
+            Expression? elseExpr = ();
+            if ifBody.length() > 1 {
+                thenExpr = self.module.block((), ifBody, ifBody.length());
+            }
+            else if ifBody.length() == 1 {
+                thenExpr = ifBody[0];
+            }
+            if elseBody.length() > 1 {
+                elseExpr = self.module.block((), elseBody, elseBody.length());
+            }
+            else if elseBody.length() == 1 {
+                elseExpr = elseBody[0];
+            }
+            if thenExpr != () {
+                ret.push(self.module.addIf(condition, thenExpr, elseExpr));
             }
         }
-        return ret;
+        else {
+            ret.push(...root);
+        }
+        return self.module.block((), ret, ret.length());
     }
 
     function calculate(int[] validBlocks, int[] entries) returns Shape? {
@@ -500,29 +485,27 @@ public class Relooper {
         if next == () {
             return ret;
         }
-        WasmBlock curr = {};
-        if ret is WasmBlock {
+        Expression curr = {};
+        if ret.tokens.length() > 1 && ret.tokens[1] == "block" {
             curr = ret;
         }
         else {
-            curr.body.push(ret);
+            curr = self.module.block((), [ret], 1);
         }
 
         while next != () {
             if next is MultipleShape {
                 foreach string key in next.handledBlocks.keys() {
-                    curr.name = self.getLabel(key, "break");
-                    WasmBlock outerBlock = {
-                        body: [curr]
-                    };
+                    curr = self.module.blockSetName(curr, self.getLabel(key, "break"));
+                    Expression[] outerBody = [curr];
                     Shape? handledShape = next.handledBlocks[key];
                     if handledShape != () {
                         Expression[] handledExpr = self.renderShape(handledShape);
                         foreach Expression expr in handledExpr {
-                            outerBlock.body.push(expr);
+                            outerBody.push(expr);
                         }
                     }
-                    curr = outerBlock;
+                    curr = self.module.block((), outerBody, 1);
                 }
                 parent.next = next.next;
                 next = next.next;
@@ -533,19 +516,16 @@ public class Relooper {
         }
         if next != () {
             if next is SimpleShape {
-                curr.name = self.getLabel(next.inner.id, "break");
+                curr = self.module.blockSetName(curr, self.getLabel(next.inner.id, "break"));
             }
             else if next is LoopShape {
                 if next.entries.length() == 1 {
-                    curr.name = self.getLabel(next.entries[0], "break");
+                    curr = self.module.blockSetName(curr, self.getLabel(next.entries[0], "break"));
                 }
                 else {
                     foreach int entryId in next.entries {
-                        curr.name = self.getLabel(entryId, "break");
-                        WasmBlock outerBlock = {
-                            body: [curr]
-                        };
-                        curr = outerBlock;
+                        curr = self.module.blockSetName(curr, self.getLabel(entryId, "break"));
+                        curr = self.module.block((), [curr], 1);
                     }
                 }
             }
@@ -561,89 +541,32 @@ public class Relooper {
         Shape? next = simple.next;
         if next != () {
             Expression[] nextExpr = self.renderShape(next);
-            foreach Expression expr in nextExpr {
-                children.push(expr);
-            }
+            children.push(...nextExpr);
         }
         return children;
     }
 
     function renderLoopShape(LoopShape loop) returns Expression[] {
         Expression[] children = [];
-        WasmLoop loopBlock = {
-            name: self.getLabel(loop.shapeId, "continue")
-        };
-        Shape? inner = loop.inner;
-        if inner != () {
-            Expression[] innerExpr = self.renderShape(inner);
-            loopBlock.loopBody = innerExpr;
+        Expression? loopBlock = ();
+        Expression[] innerExpr = self.renderShape(loop.inner);
+        if innerExpr.length() > 1 {
+            Expression body = self.module.block((), innerExpr, innerExpr.length());
+            loopBlock = self.module.loop(self.getLabel(loop.shapeId, "continue"), body);
         }
-        Expression ret = self.handleFollowupMultiples(loopBlock, loop);
-        children.push(ret);
+        else if innerExpr.length() == 1 {
+            loopBlock = self.module.loop(self.getLabel(loop.shapeId, "continue"), innerExpr[0]);
+        }
+        if loopBlock != () {
+            Expression ret = self.handleFollowupMultiples(loopBlock, loop);
+            children.push(ret);
+        }
         Shape? next = loop.next;
         if next != () {
             Expression[] nextExpr = self.renderShape(next);
-            foreach Expression expr in nextExpr {
-                children.push(expr);
-            }
+            children.push(...nextExpr);
         }
         return children;
-    }
-
-    function makeBlockText(Expression[] result) returns string[] {
-        Expression curr;
-        string[] currStr = [];
-        while result.length() > 0 {
-            curr = result.remove(0);
-            if curr is WasmBlock {
-                string? name = curr.name;
-                if name != () {
-                    currStr.push("(", "block");
-                    currStr.push(name);
-                }
-                else {
-                    currStr.push("(", "block");
-                }
-                foreach Expression expr in curr.body {
-                    currStr.push(...self.makeBlockText([expr]));
-                }
-                currStr.push(")");
-            }
-            else if curr is WasmLoop {
-                string? name = curr.name;
-                if name != () {
-                    currStr.push("(", "loop ");
-                    currStr.push(name);
-                }
-                else {
-                    currStr.push("(", "loop ");
-                }
-                foreach Expression expr in curr.loopBody {
-                    currStr.push(...self.makeBlockText([expr]));
-                }
-                currStr.push(")");
-            }
-            else if curr is If {
-                If ifExpr = curr;
-                WasmBlock? elseBody = ifExpr.elseBody;
-                currStr.push("(", "if ");
-                currStr.push(...ifExpr.condition.tokens);
-                currStr.push(...self.makeBlockText([ifExpr.ifBody]));
-                if elseBody != () {
-                    currStr.push(...self.makeBlockText([elseBody]));
-                }
-                currStr.push(")");
-            }
-            else if curr is Break {
-                currStr.push("(", "br ");
-                currStr.push(curr.label);
-                currStr.push(")");
-            }
-            else {
-                currStr.push(...curr.tokens);
-            }
-        }
-        return currStr;
     }
 
     public function render(Block body, int labelHelper) returns Expression {
@@ -653,7 +576,15 @@ public class Relooper {
         if parent != () {
             result = self.renderShape(parent);
         }
-        return {tokens:  self.makeBlockText(result)};
+        if result.length() > 1 {
+            return self.module.block((), result, result.length());
+        }
+        else if result.length() == 1 {
+            return result[0];
+        }
+        else {
+            return self.module.nop();
+        }
     }
 
     public function reset(){

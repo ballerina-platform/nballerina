@@ -42,30 +42,6 @@ public type Expression record {
     string[] tokens = [];
 };
 
-public type WasmBlock record {
-    *Expression;
-    Expression[] body = [];
-    string? name = ();
-};
-
-public type If record {
-    *Expression;
-    Expression condition;
-    WasmBlock? elseBody;
-    WasmBlock ifBody;
-};
-
-public type Break record {
-    *Expression;
-    string label;
-};
-
-public type WasmLoop record {
-    *Expression;
-    Expression[] loopBody = [];
-    string name;
-};
-
 public type LiteralInt32 record {
     int i32;
 };
@@ -177,29 +153,31 @@ public class Module {
         panic error("invalid");
     }
 
-    public function block(string? name, Expression[] children, int numChildren, Type ty) returns Expression {
-        WasmBlock block = {
-            body : children,
-            name : name
-        };
-        return block;
+    public function loop(string name, Expression body) returns Expression {
+        string[] inst = ["loop", name];
+        inst.push(...body.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function block(string? name, Expression[] children, int numChildren, Type? ty = "None") returns Expression {
+        string[] inst = ["block"];
+        if name != () {
+            inst.push(name);
+        }
+        foreach Expression child in children {
+            inst.push(...child.tokens);
+        }
+        return { tokens: appendBraces(inst) };
     }
 
     public function addIf(Expression condition, Expression ifTrue, Expression? ifFalse = ()) returns Expression {
-        WasmBlock? elseBody = ();
+        string[] inst = ["if"];
+        inst.push(...condition.tokens);
+        inst.push(...ifTrue.tokens);
         if ifFalse != () {
-            elseBody = {
-                body: [ifFalse]
-            };
+            inst.push(...ifFalse.tokens);
         }
-        If ifExpr = {
-            condition: condition,
-            ifBody: {
-                body: [ifTrue]
-            },
-            elseBody: elseBody
-        };
-        return ifExpr;
+        return { tokens: appendBraces(inst) };
     }
 
    public function throw(string tag, Expression[] operands, int numOperands) returns Expression {
@@ -218,7 +196,32 @@ public class Module {
         self.tags.push({ tokens: appendBraces(["tag",  "$" + name]) });
     }
 
-    // BinaryenModuleDispose and BinaryenModulePrint
+    public function blockSetName(Expression expr, string name) returns Expression {
+        string[] updated = ["block"];
+        if expr.tokens[1] == "block" {
+            updated.push(name, ...expr.tokens.slice(2, expr.tokens.length() - 1));
+            return { tokens: appendBraces(updated) };
+        }
+        panic error("not a block");
+    }
+
+    public function br(string name, Expression? condition = (), Expression? value = ()) returns Expression {
+        string[] inst = [];
+        if condition != () || value != () {
+            inst.push("br_if", name);
+        }
+        else {
+            inst.push("br", name);
+        }
+        if condition != () {
+            inst.push(...condition.tokens);
+        }
+        if value != () {
+            inst.push(...value.tokens);
+        }
+        return { tokens: appendBraces(inst) };
+    }
+
     public function finish() returns string[] {
         string[] module = ["(module"];
         foreach Expression imp in self.imports {
