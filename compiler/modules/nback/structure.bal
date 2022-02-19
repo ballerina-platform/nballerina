@@ -202,9 +202,11 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 }
 
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
-    ListRepr repr = listTypeToListRepr(scaffold.typeContext(), insn.operands[0].semType);
-    llvm:Value taggedStruct = builder.load(scaffold.address(insn.operands[0]));
-    llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
+    bir:Register listReg = insn.operands[0];
+    bir:IntOperand indexOperand = insn.operands[1];
+    ListRepr repr = listTypeToListRepr(scaffold.typeContext(), listReg.semType);
+    llvm:Value taggedStruct = builder.load(scaffold.address(listReg));
+    llvm:Value index = buildInt(builder, scaffold, indexOperand);
     llvm:BasicBlock? bbJoin = ();
     llvm:Value member;
     if insn.fill {
@@ -239,8 +241,13 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     }
     t:SemType resultType = insn.result.semType;
     if isPotentiallyExact(resultType) {
-        // SUBSET tuples will need to do something analogous to`isMappingMemberTypeExact``
-        member = buildMemberClearExact(builder, scaffold, taggedStruct, member, resultType);
+        if !isListMemberTypeExact(scaffold.typeContext(), listReg.semType, indexOperand, resultType) {
+            // this clears the exact bit of member
+            member = buildClearExact(builder, scaffold, member, resultType);
+        }
+        else {
+            member = buildMemberClearExact(builder, scaffold, taggedStruct, member, resultType);
+        }
     }
     repr.buildMemberStore(builder, scaffold, member, insn.result);
     if bbJoin != () {
