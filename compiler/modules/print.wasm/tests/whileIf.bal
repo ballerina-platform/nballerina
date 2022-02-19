@@ -40,4 +40,3 @@ public function whileIf() returns string[] {
     module.addFunctionExport("sum", "sum");
     return module.finish();
 }
-

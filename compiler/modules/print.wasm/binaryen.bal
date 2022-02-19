@@ -267,7 +267,3 @@ function joinTokens(string[] tokens, int spaces = 0) returns string {
     }
     return line;
 }
-
-
-
-
