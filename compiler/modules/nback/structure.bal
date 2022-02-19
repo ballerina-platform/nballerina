@@ -413,6 +413,23 @@ function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:Strin
     return true;
 }
 
+function isListMemberTypeExact(t:Context tc, t:SemType listType, bir:IntOperand indexOperand, t:SemType resultType) returns boolean {
+    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, listType);
+    if lat == () {
+        return false;
+    }
+    // don't need to check when the condition is false, because there can be only one applicable member type
+    else if t:singleIntShape(indexOperand.semType) == () && lat.members.fixedLength != 0 {
+        t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
+        foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypes(tc, lat, indexOperand.semType) {
+            if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 function isSameTypeWithin(t:Context tc, t:SemType semType, t:SemType within, t:SemType targetType) returns boolean {
     t:SemType ty = t:intersect(semType, within);
     return t:isNever(ty) || t:isSameType(tc, ty, targetType);

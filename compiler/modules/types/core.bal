@@ -815,58 +815,16 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     }
     ComparableMemo memo = { semType1: t1, semType2: t2 };
     cx.comparableMemo.add(memo);
-    MemberTypes members1 = listAllMemberTypes(cx, t1);
-    MemberTypes members2 = listAllMemberTypes(cx, t2);
-    var mergedMembers = mergeListMemberTypes(members1, members2);
-    boolean result = true;
-    foreach var [_, ty1, ty2] in mergedMembers {
-        result = comparable(cx, ty1, ty2);
-        memo.comparable = result;
-        if result == false {
-            return result;
+    var [ranges1, memberTypes1] = listAllMemberTypes(cx, t1);
+    var [ranges2, memberTypes2] = listAllMemberTypes(cx, t2);
+    foreach var [_, i1, i2] in combineRanges(ranges1, ranges2) {
+        if i1 != () && i2 != () && !comparable(cx, memberTypes1[i1], memberTypes2[i2]) {
+            memo.comparable = false;
+            return false;
         }
     }
-    memo.comparable = result;
-    return result;
-}
-
-function mergeListMemberTypes(MemberTypes list1, MemberTypes list2) returns [Range, SemType, SemType][] {
-    int index1 = 0;
-    int index2 = 0;
-    int currentStart = 0;
-    [Range, SemType, SemType][] mergedMembers = [];
-    int len1 = list1.length();
-    int len2 = list2.length();
-    while index1 < len1 && index2 < len2 {
-        var [rng1, ty1] = list1[index1];
-        var [rng2, ty2] = list2[index2];
-        if rng1.max <= rng2.max {
-            mergedMembers.push([{ min: currentStart, max: rng1.max }, ty1, ty2]);
-            currentStart = rng1.max;
-            index1 += 1;
-            if rng1.max == rng2.max {
-                index2 += 1;
-            }
-        }
-        else if rng2.max < rng1.max {
-            mergedMembers.push([{ min: currentStart, max: rng2.max }, ty1, ty2]);
-            currentStart = rng2.max;
-            index2 += 1;
-        }
-    }
-    while index1 < list1.length() {
-        var [rng1, ty1] = list1[index1];
-        mergedMembers.push([{ min: currentStart, max: rng1.max }, ty1, NEVER]);
-        currentStart = rng1.max;
-        index1 += 1;
-    }
-    while index2 < list2.length() {
-        var [rng2, ty2] = list2[index2];
-        mergedMembers.push([{ min: currentStart, max: rng2.max }, NEVER, ty2]);
-        currentStart = rng2.max;
-        index2 += 1;
-    }
-    return mergedMembers;
+    memo.comparable = true;
+    return true;
 }
 
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),
@@ -947,28 +905,15 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
 
-public type MemberTypes [Range,SemType][];
 // placeholder for #924
-public function listAllMemberTypes(Context cx, SemType t) returns MemberTypes {
+public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
     ListAtomicType? atomicType = listAtomicTypeRw(cx, t);
     if atomicType == () {
         panic error("expected atomic list type");
     }
-    MemberTypes memberTypes = [];
-    FixedLengthArray members = atomicType.members;
-    int fixedLength = members.fixedLength;
-    int currentLength = 0;
-    foreach SemType initialType in members.initial {
-        memberTypes.push([{ min: currentLength, max: currentLength + 1 }, initialType]);
-        currentLength += 1;
+    else {
+        return listAtomicTypeAllMemberTypes(atomicType);
     }
-    if currentLength < fixedLength {
-        memberTypes.push([{ min: currentLength, max: fixedLength }, members.initial[members.initial.length() - 1]]);
-    }
-    if atomicType.rest != NEVER {
-        memberTypes.push([{ min: fixedLength, max: int:MAX_VALUE }, atomicType.rest]);
-    }
-    return memberTypes;
 }
 
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
@@ -1012,6 +957,22 @@ public function listMemberType(Context cx, SemType t, SemType k) returns SemType
         }
         return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), <IntSubtype|true>keyData, TOP),
                      bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), <IntSubtype|true>keyData, TOP));
+    }
+}
+
+public function listAtomicTypeApplicableMemberTypes(Context cx, ListAtomicType atomic, SemType indexType) returns readonly & SemType[] {
+    IntSubtype|boolean indexIntType;
+    if indexType is UniformTypeBitSet {
+        indexIntType = (indexType & INT) != 0;
+    }
+    else {
+        indexIntType = intSubtype(indexType);
+    }
+    if indexIntType == false {
+        return [];
+    }
+    else {
+        return listAtomicApplicableMemberTypes(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
     }
 }
 
