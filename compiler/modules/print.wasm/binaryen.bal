@@ -34,32 +34,18 @@ final readonly & map<string> signedInt32Ops = {
 };
 
 public type Function record {
+    string[] signature;
     Expression body;
-    Type[] vars = [];
-    string name;
-    string? module = ();
-    string? base = ();
-    Type[] params = [];
-    Type? results = ();
 };
 
 public type Expression record {
-    string? code = ();
+    string[] tokens = [];
 };
 
 public type WasmBlock record {
     *Expression;
     Expression[] body = [];
     string? name = ();
-};
-
-public type WasmTry record {
-    *Expression;
-    string? name = ();
-    Expression body;
-    string[] catchTags = [];
-    Expression[] catchBodies = [];
-    string? delegateTarget = ();
 };
 
 public type If record {
@@ -92,124 +78,101 @@ public type Literal LiteralInt32|LiteralInt64;
 
 public class Module {
     private Function[] functions = [];
-    private string[] imports = [];
-    private string[] exports = [];
-    private string[] tags = [];
+    private Expression[] imports = [];
+    private Expression[] exports = [];
+    private Expression[] tags = [];
 
     public function call(string target, Expression[] operands, int numOperands, Type returnType) returns Expression {
-        string[] callInst = ["(call $", target];
+        string[] callInst = ["call", "$" + target];
         foreach int i in 0...numOperands - 1 {
-            string? code = operands[i].code;
-            if code != () {
-                callInst.push(code);
+            callInst.push(...operands[i].tokens);
         }
-        }
-        callInst.push(")");
-        return { code: "".'join(...callInst) };
+        return { tokens: appendBraces(callInst) };
     }
 
     public function localGet(int index, Type ty) returns Expression {
-        return { code: "(local.get $" + index.toString() + ")" };
+        return { tokens: appendBraces(["local.get", "$" + index.toString()]) };
     }
 
     public function addConst(Literal value) returns Expression {
         if value is LiteralInt32 {
-            return { code: "(i32.const "+ value.i32.toString() + ")" };
+            return { tokens: appendBraces(["i32.const", value.i32.toString()]) };
         }
         else {
-            return { code: "(i64.const "+ value.i64.toString() + ")" };
+            return { tokens: appendBraces(["i64.const", value.i64.toString()]) };
         }
     }
 
     public function addReturn(Expression? value = ()) returns Expression {
-        string[] inst = ["(return"];
+        string[] inst = ["return"];
         if value != () {
-            string? code = value.code;
-            if code != () {
-                inst.push(code);
+            inst.push(...value.tokens);
         }
-        }
-        inst.push(")");
-        return { code: " ".'join(...inst) };
+        return { tokens: appendBraces(inst) };
     }
 
     public function nop() returns Expression {
-        return { code: "(block )" };
+        return { tokens: appendBraces(["block"]) };
     }
 
     public function addFunction(string name, Type[] params, Type results, Type[] varTypes, int numVarTypes, Expression body) {
-        Function func = {
-            name: name,
-            params: params,
-            results: results,
-            vars: varTypes,
-            body: body
-        };
-        self.functions.push(func);
+        string[] signature = ["func", "$" + name];
+        string[] funcBody = [];
+        foreach int i in 0..<params.length() {
+            signature.push(...appendBraces(["param", "$" + i.toString(), params[i]]));
+        }
+        if results != "None" {
+            signature.push(...appendBraces(["result", results.toString()]));
+        }
+        foreach int i in 0..<varTypes.length() {
+            funcBody.push(...appendBraces(["local", "$" + (i + params.length()).toString(), varTypes[i]]));
+        }
+        funcBody.push(...body.tokens);
+        self.functions.push({ signature: signature, body : { tokens: funcBody } });
     }
 
     public function addFunctionImport(string internalName, string externalModuleName, string externalBaseName, Type[] params, Type results)  {
-        string[] funcDef = ["(import \"", externalModuleName, "\" \"", externalBaseName, "\" (func $", internalName];
+        string[] importDef = ["import", "\"" + externalModuleName + "\"", "\"" + externalBaseName + "\""];
+        string[] funcDef = ["func", "$" + internalName];
         foreach Type ty in params {
-            funcDef.push(" (param ", ty, ")");
+            funcDef.push(...appendBraces(["param", ty]));
         }
         if results != "None" {
-            funcDef.push("(param ");
-            funcDef.push(results);
-            funcDef.push(")))");
+            funcDef.push(...appendBraces(["result", results]));
         }
-        else{
-            funcDef.push("))");
-        }
-        self.imports.push("".'join(...funcDef));
+        importDef.push(...appendBraces(funcDef));
+        self.imports.push({ tokens: appendBraces(importDef) });
     }
 
     public function addFunctionExport(string internalName, string externalName) {
-        string funcDef = "(export \"" + externalName + "\"" +  " (func $" + internalName + "))";
-        self.exports.push(funcDef);
+        string[] exportDef = ["export", "\"" + externalName + "\""];
+        string[] funcDef = ["func", "$" + internalName];
+        exportDef.push(...appendBraces(funcDef));
+        self.exports.push({ tokens: appendBraces(exportDef) });
     }
 
     public function binary(Op op, Expression left, Expression right) returns Expression {
-        string? leftCode = left.code;
-        string? rightCode = right.code;
         string[]  binInst = [];
-        if leftCode != () && rightCode != () {
+        if left.tokens.length() > 0 && right.tokens.length() > 0 {
             string? operation = signedInt32Ops[op];
             if operation != () {
-                binInst.push("(" + operation);
-                binInst.push(leftCode);
-                binInst.push(rightCode);
-                binInst.push(")");
-                return { code : " ".'join(...binInst) };
+                binInst.push(operation);
+                binInst.push(...left.tokens);
+                binInst.push(...right.tokens);
+                return { tokens : appendBraces(binInst) };
             }
             else {
                 panic error("unimplemented");
             }
-        }
-        panic error("invalid");
-    }
-
-    public function unary(Op op, Expression value) returns Expression {
-        string? code = value.code;
-        string[]  binInst = [];
-        if code != () {
-            if op == "No" {
-                binInst.push("(i32.add");
-            }
-            else {
-                panic error("unimplemented");
-            }
-            binInst.push(code);
-            binInst.push(")");
-            return { code : " ".'join(...binInst) };
         }
         panic error("invalid");
     }
 
     public function localSet(int index, Expression value) returns Expression {
-        string? code = value.code;
-        if code != () {
-            return { code : "(local.set $" + index.toString() + code + " )" };
+        string[] inst = ["local.set", "$" + index.toString()];
+        if value.tokens.length() > 0 {
+            inst.push(...value.tokens);
+            return { tokens: appendBraces(inst) };
         }
         panic error("invalid");
     }
@@ -223,9 +186,6 @@ public class Module {
     }
 
     public function addIf(Expression condition, Expression ifTrue, Expression? ifFalse = ()) returns Expression {
-        WasmBlock ifBody ={
-            body: [ifTrue]
-        };
         WasmBlock? elseBody = ();
         if ifFalse != () {
             elseBody = {
@@ -234,102 +194,68 @@ public class Module {
         }
         If ifExpr = {
             condition: condition,
-            ifBody: ifBody,
+            ifBody: {
+                body: [ifTrue]
+            },
             elseBody: elseBody
         };
         return ifExpr;
     }
 
-    public function throw(string tag, Expression[] operands, int numOperands) returns Expression {
-        return { code: "(throw $" + tag + ")" };
+   public function throw(string tag, Expression[] operands, int numOperands) returns Expression {
+        return { tokens: appendBraces(["throw", "$" + tag]) };
     }
 
     public function try(string? name, Expression body, string[] catchTags, int numCatchTags, Expression[] catchBodies, int numCatchBodies, string? delegateTarget = ()) returns Expression {
-        return { code:"(try (do " + <string>body.code + "))" };
+        string[] tryBody = ["try"];
+        string[] doBody = ["do"];
+        doBody.push(...body.tokens);
+        tryBody.push(...appendBraces(doBody));
+        return { tokens: appendBraces(tryBody)};
     }
 
     public function addTag(string name, Type params, Type results) {
-        self.tags.push("(tag $" + name + ")");
+        self.tags.push({ tokens: appendBraces(["tag",  "$" + name]) });
     }
 
     // BinaryenModuleDispose and BinaryenModulePrint
     public function finish() returns string[] {
-        string[] module = [];
-        module.push("(module ");
-        foreach string imp in self.imports {
-            module.push("  " + imp);
+        string[] module = ["(module"];
+        foreach Expression imp in self.imports {
+            module.push(joinTokens(imp.tokens, 1));
         }
-        foreach string tag in self.tags {
-            module.push("  " + tag);
+        foreach Expression tag in self.tags {
+            module.push(joinTokens(tag.tokens, 1));
         }
-        foreach string exp in self.exports {
-            module.push("  " + exp);
+        foreach Expression exp in self.exports {
+            module.push(joinTokens(exp.tokens, 1));
         }
-        foreach Function func in self.functions {
-            string funcParams = "";
-            string localParam = "";
-            int varCount = 0;
-            foreach int i in 0...func.params.length() - 1 {
-                funcParams += "  (param $" + varCount.toString() + " " + func.params[i] + ")";
-                varCount += 1;
-            }
-            if func.results != "None" {
-                funcParams += " (result " + func.results.toString() + ")";
-            }
-            string funcDef = "  (func $" + func.name + funcParams;
-            module.push(funcDef);
-            foreach int i in 0...func.vars.length() - 1 {
-                localParam = "  (local $" + varCount.toString() + " " + func.vars[i] + ")";
-                module.push(localParam);
-                varCount += 1;
-            }
-            string? funcBody = func.body.code;
-            if funcBody != () {
-            string[] noSeperateCmd = ["local.get","return","br", "i32.const"];
+        foreach int i in 0..<self.functions.length() {
+            Function func = self.functions[i];
+            string[] signature = ["("];
+            signature.push(...func.signature);
+            module.push(joinTokens(signature, 1));
+            string[] currLine = [];
             int spaces = 1;
-            string cmd = "";
-            string currentCmd = "";
-            boolean cmdIn = false;
-                foreach string chr in funcBody {
-                if chr == "(" {
-                    if containCharacter(cmd) {
-                        module.push(cmd);
+            func.body.tokens.push(")");
+            if i == self.functions.length() - 1 {
+                func.body.tokens.push(")");
+            }
+            foreach string token in func.body.tokens {
+                if token == "(" {
+                    if currLine.length() > 0 {
+                        module.push(joinTokens(currLine));
                     }
                     spaces += 1;
-                    cmdIn = true;
-                    cmd = printSpaces(spaces);
-                    cmd += "(";
+                    currLine = [printSpaces(spaces)];
                 }
-                else if chr == ")" {
-                    if noSeperateCmd.filter(c => c == getCommand(currentCmd)).length() > 0 {
-                        cmd += ")";
-                        module.push(cmd);
-                        cmd = printSpaces(spaces);
-                        currentCmd = "";
-                    }
-                    else {
-                        if containCharacter(cmd) {
-                            module.push(cmd);
-                        }
-                        cmd = printSpaces(spaces);
-                        cmd += ")";
-                        module.push(cmd);
-                        cmd = "";
-                    }
+                else if token == ")" {
                     spaces -= 1;
                 }
-                else {
-                    if chr == " " && cmdIn {
-                        currentCmd = cmd;
-                        cmdIn = false;
-                    }
-                    cmd += chr;
-                    }
-                }
+                currLine.push(token);
             }
-            module.push(" )");
+            module.push(joinTokens(currLine));
         }
-        module.push(")");
         return module;
     }
 
@@ -338,26 +264,44 @@ public class Module {
 function printSpaces(int spaceCount) returns string {
     string spaces = "";
     foreach int i in 0...spaceCount - 1 {
-        spaces += " ";
+        spaces += "  ";
     }
     return spaces;
 }
 
-function containCharacter(string text) returns boolean {
-    foreach string chr in text {
-        if chr != " " {
-            return true;
-        }
+function appendBraces(string[] tokens) returns  string[] {
+    string[] updated = [];
+    if tokens.length() > 0 {
+        updated = ["("];
+        updated.push(...tokens);
+        updated.push(")");
     }
-    return false;
+    return updated;
 }
 
-function getCommand(string cmd) returns string {
-    string result = "";
-    foreach string chr in cmd {
-        if chr != " " && chr != "(" {
-            result += chr;
+function joinTokens(string[] tokens, int spaces = 0) returns string {
+    string line = printSpaces(spaces) + "";
+    boolean avoidSpace = false;
+    foreach string token in tokens {
+        if token == "(" {
+            avoidSpace = true;
+        }
+        else if token == ")" {
+            if line[line.length() - 1] == " " {
+                line = line.substring(0, line.length() - 1);
+            }
+        }
+        line += token;
+        if !avoidSpace {
+            line += " ";
+        }
+        else {
+            avoidSpace = false;
         }
     }
-    return result;
+    return line;
 }
+
+
+
+

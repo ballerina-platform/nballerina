@@ -20,11 +20,6 @@ public type Branch record {
     readonly int toId;
 };
 
-public type BlockBranchMap record {
-    Branch branch;
-    int blockId;
-};
-
 type SimpleShape record {
     Block inner;
     Shape? next = ();
@@ -49,9 +44,9 @@ type Shape SimpleShape|MultipleShape|LoopShape;
 public class Relooper {
     private Module module;
     table<Block> key(id) blocks = table [];
-    private int blockId = 1;
+    private int blockId = 0;
     private Shape? root = ();
-    private int shapeId = 1;
+    private int shapeId = 0;
 
     public function init(Module module) {
         self.module = module;
@@ -595,7 +590,7 @@ public class Relooper {
         return children;
     }
 
-    function makeBlockText(Expression[] result, int spacesCount) returns string {
+    function makeBlockText(Expression[] result) returns string[] {
         Expression curr;
         string[] currStr = [];
         while result.length() > 0 {
@@ -603,86 +598,52 @@ public class Relooper {
             if curr is WasmBlock {
                 string? name = curr.name;
                 if name != () {
-                    currStr.push("(block ");
+                    currStr.push("(", "block");
                     currStr.push(name);
                 }
                 else {
-                    currStr.push("(block ");
+                    currStr.push("(", "block");
                 }
                 foreach Expression expr in curr.body {
-                    currStr.push(self.makeBlockText([expr], spacesCount + 1));
+                    currStr.push(...self.makeBlockText([expr]));
                 }
                 currStr.push(")");
             }
             else if curr is WasmLoop {
                 string? name = curr.name;
                 if name != () {
-                    currStr.push("(loop ");
+                    currStr.push("(", "loop ");
                     currStr.push(name);
                 }
                 else {
-                    currStr.push("(loop ");
+                    currStr.push("(", "loop ");
                 }
                 foreach Expression expr in curr.loopBody {
-                    currStr.push(self.makeBlockText([expr], spacesCount + 1));
+                    currStr.push(...self.makeBlockText([expr]));
                 }
                 currStr.push(")");
             }
             else if curr is If {
                 If ifExpr = curr;
                 WasmBlock? elseBody = ifExpr.elseBody;
-                currStr.push("(if ");
-                string? conditionCode = ifExpr.condition.code;
-                if conditionCode != () {
-                    currStr.push(conditionCode);
-                }
-                currStr.push(self.makeBlockText([ifExpr.ifBody], spacesCount + 1));
+                currStr.push("(", "if ");
+                currStr.push(...ifExpr.condition.tokens);
+                currStr.push(...self.makeBlockText([ifExpr.ifBody]));
                 if elseBody != () {
-                    currStr.push(self.makeBlockText([elseBody], spacesCount + 1));
+                    currStr.push(...self.makeBlockText([elseBody]));
                 }
                 currStr.push(")");
             }
             else if curr is Break {
-                currStr.push("(br ");
+                currStr.push("(", "br ");
                 currStr.push(curr.label);
                 currStr.push(")");
             }
-            else if curr is WasmTry {
-                string? name = curr.name;
-                if name != () {
-                    currStr.push("(try ");
-                    currStr.push(name);
-                }
-                else {
-                    currStr.push("(try ");
-                }
-                currStr.push("(do");
-                currStr.push(self.makeBlockText([curr.body], spacesCount + 1));
-                currStr.push(")");
-                foreach int i in 0..<curr.catchBodies.length() {
-                    if curr.catchBodies.length() == i + 1 {
-                        currStr.push("(catch $" + curr.catchTags[i]);
-                    }
-                    else {
-                        currStr.push("(catch_all ");
-                    }
-                    currStr.push(self.makeBlockText([curr.catchBodies[i]], spacesCount + 1));
-                    currStr.push(")");
-                }
-                string? delegateTarget = curr.delegateTarget;
-                if delegateTarget != () {
-                    currStr.push("(delegate " + delegateTarget + ")");
-                }
-                currStr.push(")");
-            }
             else {
-                string? code = curr.code;
-                if code != () {
-                    currStr.push(code);
-                }
+                currStr.push(...curr.tokens);
             }
         }
-        return "".'join(...currStr);
+        return currStr;
     }
 
     public function render(Block body, int labelHelper) returns Expression {
@@ -692,7 +653,7 @@ public class Relooper {
         if parent != () {
             result = self.renderShape(parent);
         }
-        return {code: self.makeBlockText(result, 1)};
+        return {tokens:  self.makeBlockText(result)};
     }
 
     public function reset(){
