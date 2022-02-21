@@ -908,8 +908,7 @@ function lookupVarRefForAssign(StmtContext cx, Environment env, string varName, 
 function codeGenAssign(StmtContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(block, env, semType, expr);
     if result !is bir:TempRegister|bir:VarRegister|bir:FinalRegister {
-        // pr-todo: add better error message here
-        panic error("unexpected register type from :" + expr.toString());
+        panic error("can't assign to param or narrowed registers");
     }
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
@@ -1027,8 +1026,7 @@ function codeGenCompoundAssignToVar(StmtContext cx,
     var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
     var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(env), startBlock, op, pos, result, rexpr);
     if result !is bir:TempRegister|bir:VarRegister {
-        // pr-todo: add better error message here
-        panic error("unexpected register type from :" + rexpr.toString());
+        panic error("result must be a temp or var register");
     }
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
