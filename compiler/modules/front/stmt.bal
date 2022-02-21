@@ -376,7 +376,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     s:RangeExpr range = stmt.range;
     var { result: lower, block: evalUpper } = check cx.codeGenExprForInt(startBlock, env, range.lower);
     var { result: upper, block: initLoopVar } = check cx.codeGenExprForInt(evalUpper, env, range.upper);
-    bir:Register loopVar = cx.createVarRegister(t:INT, varName, stmt.namePos);
+    bir:VarRegister loopVar = cx.createVarRegister(t:INT, varName, stmt.namePos);
     bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
@@ -904,6 +904,10 @@ function lookupVarRefForAssign(StmtContext cx, Environment env, string varName, 
 
 function codeGenAssign(StmtContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(block, env, semType, expr);
+    if result !is bir:TempRegister|bir:VarRegister|bir:FinalRegister {
+        // pr-todo: add better error message here
+        panic error("unexpected register type from :" + expr.toString());
+    }
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return nextBlock;
@@ -1019,6 +1023,10 @@ function codeGenCompoundAssignToVar(StmtContext cx,
                                     Position pos) returns CodeGenError|StmtEffect {
     var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
     var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(env), startBlock, op, pos, result, rexpr);
+    if result !is bir:TempRegister|bir:VarRegister|bir:FinalRegister {
+        // pr-todo: add better error message here
+        panic error("unexpected register type from :" + rexpr.toString());
+    }
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return { block: nextBlock, assignments };
@@ -1161,7 +1169,7 @@ function codeGenExprForCond(StmtContext cx, bir:BasicBlock bb, Environment env, 
         result = value;
     }
     else if flags != 0 {
-        bir:Register reg = cx.createTmpRegister(t:BOOLEAN);
+        bir:TempRegister reg = cx.createTmpRegister(t:BOOLEAN);
         bir:AssignInsn insn = { result: reg, operand: { value, semType: t:BOOLEAN }, pos: expr.startPos };
         block.insns.push(insn);
         result = reg;

@@ -559,7 +559,7 @@ public type CallInsn readonly & record {|
 public type AssignInsn readonly & record {|
     *InsnBase;
     INSN_ASSIGN name = INSN_ASSIGN;
-    Register result;
+    VarRegister|FinalRegister|TempRegister result;
     Operand operand;
 |};
 
