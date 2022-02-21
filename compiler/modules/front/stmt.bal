@@ -70,8 +70,7 @@ class StmtContext {
     }
 
     function createVarRegister(bir:SemType t, string name, Position pos) returns bir:VarRegister {
-        bir:VarRegister reg = bir:createVarRegister(self.code, t, name, pos);
-        return reg;
+        return bir:createVarRegister(self.code, t, name, pos);
     }
 
     function createFinalRegister(bir:SemType t, string name, Position pos) returns bir:FinalRegister {
@@ -83,8 +82,7 @@ class StmtContext {
     }
 
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TempRegister {
-        bir:TempRegister reg = bir:createTempRegister(self.code, t, (), pos);
-        return reg;
+        return bir:createTempRegister(self.code, t, (), pos);
     }
 
     function nextRegisterNumber() returns int {
@@ -408,9 +406,10 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     assignments.push(...cx.onContinueAssignments());
     assignments.push(...cx.onBreakAssignments());
     if loopStep != () {
-        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: loopVar };
-        loopStep.insns.push(increment);
-        loopStep.insns.push(branchToLoopHead);
+        bir:TempRegister nextLoopVal = cx.createTmpRegister(t:INT);
+        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: nextLoopVal };
+        bir:AssignInsn incrementAssing = { result: loopVar, operand: nextLoopVal, pos: stmt.kwPos };
+        loopStep.insns.push(increment, incrementAssing, branchToLoopHead);
     }
     cx.popLoopContext();
     // XXX shouldn't we be passing up assignments here
@@ -908,7 +907,7 @@ function lookupVarRefForAssign(StmtContext cx, Environment env, string varName, 
 
 function codeGenAssign(StmtContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(block, env, semType, expr);
-    if result !is bir:AssignableRegister|bir:FinalRegister {
+    if result !is bir:TempRegister|bir:VarRegister|bir:FinalRegister {
         // pr-todo: add better error message here
         panic error("unexpected register type from :" + expr.toString());
     }
@@ -1027,7 +1026,7 @@ function codeGenCompoundAssignToVar(StmtContext cx,
                                     Position pos) returns CodeGenError|StmtEffect {
     var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
     var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(env), startBlock, op, pos, result, rexpr);
-    if result !is bir:AssignableRegister {
+    if result !is bir:TempRegister|bir:VarRegister {
         // pr-todo: add better error message here
         panic error("unexpected register type from :" + rexpr.toString());
     }
