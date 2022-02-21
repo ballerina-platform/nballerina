@@ -42,7 +42,7 @@ function preparseBracketedTypeDesc(Tokenizer tok, CLOSE_BRACKET close) returns b
     if t == () {
         return tok.err("incomplete statement");
     }
-    return t != "." && t != "=";
+    return t is [IDENTIFIER, string] || t == "_" || t == "|" || t == "&"; 
 }
 
 function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Syntax|boolean? {
@@ -85,10 +85,11 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
 
 // Returns `true` if a statement that starts with an unqualified identifier followed by `[` begins a type descriptor rather than an expression
 function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
-    check tok.expect("[");
+    check tok.advance();
     if tok.currentIsNoSpaceColon() {
         check tok.advance();
         _ = check tok.expectIdentifier();
     }
+    check tok.expect("[");
     return preparseBracketedTypeDesc(tok, "]");
 }
