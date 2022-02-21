@@ -462,7 +462,7 @@ function codeGenComplementExpr(ExprContext cx, bir:BasicBlock nextBlock, Positio
         t:SemType resultType = (flags & VALUE_SINGLE_SHAPE) != 0 ? t:singleton(cx.mod.tc, value) : t:INT;
         return { result: { value, semType: resultType }, block: nextBlock };
     }
-    bir:Register result = cx.createTmpRegister(t:INT, pos);
+    bir:TempRegister result = cx.createTmpRegister(t:INT, pos);
     bir:IntBitwiseBinaryInsn insn = { op: "^", pos, operands: [singletonIntOperand(cx.mod.tc, -1), operand], result };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
@@ -470,7 +470,7 @@ function codeGenComplementExpr(ExprContext cx, bir:BasicBlock nextBlock, Positio
 
 function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
     ArithmeticOperand? arith = arithmeticOperand(operand);
-    bir:Register result;
+    bir:TempRegister result;
     bir:Insn insn;
     if arith is [t:UT_INT, bir:IntOperand] {
         bir:IntOperand intOperand = arith[1];
@@ -524,7 +524,7 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
 
 function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, Position pos, bir:Operand lhs, bir:Operand rhs) returns CodeGenError|ExprEffect {
     ArithmeticOperandPair? pair = arithmeticOperandPair(lhs, rhs);
-    bir:Register result;
+    bir:TempRegister result;
     if pair is IntOperandPair {
         readonly & bir:IntOperand[2] operands = pair[1];
         var [leftVal, leftFlags] = intOperandValue(operands[0]);
@@ -647,7 +647,7 @@ function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, 
     if flags != 0 {
         return constExprEffect(cx, nextBlock, !value, flags);
     }
-    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:TempRegister result = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:BooleanNotInsn insn = { operand: <bir:Register>operand, result, pos };
     nextBlock.insns.push(insn);
     [ifTrue, ifFalse] = [ifFalse, ifTrue];
@@ -812,7 +812,7 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
         }
         return { result: { value, semType: resultType }, block: bb };
     }
-    bir:Register result = cx.createTmpRegister(resultType, pos);
+    bir:TempRegister result = cx.createTmpRegister(resultType, pos);
     bir:IntBitwiseBinaryInsn insn = { op, pos, operands: [lhs, rhs], result };
     bb.insns.push(insn);
     return { result, block: bb };

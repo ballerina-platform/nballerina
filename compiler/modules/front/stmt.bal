@@ -904,7 +904,7 @@ function lookupVarRefForAssign(StmtContext cx, Environment env, string varName, 
 
 function codeGenAssign(StmtContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(block, env, semType, expr);
-    if result !is bir:TempRegister|bir:VarRegister|bir:FinalRegister {
+    if result !is bir:AssignableRegister {
         // pr-todo: add better error message here
         panic error("unexpected register type from :" + expr.toString());
     }
@@ -1023,7 +1023,7 @@ function codeGenCompoundAssignToVar(StmtContext cx,
                                     Position pos) returns CodeGenError|StmtEffect {
     var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
     var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(env), startBlock, op, pos, result, rexpr);
-    if result !is bir:TempRegister|bir:VarRegister|bir:FinalRegister {
+    if result !is bir:AssignableRegister {
         // pr-todo: add better error message here
         panic error("unexpected register type from :" + rexpr.toString());
     }

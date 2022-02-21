@@ -151,6 +151,7 @@ public type RegisterBase record {|
 |};
 
 public type Register TempRegister|ParamRegister|VarRegister|FinalRegister|NarrowedRegister;
+public type AssignableRegister TempRegister|VarRegister|FinalRegister; // these are registers we can assign values to
 public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
 
 public type DeclRegister record {|
@@ -335,7 +336,7 @@ public type IntArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_ARITHMETIC_BINARY name = INSN_INT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Register result;
+    AssignableRegister result;
     IntOperand[2] operands;
 |};
 
@@ -343,7 +344,7 @@ public type IntArithmeticBinaryInsn readonly & record {|
 public type StringConcatInsn readonly & record {|
     *InsnBase;
     INSN_STR_CONCAT name = INSN_STR_CONCAT;
-    Register result;
+    AssignableRegister result;
     StringOperand[2] operands;
 |};
 
@@ -354,7 +355,7 @@ public type IntNoPanicArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY name = INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Register result;
+    AssignableRegister result;
     IntOperand[2] operands;
 |};
 
@@ -362,7 +363,7 @@ public type IntBitwiseBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_BITWISE_BINARY name = INSN_INT_BITWISE_BINARY;
     BitwiseBinaryOp op;
-    Register result;
+    AssignableRegister result;
     IntOperand[2] operands;
 |};
 
@@ -370,7 +371,7 @@ public type IntBitwiseBinaryInsn readonly & record {|
 public type BooleanNotInsn readonly & record {|
     *InsnBase;
     INSN_BOOLEAN_NOT name = INSN_BOOLEAN_NOT;
-    Register result;
+    AssignableRegister result;
     Register operand;
 |};
 
@@ -379,7 +380,7 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_FLOAT_ARITHMETIC_BINARY name = INSN_FLOAT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Register result;
+    AssignableRegister result;
     FloatOperand[2] operands;
 |};
 
@@ -389,21 +390,21 @@ public type DecimalArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_DECIMAL_ARITHMETIC_BINARY name = INSN_DECIMAL_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Register result;
+    AssignableRegister result;
     DecimalOperand[2] operands;
 |};
 
 public type FloatNegateInsn readonly & record {|
     *InsnBase;
     INSN_FLOAT_NEGATE name = INSN_FLOAT_NEGATE;
-    Register result;
+    AssignableRegister result;
     Register operand;
 |};
 
 public type DecimalNegateInsn readonly & record {|
     *InsnBase;
     INSN_DECIMAL_NEGATE name = INSN_DECIMAL_NEGATE;
-    Register result;
+    AssignableRegister result;
     Register operand;
 |};
 
@@ -559,7 +560,7 @@ public type CallInsn readonly & record {|
 public type AssignInsn readonly & record {|
     *InsnBase;
     INSN_ASSIGN name = INSN_ASSIGN;
-    VarRegister|FinalRegister|TempRegister result;
+    AssignableRegister result;
     Operand operand;
 |};
 
