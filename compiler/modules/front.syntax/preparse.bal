@@ -16,15 +16,16 @@ final readonly & map<CLOSE_BRACKET> closeBracketMap = {
 // (implying that the statement is a local variable declaration rather than a method call).
 // This is a preparse: the statement will be parsed again according to the value returned.
 function preparseParenTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
+    check tok.expect("(");
     return preparseBracketedTypeDesc(tok, ")");
 }
 
 function preparseTupleTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
+    check tok.expect("[");
     return preparseBracketedTypeDesc(tok, "]");
 }
 
 function preparseBracketedTypeDesc(Tokenizer tok, CLOSE_BRACKET close) returns boolean|err:Syntax {
-    check tok.advance();
     boolean? parenResult = check preparseBracketed(tok, close);
     if parenResult != () {
         return parenResult;
@@ -41,7 +42,7 @@ function preparseBracketedTypeDesc(Tokenizer tok, CLOSE_BRACKET close) returns b
     if t == () {
         return tok.err("incomplete statement");
     }
-    return t != ".";
+    return t != "." && t != "=";
 }
 
 function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Syntax|boolean? {
@@ -84,46 +85,10 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
 
 // Returns `true` if a statement that starts with an unqualified identifier followed by `[` begins a type descriptor rather than an expression
 function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
-    check tok.advance();
+    check tok.expect("[");
     if tok.currentIsNoSpaceColon() {
         check tok.advance();
         _ = check tok.expectIdentifier();
     }
-    check tok.expect("[");
-    while true {
-        Token? t = tok.current();
-        match t {
-            "]" => {
-                return PREPARSE_TYPE_DESC;
-            }
-            "(" => {
-                check tok.advance();
-                if tok.current() != ")" {
-                    return PREPARSE_EXPR;
-                }
-                check tok.advance();
-            }
-            [IDENTIFIER, _]
-            | [STRING_LITERAL, _]
-            | "null"
-            | "true"|"false"
-            | [DECIMAL_NUMBER, _]
-            | [HEX_INT_LITERAL, _]
-            | [DECIMAL_FP_NUMBER, _, _] => {
-                check tok.advance();
-            }
-            _ => {
-                return PREPARSE_EXPR;
-            }
-        }
-        if tok.current() != "]" {
-            return false;
-        }
-        check tok.advance();
-        if tok.current() == "[" {
-            check tok.advance();
-            continue;
-        }
-        return tok.current() is [IDENTIFIER, string];
-    }
+    return preparseBracketedTypeDesc(tok, "]");
 }
