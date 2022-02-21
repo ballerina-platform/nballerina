@@ -368,7 +368,7 @@ function codeGenNilLift(ExprContext cx, t:SemType? expected, s:Expr[] operands, 
     foreach int i in 0 ..< newOperands.length() {
         bir:Operand operand = newOperands[i];
         if operand is bir:Register && t:containsNil(operand.semType) {
-            bir:Register isNil = cx.createTmpRegister(t:BOOLEAN);
+            bir:TempRegister isNil = cx.createTmpRegister(t:BOOLEAN);
             bir:TypeTestInsn operandTypeTest = { operand, semType: t:NIL , result: isNil, negated: false, pos };
             currentBlock.insns.push(operandTypeTest);
 
@@ -417,7 +417,7 @@ function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register ma
             memberType = t:union(memberType, t:NIL);
         }
     }
-    bir:Register result = cx.createTmpRegister(memberType, pos);
+    bir:TempRegister result = cx.createTmpRegister(memberType, pos);
     bir:Insn insn = { name, result, operands: [mapping, k], pos };
     block.insns.push(insn);
     return { result, block };
@@ -439,7 +439,7 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
                 return cx.semanticErr("type of member access is never", pos);
             }
             // XXX this isn't correct for singletons
-            bir:Register result = cx.createTmpRegister(memberType, pos);
+            bir:TempRegister result = cx.createTmpRegister(memberType, pos);
             bir:ListGetInsn insn = { result, operands: [l, r], pos, fill };
             nextBlock.insns.push(insn);
             return { result, block: nextBlock };
@@ -833,7 +833,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
     if t:isEmpty(cx.mod.tc, resultType) {
         return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
-    bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
+    bir:TempRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
@@ -871,7 +871,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
         operands.push(operand);
         fieldNames.push(name);
     }
-    bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
+    bir:TempRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
@@ -934,7 +934,7 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
 
 function codeGenErrorConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr message, Position pos) returns CodeGenError|ExprEffect {
     var { result: operand, block } = check codeGenExprForString(cx, bb, message);
-    bir:Register result = cx.createTmpRegister(t:ERROR, pos);
+    bir:TempRegister result = cx.createTmpRegister(t:ERROR, pos);
     bir:ErrorConstructInsn insn = { result, operand, pos };
     block.insns.push(insn);
     return { result, block };
@@ -957,7 +957,7 @@ function codeGenRelationalExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? exp
         // XXX we only need the shape
         return constExprEffect(cx, nextBlock, check relationalEval(cx, pos, op, leftValue, rightValue), resultFlags);
     }
-    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:TempRegister result = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:CompareInsn insn = { op, pos, operands: [l, r], result };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
@@ -995,7 +995,7 @@ function codeGenEqualityExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
         }
     }
     
-    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:TempRegister result = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:EqualityInsn insn = { op, pos, operands: [l, r], result };
     nextBlock.insns.push(insn);
     [Binding, t:SingleValue]? narrowingCompare = ();
@@ -1080,7 +1080,7 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
     if t:isEmpty(cx.mod.tc, resultType) {
         return cx.semanticErr("type cast cannot succeed", tcExpr.opPos);
     }
-    bir:Register result = cx.createTmpRegister(resultType, tcExpr.opPos);
+    bir:TempRegister result = cx.createTmpRegister(resultType, tcExpr.opPos);
     bir:Register reg = <bir:Register>operand;
     bir:TypeCastInsn insn = { operand: reg, semType: toType, pos: tcExpr.opPos, result };
     nextBlock.insns.push(insn);
@@ -1116,7 +1116,7 @@ function codeGenNumericConvert(ExprContext cx, bir:BasicBlock nextBlock, bir:Ope
         }
     }
     else if operand is bir:Register { // always true but does needed narrowing
-        bir:Register result = cx.createTmpRegister(resultType, pos);
+        bir:TempRegister result = cx.createTmpRegister(resultType, pos);
         if toNumType == t:INT {
             bir:ConvertToIntInsn insn = { operand, result, pos };
             nextBlock.insns.push(insn);
@@ -1153,7 +1153,7 @@ function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
     if t:isEmpty(tc, intersect) {
         return { result: singletonOperand(cx, negated), block: nextBlock };
     }
-    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:TempRegister result = cx.createTmpRegister(t:BOOLEAN, pos);
     // Either diff or intersect should be empty if the operand is singleton
     bir:Register reg = <bir:Register>operand;
     bir:TypeTestInsn insn = { operand: reg, semType, result, negated, pos };
@@ -1250,7 +1250,7 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
 
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, bir:Operand[] args, Position pos) returns ExprEffect {
     t:SemType returnType = func.signature.returnType;
-    bir:Register reg = cx.createTmpRegister(returnType, pos);
+    bir:TempRegister reg = cx.createTmpRegister(returnType, pos);
     bir:CallInsn call = {
         func,
         result: reg,

@@ -151,7 +151,7 @@ public type RegisterBase record {|
 |};
 
 public type Register TempRegister|ParamRegister|VarRegister|FinalRegister|NarrowedRegister;
-public type AssignableRegister TempRegister|VarRegister|FinalRegister; // these are registers we can assign values to
+public type AssignableRegister TempRegister|VarRegister; // these are registers we can assign values to
 public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
 
 public type DeclRegister record {|
@@ -188,9 +188,17 @@ public type FinalRegister readonly & record {|
     FINAL_REGISTER_KIND kind;
 |};
 
+// pr-todo: factor common code from fallowings
 public function createVarRegister(FunctionCode code, SemType semType, string name, Position pos) returns VarRegister {
     int number = code.registers.length();
     VarRegister r = { number, semType, name, pos, kind: VAR_REGISTER_KIND };
+    code.registers.push(r);
+    return r;
+}
+
+public function createFinalRegister(FunctionCode code, SemType semType, string name, Position pos) returns FinalRegister {
+    int number = code.registers.length();
+    FinalRegister r = { number, semType, name, pos, kind: FINAL_REGISTER_KIND };
     code.registers.push(r);
     return r;
 }
@@ -417,7 +425,7 @@ public type DecimalNegateInsn readonly & record {|
 public type ConvertToIntInsn readonly & record {|
     *InsnBase;
     INSN_CONVERT_TO_INT name = INSN_CONVERT_TO_INT;
-    Register result;
+    AssignableRegister result;
     Register operand;
 |};
 
@@ -430,7 +438,7 @@ public type ConvertToIntInsn readonly & record {|
 public type ConvertToFloatInsn readonly & record {|
     *InsnBase;
     INSN_CONVERT_TO_FLOAT name = INSN_CONVERT_TO_FLOAT;
-    Register result;
+    AssignableRegister result;
     Register operand;
 |};
 
@@ -443,7 +451,7 @@ public type ConvertToFloatInsn readonly & record {|
 public type ConvertToDecimalInsn readonly & record {|
     *InsnBase;
     INSN_CONVERT_TO_DECIMAL name = INSN_CONVERT_TO_DECIMAL;
-    Register result;
+    AssignableRegister result;
     Register operand;
 |};
 
@@ -453,7 +461,7 @@ public type CompareInsn readonly & record {|
     *InsnBase;
     INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
-    Register result;
+    AssignableRegister result;
     Operand[2] operands;
 |};
 
@@ -462,7 +470,7 @@ public type ListConstructInsn readonly & record {|
     *InsnBase;
     INSN_LIST_CONSTRUCT_RW name = INSN_LIST_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
-    Register result;
+    AssignableRegister result;
     Operand[] operands;
 |};
 
@@ -473,7 +481,7 @@ public type ListGetInsn readonly & record {|
     INSN_LIST_GET name = INSN_LIST_GET;
     // fill must be false unless the result type is a subtype of list or mapping
     boolean fill = false;  // if true do a filling read
-    Register result;
+    AssignableRegister result;
     [Register, IntOperand] operands;
 |};
 
@@ -490,7 +498,7 @@ public type MappingConstructInsn readonly & record {|
     *InsnBase;
     INSN_MAPPING_CONSTRUCT_RW name = INSN_MAPPING_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
-    Register result;
+    AssignableRegister result;
     string[] fieldNames;
     Operand[] operands;
 |};
@@ -502,7 +510,7 @@ public type MappingConstructInsn readonly & record {|
 public type MappingGetInsn readonly & record {|
     *InsnBase;
     INSN_MAPPING_GET|INSN_MAPPING_FILLING_GET name;
-    Register result;
+    AssignableRegister result;
     [Register, StringOperand] operands;
 |};
 
@@ -519,7 +527,7 @@ public type MappingSetInsn readonly & record {|
 public type ErrorConstructInsn readonly & record {|
     *InsnBase;
     INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
-    Register result;
+    AssignableRegister result;
     StringOperand operand;
 |};
 
@@ -533,7 +541,7 @@ public type EqualityInsn readonly & record {|
     *InsnBase;
     INSN_EQUALITY name = INSN_EQUALITY;
     EqualityOp op;
-    Register result;
+    AssignableRegister result;
     Operand[2] operands;
 |};
 
@@ -549,7 +557,7 @@ public type CallInsn readonly & record {|
     *InsnBase;
     # Position in the source that resulted in the instruction
     INSN_CALL name = INSN_CALL;
-    Register result;
+    AssignableRegister result;
     FunctionOperand func;
     Operand[] args;
 |};
@@ -560,7 +568,7 @@ public type CallInsn readonly & record {|
 public type AssignInsn readonly & record {|
     *InsnBase;
     INSN_ASSIGN name = INSN_ASSIGN;
-    AssignableRegister result;
+    AssignableRegister|FinalRegister result;
     Operand operand;
 |};
 
@@ -575,7 +583,7 @@ public type AssignInsn readonly & record {|
 public type TypeCastInsn readonly & record {|
     *InsnBase;
     INSN_TYPE_CAST name = INSN_TYPE_CAST;
-    Register result;
+    AssignableRegister result;
     Register operand;
     SemType semType;
 |};
@@ -593,7 +601,7 @@ public type TypeTestInsn readonly & record {|
     INSN_TYPE_TEST name = INSN_TYPE_TEST;
     # Gets result of test.
     # Must be exactly type boolean
-    Register result;
+    AssignableRegister result;
     # Holds value to be tested.
     Register operand;
     SemType semType;
@@ -685,7 +693,7 @@ public type PanicInsn readonly & record {|
 public type CatchInsn readonly & record {|
     *InsnBase;
     INSN_CATCH name = INSN_CATCH;
-    Register result;
+    AssignableRegister result;
 |};
 
 # Conditionally branch to one of two labels based on a boolean operand.
