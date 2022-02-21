@@ -200,6 +200,11 @@ public function createNarrrowedRegister(FunctionCode code, SemType semType, stri
     return r;
 }
 
+public function createParamRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns ParamRegister {
+    ParamRegister r = <ParamRegister>createRegister(code, semType, PARAM_REGISTER_KIND, name, pos);
+    return r;
+}
+
 public function createTempRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns TempRegister {
     TempRegister r = <TempRegister>createRegister(code, semType, TEMP_REGISTER_KIND, name, pos);
     return r;

@@ -81,6 +81,10 @@ class StmtContext {
         return bir:createNarrrowedRegister(self.code, t, name, pos);
     }
 
+    function createParamRegister(bir:SemType t, string? name, Position? pos) returns bir:ParamRegister {
+        return bir:createParamRegister(self.code, t, name, pos);
+    }
+
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TempRegister {
         return bir:createTempRegister(self.code, t, (), pos);
     }
@@ -218,7 +222,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     Binding? bindings = ();
     foreach int i in 0 ..< defn.params.length() {
         var param = defn.params[i];
-        bir:NarrowedRegister reg = cx.createNarrowedRegister(signature.paramTypes[i], param.name, param.namePos);
+        bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], param.name, param.namePos);
         bindings = { name: <string>param.name, reg, prev: bindings, isFinal: true };
     }
     var { block: endBlock } = check codeGenScope(cx, startBlock, { bindings }, defn.body);
