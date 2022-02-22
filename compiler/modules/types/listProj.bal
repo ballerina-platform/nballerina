@@ -27,9 +27,12 @@ function listProjBdd(Context cx, IntSubtype|true k, Bdd b, Conjunction? pos, Con
     }
 }
 
-public function listAllMemberTypes(Context cx, SemType t) returns [Range[], SemType[]] {
+final ListMemberTypes LIST_MEMBER_TYPES_ALL_TOP = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
+final ListMemberTypes LIST_MEMBER_TYPES_ALL_NEVER = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
+
+public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
     if t is UniformTypeBitSet {
-        return (t & LIST) != 0 ? [[{ min: 0, max: int:MAX_VALUE }], [TOP]] : [[{ min: 0, max: int:MAX_VALUE }], [NEVER]];
+        return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL_TOP : LIST_MEMBER_TYPES_ALL_NEVER;
     }
     else {
         return listMemberTypesUnion(listProjBddAllKeys(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()), 
@@ -39,7 +42,7 @@ public function listAllMemberTypes(Context cx, SemType t) returns [Range[], SemT
 
 function listProjBddAllKeys(Context cx, Bdd b, Conjunction? pos, Conjunction? neg) returns ListMemberTypes {
     if b is boolean {
-        return b ? listProjAll(cx, pos, neg) : [[{ min: 0, max: int:MAX_VALUE }], [NEVER]];
+        return b ? listProjAll(cx, pos, neg) : LIST_MEMBER_TYPES_ALL_NEVER;
     }
     else {
         return listMemberTypesUnion(listProjBddAllKeys(cx, b.left, and(b.atom, pos), neg),
