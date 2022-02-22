@@ -1030,7 +1030,7 @@ function codeGenCompoundAssignToVar(StmtContext cx,
     var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
     var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(env), startBlock, op, pos, result, rexpr);
     if result !is bir:TmpRegister|bir:VarRegister {
-        panic error("result must be a temp or var register");
+        panic error("result must be a tmp or var register");
     }
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
