@@ -136,8 +136,8 @@ public enum RegisterKind {
     PARAM_REGISTER_KIND,
     VAR_REGISTER_KIND,
     FINAL_REGISTER_KIND,
-    NARRROWED_REGISTER_KIND,
-    TEMP_REGISTER_KIND
+    NARRROW_REGISTER_KIND,
+    TMP_REGISTER_KIND
 }
 
 public type RegisterBase record {|
@@ -150,7 +150,7 @@ public type RegisterBase record {|
     RegisterKind kind;
 |};
 
-public type Register TempRegister|ParamRegister|VarRegister|FinalRegister|NarrowedRegister;
+public type Register TmpRegister|ParamRegister|VarRegister|FinalRegister|NarrowRegister;
 public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
 
 public type DeclRegister record {|
@@ -160,14 +160,14 @@ public type DeclRegister record {|
     DeclRegisterKind kind;
 |};
 
-public type TempRegister readonly & record {|
+public type TmpRegister readonly & record {|
     *RegisterBase;
-    TEMP_REGISTER_KIND kind;
+    TMP_REGISTER_KIND kind;
 |};
 
-public type NarrowedRegister readonly & record {|
+public type NarrowRegister readonly & record {|
     *RegisterBase;
-    NARRROWED_REGISTER_KIND kind;
+    NARRROW_REGISTER_KIND kind;
 |};
 
 public type ParamRegister readonly & record {|
@@ -195,8 +195,8 @@ public function createFinalRegister(FunctionCode code, SemType semType, string n
     return r;
 }
 
-public function createNarrrowedRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns NarrowedRegister {
-    NarrowedRegister r = <NarrowedRegister>createRegister(code, semType, NARRROWED_REGISTER_KIND, name, pos);
+public function createNarrrowRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns NarrowRegister {
+    NarrowRegister r = <NarrowRegister>createRegister(code, semType, NARRROW_REGISTER_KIND, name, pos);
     return r;
 }
 
@@ -205,8 +205,8 @@ public function createParamRegister(FunctionCode code, SemType semType, string? 
     return r;
 }
 
-public function createTempRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns TempRegister {
-    TempRegister r = <TempRegister>createRegister(code, semType, TEMP_REGISTER_KIND, name, pos);
+public function createTmpRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns TmpRegister {
+    TmpRegister r = <TmpRegister>createRegister(code, semType, TMP_REGISTER_KIND, name, pos);
     return r;
 }
 
@@ -277,6 +277,11 @@ public type InsnBase record {
     Position pos;
 };
 
+public type ResultInsnBase record {|
+    *InsnBase;
+    TmpRegister result;
+|};
+
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |FloatArithmeticBinaryInsn|FloatNegateInsn
@@ -342,18 +347,16 @@ public function operandHasType(t:Context tc, Operand operand, t:SemType semType)
 # Perform a arithmetic operand on ints with two operands.
 # This is a PPI.
 public type IntArithmeticBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_INT_ARITHMETIC_BINARY name = INSN_INT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    TempRegister result;
     IntOperand[2] operands;
 |};
 
 # Concatenate strings, returns a new string
 public type StringConcatInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_STR_CONCAT name = INSN_STR_CONCAT;
-    TempRegister result;
     StringOperand[2] operands;
 |};
 
@@ -361,59 +364,52 @@ public type StringConcatInsn readonly & record {|
 # It is an optimization to be used only when the compiler can prove that a panic is impossible;
 # the NO_PANIC version of % must not be used if first operand is int:MIN_VALUE and second operand is -1.
 public type IntNoPanicArithmeticBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY name = INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    TempRegister result;
     IntOperand[2] operands;
 |};
 
 public type IntBitwiseBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_INT_BITWISE_BINARY name = INSN_INT_BITWISE_BINARY;
     BitwiseBinaryOp op;
-    TempRegister result;
     IntOperand[2] operands;
 |};
 
 # Perform logical not operation on a boolean.
 public type BooleanNotInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_BOOLEAN_NOT name = INSN_BOOLEAN_NOT;
-    TempRegister result;
     Register operand;
 |};
 
 // This is not a PPI
 public type FloatArithmeticBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_FLOAT_ARITHMETIC_BINARY name = INSN_FLOAT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    TempRegister result;
     FloatOperand[2] operands;
 |};
 
 // This panics for overflows, invalid decimals, divide by zero.
 // So this is a PPI.
 public type DecimalArithmeticBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_DECIMAL_ARITHMETIC_BINARY name = INSN_DECIMAL_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    TempRegister result;
     DecimalOperand[2] operands;
 |};
 
 public type FloatNegateInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_FLOAT_NEGATE name = INSN_FLOAT_NEGATE;
-    TempRegister result;
     Register operand;
 |};
 
 public type DecimalNegateInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_DECIMAL_NEGATE name = INSN_DECIMAL_NEGATE;
-    TempRegister result;
     Register operand;
 |};
 
@@ -424,9 +420,8 @@ public type DecimalNegateInsn readonly & record {|
 # where T is the operand type.
 # This panics if the conversion cannot be performed, so is a PPI.
 public type ConvertToIntInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_CONVERT_TO_INT name = INSN_CONVERT_TO_INT;
-    TempRegister result;
     Register operand;
 |};
 
@@ -437,9 +432,8 @@ public type ConvertToIntInsn readonly & record {|
 # where T is the operand type.
 # This is not a PPI.
 public type ConvertToFloatInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_CONVERT_TO_FLOAT name = INSN_CONVERT_TO_FLOAT;
-    TempRegister result;
     Register operand;
 |};
 
@@ -450,39 +444,35 @@ public type ConvertToFloatInsn readonly & record {|
 # where T is the operand type.
 # This panics if the conversion cannot be performed, so is a PPI.
 public type ConvertToDecimalInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_CONVERT_TO_DECIMAL name = INSN_CONVERT_TO_DECIMAL;
-    TempRegister result;
     Register operand;
 |};
 
 # This does ordered comparison
 # Equality and inequality are done by equal
 public type CompareInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
-    TempRegister result;
     Operand[2] operands;
 |};
 
 # Constructs a new mutable list value.
 public type ListConstructInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_LIST_CONSTRUCT_RW name = INSN_LIST_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
-    TempRegister result;
     Operand[] operands;
 |};
 
 # Gets a member of a list at a specified index.
 # This is a PPI (since the index may be out of bounds).
 public type ListGetInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_LIST_GET name = INSN_LIST_GET;
     // fill must be false unless the result type is a subtype of list or mapping
     boolean fill = false;  // if true do a filling read
-    TempRegister result;
     [Register, IntOperand] operands;
 |};
 
@@ -496,10 +486,9 @@ public type ListSetInsn readonly & record {|
 
 # Constructs a new mutable list value.
 public type MappingConstructInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_MAPPING_CONSTRUCT_RW name = INSN_MAPPING_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
-    TempRegister result;
     string[] fieldNames;
     Operand[] operands;
 |};
@@ -509,9 +498,8 @@ public type MappingConstructInsn readonly & record {|
 # INSN_MAPPING_FILLING_GET fills if there is no such member; this is a PPI
 # The filling version 
 public type MappingGetInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_MAPPING_GET|INSN_MAPPING_FILLING_GET name;
-    TempRegister result;
     [Register, StringOperand] operands;
 |};
 
@@ -526,9 +514,8 @@ public type MappingSetInsn readonly & record {|
 # Constructs an error value.
 # Operand must be of type string.
 public type ErrorConstructInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
-    TempRegister result;
     StringOperand operand;
 |};
 
@@ -539,10 +526,9 @@ public type ErrorConstructInsn readonly & record {|
 // Should this mean this is a PPI? Should we distinguish these as different
 // kind of instruction.
 public type EqualityInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_EQUALITY name = INSN_EQUALITY;
     EqualityOp op;
-    TempRegister result;
     Operand[2] operands;
 |};
 
@@ -555,10 +541,9 @@ public type EqualityInsn readonly & record {|
 # XXX This does not handle functions that don't return
 # (i.e. with return type of never)
 public type CallInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     # Position in the source that resulted in the instruction
     INSN_CALL name = INSN_CALL;
-    TempRegister result;
     FunctionOperand func;
     Operand[] args;
 |};
@@ -569,7 +554,7 @@ public type CallInsn readonly & record {|
 public type AssignInsn readonly & record {|
     *InsnBase;
     INSN_ASSIGN name = INSN_ASSIGN;
-    TempRegister|VarRegister|FinalRegister result;
+    TmpRegister|VarRegister|FinalRegister result;
     Operand operand;
 |};
 
@@ -582,9 +567,8 @@ public type AssignInsn readonly & record {|
 # typeof(result) <: typeof(operand)
 # semType not empty
 public type TypeCastInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_TYPE_CAST name = INSN_TYPE_CAST;
-    TempRegister result;
     Register operand;
     SemType semType;
 |};
@@ -598,11 +582,10 @@ public type TypeCastInsn readonly & record {|
 # and can require memory allocation and thus can potentially
 # panic. Probably need to distinguish these.
 public type TypeTestInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_TYPE_TEST name = INSN_TYPE_TEST;
     # Gets result of test.
     # Must be exactly type boolean
-    TempRegister result;
     # Holds value to be tested.
     Register operand;
     SemType semType;
@@ -627,7 +610,7 @@ public type TypeTestInsn readonly & record {|
 public type CondNarrowInsn readonly & record {|
     *InsnBase;
     INSN_COND_NARROW name = INSN_COND_NARROW;
-    NarrowedRegister result;
+    NarrowRegister result;
     Register operand;
     Result basis;
 |};
@@ -692,9 +675,8 @@ public type PanicInsn readonly & record {|
 # with the panic to be stored in the result register.
 # This is a very simplified form of a LLVM landingpad.
 public type CatchInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_CATCH name = INSN_CATCH;
-    TempRegister result;
 |};
 
 # Conditionally branch to one of two labels based on a boolean operand.

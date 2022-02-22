@@ -77,16 +77,16 @@ class StmtContext {
         return bir:createFinalRegister(self.code, t, name, pos);
     }
 
-    function createNarrowedRegister(bir:SemType t, string? name, Position? pos) returns bir:NarrowedRegister {
-        return bir:createNarrrowedRegister(self.code, t, name, pos);
+    function createNarrowRegister(bir:SemType t, string? name, Position? pos) returns bir:NarrowRegister {
+        return bir:createNarrrowRegister(self.code, t, name, pos);
     }
 
     function createParamRegister(bir:SemType t, string? name, Position? pos) returns bir:ParamRegister {
         return bir:createParamRegister(self.code, t, name, pos);
     }
 
-    function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TempRegister {
-        return bir:createTempRegister(self.code, t, (), pos);
+    function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TmpRegister {
+        return bir:createTmpRegister(self.code, t, (), pos);
     }
 
     function nextRegisterNumber() returns int {
@@ -251,7 +251,7 @@ function codeGenOnPanic(StmtContext cx, Position pos) {
         }
     }
     if onPanicBlock != () {
-        bir:TempRegister reg = cx.createTmpRegister(t:ERROR, pos);
+        bir:TmpRegister reg = cx.createTmpRegister(t:ERROR, pos);
         bir:CatchInsn catch = { result: reg, pos };
         onPanicBlock.insns.push(catch);
         onPanicBlock.insns.push(<bir:AbnormalRetInsn>{ operand: reg, pos });
@@ -389,7 +389,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     bir:BasicBlock exit = cx.createBasicBlock();
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     initLoopVar.insns.push(branchToLoopHead);
-    bir:TempRegister condition = cx.createTmpRegister(t:BOOLEAN, stmt.range.opPos);
+    bir:TmpRegister condition = cx.createTmpRegister(t:BOOLEAN, stmt.range.opPos);
     bir:CompareInsn compare = { op: "<", pos: stmt.range.opPos, operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
     bir:BasicBlock loopBody = cx.createBasicBlock();
@@ -410,10 +410,10 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     assignments.push(...cx.onContinueAssignments());
     assignments.push(...cx.onBreakAssignments());
     if loopStep != () {
-        bir:TempRegister nextLoopVal = cx.createTmpRegister(t:INT);
+        bir:TmpRegister nextLoopVal = cx.createTmpRegister(t:INT);
         bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: nextLoopVal };
-        bir:AssignInsn incrementAssing = { result: loopVar, operand: nextLoopVal, pos: stmt.kwPos };
-        loopStep.insns.push(increment, incrementAssing, branchToLoopHead);
+        bir:AssignInsn incrementAssign = { result: loopVar, operand: nextLoopVal, pos: stmt.kwPos };
+        loopStep.insns.push(increment, incrementAssign, branchToLoopHead);
     }
     cx.popLoopContext();
     // XXX shouldn't we be passing up assignments here
@@ -587,7 +587,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         if clauseIndex == defaultClauseIndex {
             break;
         }
-        bir:TempRegister testResult = cx.createTmpRegister(t:BOOLEAN, mt.pos);
+        bir:TmpRegister testResult = cx.createTmpRegister(t:BOOLEAN, mt.pos);
         if mt is EqualMatchTest {
             bir:EqualityInsn eq = { op: "==", pos: mt.pos, result: testResult, operands: [matched, mt.operand] };
             testBlock.insns.push(eq);
@@ -790,7 +790,7 @@ function addNarrowings(StmtContext cx, bir:BasicBlock bb, Environment env, Narro
         if ty === t:NEVER {
             panic err:impossible("narrowed to never type");
         }
-        bir:NarrowedRegister narrowed = cx.createNarrowedRegister(ty, binding.name, pos);
+        bir:NarrowRegister narrowed = cx.createNarrowRegister(ty, binding.name, pos);
         bir:CondNarrowInsn insn = {
             result: narrowed,
             operand: binding.reg,
@@ -911,7 +911,7 @@ function lookupVarRefForAssign(StmtContext cx, Environment env, string varName, 
 
 function codeGenAssign(StmtContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(block, env, semType, expr);
-    if result !is bir:TempRegister|bir:VarRegister|bir:FinalRegister {
+    if result !is bir:TmpRegister|bir:VarRegister|bir:FinalRegister {
         panic error("can't assign to param or narrowed registers");
     }
     bir:AssignInsn insn = { pos, result, operand };
@@ -1029,7 +1029,7 @@ function codeGenCompoundAssignToVar(StmtContext cx,
                                     Position pos) returns CodeGenError|StmtEffect {
     var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
     var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(env), startBlock, op, pos, result, rexpr);
-    if result !is bir:TempRegister|bir:VarRegister {
+    if result !is bir:TmpRegister|bir:VarRegister {
         panic error("result must be a temp or var register");
     }
     bir:AssignInsn insn = { pos, result, operand };
@@ -1050,7 +1050,7 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
     if t:isEmpty(cx.mod.tc, memberType) {
         return cx.semanticErr("type of member access is never", pos);
     }
-    bir:TempRegister member = cx.createTmpRegister(memberType, lValue.opPos);
+    bir:TmpRegister member = cx.createTmpRegister(memberType, lValue.opPos);
     bir:ListGetInsn getInsn = { result: member, operands: [list, index], pos: lValue.opPos };
     nextBlock.insns.push(getInsn);
     var { result, block } = check codeGenCompoundableBinaryExpr(cx.exprContext(env), nextBlock, op, pos, member, rexpr);
@@ -1138,7 +1138,7 @@ function codeGenCheckingStmt(StmtContext cx, bir:BasicBlock bb, Environment env,
 }
 
 function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register operand, t:SemType errorType, s:CheckingKeyword checkingKeyword, t:SemType okType, Position pos) returns CodeGenError|RegExprEffect {
-    bir:TempRegister isError = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:TmpRegister isError = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:TypeTestInsn typeTest = { operand, semType: t:ERROR, result: isError, negated: false, pos };
     bb.insns.push(typeTest);
     bir:InsnRef testInsnRef = bir:lastInsnRef(bb);
@@ -1146,7 +1146,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     bir:BasicBlock errorBlock = cx.createBasicBlock();
     bir:CondBranchInsn condBranch = { operand: isError, ifTrue: errorBlock.label, ifFalse: okBlock.label, pos };
     bb.insns.push(condBranch);
-    bir:NarrowedRegister errorReg = cx.createNarrowedRegister(errorType, (), pos);
+    bir:NarrowRegister errorReg = cx.createNarrowRegister(errorType, (), pos);
     bir:CondNarrowInsn narrowToError = {
         result: errorReg,
         operand,
@@ -1155,7 +1155,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     };
     errorBlock.insns.push(narrowToError);
     codeGenCheckingTerminator(errorBlock, checkingKeyword, errorReg, pos);
-    bir:NarrowedRegister result = cx.createNarrowedRegister(okType, (), pos);
+    bir:NarrowRegister result = cx.createNarrowRegister(okType, (), pos);
     bir:CondNarrowInsn narrowToOk = {
         result,
         operand,
@@ -1174,7 +1174,7 @@ function codeGenExprForCond(StmtContext cx, bir:BasicBlock bb, Environment env, 
         result = value;
     }
     else if flags != 0 {
-        bir:TempRegister reg = cx.createTmpRegister(t:BOOLEAN);
+        bir:TmpRegister reg = cx.createTmpRegister(t:BOOLEAN);
         bir:AssignInsn insn = { result: reg, operand: { value, semType: t:BOOLEAN }, pos: expr.startPos };
         block.insns.push(insn);
         result = reg;
