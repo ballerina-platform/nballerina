@@ -28,7 +28,7 @@ function listProjBdd(Context cx, IntSubtype|true k, Bdd b, Conjunction? pos, Con
 }
 
 final ListMemberTypes LIST_MEMBER_TYPES_ALL_TOP = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
-final ListMemberTypes LIST_MEMBER_TYPES_ALL_NEVER = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
+final ListMemberTypes LIST_MEMBER_TYPES_ALL_NEVER = [[{ min: 0, max: int:MAX_VALUE }], [NEVER]];
 
 public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
     if t is UniformTypeBitSet {
