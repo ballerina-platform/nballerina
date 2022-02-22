@@ -5,7 +5,7 @@ const double F0 = +0.0;
 static bool tidListContains(const Tid *start, const Tid *end, Tid tid);
 
 static inline TaggedPtr listConstruct(ListDescPtr desc, int64_t capacity) {
-    return ptrAddFlags(_bal_list_construct(desc, capacity),
+    return ptrAddFlags(_bal_list_construct_8(desc, capacity),
                        ((uint64_t)TAG_LIST_RW << TAG_SHIFT)|EXACT_FLAG);
 }
 

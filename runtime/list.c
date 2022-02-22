@@ -21,10 +21,19 @@ static inline bool listDescAllowsTaggedAt(ListDescPtr ldp, int64_t index, Tagged
     return memberTypeContainsTagged(mt, val);
 }
 
-ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
+// Constructs a list with 8 bytes per member
+ListPtr _bal_list_construct_8(ListDescPtr desc, int64_t capacity) {
     ListPtr lp = _bal_alloc(sizeof(struct List));
     lp->desc = desc;
     initGenericArray(&(lp->gArray), capacity, TAGGED_PTR_SHIFT);
+    return lp;
+}
+
+// Constructs a list with 1 byte per member
+ListPtr _bal_list_construct_1(ListDescPtr desc, int64_t capacity) {
+    ListPtr lp = _bal_alloc(sizeof(struct List));
+    lp->desc = desc;
+    initGenericArray(&(lp->gArray), capacity, BYTE_SHIFT);
     return lp;
 }
 
@@ -59,6 +68,18 @@ int64_t _bal_list_int_array_get_int(TaggedPtr p, int64_t index) {
     fprintf(stderr, "warning: access int array via int type desc func pointer\n");
     ListPtr lp = taggedToPtr(p);
     GC IntArray *ap = &(lp->iArray);
+    return ap->members[index];
+}
+
+TaggedPtr _bal_list_byte_array_get_tagged(TaggedPtr p, int64_t index) {
+    ListPtr lp = taggedToPtr(p);
+    GC ByteArray *ap = &(lp->bArray);
+    return intToTagged(ap->members[index]);
+}
+
+int64_t _bal_list_byte_array_get_int(TaggedPtr p, int64_t index) {
+    ListPtr lp = taggedToPtr(p);
+    GC ByteArray *ap = &(lp->bArray);
     return ap->members[index];
 }
 
@@ -189,8 +210,7 @@ PanicCode _bal_list_generic_set_int(TaggedPtr p, int64_t index, int64_t val) {
 }
 
 PanicCode _bal_list_int_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
-    ListPtr lp = taggedToPtr(p);
-    if (!listDescAllowsTaggedAt(lp->desc, index, val)) {
+    if ((getTag(val) & UT_MASK) != TAG_INT) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     return _bal_list_int_array_set_int(p, index, taggedToInt(val));
@@ -227,9 +247,49 @@ PanicCode _bal_list_int_array_set_float(TaggedPtr p, UNUSED int64_t index, UNUSE
     return storePanicCode(p, PANIC_LIST_STORE);
 }
 
-PanicCode _bal_list_float_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
+PanicCode _bal_list_byte_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
+    if ((getTag(val) & UT_MASK) != TAG_INT) {
+        return storePanicCode(p, PANIC_LIST_STORE);
+    }
+    return _bal_list_byte_array_set_int(p, index, taggedToInt(val));
+}
+
+PanicCode _bal_list_byte_array_set_int(TaggedPtr p, int64_t index, int64_t valInt) {
+    if (valInt < 0 || UINT8_MAX < valInt) {
+        return storePanicCode(p, PANIC_LIST_STORE);
+    }
+    uint8_t val = (uint8_t)valInt;
     ListPtr lp = taggedToPtr(p);
-    if (!listDescAllowsTaggedAt(lp->desc, index, val)) {
+    GC ByteArray *ap = &(lp->bArray);
+    // The cast makes this handle the negative case also in a single comparison
+    if (likely((uint64_t)index < (uint64_t)ap->length)) {
+        ap->members[index] = val;
+        return 0;
+    }
+    // The cast makes this handle the negative case also in a single comparison
+    if (unlikely((uint64_t)index >= (uint64_t)ap->capacity)) {
+        if (unlikely((uint64_t)index >= ARRAY_LENGTH_MAX)) {
+            return index < 0 ? PANIC_INDEX_OUT_OF_BOUNDS : PANIC_LIST_TOO_LONG; 
+        }
+        _bal_array_grow(&(lp->gArray), index + 1, BYTE_SHIFT);
+    }
+    // Know that: ap->length <= index < ap->capacity
+    if (index > ap->length) {
+        // we have a gap to fill
+        // from length..<index
+        memset(&(ap->members[ap->length]), 0, index - ap->length);
+    }
+    ap->members[index] = val;
+    ap->length = index + 1;
+    return 0;
+}
+
+PanicCode _bal_list_byte_array_set_float(TaggedPtr p, UNUSED int64_t index, UNUSED double val) {
+    return storePanicCode(p, PANIC_LIST_STORE);
+}
+
+PanicCode _bal_list_float_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
+    if ((getTag(val) & UT_MASK) != TAG_FLOAT) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     return _bal_list_float_array_set_float(p, index, taggedToFloat(val));
