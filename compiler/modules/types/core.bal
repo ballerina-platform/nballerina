@@ -905,17 +905,6 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
 
-// placeholder for #924
-public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
-    ListAtomicType? atomicType = listAtomicTypeRw(cx, t);
-    if atomicType == () {
-        panic error("expected atomic list type");
-    }
-    else {
-        return listAtomicTypeAllMemberTypes(atomicType);
-    }
-}
-
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {
         return t == LIST || t == LIST_RW ? LIST_ATOMIC_TOP : ();

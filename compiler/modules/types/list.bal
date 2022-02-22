@@ -34,12 +34,25 @@ public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns Sem
 
 public type ListMemberTypes [Range[], SemType[]];
 
-public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns ListMemberTypes {
+function listMemberTypesUnion(ListMemberTypes mt1, ListMemberTypes mt2) returns ListMemberTypes {
+    var [r1, t1] = mt1;
+    var [r2, t2] = mt2;
     Range[] ranges = [];
     SemType[] types = [];
-    SemType[] initial = atomicType.members.initial;
+    foreach var [r, i1, i2] in combineRanges(r1, r2) {
+        ranges.push(r);
+        types.push(union(i1 == () ? NEVER : t1[i1],
+                         i2 == () ? NEVER : t2[i2]));
+    }
+    return [ranges, types];
+}
+
+public function listAtomicTypeAllMemberTypes(FixedLengthArray fixedArray, SemType rest) returns ListMemberTypes {
+    Range[] ranges = [];
+    SemType[] types = [];
+    SemType[] initial = fixedArray.initial;
     int initialLength = initial.length();
-    int fixedLength = atomicType.members.fixedLength;
+    int fixedLength = fixedArray.fixedLength;
     if initialLength != 0 {
         types.push(...initial);
         foreach int i in 0 ..< initialLength {
@@ -49,8 +62,8 @@ public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns 
             ranges[initialLength - 1] = { min: initialLength - 1, max: fixedLength - 1 };
         }
     }
-    if atomicType.rest != NEVER {
-        types.push(atomicType.rest);
+    if rest != NEVER {
+        types.push(rest);
         ranges.push({ min: fixedLength, max: int:MAX_VALUE });
     }
     return [ranges, types];
@@ -491,7 +504,7 @@ function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSu
 }
 
 function listAtomicApplicableMemberTypes(ListAtomicType atomic, IntSubtype|true indexType) returns SemType[] {
-    var [ranges, memberTypes] = listAtomicTypeAllMemberTypes(atomic);
+    var [ranges, memberTypes] = listAtomicTypeAllMemberTypes(atomic.members, atomic.rest);
     if indexType == true {
         return memberTypes;
     }
