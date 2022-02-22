@@ -76,6 +76,12 @@ double _bal_list_float_array_get_float(TaggedPtr p, int64_t index) {
     return ap->members[index];
 }
 
+// We use this in the case where exactness does not guarantee that the set will succeed.
+PanicCode _bal_list_generic_inexact_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
+    PanicCode code = _bal_list_generic_set_tagged(p, index, val);
+    return code == 0 ? 0 : PANIC_LIST_STORE;
+}
+
 PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     ListDescPtr ldp = lp->desc;
@@ -166,8 +172,16 @@ TaggedPtrPanicCode _bal_list_filling_get(TaggedPtr p, int64_t index) {
     return result;
 }
 
+PanicCode _bal_list_generic_inexact_set_float(TaggedPtr p, int64_t index, double val) {
+    return _bal_list_generic_inexact_set_tagged(p, index, floatToTagged(val));
+}
+
 PanicCode _bal_list_generic_set_float(TaggedPtr p, int64_t index, double val) {
     return _bal_list_generic_set_tagged(p, index, floatToTagged(val));
+}
+
+PanicCode _bal_list_generic_inexact_set_int(TaggedPtr p, int64_t index, int64_t val) {
+    return _bal_list_generic_inexact_set_tagged(p, index, intToTagged(val));
 }
 
 PanicCode _bal_list_generic_set_int(TaggedPtr p, int64_t index, int64_t val) {

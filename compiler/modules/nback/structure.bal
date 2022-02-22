@@ -117,6 +117,7 @@ type ListRepr readonly & object {
     llvm:Type memberType;
     int listDescGetIndex;
     int listDescSetIndex;
+    int listDescInexactSetIndex;
     boolean isSpecialized;
     function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError;
     function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg);
@@ -131,6 +132,7 @@ final readonly & map<ListRepr> listReprs = {
         llvm:Type memberType = LLVM_TAGGED_PTR;
         int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX;
         int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 1;
+        int listDescInexactSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 2;
         boolean isSpecialized = false;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildWideRepr(builder, scaffold, member, REPR_ANY, memberType);
@@ -141,8 +143,9 @@ final readonly & map<ListRepr> listReprs = {
     },
     int_array: object {
         llvm:Type memberType = LLVM_INT;
-        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 2;
-        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 3;
+        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 3;
+        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 4;
+        int listDescInexactSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 5;
         boolean isSpecialized = true;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildInt(builder, scaffold, <bir:IntOperand>member);
@@ -153,8 +156,9 @@ final readonly & map<ListRepr> listReprs = {
     },
     float_array: object {
         llvm:Type memberType = LLVM_DOUBLE;
-        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 4;
-        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 5;
+        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 6;
+        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 7;
+        int listDescInexactSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 8;
         boolean isSpecialized = true;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildFloat(builder, scaffold, <bir:FloatOperand>member);
@@ -272,24 +276,33 @@ function buildSpecializedListGet(llvm:Builder builder, Scaffold scaffold, llvm:V
 }
 
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
-    llvm:Value taggedStruct = builder.load(scaffold.address(insn.operands[0]));
+    bir:Register listOperand = insn.operands[0];
+    bir:IntOperand indexOperand = insn.operands[1];
+    bir:Operand newMemberOperand = insn.operands[2];
+    llvm:Value taggedStruct = builder.load(scaffold.address(listOperand));
     llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
                                                                                [taggedStruct, llvm:constInt(LLVM_INT, POINTER_MASK)]),
                                                heapPointerType(llListType));
     llvm:BasicBlock? bbJoin = ();
-    t:SemType listType = insn.operands[0].semType;
-    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
-    llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
+    t:SemType listType = listOperand.semType;
+    t:Context tc = scaffold.typeContext();
+    t:SemType memberType = t:listMemberType(tc, listType, indexOperand.semType);
+    llvm:Value index = buildInt(builder, scaffold, indexOperand);
     ListRepr repr = listTypeToListRepr(scaffold.typeContext(), listType);
     if repr.isSpecialized {
         llvm:Value val = check repr.buildMember(builder, scaffold, insn.operands[2], memberType);
         bbJoin = check buildSpecializedListSet(builder, scaffold, taggedStruct, struct, index, repr.memberType, val);
     }
-
     llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
-    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, repr.listDescSetIndex)]), ALIGN_HEAP);
-    // XXX listSetFunction must also clear the exact bit if the list is not exact?
-    llvm:Value? err = builder.call(func, [taggedStruct, index, check repr.buildMember(builder, scaffold, insn.operands[2], memberType)]);
+    int funcIndex;
+    if isListSetAlwaysInexact(tc, listType, indexOperand.semType, newMemberOperand.semType) {
+        funcIndex = repr.listDescInexactSetIndex;
+    }
+    else {
+        funcIndex = repr.listDescSetIndex;
+    }
+    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, funcIndex)]), ALIGN_HEAP);
+    llvm:Value? err = builder.call(func, [taggedStruct, index, check repr.buildMember(builder, scaffold, newMemberOperand, memberType)]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
     if bbJoin != () {
         builder.br(bbJoin);
@@ -452,7 +465,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
     RuntimeFunction rf;
     llvm:Value k;
     if fieldIndex == () {
-        if isMappingSetAlwaysInexact(tc, mappingType, newMemberOperand) {
+        if isMappingSetAlwaysInexact(tc, mappingType, keyOperand.semType, newMemberOperand.semType) {
             rf = mappingInexactSetFunction;
         }
         else {
@@ -482,21 +495,35 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
 // and for the mapping_set to panic at runtime.
 // In this case, we cannot optimize based on the exactness of the mapping value, and so
 // we have to do the same was what we would do if the mapping value was inexact.
-// This can only happen at the moment if the type of the key is string.
-// SUBSET more complex with string subtypes
-function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, bir:Operand operand) returns boolean {
+function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, t:SemType keyType, t:SemType newMemberType) returns boolean {
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
     // JBUG == doesn't work
     if mat is () {
         // inherent type is atomic, so if mapping type isn't, they cannot be equal
         return false;
     }
-    foreach t:SemType ty in mat.types {
-        if !bir:operandHasType(tc, operand, ty) {
+    foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypes(tc, mat, keyType) {
+        if !t:isSubtype(tc, newMemberType, ty) {
             return true;
         }
     }
-    return !bir:operandHasType(tc, operand, mat.rest);
+    return false;
+}
+
+function isListSetAlwaysInexact(t:Context tc, t:SemType listType, t:SemType indexType, t:SemType newMemberType) returns boolean {
+    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, listType);
+    // JBUG == doesn't work
+    if lat is () || t:singleIntShape(indexType) != () {
+        // inherent type is atomic, so if list type isn't, they cannot be equal
+        // If indexing with a constant value, then we have the precise type
+        return false;
+    }
+    foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypes(tc, lat, indexType) {
+        if !t:isSubtype(tc, newMemberType, ty) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand) returns int? {

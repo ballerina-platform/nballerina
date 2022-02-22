@@ -135,10 +135,13 @@ typedef struct {
     int64_t minLength;
     TaggedPtr (*get)(TaggedPtr lp, int64_t index);
     PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
+    PanicCode (*inexactSet)(TaggedPtr lp, int64_t index, TaggedPtr val);
     int64_t (*getInt)(TaggedPtr lp, int64_t index);
     PanicCode (*setInt)(TaggedPtr lp, int64_t index, int64_t val);
+    PanicCode (*inexactSetInt)(TaggedPtr lp, int64_t index, int64_t val);
     double (*getFloat)(TaggedPtr lp, int64_t index);
     PanicCode (*setFloat)(TaggedPtr lp, int64_t index, double val);
+    PanicCode (*inexactSetFloat)(TaggedPtr lp, int64_t index, double val);
     // the type of members with index >= minLength
     MemberType restType;
     StructureDescPtr fillerDesc;
@@ -391,6 +394,9 @@ double _bal_list_generic_get_float(TaggedPtr p, int64_t index);
 extern PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
 extern PanicCode _bal_list_generic_set_int(TaggedPtr p, int64_t index, int64_t val);
 PanicCode _bal_list_generic_set_float(TaggedPtr p, int64_t index, double val);
+extern PanicCode _bal_list_generic_inexact_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_generic_inexact_set_int(TaggedPtr p, int64_t index, int64_t val);
+PanicCode _bal_list_generic_inexact_set_float(TaggedPtr p, int64_t index, double val);
 
 extern TaggedPtr _bal_list_int_array_get_tagged(TaggedPtr p, int64_t index);
 extern int64_t _bal_list_int_array_get_int(TaggedPtr p, int64_t index);
