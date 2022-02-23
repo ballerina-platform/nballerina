@@ -41,7 +41,7 @@ function preparseBracketedTypeDesc(Tokenizer tok, CLOSE_BRACKET close) returns b
     if t == () {
         return tok.err("incomplete statement");
     }
-    return t is [IDENTIFIER, string] || t == "_" || t == "|" || t == "&" || t =="?"; 
+    return t != "." && t !is AssignOp;
 }
 
 function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Syntax|boolean? {
