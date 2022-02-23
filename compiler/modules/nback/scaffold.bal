@@ -474,6 +474,8 @@ function padBytes(byte[] bytes, int headerSize) returns int {
 
 final FloatRepr REPR_FLOAT = { };
 final BooleanRepr REPR_BOOLEAN = { };
+final IntRepr REPR_INT = { alwaysInImmediateRange: false, constraints: () };
+final IntRepr REPR_BYTE = { alwaysInImmediateRange: true, constraints: { min: 0, max: 255, all: true } };
 
 final TaggedRepr REPR_NIL = { subtype: t:NIL, alwaysImmediate: true };
 final TaggedRepr REPR_LIST_RW = { subtype: t:LIST_RW, alwaysImmediate: false };
