@@ -1174,8 +1174,18 @@ function codeGenExprForCond(StmtContext cx, bir:BasicBlock bb, Environment env, 
         result = value;
     }
     else if flags != 0 {
-        bir:TmpRegister reg = cx.createTmpRegister(t:BOOLEAN);
-        bir:AssignInsn insn = { result: reg, operand: { value, semType: t:BOOLEAN }, pos: expr.startPos };
+        bir:Register reg = cx.createTmpRegister(t:BOOLEAN);
+        bir:EqualityOp op;
+        bir:Operand equalityOperand;
+        if value {
+            equalityOperand = { value: false, semType: t:BOOLEAN };
+            op = "===";
+        }
+        else {
+            equalityOperand = { value: true, semType: t:BOOLEAN };
+            op = "!==";
+        }
+        bir:EqualityInsn insn = { op, pos: expr.startPos, operands: [equalityOperand, equalityOperand], result: reg };
         block.insns.push(insn);
         result = reg;
     }
