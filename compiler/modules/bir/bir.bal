@@ -186,34 +186,31 @@ public type FinalRegister readonly & record {|
 |};
 
 public function createVarRegister(FunctionCode code, SemType semType, string name, Position pos) returns VarRegister {
-    VarRegister r = <VarRegister>createRegister(code, semType, VAR_REGISTER_KIND, name, pos);
+    VarRegister r = { number: code.registers.length(), semType, name, pos, kind: VAR_REGISTER_KIND };
+    code.registers.push(r);
     return r;
 }
 
 public function createFinalRegister(FunctionCode code, SemType semType, string name, Position pos) returns FinalRegister {
-    FinalRegister r = <FinalRegister>createRegister(code, semType, FINAL_REGISTER_KIND, name, pos);
+    FinalRegister r = { number: code.registers.length(), semType, name, pos, kind: FINAL_REGISTER_KIND };
+    code.registers.push(r);
     return r;
 }
 
 public function createNarrrowRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns NarrowRegister {
-    NarrowRegister r = <NarrowRegister>createRegister(code, semType, NARRROW_REGISTER_KIND, name, pos);
+    NarrowRegister r = { number: code.registers.length(), semType, name, pos, kind: NARRROW_REGISTER_KIND };
+    code.registers.push(r);
     return r;
 }
 
-public function createParamRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns ParamRegister {
-    ParamRegister r = <ParamRegister>createRegister(code, semType, PARAM_REGISTER_KIND, name, pos);
+public function createParamRegister(FunctionCode code, SemType semType, string name, Position pos) returns ParamRegister {
+    ParamRegister r = { number: code.registers.length(), semType, name, pos, kind: PARAM_REGISTER_KIND };
+    code.registers.push(r);
     return r;
 }
 
 public function createTmpRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns TmpRegister {
-    TmpRegister r = <TmpRegister>createRegister(code, semType, TMP_REGISTER_KIND, name, pos);
-    return r;
-}
-
-function createRegister(FunctionCode code, SemType semType, RegisterKind kind, string? name, Position? pos) returns Register {
-    int number = code.registers.length();
-    RegisterBase base = { number, semType, name, pos, kind };
-    Register r = <Register> base.cloneReadOnly();
+    TmpRegister r = { number: code.registers.length(), semType, name, pos, kind: TMP_REGISTER_KIND };
     code.registers.push(r);
     return r;
 }

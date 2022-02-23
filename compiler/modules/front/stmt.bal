@@ -81,7 +81,7 @@ class StmtContext {
         return bir:createNarrrowRegister(self.code, t, name, pos);
     }
 
-    function createParamRegister(bir:SemType t, string? name, Position? pos) returns bir:ParamRegister {
+    function createParamRegister(bir:SemType t, string name, Position pos) returns bir:ParamRegister {
         return bir:createParamRegister(self.code, t, name, pos);
     }
 
