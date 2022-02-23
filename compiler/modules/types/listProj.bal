@@ -30,16 +30,6 @@ function listProjBdd(Context cx, IntSubtype|true k, Bdd b, Conjunction? pos, Con
 final ListMemberTypes LIST_MEMBER_TYPES_ALL_TOP = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
 final ListMemberTypes LIST_MEMBER_TYPES_ALL_NEVER = [[{ min: 0, max: int:MAX_VALUE }], [NEVER]];
 
-public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
-    if t is UniformTypeBitSet {
-        return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL_TOP : LIST_MEMBER_TYPES_ALL_NEVER;
-    }
-    else {
-        return listMemberTypesUnion(listProjBddAllKeys(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()), 
-                                    listProjBddAllKeys(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
-    }
-}
-
 function listProjBddAllKeys(Context cx, Bdd b, Conjunction? pos, Conjunction? neg) returns ListMemberTypes {
     if b is boolean {
         return b ? listProjAll(cx, pos, neg) : LIST_MEMBER_TYPES_ALL_NEVER;
@@ -155,7 +145,7 @@ function listProjAll(Context cx, Conjunction? pos, Conjunction? neg) returns Lis
 
 function listProjPathAll(Context cx, FixedLengthArray members, SemType rest, ListConjunction? neg) returns ListMemberTypes {
     if neg == () {
-        return listAtomicTypeAllMemberTypes(members, rest);
+        return listAtomicTypeAllMemberTypes({ members: members.cloneReadOnly(), rest });
     }
     else {
         int len = members.fixedLength;

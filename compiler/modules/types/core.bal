@@ -905,6 +905,16 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
 
+public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
+    if t is UniformTypeBitSet {
+        return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL_TOP : LIST_MEMBER_TYPES_ALL_NEVER;
+    }
+    else {
+        return listMemberTypesUnion(listProjBddAllKeys(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()), 
+                                    listProjBddAllKeys(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
+    }
+}
+
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {
         return t == LIST || t == LIST_RW ? LIST_ATOMIC_TOP : ();

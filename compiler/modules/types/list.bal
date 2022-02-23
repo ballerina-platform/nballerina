@@ -22,16 +22,6 @@ type ListConjunction record {|
     ListConjunction? next;
 |};
 
-public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
-    if i < atomic.members.fixedLength {
-        int initialLen = atomic.members.initial.length();
-        return atomic.members.initial[ i < initialLen ? i : initialLen - 1];
-    }
-    else {
-        return atomic.rest;
-    }
-}
-
 public type ListMemberTypes [Range[], SemType[]];
 
 function listMemberTypesUnion(ListMemberTypes mt1, ListMemberTypes mt2) returns ListMemberTypes {
@@ -47,12 +37,22 @@ function listMemberTypesUnion(ListMemberTypes mt1, ListMemberTypes mt2) returns 
     return [ranges, types];
 }
 
-public function listAtomicTypeAllMemberTypes(FixedLengthArray fixedArray, SemType rest) returns ListMemberTypes {
+public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
+    if i < atomic.members.fixedLength {
+        int initialLen = atomic.members.initial.length();
+        return atomic.members.initial[ i < initialLen ? i : initialLen - 1];
+    }
+    else {
+        return atomic.rest;
+    }
+}
+
+public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns ListMemberTypes {
     Range[] ranges = [];
     SemType[] types = [];
-    SemType[] initial = fixedArray.initial;
+    SemType[] initial = atomicType.members.initial;
     int initialLength = initial.length();
-    int fixedLength = fixedArray.fixedLength;
+    int fixedLength = atomicType.members.fixedLength;
     if initialLength != 0 {
         types.push(...initial);
         foreach int i in 0 ..< initialLength {
@@ -62,8 +62,8 @@ public function listAtomicTypeAllMemberTypes(FixedLengthArray fixedArray, SemTyp
             ranges[initialLength - 1] = { min: initialLength - 1, max: fixedLength - 1 };
         }
     }
-    if rest != NEVER {
-        types.push(rest);
+    if atomicType.rest != NEVER {
+        types.push(atomicType.rest);
         ranges.push({ min: fixedLength, max: int:MAX_VALUE });
     }
     return [ranges, types];
@@ -504,7 +504,7 @@ function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSu
 }
 
 function listAtomicApplicableMemberTypes(ListAtomicType atomic, IntSubtype|true indexType) returns SemType[] {
-    var [ranges, memberTypes] = listAtomicTypeAllMemberTypes(atomic.members, atomic.rest);
+    var [ranges, memberTypes] = listAtomicTypeAllMemberTypes(atomic);
     if indexType == true {
         return memberTypes;
     }
