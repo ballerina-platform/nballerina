@@ -30,8 +30,17 @@ final RuntimeFunction mappingIndexedSetFunction = {
     attrs: []
 };
 
-final RuntimeFunction listConstructFunction = {
-    name: "list_construct",
+final RuntimeFunction listConstruct8Function = {
+    name: "list_construct_8",
+    ty: {
+        returnType: heapPointerType(llListType),
+        paramTypes: [llvm:pointerType(llStructureDescType), LLVM_INT]
+    },
+    attrs: []
+};
+
+final RuntimeFunction listConstruct1Function = {
+    name: "list_construct_1",
     ty: {
         returnType: heapPointerType(llListType),
         paramTypes: [llvm:pointerType(llStructureDescType), LLVM_INT]
@@ -115,10 +124,12 @@ const LLVM_INDEX = "i32";
 
 type ListRepr readonly & object {
     llvm:Type memberType;
+    llvm:Type memberHeapType;
     int listDescGetIndex;
     int listDescSetIndex;
     int listDescInexactSetIndex;
     boolean isSpecialized;
+    RuntimeFunction construct;
     function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError;
     function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg);
 };
@@ -130,6 +141,7 @@ const LIST_DESC_FIRST_FUNCTION_INDEX = 3;
 final readonly & map<ListRepr> listReprs = {
     generic: object {
         llvm:Type memberType = LLVM_TAGGED_PTR;
+        llvm:Type memberHeapType = LLVM_TAGGED_PTR;
         int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX;
         int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 1;
         int listDescInexactSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 2;
@@ -137,16 +149,34 @@ final readonly & map<ListRepr> listReprs = {
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildWideRepr(builder, scaffold, member, REPR_ANY, memberType);
         }
+        RuntimeFunction construct = listConstruct8Function;
         function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
             return buildStoreTagged(builder, scaffold, value, reg);
         }
     },
     int_array: object {
         llvm:Type memberType = LLVM_INT;
+        llvm:Type memberHeapType = LLVM_INT;
         int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 3;
         int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 4;
         int listDescInexactSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 5;
         boolean isSpecialized = true;
+        RuntimeFunction construct = listConstruct8Function;
+        function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+            return buildInt(builder, scaffold, <bir:IntOperand>member);
+        }
+        function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+            return buildStoreInt(builder, scaffold, value, reg);
+        }
+    },
+    byte_array: object {
+        llvm:Type memberType = LLVM_INT;
+        llvm:Type memberHeapType = LLVM_BYTE;
+        int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 3;
+        int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 4;
+        int listDescInexactSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 5;
+        boolean isSpecialized = true;
+        RuntimeFunction construct = listConstruct1Function;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildInt(builder, scaffold, <bir:IntOperand>member);
         }
@@ -159,7 +189,9 @@ final readonly & map<ListRepr> listReprs = {
         int listDescGetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 6;
         int listDescSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 7;
         int listDescInexactSetIndex = LIST_DESC_FIRST_FUNCTION_INDEX + 8;
+        llvm:Type memberHeapType = LLVM_DOUBLE;
         boolean isSpecialized = true;
+        RuntimeFunction construct = listConstruct8Function;
         function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
             return buildFloat(builder, scaffold, <bir:FloatOperand>member);
         }
@@ -180,8 +212,10 @@ function listAtomicTypeToListRepr(t:ListAtomicType? atomic) returns ListRepr {
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
     final int length = insn.operands.length();
     t:SemType listType = insn.result.semType;
+    var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.typeContext(), listType);
+    ListRepr repr = listAtomicTypeToListRepr(atomic);
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(listType);
-    llvm:PointerValue struct = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(listConstructFunction),
+    llvm:PointerValue struct = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(repr.construct),
                                                                [inherentType, llvm:constInt(LLVM_INT, length)]);
 
     if length > 0 {
@@ -191,12 +225,11 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
                                                                                         "inbounds"),
                                                                   ALIGN_HEAP);
 
-        var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.typeContext(), listType);
-        ListRepr repr = listAtomicTypeToListRepr(atomic);
-        array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberType, 0)));
+        array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberHeapType, 0)));
         foreach int i in 0 ..< length {
-            builder.store(check repr.buildMember(builder, scaffold, insn.operands[i],
-                                                 t:listAtomicTypeMemberAt(atomic, i)),
+            builder.store(listReprConvertToHeapType(builder,
+                                                    repr,
+                                                    check repr.buildMember(builder, scaffold, insn.operands[i], t:listAtomicTypeMemberAt(atomic, i))),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
         }
         builder.store(llvm:constInt(LLVM_INT, length),
@@ -268,8 +301,9 @@ function buildSpecializedListGet(llvm:Builder builder, Scaffold scaffold, llvm:V
     builder.condBr(isExact, bbExact, bbInexact);
     builder.positionAtEnd(bbExact);
     llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)]), ALIGN_HEAP);
-    array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberType, 0)));
-    repr.buildMemberStore(builder, scaffold, builder.load(builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), index], "inbounds"), ALIGN_HEAP), result);
+    array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberHeapType, 0)));
+    llvm:Value value = builder.load(builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), index], "inbounds"), ALIGN_HEAP);
+    repr.buildMemberStore(builder, scaffold, listReprConvertFromHeapType(builder, repr, value), result);
     builder.br(bbJoin);
     builder.positionAtEnd(bbInexact);
     return bbJoin;
@@ -291,7 +325,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     ListRepr repr = listTypeToListRepr(scaffold.typeContext(), listType);
     if repr.isSpecialized {
         llvm:Value val = check repr.buildMember(builder, scaffold, insn.operands[2], memberType);
-        bbJoin = check buildSpecializedListSet(builder, scaffold, taggedStruct, struct, index, repr.memberType, val);
+        bbJoin = check buildSpecializedListSet(builder, scaffold, taggedStruct, struct, index, repr, val);
     }
     llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
     int funcIndex;
@@ -310,7 +344,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     }
 }
 
-function buildSpecializedListSet(llvm:Builder builder, Scaffold scaffold, llvm:Value taggedStruct, llvm:PointerValue struct, llvm:Value index, llvm:Type memberTy, llvm:Value val)
+function buildSpecializedListSet(llvm:Builder builder, Scaffold scaffold, llvm:Value taggedStruct, llvm:PointerValue struct, llvm:Value index, ListRepr repr, llvm:Value val)
                                 returns llvm:BasicBlock|BuildError {
     llvm:BasicBlock bbExact = scaffold.addBasicBlock();
     llvm:BasicBlock bbTaggedSet = scaffold.addBasicBlock();
@@ -327,12 +361,33 @@ function buildSpecializedListSet(llvm:Builder builder, Scaffold scaffold, llvm:V
                    bbTaggedSet);
     builder.positionAtEnd(bbSpecializedSet);
     llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)]), ALIGN_HEAP);
-    array = builder.bitCast(array, heapPointerType(llvm:arrayType(memberTy, 0)));
-
-    builder.store(val, builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), index], "inbounds"));
+    array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberHeapType, 0)));
+    llvm:Value heapVal = listReprConvertToHeapType(builder, repr, val);
+    builder.store(heapVal, builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), index], "inbounds"));
     builder.br(bbJoin);
     builder.positionAtEnd(bbTaggedSet);
     return bbJoin;
+}
+
+function listReprConvertToHeapType(llvm:Builder builder, ListRepr repr, llvm:Value value) returns llvm:Value {
+    return convertValue(builder, value, repr.memberType, repr.memberHeapType);
+}
+
+function listReprConvertFromHeapType(llvm:Builder builder, ListRepr repr, llvm:Value value) returns llvm:Value {
+    return convertValue(builder, value, repr.memberHeapType, repr.memberType);
+}
+
+function convertValue(llvm:Builder builder, llvm:Value value, llvm:Type fromTy, llvm:Type toTy) returns llvm:Value {
+    if fromTy == toTy {
+        return value;
+    }
+    else if fromTy == LLVM_INT && toTy == LLVM_BYTE {
+        return builder.trunc(value, toTy);
+    }
+    else if fromTy == LLVM_BYTE && toTy == LLVM_INT {
+        return builder.zExt(value, toTy);
+    }
+    panic err:impossible("unsupported llvm type conversion");
 }
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {

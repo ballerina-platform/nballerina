@@ -33,7 +33,7 @@ final readonly & llvm:FunctionType[] llListDescFuncTypes = [
     llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_DOUBLE])
 ];
 
-type ListReprPrefix "generic"|"int_array"|"float_array";
+type ListReprPrefix "generic"|"int_array"|"byte_array"|"float_array";
 
 final readonly & string[] listDescFuncSuffixes = [
     "get_tagged",
@@ -52,6 +52,10 @@ final readonly & map<string?> listDescFuncOverrides = {
     int_array_inexact_set_tagged: "int_array_set_tagged",
     int_array_inexact_set_int: "int_array_set_int",
     int_array_inexact_set_float: "int_array_set_float",
+    byte_array_get_float: (),
+    byte_array_inexact_set_tagged: "byte_array_set_tagged",
+    byte_array_inexact_set_int: "byte_array_set_int",
+    byte_array_inexact_set_float: "byte_array_set_float",
     float_array_get_int: (),
     float_array_inexact_set_tagged: "float_array_set_tagged",
     float_array_inexact_set_int: "float_array_set_int",
@@ -116,6 +120,9 @@ function listAtomicTypeToListReprPrefix(t:ListAtomicType? atomic) returns ListRe
         }
         else if rest == t:FLOAT {
             return "float_array";
+        }
+        else if rest == t:BYTE {
+            return "byte_array";
         }
     }
     return "generic";
