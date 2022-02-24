@@ -41,7 +41,7 @@ function preparseBracketedTypeDesc(Tokenizer tok, CLOSE_BRACKET close) returns b
     if t == () {
         return tok.err("incomplete statement");
     }
-    return t != ".";
+    return t != "." && t !is AssignOp;
 }
 
 function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Syntax|boolean? {
@@ -89,8 +89,5 @@ function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
         check tok.advance();
         _ = check tok.expectIdentifier();
     }
-    check tok.expect("[");
-
-    // SUBSET fixed length array types / tuples are not supported, is a td only if no token between `[` `]`
-    return tok.current() == "]";
+    return preparseBracketedTypeDesc(tok, "]");
 }
