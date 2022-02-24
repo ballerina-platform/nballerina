@@ -110,6 +110,10 @@ class ExprContext {
         return bir:createTmpRegister(self.code, t, (), pos);
     }
 
+    function createAssignTmpRegister(bir:SemType t, Position? pos = ()) returns bir:AssignTmpRegister {
+        return bir:createAssignTmpRegister(self.code, t, (), pos);
+    }
+
     function createNarrowRegister(bir:SemType t, Position? pos = ()) returns bir:NarrowRegister {
         return bir:createNarrrowRegister(self.code, t, (), pos);
     }
@@ -311,7 +315,7 @@ function codeGenNilLiftResult(ExprContext cx, ExprEffect nonNilEffect, bir:Basic
         bir:Operand nonNilResult = nonNilEffect.result;
         bir:BasicBlock nonNilBlock = nonNilEffect.block;
 
-        bir:TmpRegister result = cx.createTmpRegister(t:union(operandSemType(cx.mod.tc, nonNilResult), t:NIL));
+        bir:AssignTmpRegister result = cx.createAssignTmpRegister(t:union(operandSemType(cx.mod.tc, nonNilResult), t:NIL));
         bir:AssignInsn nilAssign = { result, operand: bir:NIL_OPERAND, pos };
         ifNilBlock.insns.push(nilAssign);
         bir:BranchInsn branchInsn = { dest: block.label, pos };
@@ -695,7 +699,7 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
                                                                                             : [intersectNarrowing, expandedUnionNarrowing];
     Narrowing[] ifTrue = combineNarrowings(lhsIfTrue, rhsIfTrue, ifTrueCombinator);
     Narrowing[] ifFalse = combineNarrowings(lhsIfFalse, rhsIfFalse, ifFalseCombinator);
-    bir:TmpRegister result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:AssignTmpRegister result = cx.createAssignTmpRegister(t:BOOLEAN, pos);
     bir:AssignInsn lhsAssignInsn = { result, operand: lhs, pos };
     shortCircuitBlock.insns.push(lhsAssignInsn);
     bir:AssignInsn rhsAssignInsn = { result, operand: rhs, pos };
