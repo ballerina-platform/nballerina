@@ -887,33 +887,30 @@ function codeGenAssignToVar(StmtContext cx, bir:BasicBlock startBlock, Environme
     return { block: nextBlock, assignments };
 }
 
-function lookupVarRefForAssign(StmtContext cx, Environment env, string varName, Position pos) returns CodeGenError|[bir:Register, Assignment[]] {
+function lookupVarRefForAssign(StmtContext cx, Environment env, string varName, Position pos) returns CodeGenError|[bir:VarRegister, Assignment[]] {
     Binding binding = check lookupVarRefBinding(cx, varName, env, pos);
     if binding.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`, pos);
     }
-    bir:Register unnarrowedReg;
+    bir:VarRegister unnarrowedReg;
     Assignment[] assignments;
     Binding? unnarrowedBinding = binding.unnarrowed;
     if unnarrowedBinding == () {
         // no narrowed binding in effect
-        unnarrowedReg = binding.reg;
+        unnarrowedReg = <bir:VarRegister>binding.reg; // assigning to final or param registers are semantic errors and assigning to narrow register is invalid
         assignments = [];
     }
     else {
         // invalidate the narrowed binding
         // and use the unnarrowed binding
-        unnarrowedReg = unnarrowedBinding.reg;
+        unnarrowedReg = <bir:VarRegister>unnarrowedBinding.reg; // assigning to final or param registers are semantic errors and assigning to narrow register is invalid
         assignments = [{ unnarrowedReg: unnarrowedReg.number, narrowedReg: binding.reg.number, pos }];
     }
     return [unnarrowedReg, assignments];
 }
 
-function codeGenAssign(StmtContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
+function codeGenAssign(StmtContext cx, Environment env, bir:BasicBlock block, bir:VarRegister|bir:FinalRegister result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(block, env, semType, expr);
-    if result !is bir:AssignTmpRegister|bir:VarRegister|bir:FinalRegister {
-        panic error("can't assign to param or narrowed registers");
-    }
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return nextBlock;
@@ -1029,9 +1026,6 @@ function codeGenCompoundAssignToVar(StmtContext cx,
                                     Position pos) returns CodeGenError|StmtEffect {
     var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
     var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(env), startBlock, op, pos, result, rexpr);
-    if result !is bir:AssignTmpRegister|bir:VarRegister {
-        panic error("result must be a tmp or var register");
-    }
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return { block: nextBlock, assignments };

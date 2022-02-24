@@ -31,7 +31,7 @@ type ExprEffect record {|
 
 type Binding record {|
     string name;
-    bir:Register reg;
+    bir:ParamRegister|bir:FinalRegister|bir:NarrowRegister|bir:VarRegister reg;
     boolean isFinal;
     boolean used = false;
     Binding? prev;
