@@ -277,7 +277,7 @@ function testListAllMemberTypesProjection(t:Context tc, t:SemType t) {
     foreach int i in 0 ..< ranges.length() {
         t:Range r = ranges[i];
         t:SemType it = types[i];
-        t:SemType projected = t:listProj(tc, t, t:intConst(r.min));
+        t:SemType projected = t:listMemberType(tc, t, t:intConst(r.min));
         if !t:isSubtype(tc, it, projected) || !t:isSubtype(tc, projected, it) {
             test:assertFail(string `All projection for member index ${r.min} is not equal to individual projection`);
         }

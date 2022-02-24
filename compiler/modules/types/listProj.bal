@@ -27,31 +27,8 @@ function listProjBdd(Context cx, IntSubtype|true k, Bdd b, Conjunction? pos, Con
     }
 }
 
-final ListMemberTypes LIST_MEMBER_TYPES_ALL_TOP = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
-final ListMemberTypes LIST_MEMBER_TYPES_ALL_NEVER = [[{ min: 0, max: int:MAX_VALUE }], [NEVER]];
-
-function listProjBddAllKeys(Context cx, Bdd b, Conjunction? pos, Conjunction? neg) returns ListMemberTypes {
-    if b is boolean {
-        return b ? listProjAll(cx, pos, neg) : LIST_MEMBER_TYPES_ALL_NEVER;
-    }
-    else {
-        return listMemberTypesUnion(listProjBddAllKeys(cx, b.left, and(b.atom, pos), neg),
-                                    listMemberTypesUnion(listProjBddAllKeys(cx, b.middle, pos, neg),
-                                                         listProjBddAllKeys(cx, b.right, pos, and(b.atom, neg)))); 
-    }
-}
-
 // Based on listFormulaIsEmpty
 function listProjPath(Context cx, IntSubtype|true k, Conjunction? pos, Conjunction? neg) returns SemType {
-    SemType|[FixedLengthArray, SemType] intersection = listProjIntersectConjunctions(cx, pos, neg);
-    if intersection is SemType {
-        return intersection;
-    }
-    var [members, rest] = intersection;
-    return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
-}
-
-function listProjIntersectConjunctions(Context cx, Conjunction? pos, Conjunction? neg) returns SemType|[FixedLengthArray, SemType] {
     FixedLengthArray members;
     SemType rest;
     if pos == () {
@@ -91,7 +68,7 @@ function listProjIntersectConjunctions(Context cx, Conjunction? pos, Conjunction
             rest = NEVER;
         }
     }
-    return [members, rest];
+    return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
 }
 
 // Precondition k >= 0 and members[i] not empty for all i
@@ -129,51 +106,6 @@ function listProjExclude(Context cx, IntSubtype|true k, FixedLengthArray members
         SemType rd = diff(rest, nt.rest);
         if !isEmpty(cx, rd) {
             p = union(p, listProjExclude(cx, k, members, rd, neg.next));
-        }
-        return p;
-    }
-}
-
-function listProjAll(Context cx, Conjunction? pos, Conjunction? neg) returns ListMemberTypes {
-    SemType|[FixedLengthArray, SemType] intersection = listProjIntersectConjunctions(cx, pos, neg);
-    if intersection is SemType {
-        return [[{ min: 0, max: int:MAX_VALUE }], [NEVER]];
-    }
-    var [members, rest] = intersection;
-    return listProjPathAll(cx, members, rest, listConjunction(cx, neg));
-}
-
-function listProjPathAll(Context cx, FixedLengthArray members, SemType rest, ListConjunction? neg) returns ListMemberTypes {
-    if neg == () {
-        return listAtomicTypeAllMemberTypes({ members: members.cloneReadOnly(), rest });
-    }
-    else {
-        int len = members.fixedLength;
-        ListAtomicType nt = neg.listType;
-        int negLen = nt.members.fixedLength;
-        if len < negLen {
-            if isNever(rest) {
-                return listProjPathAll(cx, members, rest, neg.next);
-            }
-            fixedArrayFill(members, negLen, rest);
-            len = negLen;
-        }
-        else if negLen < len && isNever(nt.rest) {
-            return listProjPathAll(cx, members, rest, neg.next);
-        }
-        // now we have nt.members.length() <= len
-        ListMemberTypes p = [];
-        foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
-            SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
-            if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
-                p = listMemberTypesUnion(p, listProjPathAll(cx, s, rest, neg.next));
-                
-            }     
-        }
-        SemType rd = diff(rest, nt.rest);
-        if !isEmpty(cx, rd) {
-            p = listMemberTypesUnion(p, listProjPathAll(cx, members, rd, neg.next));
         }
         return p;
     }

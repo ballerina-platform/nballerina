@@ -905,13 +905,25 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
 
+final readonly & ListMemberTypes LIST_MEMBER_TYPES_ALL = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
+final readonly & ListMemberTypes LIST_MEMBER_TYPES_READONLY = [[{ min: 0, max: int:MAX_VALUE }], [READONLY]];
+final readonly & ListMemberTypes LIST_MEMBER_TYPES_NONE = [[], []];
+
 public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
     if t is UniformTypeBitSet {
-        return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL_TOP : LIST_MEMBER_TYPES_ALL_NEVER;
+        if t == LIST_RO {
+            return LIST_MEMBER_TYPES_READONLY;
+        }
+        return (t & LIST_RW) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE;
     }
     else {
-        return listMemberTypesUnion(listProjBddAllKeys(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()), 
-                                    listProjBddAllKeys(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
+        SemType[] types = [];
+        Range[] ranges = combineRanges2(bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), []), 
+                                        bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), []));
+        foreach Range range in ranges {
+            types.push(listMemberType(cx, t, intConst(range.min)));
+        }
+        return [ranges, types];
     }
 }
 

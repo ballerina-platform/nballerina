@@ -22,20 +22,9 @@ type ListConjunction record {|
     ListConjunction? next;
 |};
 
+// Pair of empty Range, SemType arrays represent NEVER at every member index.
+// [[], []] == [[{ min: 0, max: int:MAX_VALUE }], [NEVER]]
 public type ListMemberTypes [Range[], SemType[]];
-
-function listMemberTypesUnion(ListMemberTypes mt1, ListMemberTypes mt2) returns ListMemberTypes {
-    var [r1, t1] = mt1;
-    var [r2, t2] = mt2;
-    Range[] ranges = [];
-    SemType[] types = [];
-    foreach var [r, i1, i2] in combineRanges(r1, r2) {
-        ranges.push(r);
-        types.push(union(i1 == () ? NEVER : t1[i1],
-                         i2 == () ? NEVER : t2[i2]));
-    }
-    return [ranges, types];
-}
 
 public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
     if i < atomic.members.fixedLength {
@@ -470,6 +459,16 @@ function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum
     }
 }
 
+function bddListAllRanges(Context cx, Bdd b, Range[] accum) returns Range[] {
+    if b is boolean {
+        return b ? accum : [];
+    }
+    else {
+        return combineRanges2(bddListAllRanges(cx, b.left, combineRanges2(listAtomicTypeAllMemberTypes(cx.listAtomType(b.atom))[0], accum)),
+                              combineRanges2(bddListAllRanges(cx, b.middle, accum), bddListAllRanges(cx, b.right, accum)));
+    }
+}
+
 function listAtomicMemberType(ListAtomicType atomic, IntSubtype|true key) returns SemType {
     return listAtomicMemberTypeAt(atomic.members, atomic.rest, key);
 }
@@ -573,6 +572,11 @@ function combineRanges(Range[] ranges1, Range[] ranges2) returns [Range, int?, i
         cur = next;
     }
     return combined;
+}
+
+function combineRanges2(Range[] range1, Range[] range2) returns Range[] {
+    [Range, int?, int?][] combined = combineRanges(range1, range2);
+    return from var [r, _, _] in combined select r;
 }
 
 // Helper function for combineRanges
