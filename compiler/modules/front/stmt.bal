@@ -1175,12 +1175,24 @@ function codeGenExprForCond(StmtContext cx, bir:BasicBlock bb, Environment env, 
     }
     else if flags != 0 {
         bir:TmpRegister reg = cx.createTmpRegister(t:BOOLEAN);
-        bir:EqualityInsn insn = {
-            op: "===",
-            pos: expr.startPos,
-            operands: [{ value, semType: t:singleton(cx.mod.tc, t:BOOLEAN) }, { value: true, semType: t:BOOLEAN}],
-            result: reg
-        };
+        bir:EqualityInsn insn;
+        // intersection of the types of the operands of === and !=== must not be disjoint
+        if value {
+            insn = {
+                op: "===",
+                pos: expr.startPos,
+                operands: [{ value, semType: t:singleton(cx.mod.tc, t:BOOLEAN) }, { value: true, semType: t:BOOLEAN}],
+                result: reg
+            };
+        }
+        else {
+            insn = {
+                op: "!==",
+                pos: expr.startPos,
+                operands: [{ value, semType: t:singleton(cx.mod.tc, t:BOOLEAN) }, { value: false, semType: t:BOOLEAN}],
+                result: reg
+            };
+        }
         block.insns.push(insn);
         result = reg;
     }
