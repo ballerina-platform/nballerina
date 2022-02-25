@@ -112,7 +112,7 @@ postfix-type-desc =
 
 optional-type-desc = postfix-type-desc "?"
 
-array-type-desc = postfix-type-desc "[" "]"
+array-type-desc = postfix-type-desc "[" [simple-const-expr] "]"
 
 primary-type-desc =
   builtin-type-name
