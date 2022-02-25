@@ -38,6 +38,7 @@ public type FunctionDefn record {|
     FunctionParam[] params;
     StmtBlock body;
     Position namePos;
+    boolean isVarArg;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};

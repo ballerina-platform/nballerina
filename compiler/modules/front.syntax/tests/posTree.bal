@@ -1,3 +1,4 @@
+import ballerina/io;
 import wso2/nballerina.comm.diagnostic as d;
 
 type OverlappingChildNodes error<OverlappingChildNodesDiagnostic>;
@@ -17,6 +18,7 @@ function validateTerminalSyntaxNode(TerminalSyntaxNode node, Tokenizer tok) retu
     string expected = node is IdentifierSyntaxNode ? node.name : node is StringLiteralSyntaxNode ? node.literal : node.token;
     Position? expectedPos = node is IdentifierSyntaxNode|FixedSyntaxNode|StringLiteralSyntaxNode ? node.pos : ();
     if expectedPos != () && tok.currentStartPos() != expectedPos {
+        io:println(tok.current(), ":", expectedPos, "!=", tok.currentStartPos(), ":", node);
         return invalidStartPos(currentLocation(tok), expectedPos, node is IdentifierSyntaxNode ? node.name : node is StringLiteralSyntaxNode? node.literal : node.token);
     }
     Token? token = tok.current();

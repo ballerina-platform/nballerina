@@ -111,7 +111,7 @@ function syntaxNodeFromFunctionDefn(FunctionDefn defn) returns SubSyntaxNode {
                                  defn.vis == "public" ? { token: "public" } : (),
                                  { token: "function" },
                                  { name: defn.name, pos: defn.namePos },
-                                 syntaxNodeFromFunctionTypeDesc(defn.typeDesc, functionSignature = true),
+                                 syntaxNodeFromFunctionTypeDesc(defn.typeDesc, functionSignature = true, isVarArg = defn.isVarArg),
                                  syntaxNodeFromStmtBlock(defn.body));
 }
 
@@ -529,14 +529,40 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
     }
 }
 
-function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSignature = false) returns SubSyntaxNode {
-    SubSyntaxNode[] params = joinSyntaxNodesWithSeperator((from FunctionTypeParam param in td.params select syntaxNodeFromFunctionTypeParam(param)), { token: "," });
+function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSignature = false, boolean isVarArg = false) returns SubSyntaxNode {
+    SubSyntaxNode[] params;
+    if !isVarArg {
+        params = joinSyntaxNodesWithSeperator((from FunctionTypeParam param in td.params select syntaxNodeFromFunctionTypeParam(param)), { token: "," });
+    }
+    else {
+        // pr-todo: make this more functional
+        params = [];
+        foreach int i in 0..< td.params.length() {
+            if i > 0 {
+                params.push({ token: "," });
+            }
+            FunctionTypeParam param = td.params[i];
+            if i != td.params.length() - 1 {
+                params.push(syntaxNodeFromFunctionTypeParam(param));
+            }
+            else {
+                // pr-todo: we may need to wrap all of this in a function
+                params.push(syntaxNodeFromVarArg(<ArrayTypeDesc>param.td, <string>param.name, <Position>param.namePos));
+            }
+        }
+    }
     TypeDesc? retTd = td.ret;
     return nonTerminalSyntaxNode(td, functionSignature ? () : { token: "function" },
                                      { token: "(", pos: td.startPos },
                                      params,
                                      { token: ")" },
                                      retTd != () ? [{ token: "returns" }, syntaxNodeFromTypeDesc(retTd)] : ());
+}
+
+function syntaxNodeFromVarArg(ArrayTypeDesc td, string name, Position namePos) returns SubSyntaxNode {
+    return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.member),
+                                     { token: "..." },
+                                     { name, pos: namePos });
 }
 
 function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSyntaxNode {

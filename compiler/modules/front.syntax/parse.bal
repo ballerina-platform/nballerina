@@ -186,10 +186,10 @@ function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis,
     Position namePos = tok.currentStartPos();
     string name = check tok.expectIdentifier();
     FunctionParam [] params = [];
-    FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, params);
+    var [typeDesc, isVarArg] = check parseFunctionTypeDesc(tok, params);
     StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
-    FunctionDefn defn = { startPos, endPos, params, typeDesc, name, vis, namePos, body, part };
+    FunctionDefn defn = { startPos, endPos, params, typeDesc, name, vis, namePos, body, part, isVarArg };
     return defn;
 }
 
