@@ -467,7 +467,7 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
     t:ListAtomicType? lat = t:listAtomicTypeRw(cx.tc, semType);
     if lat != () {
         t:SemType rest = lat.rest;
-        if rest is t:UniformTypeBitSet {
+        if rest is t:UniformTypeBitSet && lat.members.fixedLength == 0 {
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_ARRAY);
         }
     }
@@ -534,10 +534,14 @@ function getListDescFunctionRefs(InitModuleContext cx, t:ListAtomicType atomic) 
     string prefix = listAtomicTypeToListReprPrefix(atomic);
     foreach int i in 0 ..< listDescFuncSuffixes.length() {
         string suffix = listDescFuncSuffixes[i];
-        string name = prefix + "_" + suffix;
+        string tentativeName = prefix + "_" + suffix;
         llvm:FunctionType llType = llListDescFuncTypes[i];
         FunctionRef ref;
-        if listDescNullFuncNames.indexOf(name) == () {
+        string? name = tentativeName;
+        if listDescFuncOverrides.hasKey(tentativeName) {
+            name = listDescFuncOverrides[tentativeName];
+        }
+        if name != () {
             ref = getInitRuntimeFunction(cx, mangleRuntimeSymbol("list_" + name), llType);
         }
         else {

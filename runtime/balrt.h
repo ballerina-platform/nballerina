@@ -102,6 +102,12 @@ typedef struct {
 typedef struct {
     int64_t length;
     int64_t capacity;
+    GC uint8_t *members;
+} ByteArray;
+
+typedef struct {
+    int64_t length;
+    int64_t capacity;
     GC double *members;
 } FloatArray;
 
@@ -135,10 +141,13 @@ typedef struct {
     int64_t minLength;
     TaggedPtr (*get)(TaggedPtr lp, int64_t index);
     PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
+    PanicCode (*inexactSet)(TaggedPtr lp, int64_t index, TaggedPtr val);
     int64_t (*getInt)(TaggedPtr lp, int64_t index);
     PanicCode (*setInt)(TaggedPtr lp, int64_t index, int64_t val);
+    PanicCode (*inexactSetInt)(TaggedPtr lp, int64_t index, int64_t val);
     double (*getFloat)(TaggedPtr lp, int64_t index);
     PanicCode (*setFloat)(TaggedPtr lp, int64_t index, double val);
+    PanicCode (*inexactSetFloat)(TaggedPtr lp, int64_t index, double val);
     // the type of members with index >= minLength
     MemberType restType;
     StructureDescPtr fillerDesc;
@@ -159,6 +168,7 @@ typedef GC struct List {
         TaggedPtrArray tpArray;
         IntArray iArray;
         FloatArray fArray;
+        ByteArray bArray;
     };
 } *ListPtr;
 
@@ -381,9 +391,12 @@ extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
 extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr);
 
 #define TAGGED_PTR_SHIFT 3
+// log2(sizeof(uint8_t)) = 0
+#define BYTE_SHIFT 0
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
-extern ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity);
+extern ListPtr _bal_list_construct_8(ListDescPtr desc, int64_t capacity);
+extern ListPtr _bal_list_construct_1(ListDescPtr desc, int64_t capacity);
 
 extern TaggedPtr _bal_list_generic_get_tagged(TaggedPtr p, int64_t index);
 extern int64_t _bal_list_generic_get_int(TaggedPtr p, int64_t index);
@@ -391,12 +404,21 @@ double _bal_list_generic_get_float(TaggedPtr p, int64_t index);
 extern PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
 extern PanicCode _bal_list_generic_set_int(TaggedPtr p, int64_t index, int64_t val);
 PanicCode _bal_list_generic_set_float(TaggedPtr p, int64_t index, double val);
+extern PanicCode _bal_list_generic_inexact_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_generic_inexact_set_int(TaggedPtr p, int64_t index, int64_t val);
+PanicCode _bal_list_generic_inexact_set_float(TaggedPtr p, int64_t index, double val);
 
 extern TaggedPtr _bal_list_int_array_get_tagged(TaggedPtr p, int64_t index);
 extern int64_t _bal_list_int_array_get_int(TaggedPtr p, int64_t index);
 extern PanicCode _bal_list_int_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
 extern PanicCode _bal_list_int_array_set_int(TaggedPtr p, int64_t index, int64_t val);
 extern PanicCode _bal_list_int_array_set_float(TaggedPtr p, int64_t index, double val);
+
+extern TaggedPtr _bal_list_byte_array_get_tagged(TaggedPtr p, int64_t index);
+extern int64_t _bal_list_byte_array_get_int(TaggedPtr p, int64_t index);
+extern PanicCode _bal_list_byte_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_byte_array_set_int(TaggedPtr p, int64_t index, int64_t val);
+extern PanicCode _bal_list_byte_array_set_float(TaggedPtr p, int64_t index, double val);
 
 extern TaggedPtr _bal_list_float_array_get_tagged(TaggedPtr p, int64_t index);
 extern double _bal_list_float_array_get_float(TaggedPtr p, int64_t index);

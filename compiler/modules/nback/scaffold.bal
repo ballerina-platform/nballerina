@@ -14,6 +14,7 @@ type DICompileUnit llvm:Metadata;
 type DISubroutineType llvm:Metadata;
 
 const LLVM_INT = "i64";
+const LLVM_BYTE = "i8";
 const LLVM_DOUBLE = "double";
 const LLVM_BOOLEAN = "i1";
 const LLVM_VOID = "void";
@@ -188,7 +189,7 @@ class Scaffold {
         self.addresses = [];
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
-            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.varName));
+            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.name));
         }
     }
 

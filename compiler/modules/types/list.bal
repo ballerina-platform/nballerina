@@ -32,6 +32,30 @@ public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns Sem
     }
 }
 
+public type ListMemberTypes [Range[], SemType[]];
+
+public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns ListMemberTypes {
+    Range[] ranges = [];
+    SemType[] types = [];
+    SemType[] initial = atomicType.members.initial;
+    int initialLength = initial.length();
+    int fixedLength = atomicType.members.fixedLength;
+    if initialLength != 0 {
+        types.push(...initial);
+        foreach int i in 0 ..< initialLength {
+            ranges.push({ min: i, max: i });
+        }
+        if initialLength < fixedLength {
+            ranges[initialLength - 1] = { min: initialLength - 1, max: fixedLength - 1 };
+        }
+    }
+    if atomicType.rest != NEVER {
+        types.push(atomicType.rest);
+        ranges.push({ min: fixedLength, max: int:MAX_VALUE });
+    }
+    return [ranges, types];
+}
+
 // This is atom index 0
 // Used by bddFixReadOnly
 final ListAtomicType LIST_SUBTYPE_RO = { members: { initial: [], fixedLength: 0 }, rest: READONLY };
@@ -273,12 +297,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             if listInhabited(cx, members, NEVER, neg.next) {
                 return true;
             }
-            // If last member of neg repeats, just checking one repeating occurrence should suffice.
-            int negLenLimit = neg.maxInitialLen;
-            if negLenLimit < negLen {
-                negLenLimit = int:max(negLenLimit, len + 2);
-            }
-            foreach int i in len + 1 ..< negLenLimit {
+            // Check list types with fixedLength >= `len` and  < `negLen`
+            foreach int i in len ..< int:min(negLen, neg.maxInitialLen + 1) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
                 if listInhabited(cx, s, NEVER, neg.next) {
@@ -289,7 +309,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         else if negLen < len && isNever(nt.rest) {
             return listInhabited(cx, members, rest, neg.next);
         }
-        // now we have nt.members.length() <= len
+        // Now we have negLen <= len.
 
         // This is the heart of the algorithm.
         // For [v0, v1] not to be in [t0,t1], there are two possibilities
@@ -310,7 +330,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-        foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
+        int maxInitialLen = int:max(members.initial.length(), neg.maxInitialLen);
+        foreach int i in 0 ..< maxInitialLen {
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
@@ -320,8 +341,17 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             }
         }
         SemType rd = diff(rest, nt.rest);
-        if !isEmpty(cx, rd) && listInhabited(cx, members, rd, neg.next) {
-            return true;
+        if !isEmpty(cx, rd) {
+            // We have checked the posibilities of existance of a shape in list with fixedLength >= 0 and < maxInitialLen.
+            // Now check the existance of a shape with at least `maxInitialLen` members.
+            FixedLengthArray s = members;
+            if len < maxInitialLen {
+                s = fixedArrayShallowCopy(members);
+                fixedArrayFill(s, maxInitialLen, rest);
+            }
+            if listInhabited(cx, s, rd, neg.next) {
+                return true;
+            }
         }
         // This is correct for length 0, because we know that the length of the
         // negative is 0, and [] - [] is empty.
@@ -458,6 +488,94 @@ function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSu
         }
     }
     return m;
+}
+
+function listAtomicApplicableMemberTypes(ListAtomicType atomic, IntSubtype|true indexType) returns SemType[] {
+    var [ranges, memberTypes] = listAtomicTypeAllMemberTypes(atomic);
+    if indexType == true {
+        return memberTypes;
+    }
+    else {
+        SemType[] applicable = [];
+        foreach var [_, i1, i2] in combineRanges(ranges, indexType) {
+            if i1 != () && i2 != () {
+                SemType ty = memberTypes[i1];
+                if applicable.length() == 0 || applicable[applicable.length() - 1] != ty {
+                    applicable.push(memberTypes[i1]);
+                }
+            }
+        }
+    }
+    return memberTypes;
+}
+
+// If [r, i1, i2] is included in the result, then
+//    at least one of i1 and i2 are not ()
+//    if i1 is not (), then r is completely included in ranges1[i1]
+//    if i2 is not (), then r is completely included in ranges2[i2]
+// The ranges in the result are ordered and non-overlapping.
+function combineRanges(Range[] ranges1, Range[] ranges2) returns [Range, int?, int?][] {
+    [Range, int?, int?][] combined = [];
+    int i1 = 0;
+    int i2 = 0;
+    int len1 = ranges1.length();
+    int len2 = ranges2.length();
+    int cur = int:MIN_VALUE;
+    // This iterates over the boundaries between ranges
+    while true {
+        while i1 < len1 && cur > ranges1[i1].max {
+            i1 += 1;
+        }
+        while i2 < len2 && cur > ranges2[i2].max {
+            i2 += 1;
+        }
+        int? next = ();
+        if i1 < len1 {
+            next = nextBoundary(cur, ranges1[i1], next);
+        }
+        if i2 < len2 {
+            next = nextBoundary(cur, ranges2[i2], next);
+        }
+        int max = next == () ? int:MAX_VALUE : next - 1;
+        int? in1 = ();
+        if i1 < len1 {
+            Range r = ranges1[i1];
+            if cur >= r.min && max <= r.max {
+                in1 = i1;
+            }
+        }
+        int? in2 = ();
+        if i2 < len2 {
+            Range r = ranges2[i2];
+            if cur >= r.min && max <= r.max {
+                in2 = i2;
+            }
+        }
+        if in1 != () || in2 != () {
+            combined.push([{ min: cur, max }, in1, in2 ]);
+        }
+        if next == () {
+            break;
+        }
+        cur = next;
+    }
+    return combined;
+}
+
+// Helper function for combineRanges
+// Return smallest range boundary that is > cur and <= next
+// () represents int:MAX_VALUE + 1
+function nextBoundary(int cur, Range r, int? next) returns int? {
+    if r.min > cur && (next == () || r.min < next) {
+        return r.min;
+    }
+    if r.max != int:MAX_VALUE {
+        int i = r.max + 1;
+        if i > cur && (next == () || i < next) {
+            return i;
+        }
+    }
+    return next;
 }
 
 final UniformTypeOps listRoOps = {

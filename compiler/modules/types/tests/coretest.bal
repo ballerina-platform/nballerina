@@ -223,33 +223,6 @@ function roTest() {
 }
 
 @test:Config{}
-function simpleArrayMemberTypeTest() {
-    Context cx = typeContext(new);
-    testArrayMemberTypeOk(cx, ANY);
-    testArrayMemberTypeOk(cx, STRING);
-    testArrayMemberTypeOk(cx, INT);
-    testArrayMemberTypeOk(cx, TOP);
-    testArrayMemberTypeOk(cx, BOOLEAN);
-    testArrayMemberTypeFail(cx, createJson(cx));
-    testArrayMemberTypeFail(cx, intWidthUnsigned(8));
-    test:assertEquals(simpleArrayMemberType(typeContext(new Env()), INT), ());
-}
-
-function testArrayMemberTypeOk(Context cx, UniformTypeBitSet memberType) {
-    ListDefinition def = new;
-    SemType t = def.define(cx.env, rest = memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(cx, t);
-    test:assertTrue(bits == memberType);
-}
-
-function testArrayMemberTypeFail(Context cx, SemType memberType) {
-    ListDefinition def = new;
-    SemType t = def.define(cx.env, rest = memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(cx, t);
-    test:assertTrue(bits == ());
-}
-
-@test:Config{}
 function testIntSubtypeWidenUnsigned() {
     test:assertTrue(<boolean> intSubtypeWidenUnsigned(true));
     test:assertTrue(<boolean> intSubtypeWidenUnsigned([{ min: -1, max: 10 }]));

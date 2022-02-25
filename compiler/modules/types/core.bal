@@ -815,11 +815,16 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     }
     ComparableMemo memo = { semType1: t1, semType2: t2 };
     cx.comparableMemo.add(memo);
-    // SUBSET need to iterate members when tuples are supported
-    // following relies on the fact `listMemberType(cx, NIL, ()) = NEVER`
-    boolean result = comparable(cx, listMemberType(cx, t1, INT), listMemberType(cx, t2, INT));
-    memo.comparable = result;
-    return result;
+    var [ranges1, memberTypes1] = listAllMemberTypes(cx, t1);
+    var [ranges2, memberTypes2] = listAllMemberTypes(cx, t2);
+    foreach var [_, i1, i2] in combineRanges(ranges1, ranges2) {
+        if i1 != () && i2 != () && !comparable(cx, memberTypes1[i1], memberTypes2[i2]) {
+            memo.comparable = false;
+            return false;
+        }
+    }
+    memo.comparable = true;
+    return true;
 }
 
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),
@@ -888,21 +893,6 @@ public function intSubtypeConstraints(SemType t) returns IntSubtypeConstraints? 
     } 
 }
 
-// This is a temporary API that identifies when a SemType corresponds to a type T[]
-// where T is a union of complete basic types.
-public function simpleArrayMemberType(Context cx, SemType t) returns UniformTypeBitSet? {
-    return listAtomicSimpleArrayMemberType(listAtomicTypeRw(cx, t));
-}
-
-// This is a temporary API that identifies when a SemType corresponds to a type T[]
-public function arrayMemberType(Context cx, SemType t) returns SemType? {
-    ListAtomicType? atomic = listAtomicTypeRw(cx, t);
-    if atomic != () && atomic.members.fixedLength == 0 {
-        return atomic.rest;
-    }
-    return ();
-}
-
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
     if atomic != () && atomic.members.fixedLength == 0 {
         SemType memberType = atomic.rest;
@@ -914,6 +904,17 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 }
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
+
+// placeholder for #924
+public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
+    ListAtomicType? atomicType = listAtomicTypeRw(cx, t);
+    if atomicType == () {
+        panic error("expected atomic list type");
+    }
+    else {
+        return listAtomicTypeAllMemberTypes(atomicType);
+    }
+}
 
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {
@@ -956,6 +957,22 @@ public function listMemberType(Context cx, SemType t, SemType k) returns SemType
         }
         return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), <IntSubtype|true>keyData, TOP),
                      bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), <IntSubtype|true>keyData, TOP));
+    }
+}
+
+public function listAtomicTypeApplicableMemberTypes(Context cx, ListAtomicType atomic, SemType indexType) returns readonly & SemType[] {
+    IntSubtype|boolean indexIntType;
+    if indexType is UniformTypeBitSet {
+        indexIntType = (indexType & INT) != 0;
+    }
+    else {
+        indexIntType = intSubtype(indexType);
+    }
+    if indexIntType == false {
+        return [];
+    }
+    else {
+        return listAtomicApplicableMemberTypes(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
     }
 }
 
