@@ -464,8 +464,10 @@ function bddListAllRanges(Context cx, Bdd b, Range[] accum) returns Range[] {
         return b ? accum : [];
     }
     else {
-        return combineRanges2(bddListAllRanges(cx, b.left, combineRanges2(listAtomicTypeAllMemberTypes(cx.listAtomType(b.atom))[0], accum)),
-                              combineRanges2(bddListAllRanges(cx, b.middle, accum), bddListAllRanges(cx, b.right, accum)));
+        var [atomRanges, _] = listAtomicTypeAllMemberTypes(cx.listAtomType(b.atom));
+        return distinctRanges(bddListAllRanges(cx, b.left, distinctRanges(atomRanges, accum)),
+                              distinctRanges(bddListAllRanges(cx, b.middle, accum), 
+                                             bddListAllRanges(cx, b.right, accum)));
     }
 }
 
@@ -574,7 +576,7 @@ function combineRanges(Range[] ranges1, Range[] ranges2) returns [Range, int?, i
     return combined;
 }
 
-function combineRanges2(Range[] range1, Range[] range2) returns Range[] {
+function distinctRanges(Range[] range1, Range[] range2) returns Range[] {
     [Range, int?, int?][] combined = combineRanges(range1, range2);
     return from var [r, _, _] in combined select r;
 }

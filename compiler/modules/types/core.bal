@@ -918,7 +918,7 @@ public function listAllMemberTypes(Context cx, SemType t) returns ListMemberType
     }
     else {
         SemType[] types = [];
-        Range[] ranges = combineRanges2(bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), []), 
+        Range[] ranges = distinctRanges(bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), []), 
                                         bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), []));
         foreach Range range in ranges {
             types.push(listMemberType(cx, t, intConst(range.min)));
