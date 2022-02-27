@@ -13,17 +13,19 @@ final readonly & LangLibFunction[] langLibFunctions = [
     ["error", "message", [t:ERROR], t:STRING]
 ];
 
+// pr-todo: should we allow var arg in lang lib functions
+
 function getLangLibFunction(string mod, string func) returns bir:FunctionSignature? {
     foreach var [moduleName, functionName, paramTypes, returnType] in langLibFunctions {
         if moduleName == mod && functionName == func {
-            return { returnType, paramTypes };
+            return { returnType, paramTypes, isVarArg: false };
         }   
     }
     return ();
 }
 
 final readonly & map<bir:FunctionSignature> ioLibFunctions = {
-    println: { paramTypes: [t:TOP], returnType: t:NIL }
+    println: { paramTypes: [t:TOP], returnType: t:NIL, isVarArg: false }
 };
 
 type ModuleExportSemtypes readonly & map<t:SemType>;

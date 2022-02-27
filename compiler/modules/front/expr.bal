@@ -1224,8 +1224,20 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     }
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
+    s:Expr[] varArgs = [];
     foreach int i in 0 ..< expr.args.length() {
+        if func.signature.isVarArg && i >= func.signature.paramTypes.length() - 1 {
+            varArgs.push(expr.args[i]);
+            continue;
+        }
         var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
+        curBlock = nextBlock;
+        args.push(arg);
+    }
+    if varArgs.length() > 0 {
+        s:ListConstructorExpr varArgList = { startPos: 0, endPos: 0, opPos: 0, members: varArgs};
+        t:SemType listType = func.signature.paramTypes[func.signature.paramTypes.length() - 1];
+        var { result: arg, block: nextBlock } = check codeGenListConstructor(cx, curBlock, listType, varArgList);
         curBlock = nextBlock;
         args.push(arg);
     }
@@ -1345,6 +1357,7 @@ function instantiateSignature(bir:FunctionSignature sig, t:SemType memberType, t
     bir:SemType? restParamType = sig.restParamType;
     bir:SemType[] paramTypes = from var ty in sig.paramTypes select instantiateType(ty, memberType, containerType, counter);
     return {
+        isVarArg: sig.isVarArg,
         returnType: instantiateType(sig.returnType, memberType, containerType, counter),
         paramTypes: paramTypes.cloneReadOnly(),
         restParamType: restParamType == () ? () : instantiateType(restParamType, memberType, containerType, counter)
