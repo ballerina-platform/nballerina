@@ -495,24 +495,7 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
 function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
-    if t == "-" {
-        Position opPos = tok.currentStartPos();
-        check tok.advance();
-        NumericLiteralExpr operand = check parseNumericLiteralExpr(tok);
-        Position endPos = tok.previousEndPos();
-        SimpleConstNegateExpr expr = { startPos, endPos, opPos, operand };
-        return expr;
-    }
     match t {
-        [IDENTIFIER, var identifier] => {
-            Position endPos = tok.currentEndPos();
-            check tok.advance();
-            var [prefix, name] = check parseOptQualIdentifier(tok, identifier);
-            if prefix != () {
-                endPos = tok.previousEndPos();
-            }
-            return { startPos, endPos, prefix, name, qNamePos: startPos };
-        }
         [STRING_LITERAL, var value] => {
             Position endPos = tok.currentEndPos();
             LiteralExpr expr = { startPos, endPos, value };
@@ -535,6 +518,31 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             check tok.advance();
             LiteralExpr expr = {  startPos, endPos, value: t == "true" };
             return expr;
+        }
+    }
+    return parseArrayLenExpr(tok);
+}
+
+function parseArrayLenExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
+    Token? t = tok.current();
+    Position startPos = tok.currentStartPos();
+    if t == "-" {
+        Position opPos = tok.currentStartPos();
+        check tok.advance();
+        NumericLiteralExpr operand = check parseNumericLiteralExpr(tok);
+        Position endPos = tok.previousEndPos();
+        SimpleConstNegateExpr expr = { startPos, endPos, opPos, operand };
+        return expr;
+    }
+    match t {
+        [IDENTIFIER, var identifier] => {
+            Position endPos = tok.currentEndPos();
+            check tok.advance();
+            var [prefix, name] = check parseOptQualIdentifier(tok, identifier);
+            if prefix != () {
+                endPos = tok.previousEndPos();
+            }
+            return { startPos, endPos, prefix, name, qNamePos: startPos };
         }
         [DECIMAL_NUMBER, _]
         | [HEX_INT_LITERAL, _]

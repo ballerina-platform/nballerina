@@ -415,9 +415,8 @@
     ["E", "stmt", "int, string] T = [2, \"test\"];"],
     ["E", "stmt", "[int, string] T = [2, \"test\";"],
     ["E", "stmt", "[int..., string] T = [2, \"test\";"],
-    { "comment" : "not semantically valid" },
-    ["V", "stmt", "T[\"2\"] n = [2, 1.5];"],
-    ["V", "stmt", "T[()] n = [2, 2, 2];"],
+    ["E", "stmt", "T[\"2\"] n = [2, 1.5];"],
+    ["E", "stmt", "T[()] n = [2, 2, 2];"],
 
     { "comment" : "statement var decl wildcard" },
     ["V", "stmt", "Int | String _ = x;"],
