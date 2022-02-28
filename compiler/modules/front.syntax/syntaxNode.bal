@@ -535,21 +535,12 @@ function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSig
         params = joinSyntaxNodesWithSeperator((from FunctionTypeParam param in td.params select syntaxNodeFromFunctionTypeParam(param)), { token: "," });
     }
     else {
-        // pr-todo: make this more functional
-        params = [];
-        foreach int i in 0..< td.params.length() {
-            if i > 0 {
-                params.push({ token: "," });
-            }
-            FunctionTypeParam param = td.params[i];
-            if i != td.params.length() - 1 {
-                params.push(syntaxNodeFromFunctionTypeParam(param));
-            }
-            else {
-                // pr-todo: we may need to wrap all of this in a function
-                params.push(syntaxNodeFromVarArg(<ArrayTypeDesc>param.td, <string>param.name, <Position>param.namePos));
-            }
+        params = joinSyntaxNodesWithSeperator((from int i in 0 ..< td.params.length() - 1 select syntaxNodeFromFunctionTypeParam(td.params[i])), {token: ","});
+        FunctionTypeParam restParam = td.params[td.params.length() - 1];
+        if params.length() > 0 {
+            params.push({ token: "," });
         }
+        params.push(syntaxNodeFromVarArg(restParam));
     }
     TypeDesc? retTd = td.ret;
     return nonTerminalSyntaxNode(td, functionSignature ? () : { token: "function" },
@@ -559,10 +550,11 @@ function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSig
                                      retTd != () ? [{ token: "returns" }, syntaxNodeFromTypeDesc(retTd)] : ());
 }
 
-function syntaxNodeFromVarArg(ArrayTypeDesc td, string name, Position namePos) returns SubSyntaxNode {
+function syntaxNodeFromVarArg(FunctionTypeParam restParam) returns SubSyntaxNode {
+    ArrayTypeDesc td = <ArrayTypeDesc>restParam.td;
     return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.member),
                                      { token: "..." },
-                                     { name, pos: namePos });
+                                     { name: <string>restParam.name, pos: <Position>restParam.namePos });
 }
 
 function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSyntaxNode {

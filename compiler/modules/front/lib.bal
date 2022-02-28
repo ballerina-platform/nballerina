@@ -13,8 +13,6 @@ final readonly & LangLibFunction[] langLibFunctions = [
     ["error", "message", [t:ERROR], t:STRING]
 ];
 
-// pr-todo: should we allow var arg in lang lib functions
-
 function getLangLibFunction(string mod, string func) returns bir:FunctionSignature? {
     foreach var [moduleName, functionName, paramTypes, returnType] in langLibFunctions {
         if moduleName == mod && functionName == func {

@@ -246,8 +246,7 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
                     break;
                 }
                 else {
-                    // pr-todo: better error message
-                    return parseError(tok, "var arg must be the last argument");
+                    return parseError(tok, "parameter after rest parameter");
                 }
             }
             _ => {

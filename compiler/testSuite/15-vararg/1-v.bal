@@ -2,6 +2,7 @@ import ballerina/io;
 public function main() {
     io:println(addAll(1)); // @output 1
     io:println(addAll(1, 2)); // @output 3
+    io:println(addAll(1, (2))); // @output 3
     io:println(addAll(1, 2, 3)); // @output 6
 }
 

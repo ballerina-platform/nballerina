@@ -87,7 +87,6 @@ public type FunctionCode record {|
 # by referencing the name of the function as a variable
 # reference.
 public type FunctionSignature readonly & record {|
-    // pr-todo: is this the best place for this
     boolean isVarArg;
     SemType returnType;
     SemType[] paramTypes;
