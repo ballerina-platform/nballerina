@@ -6,10 +6,10 @@ public type ListAtomicType readonly & record {|
 |};
 
 // Represent a fixed length semtype member list similar to a tuple.
-// The length of the list is `fixedLength`, the last member of the `initial` is repeated to achive this semantic.
+// The length of the list is `fixedLength`, the last member of the `initial` is repeated to achieve this semantic.
 // { initial: [int], fixedLength: 3, } is same as { initial: [int, int, int], fixedLength: 3 }
 // { initial: [string, int], fixedLength: 100 } means `int` is repeated 99 times to get a list of 100 members.
-// `fixedLength` must be `0` when `inital` is empty and the `fixedLength` must be at least `initial.length()`
+// `fixedLength` must be `0` when `initial` is empty and the `fixedLength` must be at least `initial.length()`
 public type FixedLengthArray record {|
     SemType[] initial;
     int fixedLength;
@@ -22,8 +22,7 @@ type ListConjunction record {|
     ListConjunction? next;
 |};
 
-// Pair of empty Range, SemType arrays represent NEVER at every member index.
-// [[], []] == [[{ min: 0, max: int:MAX_VALUE }], [NEVER]]
+// Member types at the indices that are not contained in `Range` array represent NEVER.
 public type ListMemberTypes [Range[], SemType[]];
 
 public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
@@ -344,8 +343,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         }
         SemType rd = diff(rest, nt.rest);
         if !isEmpty(cx, rd) {
-            // We have checked the posibilities of existance of a shape in list with fixedLength >= 0 and < maxInitialLen.
-            // Now check the existance of a shape with at least `maxInitialLen` members.
+            // We have checked the possibilities of existence of a shape in list with fixedLength >= 0 and < maxInitialLen.
+            // Now check the existence of a shape with at least `maxInitialLen` members.
             FixedLengthArray s = members;
             if len < maxInitialLen {
                 s = fixedArrayShallowCopy(members);
