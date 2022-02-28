@@ -184,7 +184,11 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns E
     }
     Operand[] operands = insn.operands;
     foreach int i in 0 ..< operands.length() {
-        check verifyOperandType(vc, operands[i], t:listAtomicTypeMemberAt(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
+        SemType st = t:listAtomicTypeMemberAt(lat, i);
+        if t:isEmpty(vc.typeContext(), st) {
+            return vc.semanticErr("size mismatch in list", insn.pos);
+        }
+        check verifyOperandType(vc, operands[i], st, "type of list constructor member is not allowed by the list type", insn.pos);
     }
 }
 
