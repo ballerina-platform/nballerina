@@ -1,7 +1,5 @@
-// import wso2/nballerina.comm.err;
-// import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.bir;
-// import wso2/nballerina.types as t;
+import wso2/nballerina.print.wasm;
 
 public type Branch record {
     bir:BranchInsn insn;
@@ -14,24 +12,16 @@ public type CondBranch record {
 };
 
 class Scaffold {
-    private Branch[] branchInsns = [];
-    private CondBranch[] condBranchInsns = [];
     private boolean overflowOps = false;
+    map<wasm:Expression[]> renderedRegion = {};
+    int[] processedBlocks = [];
+    final bir:BasicBlock[] blocks;
+    final bir:Region[] regions;
 
-    public function addCondBranchInsn(bir:CondBranchInsn insn, int index) {
-        self.condBranchInsns.push({ insn: insn, fromIndex: index });
-    }
 
-    public function addBranchInsn(bir:BranchInsn insn, int index) {
-        self.branchInsns.push({ insn: insn, fromIndex: index });
-    }
-
-    public function getBranchInsns() returns Branch[] {
-        return self.branchInsns;
-    }
-
-    public function getCondBranchInsns() returns CondBranch[] {
-        return self.condBranchInsns;
+    function init(bir:FunctionCode code) {
+        self.blocks = code.blocks;
+        self.regions = code.regions;
     }
 
     public function setOverflowOps() {
@@ -43,9 +33,9 @@ class Scaffold {
     }
 
     public function reset() {
-        self.condBranchInsns = [];
-        self.branchInsns = [];
         self.overflowOps = false;
+        self.processedBlocks = [];
+        self.renderedRegion = {};
     }
 
 }

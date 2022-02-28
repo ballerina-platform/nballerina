@@ -30,6 +30,31 @@ jobs:
           path: |
             ~/ballerina-${{ env.JBAL_VERSION }}-*.*
           key: jbal-${{ env.JBAL_VERSION }}-${{ runner.os }}
+      - name: Cache Binaryen
+        id: cache-binaryen
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/binaryen-105.tar.gz
+          key: binaryen-${{ runner.os }}
+      - name: Download Binaryen tools deb
+        if: steps.cache-binaryen.outputs.cache-hit != 'true' && runner.os == 'Linux'
+        run: |
+          curl -L "https://github.com/WebAssembly/binaryen/releases/download/version_105/binaryen-version_105-x86_64-linux.tar.gz" > $HOME/binaryen-105.tar.gz
+      - name: Extract Binaryen tools deb
+        run: |
+          tar -xf $HOME/binaryen-105.tar.gz -C $HOME/
+      - name: Install NodeJS Linux
+        if: runner.os == 'Linux'
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_17.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          node -v
+      - name: Install NodeJS macOs
+        if: runner.os == 'macOs'
+        run: |
+          curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/"
+          node -v
       - name: Download jBallerina deb
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: |
@@ -51,6 +76,14 @@ jobs:
           chmod +x "$HOME/Library/Ballerina/bin/bal"
           echo "$HOME/Library/Ballerina/bin" >> $GITHUB_PATH
           echo "JAVA=$HOME/Library/Ballerina/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_ENV
+      - name: Download Binaryen Tools macOs
+        if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'macOs'
+        run: |
+          curl -L "https://github.com/WebAssembly/binaryen/releases/download/version_105/binaryen-version_105-x86_64-macos.tar.gz" > $HOME/binaryen-105.tar.gz
+          tar -xf $HOME/binaryen-105.tar.gz -C $HOME/
+      - name: Extract Binaryen Tools macOs
+        run: |
+          tar -xf $HOME/binaryen-105.tar.gz -C $HOME/
       - name: Test
         run: |
           echo "useing clang=`which clang` llvm-as=`which llvm-as` bal=`which bal`"
@@ -61,7 +94,8 @@ jobs:
         with:
           name: test output
           path: |
-            test/out
+            test/outwat
+            test/outll
 
   test-jni:
     env:

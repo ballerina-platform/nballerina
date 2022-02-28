@@ -1,17 +1,22 @@
-TARGETS=test all compile testll
+TARGETS=test all compile
 
-TDIRS= $(sort $(basename $(notdir $(wildcard ../compiler/testSuite/01-*))))
+TDIRSLL= $(sort $(addsuffix .ll, $(basename $(notdir $(wildcard ../compiler/testSuite/*)))))
+TDIRSWAT= $(sort $(addsuffix .wat, $(basename $(notdir $(wildcard ../compiler/testSuite/01-*)))))
 
-$(TARGETS): $(TDIRS)
+$(TARGETS): $(TDIRSLL) $(TDIRSWAT)
+
+testll: $(TDIRSLL)
+
+testwat: $(TDIRSWAT)
 
 # The filter is so we can say e.g. make 07-error
-$(TDIRS):
-	mkdir -p out/$@
-	@if [ $(wat) = "true" ]; then\
-    	$(MAKE) -C out/$@ -f ../../wsub.mk tdir=$@ $(filter-out $@, $(MAKECMDGOALS));\
-	else\
-		$(MAKE) -C out/$@ -f ../../sub.mk tdir=$@ $(filter-out $@, $(MAKECMDGOALS));\
-    fi
+$(TDIRSLL):
+	mkdir -p outll/$(basename $@)
+	$(MAKE) -C outll/$(basename $@) -f ../../sub.mk tdir=$(basename $@) $(filter-out $(basename $@), $(MAKECMDGOALS))
+
+$(TDIRSWAT):
+	mkdir -p outwat/$(basename $@)
+	$(MAKE) -C outwat/$(basename $@) -f ../../wsub.mk tdir=$(basename $@) $(filter-out $(basename $@), $(MAKECMDGOALS))
 
 clean:
 	-rm -fr out
