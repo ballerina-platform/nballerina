@@ -79,6 +79,7 @@ public type FunctionCode record {|
     BasicBlock[] blocks = [];
     # Registers indexed by number
     Register[] registers = [];
+    # Single-entry single-exit regions
     Region[] regions = [];
 |};
 
@@ -707,7 +708,7 @@ public type BranchInsn readonly & record {|
     *InsnBase;
     INSN_BRANCH name = INSN_BRANCH;
     Label dest;
-    boolean isBrContBack = false;
+    boolean backward = false;
 |};
 
 

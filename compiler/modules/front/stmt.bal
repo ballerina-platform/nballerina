@@ -120,6 +120,11 @@ class StmtContext {
         return <bir:Label>self.currParent - 1;
     }
 
+    function finalizeRegions() {
+        self.code.regions = from var e in self.code.regions
+                        order by e.entry ascending select e;
+    }
+
     function qNameRange(Position startPos) returns Range {
         return self.file.qNameRange(startPos);
     }
@@ -250,6 +255,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
         cx.createRegion(startBlock.label, "Simple", ());
     }
     codeGenOnPanic(cx, defn.body.closeBracePos);
+    cx.finalizeRegions();
     return cx.code;
 }
 
@@ -475,9 +481,8 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     cx.pushLoopContext(exit, loopHead);
     var { block: loopEnd, assignments } = check codeGenScope(cx, loopBody, env, stmt.body, ifTrue);
     if loopEnd != () {
-        bir:BranchInsn branchToLoopHeadFromBottom = { dest: loopHead.label, pos: stmt.body.startPos, isBrContBack: true };
+        bir:BranchInsn branchToLoopHeadFromBottom = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
         loopEnd.insns.push(branchToLoopHeadFromBottom);
-        loopEnd.insns.push(branchToLoopHead);
         check validLoopAssignments(cx, assignments);
     }
     check validLoopAssignments(cx, cx.onContinueAssignments());
@@ -517,14 +522,16 @@ function validLoopAssignments(StmtContext cx, Assignment[] assignments) returns 
 
 function codeGenBreakContinueStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
     bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel(stmt.startPos) : check cx.onContinueLabel(stmt.startPos);
-    bir:BranchInsn branch = { dest, pos: stmt.startPos, isBrContBack: true };
-    startBlock.insns.push(branch);
+    bir:BranchInsn branch;
     if stmt.breakContinue == "break" {
+        branch = { dest, pos: stmt.startPos };
         cx.addOnBreakAssignments(env.assignments);
     }
     else {
+        branch = { dest, pos: stmt.startPos, backward: true };
         cx.addOnContinueAssignments(env.assignments);
     }
+    startBlock.insns.push(branch);
     return { block: () };
 }
 
