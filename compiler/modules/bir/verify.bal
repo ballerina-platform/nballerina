@@ -225,6 +225,9 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns Error? {
         return vc.semanticErr("list set applied to non-list", insn.pos);
     }
     t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
+    if t:isEmpty(vc.typeContext(), memberType) {
+        return vc.semanticErr("list index out of range", insn.pos);
+    }
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type", insn.pos);
 }
 
