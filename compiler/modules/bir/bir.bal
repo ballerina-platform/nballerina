@@ -79,6 +79,7 @@ public type FunctionCode record {|
     BasicBlock[] blocks = [];
     # Registers indexed by number
     Register[] registers = [];
+    Region[] regions = [];
 |};
 
 # This represents the signature of a function definition.
@@ -91,6 +92,19 @@ public type FunctionSignature readonly & record {|
     SemType[] paramTypes;
     SemType? restParamType = ();
 |};
+
+public type Region record {|
+    Label entry;
+    Label? exit = ();
+    Label? parent = ();
+    RegionType ty;
+|};
+
+public enum RegionType {
+    Simple,
+    Loop,
+    Multiple
+}
 
 # A basic block.
 # Normal control flow proceeds implicitly through the members of the insns array.
@@ -693,6 +707,7 @@ public type BranchInsn readonly & record {|
     *InsnBase;
     INSN_BRANCH name = INSN_BRANCH;
     Label dest;
+    boolean isBrContBack = false;
 |};
 
 
