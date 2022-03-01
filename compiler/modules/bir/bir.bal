@@ -94,17 +94,17 @@ public type FunctionSignature readonly & record {|
     SemType? restParamType = ();
 |};
 
-public type Region record {|
+public type Region readonly & record {|
     Label entry;
     Label? exit = ();
     Label? parent = ();
-    RegionType ty;
+    RegionKind kind;
 |};
 
-public enum RegionType {
-    Simple,
-    Loop,
-    Multiple
+public enum RegionKind {
+    SIMPLE,
+    LOOP,
+    MULTIPLE
 }
 
 # A basic block.
