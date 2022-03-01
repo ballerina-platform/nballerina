@@ -107,9 +107,7 @@ class StmtContext {
 
     function createRegion(bir:Label entry, bir:RegionType ty, bir:Label? parent = (), bir:Label? exit = ()) {
         bir:Region region  = { entry: entry, ty: ty, exit: exit, parent: parent };
-        if ty != "Loop" {
-            self.currParent = region.parent;
-        }
+        self.currParent = region.parent;
         self.code.regions.push(region);
     }
 
