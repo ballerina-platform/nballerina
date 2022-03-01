@@ -828,6 +828,38 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, t:listMemberType(tc, resultType, t:singleton(tc, i)), member);
         operands.push(operand);
     }
+    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, resultType);
+    if lat != () {
+        // Add filler values
+        foreach int i in operands.length()..<lat.members.fixedLength {
+            t:SemType fillType = i < lat.members.initial.length() ? lat.members.initial[i] : lat.members.initial[0];           
+            if i < lat.members.initial.length() {
+                fillType = lat.members.initial[i];
+            }
+            else {
+                fillType = lat.members.initial[0];
+            }
+
+            if fillType == t:INT {
+                operands.push(singletonIntOperand(tc, 0));
+            }
+            else if fillType == t:NIL || fillType == t:ANY {
+                operands.push(singletonOperand(cx, ()));
+            }
+            else if fillType == t:FLOAT {
+                operands.push(singletonOperand(cx, 0.0f));
+            }
+            else if fillType == t:DECIMAL {
+                operands.push(singletonOperand(cx, 0.0d));
+            }
+            else if fillType == t:STRING {
+                operands.push(singletonStringOperand(tc, ""));
+            }
+            else {
+                return cx.semanticErr("type does not have a filler value", s:range(expr));
+            }
+        }
+    }
     if t:isEmpty(cx.mod.tc, resultType) {
         return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
