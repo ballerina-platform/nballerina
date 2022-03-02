@@ -832,13 +832,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
     if lat != () {
         // Add filler values
         foreach int i in operands.length()..<lat.members.fixedLength {
-            t:SemType fillType = i < lat.members.initial.length() ? lat.members.initial[i] : lat.members.initial[0];           
-            if i < lat.members.initial.length() {
-                fillType = lat.members.initial[i];
-            }
-            else {
-                fillType = lat.members.initial[0];
-            }
+            t:SemType fillType = i < lat.members.initial.length() ? lat.members.initial[i] : lat.members.initial[0];
 
             if fillType == t:INT {
                 operands.push(singletonIntOperand(tc, 0));
@@ -851,6 +845,9 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
             }
             else if fillType == t:DECIMAL {
                 operands.push(singletonOperand(cx, 0.0d));
+            }
+            else if fillType == t:BOOLEAN {
+                operands.push(singletonOperand(cx, false));
             }
             else if fillType == t:STRING {
                 operands.push(singletonStringOperand(tc, ""));
