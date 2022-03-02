@@ -917,11 +917,16 @@ public function listAllMemberTypes(Context cx, SemType t) returns ListMemberType
         return (t & LIST_RW) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE;
     }
     else {
+        Range[] ranges = [];
         SemType[] types = [];
-        Range[] ranges = distinctRanges(bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), []), 
-                                        bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), []));
-        foreach Range range in ranges {
-            types.push(listMemberType(cx, t, intConst(range.min)));
+        Range[] allRanges = distinctRanges(bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), []), 
+                                           bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), []));
+        foreach Range r in allRanges {
+            SemType m = listMemberType(cx, t, intConst(r.min));
+            if m != NEVER {
+                ranges.push(r);
+                types.push(m);
+            }
         }
         return [ranges, types];
     }
