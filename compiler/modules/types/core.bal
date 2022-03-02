@@ -905,14 +905,25 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
 
-// placeholder for #924
+final readonly & ListMemberTypes LIST_MEMBER_TYPES_ALL = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
+final readonly & ListMemberTypes LIST_MEMBER_TYPES_READONLY = [[{ min: 0, max: int:MAX_VALUE }], [READONLY]];
+final readonly & ListMemberTypes LIST_MEMBER_TYPES_NONE = [[], []];
+
 public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
-    ListAtomicType? atomicType = listAtomicTypeRw(cx, t);
-    if atomicType == () {
-        panic error("expected atomic list type");
+    if t is UniformTypeBitSet {
+        if t == LIST_RO {
+            return LIST_MEMBER_TYPES_READONLY;
+        }
+        return (t & LIST_RW) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE;
     }
     else {
-        return listAtomicTypeAllMemberTypes(atomicType);
+        SemType[] types = [];
+        Range[] ranges = distinctRanges(bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), []), 
+                                        bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), []));
+        foreach Range range in ranges {
+            types.push(listMemberType(cx, t, intConst(range.min)));
+        }
+        return [ranges, types];
     }
 }
 
