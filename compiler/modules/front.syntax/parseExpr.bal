@@ -520,10 +520,10 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             return expr;
         }
     }
-    return parseArrayLenExpr(tok);
+    return parseArrayLengthExpr(tok);
 }
 
-function parseArrayLenExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
+function parseArrayLengthExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
     if t == "-" {

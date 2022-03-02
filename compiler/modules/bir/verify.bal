@@ -184,11 +184,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns E
     }
     Operand[] operands = insn.operands;
     foreach int i in 0 ..< operands.length() {
-        SemType st = t:listAtomicTypeMemberAt(lat, i);
-        if t:isEmpty(vc.typeContext(), st) {
-            return vc.semanticErr("size mismatch in list", insn.pos);
-        }
-        check verifyOperandType(vc, operands[i], st, "type of list constructor member is not allowed by the list type", insn.pos);
+        check verifyOperandType(vc, operands[i], t:listAtomicTypeMemberAt(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
     }
 }
 
@@ -229,9 +225,6 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns Error? {
         return vc.semanticErr("list set applied to non-list", insn.pos);
     }
     t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
-    if t:isEmpty(vc.typeContext(), memberType) {
-        return vc.semanticErr("list index out of range", insn.pos);
-    }
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type", insn.pos);
 }
 
