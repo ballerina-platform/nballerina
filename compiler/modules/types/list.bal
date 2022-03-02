@@ -351,7 +351,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
                 s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, maxInitialLen, rest);
             }
-            if listInhabited(cx, s, rd, neg.next) {
+            if listInhabited(cx, s, rest, neg.next) {
                 return true;
             }
         }
