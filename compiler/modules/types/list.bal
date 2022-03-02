@@ -22,7 +22,8 @@ type ListConjunction record {|
     ListConjunction? next;
 |};
 
-// Member types at the indices that are not contained in `Range` array represent NEVER.
+// Member types at the indices that are not contained in `Range` array represent `never.
+// The SemTypes in this list are not `never`.
 public type ListMemberTypes [Range[], SemType[]];
 
 public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
