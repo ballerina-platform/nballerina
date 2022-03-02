@@ -837,7 +837,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
             if fillType == t:INT {
                 operands.push(singletonIntOperand(tc, 0));
             }
-            else if fillType == t:NIL || fillType == t:ANY {
+            else if t:isSubtype(tc, t:NIL, fillType) {
                 operands.push(singletonOperand(cx, ()));
             }
             else if fillType == t:FLOAT {
