@@ -1275,8 +1275,7 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
 
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
     int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
-    int required = func.signature.paramTypes.length();
-    if nSuppliedArgs < required {
+    if nSuppliedArgs < func.signature.paramTypes.length() {
         if func.symbol == IO_PRINTLN_SYMBOL {
             return cx.unimplementedErr("io:println without arguments not implemented", call.closeParenPos);
         }
