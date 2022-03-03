@@ -225,6 +225,11 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
         bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], param.name, param.namePos);
         bindings = { name: <string>param.name, reg, prev: bindings, isFinal: true };
     }
+    s:FunctionParam? restParam = defn.restParam;
+    if restParam != () {
+        bir:ParamRegister reg = cx.createParamRegister(<t:SemType>signature.restParamType, restParam.name, restParam.namePos);
+        bindings = { name: restParam.name, reg, prev: bindings, isFinal: true };
+    }
     var { block: endBlock } = check codeGenScope(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
         bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: defn.body.closeBracePos };

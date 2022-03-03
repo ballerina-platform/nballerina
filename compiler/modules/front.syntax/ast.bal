@@ -36,9 +36,9 @@ public type FunctionDefn record {|
     Visibility vis;
     FunctionTypeDesc typeDesc;
     FunctionParam[] params;
+    FunctionParam? restParam;
     StmtBlock body;
     Position namePos;
-    boolean isVarArg;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};
@@ -454,6 +454,7 @@ public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
     *PositionFields;
     FunctionTypeParam[] params;
+    FunctionTypeParam? restParam;
     TypeDesc? ret;
     t:FunctionDefinition? defn = ();
 |};

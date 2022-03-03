@@ -48,7 +48,9 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
     }
     s:TypeDesc? retTy = defn.typeDesc.ret;
     t:SemType ret = retTy != () ? check resolveSubsetTypeDesc(mod, defn, retTy) : t:NIL;
-    return { paramTypes: paramTypes.cloneReadOnly(), returnType: ret, isVarArg: defn.isVarArg };
+    s:FunctionTypeParam? restParam = defn.restParam;
+    t:SemType? restParamType = restParam != () ? check resolveSubsetTypeDesc(mod, defn, restParam.td) : ();
+    return { paramTypes: paramTypes.cloneReadOnly(), returnType: ret, restParamType };
 }
 
 function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:TypeDesc td) returns t:SemType|ResolveTypeError {

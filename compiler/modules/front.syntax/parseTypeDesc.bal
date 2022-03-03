@@ -4,7 +4,7 @@ import wso2/nballerina.comm.err;
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {
         check tok.advance();
-        return (check parseFunctionTypeDesc(tok))[0];
+        return parseFunctionTypeDesc(tok);
     }
     return parseUnion(tok);
 }
@@ -214,12 +214,12 @@ function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
 }
 
 // current token should be "("
-function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ()) returns [FunctionTypeDesc, boolean]|err:Syntax {
+function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ()) returns FunctionTypeDesc|err:Syntax {
     // skip "function"
     Position startPos = tok.currentStartPos();
     check tok.expect("(");
     FunctionTypeParam[] params = namedParams ?: [];
-    boolean isVarArg = false;
+    FunctionParam? restParam = ();
     while true {
         if tok.current() == ")" {
             break;
@@ -235,13 +235,11 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
                 check tok.advance();
             }
             "..." => {
-                isVarArg = true;
                 td = { member: td, startPos: td.startPos, endPos: tok.currentEndPos(), dimensions: [()] }; // convert to array type desc
                 check tok.advance();
                 Position namePos = tok.currentStartPos();
                 string name = check tok.expectIdentifier();
-                FunctionParam param = { startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td };
-                params.push(param);
+                restParam = { startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td };
                 if tok.current() == ")" {
                     break;
                 }
@@ -269,7 +267,7 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
         ret = check parseTypeDesc(tok);
     }
     endPos = tok.previousEndPos();
-    return [{ startPos, endPos, params, ret }, isVarArg];
+    return { startPos, endPos, params, ret, restParam };
 }
 
 // current token is []

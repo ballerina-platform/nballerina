@@ -193,7 +193,17 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     t:SemType[] paramTypes = signature.paramTypes;
     t:SemType[] instantiatedParamTypes = funcRef.signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]));
+        t:SemType targetType;
+        t:SemType paramType;
+        if i == instantiatedParamTypes.length() && signature.restParamType != () {
+            targetType = <t:SemType>funcRef.signature.restParamType;
+            paramType = <t:SemType>signature.restParamType;
+        }
+        else {
+            targetType = instantiatedParamTypes[i];
+            paramType = paramTypes[i];
+        }
+        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramType), targetType));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;

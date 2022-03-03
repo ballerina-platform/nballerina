@@ -180,7 +180,7 @@ class Scaffold {
         self.reprs = reprs;
         self.returnType = defn.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
-        self.nParams = defn.signature.paramTypes.length();
+        self.nParams = defn.signature.restParamType == () ? defn.signature.paramTypes.length() : defn.signature.paramTypes.length() + 1;
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock(b.name);

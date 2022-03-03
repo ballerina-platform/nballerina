@@ -1224,22 +1224,22 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     }
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
-    s:Expr[] varArgs = [];
+    s:Expr[] restArgs = [];
+    t:SemType? restParamType = func.signature.restParamType;
     foreach int i in 0 ..< expr.args.length() {
-        if func.signature.isVarArg && i >= func.signature.paramTypes.length() - 1 {
-            varArgs.push(expr.args[i]);
+        if restParamType != () && i >= func.signature.paramTypes.length() {
+            restArgs.push(expr.args[i]);
             continue;
         }
         var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
         curBlock = nextBlock;
         args.push(arg);
     }
-    if func.signature.isVarArg {
-        Position startPos = varArgs.length() > 0 ? varArgs[0].startPos : expr.openParenPos;
-        Position endPos = varArgs.length() > 0 ? varArgs[varArgs.length() - 1].endPos : expr.closeParenPos;
-        s:ListConstructorExpr varArgList = { startPos, endPos, opPos: startPos, members: varArgs};
-        t:SemType listType = func.signature.paramTypes[func.signature.paramTypes.length() - 1];
-        var { result: arg, block: nextBlock } = check codeGenListConstructor(cx, curBlock, listType, varArgList);
+    if restParamType != () {
+        Position startPos = restArgs.length() > 0 ? restArgs[0].startPos : expr.openParenPos;
+        Position endPos = restArgs.length() > 0 ? restArgs[restArgs.length() - 1].endPos : expr.closeParenPos;
+        s:ListConstructorExpr varArgList = { startPos, endPos, opPos: startPos, members: restArgs};
+        var { result: arg, block: nextBlock } = check codeGenListConstructor(cx, curBlock, restParamType, varArgList);
         curBlock = nextBlock;
         args.push(arg);
     }
@@ -1275,7 +1275,7 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
 
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
     int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
-    int required = func.signature.isVarArg ? func.signature.paramTypes.length() - 1 : func.signature.paramTypes.length();
+    int required = func.signature.paramTypes.length();
     if nSuppliedArgs < required {
         if func.symbol == IO_PRINTLN_SYMBOL {
             return cx.unimplementedErr("io:println without arguments not implemented", call.closeParenPos);
@@ -1360,7 +1360,6 @@ function instantiateSignature(bir:FunctionSignature sig, t:SemType memberType, t
     bir:SemType? restParamType = sig.restParamType;
     bir:SemType[] paramTypes = from var ty in sig.paramTypes select instantiateType(ty, memberType, containerType, counter);
     return {
-        isVarArg: sig.isVarArg,
         returnType: instantiateType(sig.returnType, memberType, containerType, counter),
         paramTypes: paramTypes.cloneReadOnly(),
         restParamType: restParamType == () ? () : instantiateType(restParamType, memberType, containerType, counter)
