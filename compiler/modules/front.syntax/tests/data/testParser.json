@@ -395,6 +395,7 @@
     ["V", "stmt", "int[x] n = [2, 1];"],
     ["V", "stmt", "int[1] n = [3];"],
     ["V", "stmt", "int[3] n = [2, 1, 7];"],
+    ["V", "stmt", "int[0x3] n = [2, 1, 7];"],
     ["V", "stmt", "(int|boolean)[3] n = [2, true, 7];", "(int | boolean)[3] n = [2, true, 7];"],
     ["V", "stmt", "int|boolean[2] n = [2, [true, false]];", "int | (boolean[2]) n = [2, [true, false]];"],
     ["V", "stmt", "3[2] n = [2, 2, 2];"],
@@ -417,6 +418,8 @@
     ["E", "stmt", "[int..., string] T = [2, \"test\";"],
     ["E", "stmt", "T[\"2\"] n = [2, 1.5];"],
     ["E", "stmt", "T[()] n = [2, 2, 2];"],
+    ["E", "stmt", "T[2.0] n = [2, 2];"],
+    ["E", "stmt", "T[-2] n = [2, 2];"],
 
     { "comment" : "statement var decl wildcard" },
     ["V", "stmt", "Int | String _ = x;"],

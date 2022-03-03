@@ -495,6 +495,14 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
 function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
+    if t == "-" {
+        Position opPos = tok.currentStartPos();
+        check tok.advance();
+        NumericLiteralExpr operand = check parseNumericLiteralExpr(tok);
+        Position endPos = tok.previousEndPos();
+        SimpleConstNegateExpr expr = { startPos, endPos, opPos, operand };
+        return expr;
+    }
     match t {
         [STRING_LITERAL, var value] => {
             Position endPos = tok.currentEndPos();
@@ -519,6 +527,9 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             LiteralExpr expr = {  startPos, endPos, value: t == "true" };
             return expr;
         }
+        [DECIMAL_FP_NUMBER, _, _] => {
+            return parseNumericLiteralExpr(tok);
+        }
     }
     return parseArrayLengthExpr(tok);
 }
@@ -526,14 +537,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
 function parseArrayLengthExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
-    if t == "-" {
-        Position opPos = tok.currentStartPos();
-        check tok.advance();
-        NumericLiteralExpr operand = check parseNumericLiteralExpr(tok);
-        Position endPos = tok.previousEndPos();
-        SimpleConstNegateExpr expr = { startPos, endPos, opPos, operand };
-        return expr;
-    }
+    
     match t {
         [IDENTIFIER, var identifier] => {
             Position endPos = tok.currentEndPos();
@@ -545,8 +549,7 @@ function parseArrayLengthExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             return { startPos, endPos, prefix, name, qNamePos: startPos };
         }
         [DECIMAL_NUMBER, _]
-        | [HEX_INT_LITERAL, _]
-        | [DECIMAL_FP_NUMBER, _, _] => {
+        | [HEX_INT_LITERAL, _] => {
             return parseNumericLiteralExpr(tok);
         }
     }
