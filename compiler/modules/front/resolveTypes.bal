@@ -169,7 +169,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                     t = d.define(env, rest = t);
                 }
                 else {
-                    int length = check resolveConstIntExpr(mod, modDefn, len);
+                    int length = check resolveConstIntExpr(mod, modDefn, len, "array length should be a non-negative integer constant");
                     t = d.define(env, [t], length);
                 }
             }

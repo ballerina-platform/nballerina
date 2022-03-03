@@ -673,7 +673,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
 
 function resolveConstMatchPattern(StmtContext cx, Environment env, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|ResolveTypeError {
     if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(expr.name, env) {
-        var [_, value] = check resolveConstExpr(cx.mod, cx.functionDefn, expr, ());
+        var [_, value] = check resolveConstExpr(cx.mod, cx.functionDefn, expr, expectedType, "pattern will not be matched");
         return value;
     }
     return cx.semanticErr(`match pattern is not constant`, s:range(expr));
