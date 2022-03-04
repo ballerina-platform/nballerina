@@ -77,8 +77,8 @@ class StmtContext {
         return bir:createFinalRegister(self.code, t, name, pos);
     }
 
-    function createNarrowRegister(bir:SemType t, string? name, Position? pos) returns bir:NarrowRegister {
-        return bir:createNarrrowRegister(self.code, t, name, pos);
+    function createNarrowRegister(bir:SemType t, bir:Register prev, string? name, Position? pos) returns bir:NarrowRegister {
+        return bir:createNarrrowRegister(self.code, t, prev, name, pos);
     }
 
     function createParamRegister(bir:SemType t, string name, Position pos) returns bir:ParamRegister {
@@ -790,7 +790,7 @@ function addNarrowings(StmtContext cx, bir:BasicBlock bb, Environment env, Narro
         if ty === t:NEVER {
             panic err:impossible("narrowed to never type");
         }
-        bir:NarrowRegister narrowed = cx.createNarrowRegister(ty, binding.name, pos);
+        bir:NarrowRegister narrowed = cx.createNarrowRegister(ty, binding.reg, binding.name, pos);
         bir:CondNarrowInsn insn = {
             result: narrowed,
             operand: binding.reg,
@@ -1140,7 +1140,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     bir:BasicBlock errorBlock = cx.createBasicBlock();
     bir:CondBranchInsn condBranch = { operand: isError, ifTrue: errorBlock.label, ifFalse: okBlock.label, pos };
     bb.insns.push(condBranch);
-    bir:NarrowRegister errorReg = cx.createNarrowRegister(errorType, (), pos);
+    bir:NarrowRegister errorReg = cx.createNarrowRegister(errorType, operand, (), pos);
     bir:CondNarrowInsn narrowToError = {
         result: errorReg,
         operand,
@@ -1149,7 +1149,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     };
     errorBlock.insns.push(narrowToError);
     codeGenCheckingTerminator(errorBlock, checkingKeyword, errorReg, pos);
-    bir:NarrowRegister result = cx.createNarrowRegister(okType, (), pos);
+    bir:NarrowRegister result = cx.createNarrowRegister(okType, operand, (), pos);
     bir:CondNarrowInsn narrowToOk = {
         result,
         operand,
