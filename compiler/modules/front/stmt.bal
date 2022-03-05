@@ -77,8 +77,8 @@ class StmtContext {
         return bir:createFinalRegister(self.code, t, name, pos);
     }
 
-    function createNarrowRegister(bir:SemType t, string? name, Position? pos) returns bir:NarrowRegister {
-        return bir:createNarrrowRegister(self.code, t, name, pos);
+    function createNarrowRegister(bir:SemType t, bir:Register prev, string? name, Position? pos) returns bir:NarrowRegister {
+        return bir:createNarrrowRegister(self.code, t, prev, name, pos);
     }
 
     function createParamRegister(bir:SemType t, string name, Position pos) returns bir:ParamRegister {
@@ -790,7 +790,7 @@ function addNarrowings(StmtContext cx, bir:BasicBlock bb, Environment env, Narro
         if ty === t:NEVER {
             panic err:impossible("narrowed to never type");
         }
-        bir:NarrowRegister narrowed = cx.createNarrowRegister(ty, binding.name, pos);
+        bir:NarrowRegister narrowed = cx.createNarrowRegister(ty, binding.reg, binding.name, pos);
         bir:CondNarrowInsn insn = {
             result: narrowed,
             operand: binding.reg,
@@ -887,33 +887,30 @@ function codeGenAssignToVar(StmtContext cx, bir:BasicBlock startBlock, Environme
     return { block: nextBlock, assignments };
 }
 
-function lookupVarRefForAssign(StmtContext cx, Environment env, string varName, Position pos) returns CodeGenError|[bir:Register, Assignment[]] {
+function lookupVarRefForAssign(StmtContext cx, Environment env, string varName, Position pos) returns CodeGenError|[bir:VarRegister, Assignment[]] {
     Binding binding = check lookupVarRefBinding(cx, varName, env, pos);
     if binding.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`, pos);
     }
-    bir:Register unnarrowedReg;
+    bir:VarRegister unnarrowedReg;
     Assignment[] assignments;
     Binding? unnarrowedBinding = binding.unnarrowed;
     if unnarrowedBinding == () {
         // no narrowed binding in effect
-        unnarrowedReg = binding.reg;
+        unnarrowedReg = <bir:VarRegister>binding.reg; // assigning to final or param registers are semantic errors and assigning to narrow register is invalid
         assignments = [];
     }
     else {
         // invalidate the narrowed binding
         // and use the unnarrowed binding
-        unnarrowedReg = unnarrowedBinding.reg;
+        unnarrowedReg = <bir:VarRegister>unnarrowedBinding.reg; // assigning to final or param registers are semantic errors and assigning to narrow register is invalid
         assignments = [{ unnarrowedReg: unnarrowedReg.number, narrowedReg: binding.reg.number, pos }];
     }
     return [unnarrowedReg, assignments];
 }
 
-function codeGenAssign(StmtContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
+function codeGenAssign(StmtContext cx, Environment env, bir:BasicBlock block, bir:VarRegister|bir:FinalRegister result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(block, env, semType, expr);
-    if result !is bir:TmpRegister|bir:VarRegister|bir:FinalRegister {
-        panic error("can't assign to param or narrowed registers");
-    }
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return nextBlock;
@@ -1029,9 +1026,6 @@ function codeGenCompoundAssignToVar(StmtContext cx,
                                     Position pos) returns CodeGenError|StmtEffect {
     var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
     var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(env), startBlock, op, pos, result, rexpr);
-    if result !is bir:TmpRegister|bir:VarRegister {
-        panic error("result must be a tmp or var register");
-    }
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return { block: nextBlock, assignments };
@@ -1146,7 +1140,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     bir:BasicBlock errorBlock = cx.createBasicBlock();
     bir:CondBranchInsn condBranch = { operand: isError, ifTrue: errorBlock.label, ifFalse: okBlock.label, pos };
     bb.insns.push(condBranch);
-    bir:NarrowRegister errorReg = cx.createNarrowRegister(errorType, (), pos);
+    bir:NarrowRegister errorReg = cx.createNarrowRegister(errorType, operand, (), pos);
     bir:CondNarrowInsn narrowToError = {
         result: errorReg,
         operand,
@@ -1155,7 +1149,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     };
     errorBlock.insns.push(narrowToError);
     codeGenCheckingTerminator(errorBlock, checkingKeyword, errorReg, pos);
-    bir:NarrowRegister result = cx.createNarrowRegister(okType, (), pos);
+    bir:NarrowRegister result = cx.createNarrowRegister(okType, operand, (), pos);
     bir:CondNarrowInsn narrowToOk = {
         result,
         operand,
@@ -1175,7 +1169,24 @@ function codeGenExprForCond(StmtContext cx, bir:BasicBlock bb, Environment env, 
     }
     else if flags != 0 {
         bir:TmpRegister reg = cx.createTmpRegister(t:BOOLEAN);
-        bir:AssignInsn insn = { result: reg, operand: { value, semType: t:BOOLEAN }, pos: expr.startPos };
+        bir:EqualityInsn insn;
+        // intersection of the types of the operands of === and !=== must not be disjoint
+        if value {
+            insn = {
+                op: "===",
+                pos: expr.startPos,
+                operands: [{ value, semType: t:singleton(cx.mod.tc, t:BOOLEAN) }, { value: true, semType: t:BOOLEAN}],
+                result: reg
+            };
+        }
+        else {
+            insn = {
+                op: "!==",
+                pos: expr.startPos,
+                operands: [{ value, semType: t:singleton(cx.mod.tc, t:BOOLEAN) }, { value: false, semType: t:BOOLEAN}],
+                result: reg
+            };
+        }
         block.insns.push(insn);
         result = reg;
     }
