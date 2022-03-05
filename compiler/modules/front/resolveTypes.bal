@@ -169,10 +169,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                     t = d.define(env, rest = t);
                 }
                 else {
-                    if !mod.allowAllTypes {
-                        return err:unimplemented("fixed length array types not implemented", s:locationInDefn(modDefn, td.startPos));
-                    }
-                    int length = check resolveConstIntExpr(mod, modDefn, len);
+                    int length = check resolveConstIntExpr(mod, modDefn, len, "array length should be a non-negative integer constant");
                     t = d.define(env, [t], length);
                 }
             }

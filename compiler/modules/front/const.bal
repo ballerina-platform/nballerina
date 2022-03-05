@@ -26,11 +26,15 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
     }
 }
 
-function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, t:SemType? expectedType) returns s:ResolvedConst|ResolveTypeError {
+function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, t:SemType? expectedType, string? errMsg = ()) returns s:ResolvedConst|ResolveTypeError {
     ExprContext cx = new ExprContext(mod, defn, constCode, constEnvironment, ());
     var { result } = check codeGenExpr(cx, constBasicBlock, expectedType, expr);
     bir:ConstOperand operand = <bir:ConstOperand>result;
     if expectedType != () && !t:isSubtype(mod.tc, operand.semType, expectedType) {
+        if defn !is s:ConstDefn {
+            string msg = errMsg == () ? "expression is not of expected type" : errMsg;
+            return err:semantic(msg, s:locationInDefn(defn, s:range(expr)));
+        }
         return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
     }
     t:SemType semType = operand.semType;
@@ -40,7 +44,7 @@ function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr
     return [semType, operand.value];
 }
 
-function resolveConstIntExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr) returns int|ResolveTypeError {
-    [t:SemType, t:SingleValue] [_, resolved] = check resolveConstExpr(mod, defn, expr, t:INT);
+function resolveConstIntExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, string? errMsg) returns int|ResolveTypeError {
+    [t:SemType, t:SingleValue] [_, resolved] = check resolveConstExpr(mod, defn, expr, t:INT, errMsg);
     return <int>resolved;
 }

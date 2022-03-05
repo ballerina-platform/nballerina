@@ -112,7 +112,12 @@ postfix-type-desc =
 
 optional-type-desc = postfix-type-desc "?"
 
-array-type-desc = postfix-type-desc "[" "]"
+array-type-desc := array-member-type-desc array-dimension+
+array-dimension := "[" [ array-length ] "]"
+array-member-type-desc := type-desc *but not* array-type-desc
+array-length :=
+  int-literal
+  | constant-reference-expr
 
 primary-type-desc =
   builtin-type-name

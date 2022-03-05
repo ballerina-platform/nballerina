@@ -504,15 +504,6 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
         return expr;
     }
     match t {
-        [IDENTIFIER, var identifier] => {
-            Position endPos = tok.currentEndPos();
-            check tok.advance();
-            var [prefix, name] = check parseOptQualIdentifier(tok, identifier);
-            if prefix != () {
-                endPos = tok.previousEndPos();
-            }
-            return { startPos, endPos, prefix, name, qNamePos: startPos };
-        }
         [STRING_LITERAL, var value] => {
             Position endPos = tok.currentEndPos();
             LiteralExpr expr = { startPos, endPos, value };
@@ -536,9 +527,29 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             LiteralExpr expr = {  startPos, endPos, value: t == "true" };
             return expr;
         }
+        [DECIMAL_FP_NUMBER, _, _] => {
+            return parseNumericLiteralExpr(tok);
+        }
+    }
+    return parseArrayLengthExpr(tok);
+}
+
+function parseArrayLengthExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
+    Token? t = tok.current();
+    Position startPos = tok.currentStartPos();
+    
+    match t {
+        [IDENTIFIER, var identifier] => {
+            Position endPos = tok.currentEndPos();
+            check tok.advance();
+            var [prefix, name] = check parseOptQualIdentifier(tok, identifier);
+            if prefix != () {
+                endPos = tok.previousEndPos();
+            }
+            return { startPos, endPos, prefix, name, qNamePos: startPos };
+        }
         [DECIMAL_NUMBER, _]
-        | [HEX_INT_LITERAL, _]
-        | [DECIMAL_FP_NUMBER, _, _] => {
+        | [HEX_INT_LITERAL, _] => {
             return parseNumericLiteralExpr(tok);
         }
     }

@@ -76,7 +76,7 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                     dimensions.push(());
                 } 
                 else {
-                    dimensions.push(check parseSimpleConstExpr(tok));
+                    dimensions.push(check parseArrayLengthExpr(tok));
                 }
                 endPos = check tok.expectEnd("]");
             }
