@@ -31,7 +31,7 @@ type ExprEffect record {|
 
 type Binding record {|
     string name;
-    bir:BindableRegister reg;
+    bir:DeclRegister|bir:NarrowRegister reg;
     boolean isFinal;
     boolean used = false;
     Binding? prev;
@@ -107,15 +107,15 @@ class ExprContext {
     }
 
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TmpRegister {
-        return bir:createTmpRegister(self.code, t, (), pos);
+        return bir:createTmpRegister(self.code, t, pos);
     }
 
     function createAssignTmpRegister(bir:SemType t, Position? pos = ()) returns bir:AssignTmpRegister {
-        return bir:createAssignTmpRegister(self.code, t, (), pos);
+        return bir:createAssignTmpRegister(self.code, t, pos);
     }
 
-    function createNarrowRegister(bir:SemType t, bir:Register prev, Position? pos = ()) returns bir:NarrowRegister {
-        return bir:createNarrowRegister(self.code, t, prev, (), pos);
+    function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos = ()) returns bir:NarrowRegister {
+        return bir:createNarrowRegister(self.code, t, underlying, pos);
     }
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {

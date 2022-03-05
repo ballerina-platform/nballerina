@@ -69,24 +69,24 @@ class StmtContext {
         self.returnType = returnType;
     }
 
-    function createVarRegister(bir:SemType t, string name, Position pos) returns bir:VarRegister {
-        return bir:createVarRegister(self.code, t, name, pos);
+    function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
+        return bir:createVarRegister(self.code, t, pos, name);
     }
 
-    function createFinalRegister(bir:SemType t, string name, Position pos) returns bir:FinalRegister {
-        return bir:createFinalRegister(self.code, t, name, pos);
+    function createFinalRegister(bir:SemType t, Position pos, string name) returns bir:FinalRegister {
+        return bir:createFinalRegister(self.code, t, pos, name);
     }
 
-    function createNarrowRegister(bir:SemType t, bir:Register prev, string? name, Position? pos) returns bir:NarrowRegister {
-        return bir:createNarrowRegister(self.code, t, prev, name, pos);
+    function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos) returns bir:NarrowRegister {
+        return bir:createNarrowRegister(self.code, t, underlying, pos);
     }
 
-    function createParamRegister(bir:SemType t, string name, Position pos) returns bir:ParamRegister {
-        return bir:createParamRegister(self.code, t, name, pos);
+    function createParamRegister(bir:SemType t, Position pos, string name) returns bir:ParamRegister {
+        return bir:createParamRegister(self.code, t, pos, name);
     }
 
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TmpRegister {
-        return bir:createTmpRegister(self.code, t, (), pos);
+        return bir:createTmpRegister(self.code, t, pos);
     }
 
     function nextRegisterNumber() returns int {
@@ -222,7 +222,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     Binding? bindings = ();
     foreach int i in 0 ..< defn.params.length() {
         var param = defn.params[i];
-        bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], param.name, param.namePos);
+        bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], param.namePos, param.name);
         bindings = { name: <string>param.name, reg, prev: bindings, isFinal: true };
     }
     var { block: endBlock } = check codeGenScope(cx, startBlock, { bindings }, defn.body);
@@ -382,7 +382,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     s:RangeExpr range = stmt.range;
     var { result: lower, block: evalUpper } = check cx.codeGenExprForInt(startBlock, env, range.lower);
     var { result: upper, block: initLoopVar } = check cx.codeGenExprForInt(evalUpper, env, range.upper);
-    bir:VarRegister loopVar = cx.createVarRegister(t:INT, varName, stmt.namePos);
+    bir:VarRegister loopVar = cx.createVarRegister(t:INT, stmt.namePos, varName);
     bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
@@ -483,7 +483,7 @@ function validLoopAssignments(StmtContext cx, Assignment[] assignments) returns 
         // Despite of `loopStartRegister` being calculated after the conditional, assignment to vars narrowed in the conditional work
         // because narrowings for the conditional are actually generated as the first thing in the block, not in the conditional itself.
         if narrowedReg != () && narrowedReg < cx.loopStartRegister() {
-            return cx.semanticErr(`assignment to narrowed variable ${<string>cx.registerVarName(narrowedReg)} in loop`, a.pos);
+            return cx.semanticErr(`assignment to narrowed variable ${<string>cx.registerVarName(a.unnarrowedReg)} in loop`, a.pos);
         }
     }
 }
@@ -790,7 +790,7 @@ function addNarrowings(StmtContext cx, bir:BasicBlock bb, Environment env, Narro
         if ty === t:NEVER {
             panic err:impossible("narrowed to never type");
         }
-        bir:NarrowRegister narrowed = cx.createNarrowRegister(ty, binding.reg, binding.name, pos);
+        bir:NarrowRegister narrowed = cx.createNarrowRegister(ty, binding.reg, pos);
         bir:CondNarrowInsn insn = {
             result: narrowed,
             operand: binding.reg,
@@ -852,7 +852,7 @@ function codeGenVarDeclStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
             return cx.semanticErr(`duplicate declaration of ${name}`, namePos);
         }
         t:SemType semType = check cx.resolveTypeDesc(td);
-        bir:VarRegister|bir:FinalRegister result = isFinal ? cx.createFinalRegister(semType, name, namePos) : cx.createVarRegister(semType, name, namePos);
+        bir:VarRegister|bir:FinalRegister result = isFinal ? cx.createFinalRegister(semType, namePos, name) : cx.createVarRegister(semType, namePos, name);
         bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType, stmt.opPos);
         return { block: nextBlock, bindings: { name, reg: result, prev: env.bindings, isFinal } };  
     }
@@ -863,7 +863,7 @@ function codeGenWildcardDeclStmt(StmtContext cx, bir:BasicBlock startBlock, Envi
     if !t:isSubtype(cx.mod.tc, semType, t:ANY) {
         return cx.semanticErr("type descriptor of wildcard should be a subtype of any", pos);
     }
-    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createVarRegister(semType, "_", pos), expr, semType, pos);
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createVarRegister(semType, pos, "_"), expr, semType, pos);
     return { block: nextBlock };
 }
 
@@ -873,7 +873,7 @@ function codeGenAssignStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
         return codeGenAssignToVar(cx, startBlock, env, lValue.name, expr, stmt.opPos);
     }
     else if lValue is s:WILDCARD {
-        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createVarRegister(t:ANY, "_", stmt.opPos), expr, t:ANY, stmt.opPos);
+        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createVarRegister(t:ANY, stmt.opPos, "_"), expr, t:ANY, stmt.opPos);
         return { block: nextBlock };
     }
     else {
@@ -1140,7 +1140,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     bir:BasicBlock errorBlock = cx.createBasicBlock();
     bir:CondBranchInsn condBranch = { operand: isError, ifTrue: errorBlock.label, ifFalse: okBlock.label, pos };
     bb.insns.push(condBranch);
-    bir:NarrowRegister errorReg = cx.createNarrowRegister(errorType, operand, (), pos);
+    bir:NarrowRegister errorReg = cx.createNarrowRegister(errorType, operand, pos);
     bir:CondNarrowInsn narrowToError = {
         result: errorReg,
         operand,
@@ -1149,7 +1149,7 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     };
     errorBlock.insns.push(narrowToError);
     codeGenCheckingTerminator(errorBlock, checkingKeyword, errorReg, pos);
-    bir:NarrowRegister result = cx.createNarrowRegister(okType, operand, (), pos);
+    bir:NarrowRegister result = cx.createNarrowRegister(okType, operand, pos);
     bir:CondNarrowInsn narrowToOk = {
         result,
         operand,

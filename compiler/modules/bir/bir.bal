@@ -132,108 +132,110 @@ public function lastInsnRef(BasicBlock bb) returns InsnRef {
     return { block: bb.label, index: bb.insns.length() - 1 };
 }
 
-public enum RegisterKind {
-    PARAM_REGISTER_KIND,
-    VAR_REGISTER_KIND,
-    FINAL_REGISTER_KIND,
-    NARROW_REGISTER_KIND,
-    TMP_REGISTER_KIND,
-    ASSIGN_TMP_REGISTER_KIND
-}
+public const PARAM_REGISTER_KIND = "param";
+public const VAR_REGISTER_KIND = "var";
+public const FINAL_REGISTER_KIND = "final";
+
+public const NARROW_REGISTER_KIND = "narrow";
+public const TMP_REGISTER_KIND = "tmp";
+public const ASSIGN_TMP_REGISTER_KIND = "=tmp";
+
+public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
+public type RegisterKind DeclRegisterKind|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
 
 public type RegisterBase record {|
+    RegisterKind kind;
     # Unique identifier within a function
     # Always >= 0
     int number;
     SemType semType;
-    string? name;
     Position? pos;
-    RegisterKind kind;
+    string? name;
 |};
 
-public type Register TmpRegister|AssignTmpRegister|ParamRegister|VarRegister|FinalRegister|NarrowRegister;
-public type BindableRegister ParamRegister|FinalRegister|VarRegister|NarrowRegister;
-public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
+public type DeclRegister ParamRegister|VarRegister|FinalRegister;
+public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
 
-public type DeclRegister record {|
+public type DeclRegisterBase record {|
     *RegisterBase;
-    string name;
     Position pos;
+    string name;
     DeclRegisterKind kind;
 |};
 
 public type TmpRegister readonly & record {|
     *RegisterBase;
-    TMP_REGISTER_KIND kind;
+    TMP_REGISTER_KIND kind = TMP_REGISTER_KIND;
 |};
 
 public type AssignTmpRegister readonly & record {|
     *RegisterBase;
-    ASSIGN_TMP_REGISTER_KIND kind;
+    ASSIGN_TMP_REGISTER_KIND kind = ASSIGN_TMP_REGISTER_KIND;
 |};
 
 public type NarrowRegister readonly & record {|
     *RegisterBase;
-    // position of the register that was narrowed
-    Position prevPos;
-    NARROW_REGISTER_KIND kind;
+    // number of the register that was narrowed
+    // Could be another NarrowRegister.
+    int underlying;
+    // It's name comes from the underlying register.
+    () name = ();
+    NARROW_REGISTER_KIND kind = NARROW_REGISTER_KIND;
 |};
 
 public type ParamRegister readonly & record {|
-    *DeclRegister;
-    PARAM_REGISTER_KIND kind;
+    *DeclRegisterBase;
+    PARAM_REGISTER_KIND kind = PARAM_REGISTER_KIND;
 |};
 
 public type VarRegister readonly & record {|
-    *DeclRegister;
-    VAR_REGISTER_KIND kind;
+    *DeclRegisterBase;
+    VAR_REGISTER_KIND kind = VAR_REGISTER_KIND;
 |};
 
 public type FinalRegister readonly & record {|
-    *DeclRegister;
-    FINAL_REGISTER_KIND kind;
+    *DeclRegisterBase;
+    FINAL_REGISTER_KIND kind = FINAL_REGISTER_KIND;
 |};
 
-public function createVarRegister(FunctionCode code, SemType semType, string name, Position pos) returns VarRegister {
-    VarRegister r = { number: code.registers.length(), semType, name, pos, kind: VAR_REGISTER_KIND };
+public function createVarRegister(FunctionCode code, SemType semType, Position pos, string name) returns VarRegister {
+    VarRegister r = { number: code.registers.length(), semType, pos, name };
     code.registers.push(r);
     return r;
 }
 
-public function createFinalRegister(FunctionCode code, SemType semType, string name, Position pos) returns FinalRegister {
-    FinalRegister r = { number: code.registers.length(), semType, name, pos, kind: FINAL_REGISTER_KIND };
+public function createFinalRegister(FunctionCode code, SemType semType, Position pos, string name) returns FinalRegister {
+    FinalRegister r = { number: code.registers.length(), semType, pos, name };
     code.registers.push(r);
     return r;
 }
 
-public function createNarrowRegister(FunctionCode code, SemType semType, Register prev, string? name = (), Position? pos = ()) returns NarrowRegister {
-    // for debug information we at least need the position
-    Position prevPos = prev is NarrowRegister ? prev.prevPos : <Position> prev.pos;
-    NarrowRegister r = { number: code.registers.length(), semType, name, pos, kind: NARROW_REGISTER_KIND, prevPos };
+public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, Position? pos = ()) returns NarrowRegister {
+    NarrowRegister r = { number: code.registers.length(), underlying: underlying.number, semType, pos };
     code.registers.push(r);
     return r;
 }
 
-public function createParamRegister(FunctionCode code, SemType semType, string name, Position pos) returns ParamRegister {
-    ParamRegister r = { number: code.registers.length(), semType, name, pos, kind: PARAM_REGISTER_KIND };
+public function createParamRegister(FunctionCode code, SemType semType, Position pos, string name) returns ParamRegister {
+    ParamRegister r = { number: code.registers.length(), semType, pos, name  };
     code.registers.push(r);
     return r;
 }
 
-public function createTmpRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns TmpRegister {
-    TmpRegister r = { number: code.registers.length(), semType, name, pos, kind: TMP_REGISTER_KIND };
+public function createTmpRegister(FunctionCode code, SemType semType, Position? pos = (), string? name = ()) returns TmpRegister {
+    TmpRegister r = { number: code.registers.length(), semType, pos, name };
     code.registers.push(r);
     return r;
 }
 
-public function createAssignTmpRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns AssignTmpRegister {
-    AssignTmpRegister r = { number: code.registers.length(), semType, name, pos, kind: ASSIGN_TMP_REGISTER_KIND };
+public function createAssignTmpRegister(FunctionCode code, SemType semType, Position? pos = (), string? name = ()) returns AssignTmpRegister {
+    AssignTmpRegister r = { number: code.registers.length(), semType, pos, name };
     code.registers.push(r);
     return r;
 }
 
-public function getRegister(FunctionCode code, int registerNum) returns Register {
-    return code.registers[registerNum];
+public function getRegister(FunctionCode code, int number) returns Register {
+    return code.registers[number];
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
