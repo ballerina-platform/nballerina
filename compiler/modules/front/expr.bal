@@ -115,7 +115,7 @@ class ExprContext {
     }
 
     function createNarrowRegister(bir:SemType t, bir:Register prev, Position? pos = ()) returns bir:NarrowRegister {
-        return bir:createNarrrowRegister(self.code, t, prev, (), pos);
+        return bir:createNarrowRegister(self.code, t, prev, (), pos);
     }
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {

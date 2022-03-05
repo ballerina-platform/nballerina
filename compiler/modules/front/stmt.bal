@@ -78,7 +78,7 @@ class StmtContext {
     }
 
     function createNarrowRegister(bir:SemType t, bir:Register prev, string? name, Position? pos) returns bir:NarrowRegister {
-        return bir:createNarrrowRegister(self.code, t, prev, name, pos);
+        return bir:createNarrowRegister(self.code, t, prev, name, pos);
     }
 
     function createParamRegister(bir:SemType t, string name, Position pos) returns bir:ParamRegister {

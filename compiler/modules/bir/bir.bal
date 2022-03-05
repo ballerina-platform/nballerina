@@ -206,7 +206,7 @@ public function createFinalRegister(FunctionCode code, SemType semType, string n
     return r;
 }
 
-public function createNarrrowRegister(FunctionCode code, SemType semType, Register prev, string? name = (), Position? pos = ()) returns NarrowRegister {
+public function createNarrowRegister(FunctionCode code, SemType semType, Register prev, string? name = (), Position? pos = ()) returns NarrowRegister {
     // for debug information we at least need the position
     Position prevPos = prev is NarrowRegister ? prev.prevPos : <Position> prev.pos;
     NarrowRegister r = { number: code.registers.length(), semType, name, pos, kind: NARROW_REGISTER_KIND, prevPos };
