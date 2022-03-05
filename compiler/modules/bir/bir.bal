@@ -136,7 +136,7 @@ public enum RegisterKind {
     PARAM_REGISTER_KIND,
     VAR_REGISTER_KIND,
     FINAL_REGISTER_KIND,
-    NARRROW_REGISTER_KIND,
+    NARROW_REGISTER_KIND,
     TMP_REGISTER_KIND,
     ASSIGN_TMP_REGISTER_KIND
 }
@@ -176,7 +176,7 @@ public type NarrowRegister readonly & record {|
     *RegisterBase;
     // position of the register that was narrowed
     Position prevPos;
-    NARRROW_REGISTER_KIND kind;
+    NARROW_REGISTER_KIND kind;
 |};
 
 public type ParamRegister readonly & record {|
@@ -209,7 +209,7 @@ public function createFinalRegister(FunctionCode code, SemType semType, string n
 public function createNarrrowRegister(FunctionCode code, SemType semType, Register prev, string? name = (), Position? pos = ()) returns NarrowRegister {
     // for debug information we at least need the position
     Position prevPos = prev is NarrowRegister ? prev.prevPos : <Position> prev.pos;
-    NarrowRegister r = { number: code.registers.length(), semType, name, pos, kind: NARRROW_REGISTER_KIND, prevPos };
+    NarrowRegister r = { number: code.registers.length(), semType, name, pos, kind: NARROW_REGISTER_KIND, prevPos };
     code.registers.push(r);
     return r;
 }
