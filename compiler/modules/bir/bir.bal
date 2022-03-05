@@ -137,7 +137,8 @@ public enum RegisterKind {
     VAR_REGISTER_KIND,
     FINAL_REGISTER_KIND,
     NARRROW_REGISTER_KIND,
-    TMP_REGISTER_KIND
+    TMP_REGISTER_KIND,
+    ASSIGN_TMP_REGISTER_KIND
 }
 
 public type RegisterBase record {|
@@ -150,7 +151,8 @@ public type RegisterBase record {|
     RegisterKind kind;
 |};
 
-public type Register TmpRegister|ParamRegister|VarRegister|FinalRegister|NarrowRegister;
+public type Register TmpRegister|AssignTmpRegister|ParamRegister|VarRegister|FinalRegister|NarrowRegister;
+public type BindableRegister ParamRegister|FinalRegister|VarRegister|NarrowRegister;
 public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
 
 public type DeclRegister record {|
@@ -165,8 +167,15 @@ public type TmpRegister readonly & record {|
     TMP_REGISTER_KIND kind;
 |};
 
+public type AssignTmpRegister readonly & record {|
+    *RegisterBase;
+    ASSIGN_TMP_REGISTER_KIND kind;
+|};
+
 public type NarrowRegister readonly & record {|
     *RegisterBase;
+    // position of the register that was narrowed
+    Position prevPos;
     NARRROW_REGISTER_KIND kind;
 |};
 
@@ -197,8 +206,10 @@ public function createFinalRegister(FunctionCode code, SemType semType, string n
     return r;
 }
 
-public function createNarrrowRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns NarrowRegister {
-    NarrowRegister r = { number: code.registers.length(), semType, name, pos, kind: NARRROW_REGISTER_KIND };
+public function createNarrrowRegister(FunctionCode code, SemType semType, Register prev, string? name = (), Position? pos = ()) returns NarrowRegister {
+    // for debug information we at least need the position
+    Position prevPos = prev is NarrowRegister ? prev.prevPos : <Position> prev.pos;
+    NarrowRegister r = { number: code.registers.length(), semType, name, pos, kind: NARRROW_REGISTER_KIND, prevPos };
     code.registers.push(r);
     return r;
 }
@@ -211,6 +222,12 @@ public function createParamRegister(FunctionCode code, SemType semType, string n
 
 public function createTmpRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns TmpRegister {
     TmpRegister r = { number: code.registers.length(), semType, name, pos, kind: TMP_REGISTER_KIND };
+    code.registers.push(r);
+    return r;
+}
+
+public function createAssignTmpRegister(FunctionCode code, SemType semType, string? name = (), Position? pos = ()) returns AssignTmpRegister {
+    AssignTmpRegister r = { number: code.registers.length(), semType, name, pos, kind: ASSIGN_TMP_REGISTER_KIND };
     code.registers.push(r);
     return r;
 }
@@ -551,7 +568,7 @@ public type CallInsn readonly & record {|
 public type AssignInsn readonly & record {|
     *InsnBase;
     INSN_ASSIGN name = INSN_ASSIGN;
-    TmpRegister|VarRegister|FinalRegister result;
+    AssignTmpRegister|VarRegister|FinalRegister result;
     Operand operand;
 |};
 
