@@ -1227,13 +1227,14 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     s:Expr[] restArgs = [];
     t:SemType? restParamType = func.signature.restParamType;
     foreach int i in 0 ..< expr.args.length() {
-        if restParamType != () && i >= func.signature.paramTypes.length() {
+        if restParamType != () && i >= func.signature.paramTypes.length() - 1 {
             restArgs.push(expr.args[i]);
-            continue;
         }
-        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
-        curBlock = nextBlock;
-        args.push(arg);
+        else {
+            var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
+            curBlock = nextBlock;
+            args.push(arg);
+        }
     }
     if restParamType != () {
         Position startPos = restArgs.length() > 0 ? restArgs[0].startPos : expr.openParenPos;
@@ -1275,7 +1276,8 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
 
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
     int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
-    if nSuppliedArgs < func.signature.paramTypes.length() {
+    int nExpectedArgs = func.signature.restParamType == () ? func.signature.paramTypes.length() : func.signature.paramTypes.length() - 1;
+    if nSuppliedArgs < nExpectedArgs {
         if func.symbol == IO_PRINTLN_SYMBOL {
             return cx.unimplementedErr("io:println without arguments not implemented", call.closeParenPos);
         }

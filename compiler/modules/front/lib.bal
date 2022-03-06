@@ -16,14 +16,14 @@ final readonly & LangLibFunction[] langLibFunctions = [
 function getLangLibFunction(string mod, string func) returns bir:FunctionSignature? {
     foreach var [moduleName, functionName, paramTypes, returnType] in langLibFunctions {
         if moduleName == mod && functionName == func {
-            return { returnType, paramTypes, restParamType: () };
+            return { returnType, paramTypes };
         }   
     }
     return ();
 }
 
 final readonly & map<bir:FunctionSignature> ioLibFunctions = {
-    println: { paramTypes: [t:TOP], returnType: t:NIL, restParamType: () }
+    println: { paramTypes: [t:TOP], returnType: t:NIL }
 };
 
 type ModuleExportSemtypes readonly & map<t:SemType>;

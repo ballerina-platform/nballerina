@@ -36,7 +36,6 @@ public type FunctionDefn record {|
     Visibility vis;
     FunctionTypeDesc typeDesc;
     FunctionParam[] params;
-    FunctionParam? restParam;
     StmtBlock body;
     Position namePos;
     // This is filled in during analysis
@@ -48,6 +47,7 @@ public type FunctionParam record {|
     string name;
     Position namePos;
     TypeDesc td;
+    boolean isRest = false;
 |};
 
 public type ResolvedConst readonly & [t:SemType, t:SingleValue];
@@ -454,7 +454,6 @@ public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
     *PositionFields;
     FunctionTypeParam[] params;
-    FunctionTypeParam? restParam;
     TypeDesc? ret;
     t:FunctionDefinition? defn = ();
 |};
@@ -464,6 +463,7 @@ public type FunctionTypeParam record {|
     string? name;
     Position? namePos;
     TypeDesc td;
+    boolean isRest = false;
 |};
 
 public type ErrorTypeDesc record {|

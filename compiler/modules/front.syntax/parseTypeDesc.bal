@@ -219,7 +219,6 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
     Position startPos = tok.currentStartPos();
     check tok.expect("(");
     FunctionTypeParam[] params = namedParams ?: [];
-    FunctionParam? restParam = ();
     while true {
         if tok.current() == ")" {
             break;
@@ -239,7 +238,8 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
                 check tok.advance();
                 Position namePos = tok.currentStartPos();
                 string name = check tok.expectIdentifier();
-                restParam = { startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td };
+                FunctionParam param = { startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td, isRest: true };
+                params.push(param);
                 if tok.current() == ")" {
                     break;
                 }
@@ -267,7 +267,7 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
         ret = check parseTypeDesc(tok);
     }
     endPos = tok.previousEndPos();
-    return { startPos, endPos, params, ret, restParam };
+    return { startPos, endPos, params, ret };
 }
 
 // current token is []

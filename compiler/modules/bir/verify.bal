@@ -158,8 +158,7 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
     FunctionRef func = <FunctionRef>insn.func;
     FunctionSignature sig = func.signature;
     int nSuppliedArgs = insn.args.length();
-    t:SemType? restParamType = sig.restParamType;
-    int nExpectedArgs = restParamType == () ? sig.paramTypes.length() : sig.paramTypes.length() + 1;
+    int nExpectedArgs = sig.paramTypes.length();
     if nSuppliedArgs != nExpectedArgs {
         string name = vc.symbolToString(func.symbol);
         if nSuppliedArgs < nExpectedArgs {
@@ -170,8 +169,7 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        t:SemType paramType = i == sig.paramTypes.length() && restParamType != () ? restParamType : sig.paramTypes[i];
-        check verifyOperandType(vc, insn.args[i], paramType, `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos), true);
+        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos), true);
     }
 }
 

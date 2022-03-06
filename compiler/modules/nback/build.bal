@@ -414,10 +414,6 @@ function heapPointerType(llvm:Type ty) returns llvm:PointerType {
 
 function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:FunctionType {
     llvm:Type[] paramTypes = from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm;
-    t:SemType? rest = signature.restParamType;
-    if rest != () {
-        paramTypes.push(semTypeRepr(rest).llvm);
-    }
     RetRepr repr = semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {
         returnType: repr.llvm,

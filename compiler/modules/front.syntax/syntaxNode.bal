@@ -530,14 +530,7 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
 }
 
 function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSignature = false, boolean isVarArg = false) returns SubSyntaxNode {
-    SubSyntaxNode[] params = joinSyntaxNodesWithSeperator((from FunctionTypeParam param in td.params select syntaxNodeFromFunctionTypeParam(param)), { token: "," });
-    FunctionTypeParam? rest = td.restParam;
-    if rest != () {
-        if params.length() > 0 {
-            params.push({ token: "," });
-        }
-        params.push(syntaxNodeFromVarArg(rest));
-    }
+    SubSyntaxNode[] params = joinSyntaxNodesWithSeperator((from FunctionTypeParam param in td.params select param.isRest ? syntaxNodeFromRestParam(param) : syntaxNodeFromFunctionTypeParam(param)), { token: "," });
     TypeDesc? retTd = td.ret;
     return nonTerminalSyntaxNode(td, functionSignature ? () : { token: "function" },
                                      { token: "(", pos: td.startPos },
@@ -546,7 +539,7 @@ function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSig
                                      retTd != () ? [{ token: "returns" }, syntaxNodeFromTypeDesc(retTd)] : ());
 }
 
-function syntaxNodeFromVarArg(FunctionTypeParam restParam) returns SubSyntaxNode {
+function syntaxNodeFromRestParam(FunctionTypeParam restParam) returns SubSyntaxNode {
     ArrayTypeDesc td = <ArrayTypeDesc>restParam.td;
     return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.member),
                                      { token: "..." },
