@@ -169,7 +169,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                     t = d.define(env, rest = t);
                 }
                 else {
-                    int length = check resolveConstIntExpr(mod, modDefn, len, "array length should be a non-negative integer constant");
+                    int length = check resolveConstExprForInt(mod, modDefn, len, "array length should be a non-negative integer constant");
                     t = d.define(env, [t], length);
                 }
             }
@@ -252,8 +252,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if td is s:SingletonTypeDesc {
-        s:ResolvedConst resolved =  check resolveConstExpr(mod, modDefn, td.valueExpr, ());
-        return resolved[0];
+        var  [ty, _] =  check resolveConstExpr(mod, modDefn, td.valueExpr, ());
+        return ty;
     }
     if td is s:UnaryTypeDesc && td.op != "!" {
         if td.op == "?" {
