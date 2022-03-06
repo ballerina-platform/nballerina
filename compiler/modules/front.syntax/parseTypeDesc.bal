@@ -234,7 +234,6 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
                 check tok.advance();
             }
             "..." => {
-                td = { member: td, startPos: td.startPos, endPos: tok.currentEndPos(), dimensions: [()] }; // convert to array type desc
                 check tok.advance();
                 Position namePos = tok.currentStartPos();
                 string name = check tok.expectIdentifier();

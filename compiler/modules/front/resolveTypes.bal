@@ -45,10 +45,14 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
     t:SemType[] paramTypes = [];
     t:SemType? restParamType = ();
     foreach var x in defn.params {
-        t:SemType ty = check resolveSubsetTypeDesc(mod, defn, x.td);
-        paramTypes.push(ty);
         if x.isRest {
-            restParamType = ty;
+            restParamType = check resolveSubsetTypeDesc(mod, defn, x.td);
+            s:TypeDesc member = x.td;
+            s:ArrayTypeDesc restArrayTd = { member, startPos: member.startPos, endPos: member.endPos, dimensions: [()] };
+            paramTypes.push(check resolveSubsetTypeDesc(mod, defn, restArrayTd));
+        }
+        else {
+            paramTypes.push(check resolveSubsetTypeDesc(mod, defn, x.td));
         }
     }
     s:TypeDesc? retTy = defn.typeDesc.ret;

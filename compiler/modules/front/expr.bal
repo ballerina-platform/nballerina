@@ -1240,7 +1240,8 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         Position startPos = restArgs.length() > 0 ? restArgs[0].startPos : expr.openParenPos;
         Position endPos = restArgs.length() > 0 ? restArgs[restArgs.length() - 1].endPos : expr.closeParenPos;
         s:ListConstructorExpr varArgList = { startPos, endPos, opPos: startPos, members: restArgs};
-        var { result: arg, block: nextBlock } = check codeGenListConstructor(cx, curBlock, restParamType, varArgList);
+        t:SemType restListTy = func.signature.paramTypes[func.signature.paramTypes.length() - 1];
+        var { result: arg, block: nextBlock } = check codeGenListConstructor(cx, curBlock, restListTy, varArgList);
         curBlock = nextBlock;
         args.push(arg);
     }

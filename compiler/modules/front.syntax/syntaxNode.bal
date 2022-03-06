@@ -540,10 +540,9 @@ function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSig
 }
 
 function syntaxNodeFromRestParam(FunctionTypeParam restParam) returns SubSyntaxNode {
-    ArrayTypeDesc td = <ArrayTypeDesc>restParam.td;
-    return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.member),
-                                     { token: "..." },
-                                     { name: <string>restParam.name, pos: <Position>restParam.namePos });
+    return nonTerminalSyntaxNode(restParam, syntaxNodeFromTypeDesc(restParam.td),
+                                            { token: "..." },
+                                            { name: <string>restParam.name, pos: <Position>restParam.namePos });
 }
 
 function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSyntaxNode {
