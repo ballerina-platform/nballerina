@@ -147,8 +147,9 @@ tuple-member-type-desc-list =
    | [ tuple-rest-desc ]
 tuple-rest-desc = type-desc "..."
 
-param-list = param ["," param]*
+param-list = param ["," param]* ["," rest-param]
 param = type-desc identifier
+rest-param = type-desc "..." identifier
 
 stmt-block = "{" statement* "}"
 
@@ -396,6 +397,7 @@ Two kinds of `import` are supported.
 ## Additions from subset 13
 
 * Tuple types
+* Rest param in function definition
 
 ## Implemented spec changes since 2022R1
 
