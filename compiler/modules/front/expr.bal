@@ -848,7 +848,7 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
     // SUBSET always have contextually expected type for list constructor
     t:SemType resultType = t:intersect(expectedType, t:LIST_RW);
     t:Context tc = cx.mod.tc;
-     if t:isEmpty(tc, resultType) {
+    if t:isEmpty(tc, resultType) {
         // don't think this can happen 
         return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
@@ -862,12 +862,7 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
 
 function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
     // SUBSET always have contextually expected type for mapping constructor
-    t:SemType resultType = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
-    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.mod.tc, resultType);
-    if mat is () {
-        // XXX can this happen?
-        return cx.semanticErr("mapping not allowed in this context", s:range(expr));
-    }
+    var [resultType, mat] = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
     string[] fieldNames = [];
@@ -888,7 +883,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
             }
         }
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, t:mappingAtomicTypeMemberAt(mat, name), f.value);
+        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAt(mat, name), f.value, "incorrect type for list member");
         operands.push(operand);
         fieldNames.push(name);
     }
@@ -898,11 +893,16 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
     return { result, block: nextBlock };
 }
 
-function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns t:SemType|ResolveTypeError {
+function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns [t:SemType, t:MappingAtomicType]|ResolveTypeError {
     t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING_RW);
     t:Context tc = cx.mod.tc;
-    if t:mappingAtomicTypeRw(tc, expectedMappingType) != () {
-        return expectedMappingType; // easy case
+    if t:isEmpty(tc, expectedMappingType) {
+        // XXX can this happen?
+        return cx.semanticErr("mapping not allowed in this context", s:range(expr));
+    }
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, expectedMappingType);
+    if mat != () { // easy case
+        return [expectedMappingType, mat]; 
     }
     string[] fieldNames = from var f in expr.fields order by f.name select f.name;
     t:MappingAlternative[] alts =
@@ -916,10 +916,11 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
         return cx.semanticErr("ambiguous inherent type for mapping constructor", s:range(expr));
     }
     t:SemType semType = alts[0].semType;
-    if t:mappingAtomicTypeRw(tc, semType) == () {
+    mat = t:mappingAtomicTypeRw(tc, semType);
+    if mat is () {
         return cx.semanticErr("applicable type for mapping constructor is not atomic", s:range(expr));
     }
-    return semType;
+    return [semType, mat];
 }
 
 function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] fieldNames) returns boolean {
