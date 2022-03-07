@@ -179,12 +179,15 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns E
         return vc.invalidErr("inherent type of list construct is not a mutable list", insn.pos);
     }
     t:ListAtomicType? lat = t:listAtomicTypeRw(vc.typeContext(), ty);
-    if lat == () {
+    if lat is () {
         return vc.invalidErr("inherent type of list is not atomic", insn.pos);
     }
     Operand[] operands = insn.operands;
     foreach int i in 0 ..< operands.length() {
-        check verifyOperandType(vc, operands[i], t:listAtomicTypeMemberAt(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
+        check validOperandType(vc, operands[i], t:listAtomicTypeMemberAt(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
+    }
+    if operands.length() < lat.members.fixedLength {
+        return vc.semanticErr("not enough members in list constructor", insn.pos);
     }
 }
 

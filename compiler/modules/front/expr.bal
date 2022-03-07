@@ -189,11 +189,15 @@ function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:F
         }
         return cx.semanticErr("too many arguments for call to function", s:range(arg)); 
     }
-    var { result, block } = check codeGenExpr(cx, bb, func.signature.paramTypes[n], arg);
-    if operandHasType(cx.mod.tc, result, func.signature.paramTypes[n]) {
-        return { result, block };
+    return codeGenExprForType(cx, bb, func.signature.paramTypes[n], arg, "incorrect type for argument");
+}
+
+function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, t:SemType requiredType, s:Expr expr, string msg) returns CodeGenError|ExprEffect {
+    ExprEffect effect = check codeGenExpr(cx, bb, requiredType, expr);
+    if !operandHasType(cx.mod.tc, effect.result, requiredType) {
+        return cx.semanticErr(msg, s:range(expr));
     }
-    return cx.semanticErr("incorrect type for argument", s:range(arg));
+    return effect;
 }
 
 function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -821,24 +825,39 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
 }
 
 function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:ListConstructorExpr expr) returns CodeGenError|ExprEffect {
+    // SUBSET always have contextually expected type for mapping constructor
+    var [resultType, atomicType] = check selectListInherentType(cx, <t:SemType>expected, expr);
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
-
-    // SUBSET always have contextually expected type for list constructor
-    t:SemType resultType = t:intersect(<t:SemType>expected, t:LIST_RW);
-    t:Context tc = cx.mod.tc;
     foreach var [i, member] in expr.members.enumerate() {
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, t:listMemberType(tc, resultType, t:singleton(tc, i)), member);
+        t:SemType requiredType =  t:listAtomicTypeMemberAt(atomicType, i);
+        if t:isNever(requiredType) {
+            return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
+        }
+        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
         operands.push(operand);
-    }
-    if t:isEmpty(cx.mod.tc, resultType) {
-        return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
+}
+
+function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListConstructorExpr expr) returns [t:SemType, t:ListAtomicType]|ResolveTypeError {
+    // SUBSET always have contextually expected type for list constructor
+    t:SemType resultType = t:intersect(expectedType, t:LIST_RW);
+    t:Context tc = cx.mod.tc;
+     if t:isEmpty(tc, resultType) {
+        // don't think this can happen 
+        return cx.semanticErr("list not allowed in this context", s:range(expr));
+    }
+    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, resultType);
+    // XXX this needs to be enhanced to eliminate possibilities from unions that are impossible because of the number of members in expr
+    if lat is () {
+        return cx.semanticErr("applicable type for list constructor is not atomic", s:range(expr));
+    }
+    return [resultType, lat];
 }
 
 function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
@@ -898,7 +917,7 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
     }
     t:SemType semType = alts[0].semType;
     if t:mappingAtomicTypeRw(tc, semType) == () {
-        return cx.semanticErr("appplicable type for mapping constructor is not atomic", s:range(expr));
+        return cx.semanticErr("applicable type for mapping constructor is not atomic", s:range(expr));
     }
     return semType;
 }

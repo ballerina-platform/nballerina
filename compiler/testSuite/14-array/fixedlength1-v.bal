@@ -1,11 +1,11 @@
 import ballerina/io;
 
 public function main() {
-    int[4] i5 = [1, 2];
-    io:println(i5); //@output [1,2]
+    int[4] i5 = [1, 2, 3, 4];
+    io:println(i5); //@output [1,2,3,4]
     io:println(i5[1]); //@output 2
-    i5[2] = 3;
-    io:println(i5); //@output [1,2,3]
+    i5[2] = 17;
+    io:println(i5); //@output [1,2,17,4]
     i5 = [4, 5, 6, 7];
     io:println(i5); //@output [4,5,6,7]
     boolean[3] b3 = [true, false, true];
