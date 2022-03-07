@@ -102,9 +102,12 @@ public type Region readonly & record {|
 |};
 
 public enum RegionKind {
-    SIMPLE,
+    # Region that represents a basic loop.
     LOOP,
-    MULTIPLE
+    # Region that represents a divergence into several possible branches, that eventually rejoin.
+    MULTIPLE,
+    # Region that is neither a Multiple nor a Loop.
+    SIMPLE
 }
 
 # A basic block.
