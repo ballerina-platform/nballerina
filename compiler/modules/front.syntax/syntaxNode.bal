@@ -529,7 +529,7 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
     }
 }
 
-function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSignature = false, boolean isVarArg = false) returns SubSyntaxNode {
+function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSignature = false) returns SubSyntaxNode {
     SubSyntaxNode[] params = joinSyntaxNodesWithSeperator((from FunctionTypeParam param in td.params select param.isRest ? syntaxNodeFromRestParam(param) : syntaxNodeFromFunctionTypeParam(param)), { token: "," });
     TypeDesc? retTd = td.ret;
     return nonTerminalSyntaxNode(td, functionSignature ? () : { token: "function" },
