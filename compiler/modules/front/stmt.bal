@@ -61,6 +61,7 @@ class StmtContext {
     final t:SemType returnType;
     LoopContext? loopContext = ();
     bir:Label[] curRegions = [];
+    bir:Label?[] foundParentRegions = [];
 
     function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
@@ -113,7 +114,15 @@ class StmtContext {
             parent = self.curRegions[self.curRegions.length() - 1];
         }
         bir:Region region  = { entry, kind, exit, parent };
-        self.code.regions.push(region);
+        if self.foundParentRegions.indexOf(parent) == () {
+            bir:Region[] cur = [region];
+            cur.push(...self.code.regions);
+            self.code.regions = cur;
+            self.foundParentRegions.push(parent);
+        }
+        else {
+            self.code.regions.push(region);
+        }
     }
 
     function pushRegionIndex() {
@@ -124,11 +133,6 @@ class StmtContext {
             bir:Label parentRegion = self.curRegions[self.curRegions.length() - 1];
             self.curRegions.push(parentRegion + 1);
         }
-    }
-
-    function finalizeRegions() {
-        self.code.regions = from var e in self.code.regions
-                        order by e.entry ascending select e;
     }
 
     function qNameRange(Position startPos) returns Range {
@@ -262,7 +266,6 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
         cx.finishRegion(startBlock.label, "SIMPLE");
     }
     codeGenOnPanic(cx, defn.body.closeBracePos);
-    cx.finalizeRegions();
     return cx.code;
 }
 
