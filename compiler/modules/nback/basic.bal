@@ -162,7 +162,7 @@ function buildCondBranch(llvm:Builder builder, Scaffold scaffold, bir:CondBranch
 
 function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
     RetRepr repr = scaffold.getRetRepr();
-    builder.ret(repr is Repr ? check buildWideRepr(builder, scaffold, insn.operand, repr, scaffold.returnType) : ());
+    builder.ret(repr is Repr ? check buildWideRepr(builder, scaffold, insn.operand, repr, scaffold.returnType, insn.pos) : ());
 }
 
 function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
@@ -180,12 +180,11 @@ function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerVal
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
-    builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType),
+    builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType, insn.pos),
                   scaffold.address(insn.result));
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CALL);
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
     llvm:Value[] args = [];
@@ -193,7 +192,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     t:SemType[] paramTypes = signature.paramTypes;
     t:SemType[] instantiatedParamTypes = funcRef.signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]));
+        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i], insn.pos));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;
@@ -204,14 +203,16 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     else {
         func = check buildFunctionDecl(scaffold, funcSymbol, signature);
     }  
+    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CALL);
     llvm:Value? retValue = builder.call(func, args);
+    scaffold.clearDebugLocation(builder);
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
-    buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
+    buildStoreRet(builder, scaffold, retRepr, retValue, insn.result, insn.pos);
 }
 
-function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) {
+function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg, bir:Position pos) {
     if retRepr is Repr {
-        builder.store(buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
+        builder.store(buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg), pos),
                       scaffold.address(reg));
     }
     else {
@@ -244,11 +245,10 @@ function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorC
 }
 
 function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
-    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringConcatFunction),
-                                                [
-                                                    check buildString(builder, scaffold, insn.operands[0]),
-                                                    check buildString(builder, scaffold, insn.operands[1])
-                                                ]);
+    llvm:Value[] operands = [check buildString(builder, scaffold, insn.operands[0]), check buildString(builder, scaffold, insn.operands[1])];
+    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CALL);
+    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringConcatFunction), operands);
+    scaffold.clearDebugLocation(builder);
     builder.store(value, scaffold.address(insn.result));
 }
 

@@ -71,13 +71,13 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
-                return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
+                return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result, insn.pos);
             }
             else if reprIsDecimal(lhsRepr) && reprIsDecimal(rhsRepr) {
                 return buildEqualDecimalDecimal(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
             else {
-                return buildEqualTaggedTagged(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
+                return buildEqualTaggedTagged(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result, insn.pos);
             }
         }
         [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
@@ -87,10 +87,10 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
             return buildEqualTaggedBoolean(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, result);
         }
         [BASE_REPR_TAGGED, BASE_REPR_INT] => {
-            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>lhsValue, rhsValue, <IntRepr>rhsRepr, result);
+            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>lhsValue, rhsValue, <IntRepr>rhsRepr, result, insn.pos);
         }
         [BASE_REPR_INT, BASE_REPR_TAGGED] => {
-            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, <IntRepr>lhsRepr, result);
+            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, <IntRepr>lhsRepr, result, insn.pos);
         }
         [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN]
         | [BASE_REPR_INT, BASE_REPR_INT] => {
@@ -98,10 +98,10 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
             return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
         }
         [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
-            return buildEqualTaggedFloat(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, rhsValue, result);
+            return buildEqualTaggedFloat(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, rhsValue, result, insn.pos);
         }
         [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
-            return buildEqualTaggedFloat(builder, scaffold, exact, op, <llvm:PointerValue>rhsValue, lhsValue, result);
+            return buildEqualTaggedFloat(builder, scaffold, exact, op, <llvm:PointerValue>rhsValue, lhsValue, result, insn.pos);
         }
         [BASE_REPR_FLOAT, BASE_REPR_FLOAT] => {
             return buildEqualFloat(builder, scaffold, exact, op, lhsValue, rhsValue, result);
@@ -110,7 +110,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     return scaffold.unimplementedErr("equality with two different untagged representations", insn.pos);
 }
 
-function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result) {
+function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result, bir:Position pos) {
     llvm:BasicBlock floatTagBlock = scaffold.addBasicBlock();
     llvm:BasicBlock otherTagBlock = scaffold.addBasicBlock();
     llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
@@ -122,7 +122,7 @@ function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean 
                       result);
     builder.br(joinBlock);
     builder.positionAtEnd(floatTagBlock);
-    buildEqualFloat(builder, scaffold, exact, op, buildUntagFloat(builder, scaffold, tagged), untagged, result);
+    buildEqualFloat(builder, scaffold, exact, op, buildUntagFloat(builder, scaffold, tagged, pos), untagged, result);
     builder.br(joinBlock);
     builder.positionAtEnd(joinBlock);
 }
@@ -173,7 +173,7 @@ function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqO
                       result);
 }
 
-function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, IntRepr untaggedRepr, bir:Register result) {
+function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, IntRepr untaggedRepr, bir:Register result, bir:Position pos) {
     if untaggedRepr.alwaysInImmediateRange {
         return buildStoreBoolean(builder, scaffold, builder.iCmp(op, tagged, buildImmediateTaggedInt(builder, untagged)), result);
     }
@@ -188,22 +188,26 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
                       result);
     builder.br(joinBlock);
     builder.positionAtEnd(intTagBlock);
-    buildStoreBoolean(builder, scaffold, builder.iCmp(op, buildUntagInt(builder, scaffold, tagged), untagged), result);
+    buildStoreBoolean(builder, scaffold, builder.iCmp(op, buildUntagInt(builder, scaffold, tagged, pos), untagged), result);
     builder.br(joinBlock);
     builder.positionAtEnd(joinBlock);
 }
 
-function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
+function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result, bir:Position pos) {
     RuntimeFunction func = exact ? exactEqFunction : eqFunction;
+    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_CALL);
     llvm:Value b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(func), [tagged1, tagged2]);
+    scaffold.clearDebugLocation(builder);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
     buildStoreBoolean(builder, scaffold, b, result);
 }
 
-function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
+function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result, bir:Position pos) {
+    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_CALL);
     llvm:Value b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringEqFunction), [tagged1, tagged2]);
+    scaffold.clearDebugLocation(builder);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }

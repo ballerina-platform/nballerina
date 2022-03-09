@@ -68,7 +68,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
         valueToStore = check buildNarrowRepr(builder, scaffold, repr, value, scaffold.getRepr(insn.result), insn.pos);
     }
     else {
-        valueToStore = buildExactify(builder, scaffold, valueToExactify, insn.result.semType);
+        valueToStore = buildExactify(builder, scaffold, valueToExactify, insn.result.semType, insn.pos);
     }
     builder.store(valueToStore, scaffold.address(insn.result));
     builder.positionAtEnd(castFailBlock);
@@ -118,7 +118,7 @@ function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrow
     var [sourceRepr, value] = check buildReprValue(builder, scaffold, insn.operand);
     t:SemType semType = insn.result.semType;
     if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsUniformBitSet(scaffold.typeContext(), insn.operand.semType, semType) == () {
-        value = buildExactify(builder, scaffold, <llvm:PointerValue>value, semType);
+        value = buildExactify(builder, scaffold, <llvm:PointerValue>value, semType, insn.pos);
     }
     llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result), insn.pos);
     builder.store(narrowed, scaffold.address(insn.result));
@@ -131,18 +131,21 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
         return value;
     }
     if sourceBaseRepr == BASE_REPR_TAGGED {
-        return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr);
+        return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr, pos);
     }
     return scaffold.unimplementedErr("unimplemented narrowing conversion required", pos);
 }
 
-function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {
+function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType, bir:Position pos) returns llvm:PointerValue {
     t:Context tc = scaffold.typeContext();
     if t:mappingAtomicTypeRw(tc, targetType) == () && t:listAtomicTypeRw(tc, targetType) == () {
         return tagged;
     }
-    return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(structureExactifyFunction),
-                                           [tagged, scaffold.getExactify(t:diff(targetType, t:READONLY))]);
+    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_CALL);
+    llvm:PointerValue val = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(structureExactifyFunction),
+                                                            [tagged, scaffold.getExactify(t:diff(targetType, t:READONLY))]);
+    scaffold.clearDebugLocation(builder);
+    return val;
 }
 
 // If we can perform the type test by testing whether the value belongs to a UniformTypeBitSet, then return that bit set.
