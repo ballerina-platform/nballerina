@@ -235,10 +235,20 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
             }
             "..." => {
                 check tok.advance();
-                Position namePos = tok.currentStartPos();
-                string name = check tok.expectIdentifier();
-                FunctionParam param = { startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td, isRest: true };
-                params.push(param);
+                Token? t = tok.current();
+                if t is [IDENTIFIER, string] {
+                    Position namePos = tok.currentStartPos();
+                    string name = t[1];
+                    check tok.advance();
+                    FunctionParam param = { startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td, isRest: true };
+                    params.push(param);
+                }
+                else {
+                    if namedParams != () {
+                        return parseError(tok);
+                    }
+                    params.push({ startPos: paramStartPos, endPos: tok.currentEndPos(), name: (), namePos: (), td, isRest: true });
+                }
                 if tok.current() == ")" {
                     break;
                 }

@@ -119,6 +119,7 @@ function syntaxNodeFromFunctionTypeParam(FunctionTypeParam param) returns SubSyn
     string? name = param.name;
     return nonTerminalSyntaxNode(param,
                                  syntaxNodeFromTypeDesc(param.td),
+                                 param.isRest ? { token: "..." } : (),
                                  name != () ? { name, pos: param.namePos } : ());
 }
 
@@ -530,19 +531,13 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
 }
 
 function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSignature = false) returns SubSyntaxNode {
-    SubSyntaxNode[] params = joinSyntaxNodesWithSeperator((from FunctionTypeParam param in td.params select param.isRest ? syntaxNodeFromRestParam(param) : syntaxNodeFromFunctionTypeParam(param)), { token: "," });
+    SubSyntaxNode[] params = joinSyntaxNodesWithSeperator((from FunctionTypeParam param in td.params select syntaxNodeFromFunctionTypeParam(param)), { token: "," });
     TypeDesc? retTd = td.ret;
     return nonTerminalSyntaxNode(td, functionSignature ? () : { token: "function" },
                                      { token: "(", pos: td.startPos },
                                      params,
                                      { token: ")" },
                                      retTd != () ? [{ token: "returns" }, syntaxNodeFromTypeDesc(retTd)] : ());
-}
-
-function syntaxNodeFromRestParam(FunctionTypeParam restParam) returns SubSyntaxNode {
-    return nonTerminalSyntaxNode(restParam, syntaxNodeFromTypeDesc(restParam.td),
-                                            { token: "..." },
-                                            { name: <string>restParam.name, pos: <Position>restParam.namePos });
 }
 
 function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSyntaxNode {

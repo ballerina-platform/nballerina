@@ -25,8 +25,8 @@ type FT1RetSub3 function(int a, int b) returns float;
 type FT3 function(float b, int ... a);
 type FT4 function(float b, int[] a);
 type FT3Sub1 function(float b);
-type FT3Sub2 function(float b,int a);
-type FT3Sub3 function(float b,int a, int c);
+type FT3Sub2 function(float b, int a);
+type FT3Sub3 function(float b, int a, int c);
 
 //@type FT3Ret <> FT4Ret
 //@type FT3Ret > FT3RetSub1
@@ -35,5 +35,5 @@ type FT3Sub3 function(float b,int a, int c);
 type FT3Ret function(float b, int ... a) returns float;
 type FT4Ret function(float b, int[] a) returns float;
 type FT3RetSub1 function(float b) returns float;
-type FT3RetSub2 function(float b,int a) returns float;
-type FT3RetSub3 function(float b,int a, int c) returns float;
+type FT3RetSub2 function(float b, int a) returns float;
+type FT3RetSub3 function(float b, int a, int c) returns float;
