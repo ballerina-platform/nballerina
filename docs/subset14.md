@@ -149,7 +149,7 @@ tuple-rest-desc = type-desc "..."
 
 param-list = param ["," param]* ["," rest-param]
 param = type-desc identifier
-rest-param = type-desc "..." identifier
+rest-param = type-desc "..." [identifier]
 
 stmt-block = "{" statement* "}"
 
