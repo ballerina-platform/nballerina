@@ -108,16 +108,16 @@ class StmtContext {
         return bir:createBasicBlock(self.code, name);
     }
 
+    function startRegion() {
+        self.curRegion += 1;
+        self.started.push(self.curRegion);
+    }
+
     function finishRegion(bir:Label entry, bir:RegionKind kind, bir:Label? exit = ()) {
         bir:Label finished = self.started.pop();
         int startedCount = self.started.length();
         bir:Label? parent = startedCount > 0 ? self.started[startedCount - 1] : ();
         self.regions[finished] = { entry, kind, exit, parent };
-    }
-
-    function startRegion() {
-        self.curRegion += 1;
-        self.started.push(self.curRegion);
     }
 
     function qNameRange(Position startPos) returns Range {
