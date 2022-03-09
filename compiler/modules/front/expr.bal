@@ -442,8 +442,8 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, index);
             t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r.semType);
             if t:isEmpty(cx.mod.tc, memberType) {
-                return t:listAtomicTypeRw(cx.mod.tc, l.semType) is () ? 
-                    cx.semanticErr("type of member access is never", pos) : cx.semanticErr("index out of range", s:range(index));
+                string msg = t:listAtomicTypeRw(cx.mod.tc, l.semType) == () ? "type of member access is never" : "index out of range" ;
+                return cx.semanticErr(msg, s:range(index));
             }
             // XXX this isn't correct for singletons
             bir:TmpRegister result = cx.createTmpRegister(memberType, pos);
