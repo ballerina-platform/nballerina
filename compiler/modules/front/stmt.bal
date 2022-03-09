@@ -964,7 +964,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Enviro
         else {
             var { result: index, block: nextBlock } = check cx.codeGenExprForInt(block1, env, lValue.index);
             t:SemType memberType = t:listMemberType(cx.mod.tc, reg.semType, index.semType);
-            if t:isEmpty(cx.mod.tc, memberType) && t:listAtomicTypeRw(cx.mod.tc, reg.semType) !is () {
+            if t:isEmpty(cx.mod.tc, memberType) {
                     return cx.semanticErr("index out of range", s:range(lValue.index));
             }
             { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, env, memberType, expr);
@@ -1044,7 +1044,7 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
                                            Position pos) returns CodeGenError|StmtEffect {
     var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, env, lValue.index);
     t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, index.semType);
-    if t:isEmpty(cx.mod.tc, memberType) && t:listAtomicTypeRw(cx.mod.tc, list.semType) !is () {
+    if t:isEmpty(cx.mod.tc, memberType) {
         return cx.semanticErr("index out of range", s:range(lValue.index));
     }
     bir:TmpRegister member = cx.createTmpRegister(memberType, lValue.opPos);
