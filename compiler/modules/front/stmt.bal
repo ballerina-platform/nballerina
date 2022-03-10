@@ -60,9 +60,7 @@ class StmtContext {
     final bir:FunctionCode code;
     final t:SemType returnType;
     LoopContext? loopContext = ();
-    bir:Label[] started = [];
-    bir:Region?[] regions = [];
-    int curRegion = -1;
+    bir:RegionIndex[] openRegions = [];
 
     function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
@@ -108,16 +106,17 @@ class StmtContext {
         return bir:createBasicBlock(self.code, name);
     }
 
-    function startRegion() {
-        self.curRegion += 1;
-        self.started.push(self.curRegion);
+    function openRegion(bir:Label entry, bir:RegionKind kind, bir:Label? exit = ()) {
+        bir:RegionIndex regionIndex = self.code.regions.length();
+        int openCount = self.openRegions.length();
+        bir:RegionIndex? parent = openCount > 0 ? self.openRegions[openCount - 1] : ();
+        self.code.regions.push({ entry, kind, exit, parent });
+        self.openRegions.push(regionIndex);
     }
 
-    function finishRegion(bir:Label entry, bir:RegionKind kind, bir:Label? exit = ()) {
-        bir:Label finished = self.started.pop();
-        int startedCount = self.started.length();
-        bir:Label? parent = startedCount > 0 ? self.started[startedCount - 1] : ();
-        self.regions[finished] = { entry, kind, exit, parent };
+    function closeRegion(bir:Label? exit =()) {
+        int regionIndex = self.openRegions.pop();
+        self.code.regions[regionIndex].exit = exit;
     }
 
     function qNameRange(Position startPos) returns Range {
@@ -234,7 +233,7 @@ class StmtContext {
 function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
     StmtContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
-    cx.startRegion();
+    cx.openRegion(startBlock.label, "SIMPLE");
     Binding? bindings = ();
     foreach int i in 0 ..< defn.params.length() {
         var param = defn.params[i];
@@ -245,15 +244,10 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     if endBlock != () {
         bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: defn.body.closeBracePos };
         endBlock.insns.push(ret);
-        cx.finishRegion(startBlock.label, "SIMPLE", endBlock.label);
+        cx.closeRegion(endBlock.label);
     }
     else {
-        cx.finishRegion(startBlock.label, "SIMPLE");
-    }
-    foreach bir:Region? region in cx.regions {
-        if region != () {
-            cx.code.regions.push(region);
-        }
+        cx.closeRegion();
     }
     codeGenOnPanic(cx, defn.body.closeBracePos);
     return cx.code;
@@ -447,7 +441,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
 
 function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:WhileStmt stmt) returns CodeGenError|StmtEffect {
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
-    cx.startRegion();
+    cx.openRegion(loopHead.label, "LOOP");
     bir:BranchInsn forwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     startBlock.insns.push(forwardBranchToLoopHead);
     bir:BasicBlock loopBody = cx.createBasicBlock();
@@ -496,10 +490,10 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     }
     cx.popLoopContext();
     if exit != () {
-        cx.finishRegion(loopHead.label, "LOOP", exit.label);
+        cx.closeRegion(exit.label);
     }
     else {
-        cx.finishRegion(loopHead.label, "LOOP");
+        cx.closeRegion();
     }
     if exitReachable {
         return { block: exit, assignments };
@@ -750,7 +744,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
-        cx.startRegion();
+        cx.openRegion(startBlock.label, "MULTIPLE");
         var { block: ifContBlock, assignments, narrowings: ifNarrowings } = check codeGenScope(cx, ifBlock, env, ifTrue, ifCondNarrowings);
         bir:BasicBlock contBlock;
         if ifFalse == () {
@@ -763,7 +757,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
                 ifContBlock.insns.push(branch);
             }
             Narrowing[] narrowings = combineIfElseNarrowings(ifNarrowings, ifContBlock != (), elseCondNarrowings, true);
-            cx.finishRegion(startBlock.label, "MULTIPLE", contBlock.label);
+            cx.closeRegion(contBlock.label);
             return { block: contBlock, assignments, narrowings };
         }
         else {
@@ -773,7 +767,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
             bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: elseBlock.label, pos: stmt.condition.startPos };
             branchBlock.insns.push(condBranch);
             if ifContBlock == () && elseContBlock == () {
-                cx.finishRegion(startBlock.label, "MULTIPLE");
+                cx.closeRegion();
                 // e.g. both arms have a return
                 return { block: () };
             }
@@ -788,7 +782,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
             }
             assignments.push(...elseAssignments);
             Narrowing[] narrowings = combineIfElseNarrowings(ifNarrowings, ifContBlock != (), elseNarrowings, elseContBlock != ());
-            cx.finishRegion(startBlock.label, "MULTIPLE", contBlock.label);
+            cx.closeRegion(contBlock.label);
             return { block: contBlock, assignments, narrowings };
         }
     }

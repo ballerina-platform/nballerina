@@ -39,6 +39,9 @@ public type ModuleDefn record {|
 # A label is an index of a basic block in the basicBlock.
 public type Label int;
 
+# A RegionIndex is an index of a region in the regions array.
+public type RegionIndex int;
+
 # The definition of a function.
 public type FunctionDefn readonly & record {|
     *ModuleDefn;
@@ -94,10 +97,10 @@ public type FunctionSignature readonly & record {|
     SemType? restParamType = ();
 |};
 
-public type Region readonly & record {|
+public type Region record {|
     Label entry;
     Label? exit = ();
-    Label? parent = ();
+    RegionIndex? parent = ();
     RegionKind kind;
 |};
 
