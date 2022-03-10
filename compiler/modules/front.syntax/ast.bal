@@ -47,6 +47,7 @@ public type FunctionParam record {|
     string name;
     Position namePos;
     TypeDesc td;
+    boolean isRest = false;
 |};
 
 public type ResolvedConst readonly & [t:SemType, t:SingleValue];
@@ -462,6 +463,7 @@ public type FunctionTypeParam record {|
     string? name;
     Position? namePos;
     TypeDesc td;
+    boolean isRest = false;
 |};
 
 public type ErrorTypeDesc record {|
