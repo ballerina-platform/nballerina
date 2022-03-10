@@ -70,13 +70,13 @@ public type Region record {|
     Label entry;
     Label? exit = ();
     Label? parent = ();
-    RegionType ty;
+    RegionKind kind;
 |};
 
-public enum RegionType {
-    Simple,
-    Loop,
-    Multiple
+public enum RegionKind {
+    SIMPLE,
+    LOOP,
+    MULTIPLE
 }
 
 # A function's code is represented as a factored control flow graph.

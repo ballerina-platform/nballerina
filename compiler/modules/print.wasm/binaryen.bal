@@ -1,6 +1,6 @@
 public type IntType "i64"|"i32";
 public type Type "None"|IntType;
-public type Op "i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.or"|"i32.xor"|"i32.and"|"i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|"i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.or"|"i64.xor"|"i64.and";
+public type Op "i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.or"|"i32.xor"|"i32.and"|"i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|"i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.or"|"i64.xor"|"i64.and"|"i64.extend_i32_u"|"i64.shl"|"i32.add";
 
 public type Function record {
     string[] signature;
@@ -26,7 +26,9 @@ public class Module {
     private Expression[] imports = [];
     private Expression[] exports = [];
     private Expression[] tags = [];
-
+    private Expression[] globals = [];
+    private Expression? memory = ();
+    private Expression[] memoryExport = [];
     public function call(string target, Expression[] operands, int numOperands, Type returnType) returns Expression {
         string[] callInst = ["call", "$" + target];
         foreach int i in 0...numOperands - 1 {
@@ -37,6 +39,10 @@ public class Module {
 
     public function localGet(int index, Type ty) returns Expression {
         return { tokens: appendBraces(["local.get", "$" + index.toString()]) };
+    }
+
+    public function globalGet(string name, Type ty) returns Expression {
+        return { tokens: appendBraces(["global.get", "$" + name]) };
     }
 
     public function addConst(Literal value) returns Expression {
@@ -96,6 +102,24 @@ public class Module {
         self.exports.push({ tokens: appendBraces(exportDef) });
     }
 
+    public function addGlobal(string name, Type ty, boolean mutable_, Expression init) {
+        string[] gl = ["global", "$" + name];
+        if mutable_ {
+            gl.push(...appendBraces(["mut", ty]));
+        }
+        gl.push(...init.tokens);
+        self.globals.push({ tokens: appendBraces(gl) });
+    }
+
+    public function setMemory(int initial, int maximum, string exportName) {
+        string[] memInst = ["memory", "$0"];
+        string[] exportInst = ["export", "\"" + exportName + "\""];
+        exportInst.push(...appendBraces(memInst));
+        memInst.push(initial.toString(), maximum.toString());
+        self.memory = { tokens: appendBraces(memInst) };
+        self.memoryExport.push({ tokens: appendBraces(exportInst) });
+    }
+
     public function binary(Op op, Expression left, Expression right) returns Expression {
         string[]  binInst = [];
         if left.tokens.length() > 0 && right.tokens.length() > 0 {
@@ -107,8 +131,27 @@ public class Module {
         panic error("invalid");
     }
 
+    public function unary(Op op, Expression value) returns Expression {
+        string[]  binInst = [];
+        if value.tokens.length() > 0 {
+            binInst.push(op);
+            binInst.push(...value.tokens);
+            return { tokens : appendBraces(binInst) };
+        }
+        panic error("invalid");
+    }
+
     public function localSet(int index, Expression value) returns Expression {
         string[] inst = ["local.set", "$" + index.toString()];
+        if value.tokens.length() > 0 {
+            inst.push(...value.tokens);
+            return { tokens: appendBraces(inst) };
+        }
+        panic error("invalid");
+    }
+
+    public function globalSet(string name, Expression value) returns Expression {
+        string[] inst = ["global.set", "$" + name];
         if value.tokens.length() > 0 {
             inst.push(...value.tokens);
             return { tokens: appendBraces(inst) };
@@ -151,8 +194,21 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-   public function throw(string tag, Expression[] operands, int numOperands) returns Expression {
+    public function throw(string tag, Expression[] operands, int numOperands) returns Expression {
         return { tokens: appendBraces(["throw", "$" + tag]) };
+    }
+
+    public function store(int bytes, int offset, int align, Expression ptr, Expression value, Type ty) returns Expression {
+        string[] inst = [];
+        if ty is "i64" {
+            inst.push("i64.store");
+        }
+        else if ty is "i32" {
+            inst.push("i32.store");
+        }
+        inst.push(...ptr.tokens);
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
     }
 
     public function try(string? name, Expression body, string[] catchTags, int numCatchTags, Expression[] catchBodies, int numCatchBodies, string? delegateTarget = ()) returns Expression {
@@ -200,6 +256,15 @@ public class Module {
         }
         foreach Expression tag in self.tags {
             module.push(joinTokens(tag.tokens, 1));
+        }
+        if self.memory != () {
+            module.push(joinTokens((<Expression>self.memory).tokens, 1));
+        }
+        foreach Expression gl in self.globals {
+            module.push(joinTokens(gl.tokens, 1));
+        }
+        foreach Expression exp in self.memoryExport {
+            module.push(joinTokens(exp.tokens, 1));
         }
         foreach Expression exp in self.exports {
             module.push(joinTokens(exp.tokens, 1));

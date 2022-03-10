@@ -105,8 +105,8 @@ class StmtContext {
         return <bir:Label>self.currParent - 1;
     }
 
-    function createRegion(bir:Label entry, bir:RegionType ty, bir:Label? parent = (), bir:Label? exit = ()) {
-        bir:Region region  = { entry: entry, ty: ty, exit: exit, parent: parent };
+    function createRegion(bir:Label entry, bir:RegionKind kind, bir:Label? parent = (), bir:Label? exit = ()) {
+        bir:Region region  = { entry: entry, kind: kind, exit: exit, parent: parent };
         self.currParent = region.parent;
         self.code.regions.push(region);
     }
@@ -238,12 +238,12 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     }
     var { block: endBlock } = check codeGenScope(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
-        cx.createRegion(startBlock.label, "Simple", (), endBlock.label);
+        cx.createRegion(startBlock.label, "SIMPLE", (), endBlock.label);
         bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: defn.body.closeBracePos };
         endBlock.insns.push(ret);
     }
     else {
-        cx.createRegion(startBlock.label, "Simple", ());
+        cx.createRegion(startBlock.label, "SIMPLE", ());
     }
     codeGenOnPanic(cx, defn.body.closeBracePos);
     return cx.code;
@@ -484,10 +484,10 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     }
     cx.popLoopContext();
     if exit != () {
-        cx.createRegion(loopHead.label, "Loop", currRegion, exit.label);
+        cx.createRegion(loopHead.label, "LOOP", currRegion, exit.label);
     }
     else {
-        cx.createRegion(loopHead.label, "Loop", currRegion);
+        cx.createRegion(loopHead.label, "LOOP", currRegion);
     }
     if exitReachable {
         return { block: exit, assignments };
@@ -745,7 +745,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
         if ifFalse == () {
             // just an if branch
             contBlock = cx.createBasicBlock();
-            cx.createRegion(startBlock.label, "Multiple", currRegion, contBlock.label);
+            cx.createRegion(startBlock.label, "MULTIPLE", currRegion, contBlock.label);
             bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: contBlock.label, pos: stmt.condition.startPos };
             branchBlock.insns.push(condBranch);
             if ifContBlock != () {
@@ -763,11 +763,11 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
             branchBlock.insns.push(condBranch);
             if ifContBlock == () && elseContBlock == () {
                 // e.g. both arms have a return
-                cx.createRegion(startBlock.label, "Multiple", currRegion);
+                cx.createRegion(startBlock.label, "MULTIPLE", currRegion);
                 return { block: () };
             }
             contBlock = cx.createBasicBlock();
-            cx.createRegion(startBlock.label, "Multiple", currRegion, contBlock.label);
+            cx.createRegion(startBlock.label, "MULTIPLE", currRegion, contBlock.label);
             Position joinPos = (ifFalse is s:StmtBlock ? ifFalse : ifFalse.ifTrue).closeBracePos;
             bir:BranchInsn branch = { dest: contBlock.label, pos: joinPos };
             if ifContBlock != () {
