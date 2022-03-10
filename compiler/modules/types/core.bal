@@ -992,6 +992,47 @@ public function listAtomicTypeApplicableMemberTypes(Context cx, ListAtomicType a
     }
 }
 
+public type ListAlternative record {|
+    SemType semType;
+    ListAtomicType[] pos;
+    ListAtomicType[] neg;
+|};
+
+public function listAlternativesRw(Context cx, SemType t) returns ListAlternative[] {
+    if t is UniformTypeBitSet {
+        if (t & LIST_RW) == 0 {
+            return [];
+        }
+        else {
+            return [
+                {
+                    semType: LIST_RW,
+                    pos: [],
+                    neg: []
+                }
+            ];
+        }
+    }
+    else {
+        BddPath[] paths = [];
+        bddPaths(<Bdd>getComplexSubtypeData(t, UT_LIST_RW), paths, {});
+        /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
+        ListAlternative[] alts = [];
+        foreach var { bdd, pos, neg } in paths {
+            SemType semType = createUniformSemType(UT_LIST_RW, bdd);
+            if semType != NEVER {
+                alts.push({
+                    semType,
+                    // JBUG parse error without parentheses (33707)
+                    pos: (from var atom in pos select cx.listAtomType(atom)),
+                    neg: (from var atom in neg select cx.listAtomType(atom))
+                });
+            }          
+        }
+        return alts;
+    }
+}
+
 final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: TOP };
 final MappingAtomicType MAPPING_ATOMIC_READONLY = { names: [], types: [], rest: READONLY };
 

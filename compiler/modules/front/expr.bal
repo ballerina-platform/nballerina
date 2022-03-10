@@ -846,18 +846,44 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
 
 function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListConstructorExpr expr) returns [t:SemType, t:ListAtomicType]|ResolveTypeError {
     // SUBSET always have contextually expected type for list constructor
-    t:SemType resultType = t:intersect(expectedType, t:LIST_RW);
+    t:SemType expectedListType = t:intersect(expectedType, t:LIST_RW);
     t:Context tc = cx.mod.tc;
-    if t:isEmpty(tc, resultType) {
+    if t:isEmpty(tc, expectedListType) {
         // don't think this can happen 
         return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
-    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, resultType);
-    // XXX this needs to be enhanced to eliminate possibilities from unions that are impossible because of the number of members in expr
+    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, expectedListType);
+    if lat != () {
+        return [expectedListType, lat];
+    }
+    int len = expr.members.length();
+    t:ListAlternative[] alts =
+        from var alt in t:listAlternativesRw(tc, expectedListType)
+        where listAlternativeAllowsLength(alt, len)
+        select alt;
+    if alts.length() == 0 {
+        return cx.semanticErr("no applicable inherent type for list constructor", s:range(expr));
+    }
+    else if alts.length() > 1 {
+        return cx.semanticErr("ambiguous inherent type for list constructor", s:range(expr));
+    }
+    t:SemType semType = alts[0].semType;
+    lat = t:listAtomicTypeRw(tc, semType);
     if lat is () {
         return cx.semanticErr("applicable type for list constructor is not atomic", s:range(expr));
     }
-    return [resultType, lat];
+    return [semType, lat];
+}
+
+function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boolean {
+    foreach t:ListAtomicType a in alt.pos {
+        int minLength = a.members.fixedLength;
+        // This doesn't account for filling. See spec issue #1064
+        if a.rest == t:NEVER ? len != minLength : len < minLength {     
+            return false;
+        }
+    }
+    return true;
 }
 
 function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
