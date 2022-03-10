@@ -8,6 +8,10 @@ const int TAG_INT = t:UT_INT << TAG_SHIFT;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN << TAG_SHIFT;
 const int FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
 const int TAG_NIL      = 0;
+const int TRUNCATE = (1 << TAG_SHIFT) - 1;
+const int MAX_IMMEDIATE_INT = (1 << (TAG_SHIFT - 1)) - 1;
+const int MIN_IMMEDIATE_INT = - (1 << (TAG_SHIFT - 1));
+
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     wasm:Expression immediate = module.binary("i64.or", module.addConst({ i64: FLAG_IMMEDIATE }), module.unary("i64.extend_i32_u", value));
@@ -91,4 +95,23 @@ function buildConvertRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr
 
 function buildUntagBoolean(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
     return module.binary("i64.and", module.addConst({ i64: 1 }), tagged);
+}
+
+function taggedInt(wasm:Module module) {
+    module.addGlobal("offset", "i32", true, module.addConst({ i32: 0 }));
+    wasm:Expression value = module.localGet(0, "i64");
+    wasm:Expression offset = module.globalGet("offset", "i32");
+    wasm:Expression valLMax = module.binary("i64.lt_s", value, module.addConst({ i64: MAX_IMMEDIATE_INT }));
+    wasm:Expression valGMin = module.binary("i64.gt_s", value, module.addConst({ i64: MIN_IMMEDIATE_INT }));
+    wasm:Expression condition = module.binary("i32.and", valGMin, valLMax);
+    wasm:Expression truncated = module.binary("i64.and", value, module.addConst({ i64: TRUNCATE }));
+    wasm:Expression immediated = module.binary("i64.or", truncated, module.addConst({ i64: FLAG_IMMEDIATE }));
+    wasm:Expression trueBody = module.addReturn(module.binary("i64.or", immediated, module.addConst({ i64: TAG_INT })));
+    wasm:Expression store = module.store(8, 0, 0, offset, value, "i64");
+    wasm:Expression location = module.localSet(1, offset);
+    wasm:Expression incrementOffset = module.globalSet("offset", module.binary("i32.add", offset, module.addConst({ i32: 8 })));
+    wasm:Expression falseReturn = module.addReturn(module.binary("i64.or", module.addConst({ i64: TAG_INT }), module.unary("i64.extend_i32_u", module.localGet(1, "i32"))));
+    wasm:Expression elseBody = module.block((), [store, location, incrementOffset, falseReturn], 4);
+    wasm:Expression body = module.addIf(condition, trueBody, elseBody);
+    module.addFunction("int_to_tagged", ["i64"], "i64", ["i32"], 1, body);
 }

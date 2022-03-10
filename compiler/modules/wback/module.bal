@@ -1,6 +1,10 @@
+import ballerina/io;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.wasm;
+import wso2/nballerina.comm.err;
+
+type BuildError err:Semantic|err:Unimplemented|err:Internal;
 
 function buildModule(bir:Module mod) returns string[]|BuildError {
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
@@ -194,3 +198,14 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
     return module.nop();
 }
 
+public function compileModule(bir:Module mod, string? outputFilename) returns io:Error? {
+    do {
+	    string[] module = check buildModule(mod);
+        if outputFilename != () {
+            return io:fileWriteLines(outputFilename, module);
+        }
+    }
+    on fail var e {
+        io:println(e);
+    }
+}

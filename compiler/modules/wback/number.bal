@@ -1,6 +1,20 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
 
+final readonly & map<wasm:Op> signedInt64ArithmeticOps = {
+    "+": "i64.add",
+    "-": "i64.sub",
+    "*": "i64.mul",
+    "/": "i64.div_s",
+    "%": "i64.rem_s"
+};
+
+final readonly & map<wasm:Op> signedInt64BitwiseOps = {
+    "|": "i64.or",
+    "^": "i64.xor",
+    "&": "i64.and"
+};
+
 function buildBitwiseBinary(wasm:Module module, Scaffold scaffold, bir:IntBitwiseBinaryInsn insn) returns wasm:Expression {
     wasm:Op? op = signedInt64BitwiseOps[insn.op];
     wasm:Expression operand1 = buildInt(module, insn.operands[0]);

@@ -1,6 +1,29 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
 
+final readonly & map<wasm:Op> signedInt32CompareOps = {
+    "<": "i32.lt_s",
+    "<=": "i32.le_s",
+    ">": "i32.gt_s",
+    ">=": "i32.ge_s"
+};
+
+final readonly & map<bir:OrderOp> flipped32OrderOps = {
+    ">=": "<=",
+    ">" : "<",
+    "<=": ">=",
+    "<" : ">"
+};
+
+final readonly & map<wasm:Op> signedInt64CompareOps = {
+    "<": "i64.lt_s",
+    "<=": "i64.le_s",
+    ">": "i64.gt_s",
+    ">=": "i64.ge_s",
+    "==": "i64.eq",
+    "!=": "i64.ne"
+};
+
 function buildCompare(wasm:Module module, Scaffold scaffold, bir:CompareInsn insn) returns wasm:Expression {
     bir:Operand lhs = insn.operands[0];
     bir:Operand rhs = insn.operands[1];
