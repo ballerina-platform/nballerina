@@ -965,7 +965,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Enviro
             var { result: index, block: nextBlock } = check cx.codeGenExprForInt(block1, env, lValue.index);
             t:SemType memberType = t:listMemberType(cx.mod.tc, reg.semType, index.semType);
             if t:isEmpty(cx.mod.tc, memberType) {
-                    return cx.semanticErr("index out of range", s:range(lValue.index));
+                return cx.semanticErr("index out of range", s:range(lValue.index));
             }
             { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, env, memberType, expr);
             bir:ListSetInsn insn = { operands: [reg, index, operand], pos: lValue.opPos };
