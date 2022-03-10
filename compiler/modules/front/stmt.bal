@@ -244,11 +244,8 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     if endBlock != () {
         bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: defn.body.closeBracePos };
         endBlock.insns.push(ret);
-        cx.closeRegion(endBlock.label);
     }
-    else {
-        cx.closeRegion();
-    }
+    cx.closeRegion();
     codeGenOnPanic(cx, defn.body.closeBracePos);
     return cx.code;
 }
