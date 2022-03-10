@@ -1224,21 +1224,26 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     }
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
-    s:Expr[] restArgs = [];
     t:SemType? restParamType = func.signature.restParamType;
-    foreach int i in 0 ..< expr.args.length() {
-        if restParamType != () && i >= func.signature.paramTypes.length() - 1 {
-            restArgs.push(expr.args[i]);
+    int regularArgCount = restParamType == () ? expr.args.length() : func.signature.paramTypes.length() - 1;
+    foreach int i in 0 ..< regularArgCount {
+        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
+        curBlock = nextBlock;
+        args.push(arg);
+    }
+    s:Expr[] restArgs = from int i in regularArgCount ..< expr.args.length() select expr.args[i];
+    if restParamType != () {
+        Position startPos;
+        Position endPos;
+        int restArgCount = restArgs.length();
+        if restArgCount > 0 {
+            startPos = restArgs[0].startPos;
+            endPos = restArgs[restArgCount - 1].endPos;
         }
         else {
-            var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
-            curBlock = nextBlock;
-            args.push(arg);
+            startPos = expr.openParenPos;
+            endPos = expr.closeParenPos;
         }
-    }
-    if restParamType != () {
-        Position startPos = restArgs.length() > 0 ? restArgs[0].startPos : expr.openParenPos;
-        Position endPos = restArgs.length() > 0 ? restArgs[restArgs.length() - 1].endPos : expr.closeParenPos;
         s:ListConstructorExpr varArgList = { startPos, endPos, opPos: startPos, members: restArgs};
         t:SemType restListTy = func.signature.paramTypes[func.signature.paramTypes.length() - 1];
         var { result: arg, block: nextBlock } = check codeGenListConstructor(cx, curBlock, restListTy, varArgList);
@@ -1277,7 +1282,7 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
 
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
     int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
-    int nExpectedArgs = func.signature.restParamType == () ? func.signature.paramTypes.length() : func.signature.paramTypes.length() - 1;
+    int nExpectedArgs = func.signature.paramTypes.length() - (func.signature.restParamType != () ? 1 : 0);
     if nSuppliedArgs < nExpectedArgs {
         if func.symbol == IO_PRINTLN_SYMBOL {
             return cx.unimplementedErr("io:println without arguments not implemented", call.closeParenPos);
