@@ -227,8 +227,7 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
         TypeDesc td = check parseTypeDesc(tok);
         if tok.current() == "..." {
             check tok.advance();
-            FunctionTypeParam|FunctionParam param = check finishParam(tok, td, paramStartPos, namedParams == (), true);
-            params.push(param);
+            params.push(check finishParam(tok, td, paramStartPos, namedParams == (), true));
             if tok.current() == ")" {
                 break;
             }
@@ -237,8 +236,7 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
             }
         }
         else {
-            FunctionTypeParam|FunctionParam param = check finishParam(tok, td, paramStartPos, namedParams == (), false);
-            params.push(param);
+            params.push(check finishParam(tok, td, paramStartPos, namedParams == (), false));
         }
         if tok.current() == "," {
             check tok.advance();
@@ -260,9 +258,6 @@ function finishParam(Tokenizer tok, TypeDesc td, Position startPos, boolean allo
     Token? t = tok.current();
     if !allowUnnamed || t is [IDENTIFIER, string] {
         return finishFunctionParam(tok, td, startPos, isRest);
-    }
-    if !allowUnnamed {
-        return parseError(tok);
     }
     return { startPos, endPos: tok.previousEndPos(), name: (), namePos: (), td, isRest };
 }

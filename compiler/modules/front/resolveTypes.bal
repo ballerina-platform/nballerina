@@ -47,9 +47,9 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
     foreach var x in defn.params {
         if x.isRest {
             restParamType = check resolveSubsetTypeDesc(mod, defn, x.td);
-            s:TypeDesc member = x.td;
-            s:ArrayTypeDesc restArrayTd = { member, startPos: member.startPos, endPos: member.endPos, dimensions: [()] };
-            paramTypes.push(check resolveSubsetTypeDesc(mod, defn, restArrayTd));
+            t:ListDefinition d = new;
+            t:SemType arrTy = d.define(mod.tc.env, rest = <t:SemType>restParamType);
+            paramTypes.push(arrTy);
         }
         else {
             paramTypes.push(check resolveSubsetTypeDesc(mod, defn, x.td));
