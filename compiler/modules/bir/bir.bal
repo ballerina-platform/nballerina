@@ -106,11 +106,11 @@ public type Region record {|
 
 public enum RegionKind {
     # Region that represents a basic loop.
-    LOOP,
+    REGION_LOOP,
     # Region that represents a divergence into several possible branches, that eventually rejoin.
-    MULTIPLE,
+    REGION_MULTIPLE,
     # Region that is neither a Multiple nor a Loop.
-    SIMPLE
+    REGION_SIMPLE
 }
 
 # A basic block.

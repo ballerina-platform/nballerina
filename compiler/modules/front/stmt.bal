@@ -114,7 +114,7 @@ class StmtContext {
         self.openRegions.push(regionIndex);
     }
 
-    function closeRegion(bir:Label? exit =()) {
+    function closeRegion(bir:Label? exit = ()) {
         int regionIndex = self.openRegions.pop();
         self.code.regions[regionIndex].exit = exit;
     }
@@ -233,7 +233,7 @@ class StmtContext {
 function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
     StmtContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
-    cx.openRegion(startBlock.label, "SIMPLE");
+    cx.openRegion(startBlock.label, "REGION_SIMPLE");
     Binding? bindings = ();
     foreach int i in 0 ..< defn.params.length() {
         var param = defn.params[i];
@@ -438,7 +438,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
 
 function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:WhileStmt stmt) returns CodeGenError|StmtEffect {
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
-    cx.openRegion(loopHead.label, "LOOP");
+    cx.openRegion(loopHead.label, "REGION_LOOP");
     bir:BranchInsn forwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     startBlock.insns.push(forwardBranchToLoopHead);
     bir:BasicBlock loopBody = cx.createBasicBlock();
@@ -486,12 +486,7 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         exit = breakBlock;
     }
     cx.popLoopContext();
-    if exit != () {
-        cx.closeRegion(exit.label);
-    }
-    else {
-        cx.closeRegion();
-    }
+    cx.closeRegion(exit != () ? exit.label: ());
     if exitReachable {
         return { block: exit, assignments };
     }
@@ -513,13 +508,12 @@ function validLoopAssignments(StmtContext cx, Assignment[] assignments) returns 
 
 function codeGenBreakContinueStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
     bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel(stmt.startPos) : check cx.onContinueLabel(stmt.startPos);
-    bir:BranchInsn branch;
+    boolean backward = stmt.breakContinue == "break"? false : true;
+    bir:BranchInsn branch = { dest, pos: stmt.startPos, backward };
     if stmt.breakContinue == "break" {
-        branch = { dest, pos: stmt.startPos };
         cx.addOnBreakAssignments(env.assignments);
     }
     else {
-        branch = { dest, pos: stmt.startPos, backward: true };
         cx.addOnContinueAssignments(env.assignments);
     }
     startBlock.insns.push(branch);
@@ -741,7 +735,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
-        cx.openRegion(startBlock.label, "MULTIPLE");
+        cx.openRegion(startBlock.label, "REGION_MULTIPLE");
         var { block: ifContBlock, assignments, narrowings: ifNarrowings } = check codeGenScope(cx, ifBlock, env, ifTrue, ifCondNarrowings);
         bir:BasicBlock contBlock;
         if ifFalse == () {
