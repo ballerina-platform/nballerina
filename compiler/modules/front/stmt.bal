@@ -233,7 +233,7 @@ class StmtContext {
 function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
     StmtContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
-    cx.openRegion(startBlock.label, "REGION_SIMPLE");
+    cx.openRegion(startBlock.label, bir:REGION_SIMPLE);
     Binding? bindings = ();
     foreach int i in 0 ..< defn.params.length() {
         var param = defn.params[i];
@@ -438,7 +438,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
 
 function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:WhileStmt stmt) returns CodeGenError|StmtEffect {
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
-    cx.openRegion(loopHead.label, "REGION_LOOP");
+    cx.openRegion(loopHead.label, bir:REGION_LOOP);
     bir:BranchInsn forwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     startBlock.insns.push(forwardBranchToLoopHead);
     bir:BasicBlock loopBody = cx.createBasicBlock();
@@ -735,7 +735,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
-        cx.openRegion(startBlock.label, "REGION_MULTIPLE");
+        cx.openRegion(startBlock.label, bir:REGION_MULTIPLE);
         var { block: ifContBlock, assignments, narrowings: ifNarrowings } = check codeGenScope(cx, ifBlock, env, ifTrue, ifCondNarrowings);
         bir:BasicBlock contBlock;
         if ifFalse == () {
