@@ -44,7 +44,6 @@ type VoidRepr readonly & record {|
 type RetRepr Repr|VoidRepr;
 
 class Scaffold {
-    private boolean overflowOps = false;
     map<wasm:Expression[]> renderedRegion = {};
     int[] processedBlocks = [];
     final bir:BasicBlock[] blocks;
@@ -55,6 +54,7 @@ class Scaffold {
     private Repr[] reprs = [];
     final t:SemType returnType;
     private final RetRepr retRepr;
+    private string[] exceptionTags = [];
     function init(bir:FunctionCode code, bir:FunctionDefn def) {
         self.blocks = code.blocks;
         self.regions = code.regions;
@@ -75,12 +75,14 @@ class Scaffold {
         self.reprs = reprs;
     }
 
-    public function setOverflowOps() {
-        self.overflowOps = true;
+    public function addExceptionTag(string tag) {
+        if self.exceptionTags.indexOf(tag) == () {
+            self.exceptionTags.push(tag);
+        }
     }
 
-    public function getOverflowOps() returns boolean {
-        return self.overflowOps;
+    public function getExceptionTags() returns string[] {
+        return self.exceptionTags;
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];

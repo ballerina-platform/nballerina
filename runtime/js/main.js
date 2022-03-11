@@ -65,6 +65,9 @@ const errorHandler = err => {
   else if (err.message == "wasm exception") {
     msg += "arithmetic overflow"
   }
+  else if (err.message == "Maximum call stack size exceeded") {
+    msg += "stack overflow";
+  }
   else {
     msg += err.message
   }

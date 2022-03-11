@@ -33,7 +33,7 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
         wasm:Expression operand2 = buildInt(module, insn.operands[1]);
         wasm:Expression operation = module.localSet(insn.result.number, module.binary(op, operand1, operand2));
         if ["i64.add", "i64.sub", "i64.mul", "i64.div_s"].indexOf(op) != () {
-            scaffold.setOverflowOps();
+            scaffold.addExceptionTag("overflow");
             wasm:Expression? overflowCheck = checkOverflow(module, op, operand1, operand2);
             if overflowCheck != () {
                 return module.block("", [overflowCheck, operation], 2, "None");
@@ -45,20 +45,10 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
     panic error("unimplemented");
 }
 
-// function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToIntInsn insn) returns wasm:Expression {
-//     var [repr, val] = buildReprValue(module, scaffold, insn.operand);
-//     if repr.base == BASE_REPR_FLOAT {
-//         buildConvertFloatToInt(builder, scaffold, val, insn);
-//         return;
-//     }
-//     else if repr.base == BASE_REPR_TAGGED && repr.subtype == t:DECIMAL {
-//         buildConvertDecimalToInt(builder, scaffold, val, insn);
-//         return;
-//     }
-//     // convert to int form tagged pointer
-//     llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(convertToIntFunction), [val]);
-//     buildStoreTagged(builder, scaffold, buildCheckOverflow(builder, scaffold, resultWithErr, insn), insn.result);
-// }
+function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToIntInsn insn) returns wasm:Expression {
+    var [_, val] = buildReprValue(module, scaffold, insn.operand);
+    return module.localSet(insn.result.number, val);
+}
 
 
 function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm:Expression op2) returns wasm:Expression? {

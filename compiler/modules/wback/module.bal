@@ -9,7 +9,7 @@ type BuildError err:Semantic|err:Unimplemented|err:Internal;
 function buildModule(bir:Module mod) returns string[]|BuildError {
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     wasm:Module module = new;
-    boolean tagAdded = false;
+    string[] tagsAdded = [];
     boolean globalSet = false;
     string[] taggedFuncs = [];
     foreach int i in 0 ..< functionDefns.length() {
@@ -22,12 +22,14 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         scaffold.setMemory = globalSet;
         scaffold.taggedFuncs = taggedFuncs;
         wasm:Expression body = buildFunctionBody(scaffold, module);
-        if scaffold.getOverflowOps() {
+        if scaffold.getExceptionTags().length() > 0 {
             wasm:Expression tryBody = module.try((), body, [], 0, [], 0);
             body = tryBody;
-            if !tagAdded {
-                module.addTag("overflow", "None", "None");
-                tagAdded = true;
+            foreach string tag in scaffold.getExceptionTags() {
+                if tagsAdded.indexOf(tag) == () {
+                    module.addTag(tag, "None", "None");
+                    tagsAdded.push(tag);
+                }
             }
         }
         string funcName = functionDefns[i].symbol.identifier;

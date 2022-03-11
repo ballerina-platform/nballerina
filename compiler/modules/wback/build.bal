@@ -97,6 +97,10 @@ function buildUntagBoolean(wasm:Module module, wasm:Expression tagged) returns w
     return module.binary("i64.and", module.addConst({ i64: 1 }), tagged);
 }
 
+function buildTruncateBoolean(wasm:Module module, wasm:Expression val, bir:Register result) returns wasm:Expression {
+    return module.addIf(module.unary("i64.eqz", val), module.localSet(result.number, module.addConst({ i32: 0 })), module.localSet(result.number, module.addConst({ i32: 1 })));
+}
+
 function taggedInt(wasm:Module module) {
     module.addGlobal("offset", "i32", true, module.addConst({ i32: 0 }));
     wasm:Expression value = module.localGet(0, "i64");
