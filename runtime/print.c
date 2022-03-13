@@ -39,7 +39,7 @@ static void printStringLiteralChar(FILE *fp, int c) {
     fputc(escape, fp);
 }
 
-static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *stackPtr) {
+static void printTaggedInner(FILE *fp, TaggedPtr p, int style, struct PrintStack *stackPtr) {
     double d;
     int tag = getTag(p);
     switch (tag & UT_MASK) {
@@ -80,7 +80,7 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
             {
                 fputs("error(", fp);
                 ErrorPtr ep = taggedToPtr(p);
-                printTagged(fp, ep->message, STYLE_INFORMAL, NULL);
+                printTaggedInner(fp, ep->message, STYLE_INFORMAL, NULL);
                 fputs(")", fp);
             }
             break;
@@ -99,7 +99,7 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
                     if (i > 0) {
                         fputs(",", fp);
                     }
-                    printTagged(fp, lp->desc->get(p, i), STYLE_INFORMAL, &stack);
+                    printTaggedInner(fp, lp->desc->get(p, i), STYLE_INFORMAL, &stack);
                 }
                 fputs("]", fp);
             }
@@ -119,9 +119,9 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
                     if (i > 0) {
                         fputs(",", fp);
                     }
-                    printTagged(fp, mp->fArray.members[i].key, STYLE_INFORMAL, 0);
+                    printTaggedInner(fp, mp->fArray.members[i].key, STYLE_INFORMAL, 0);
                     fputs(":", fp);
-                    printTagged(fp, mp->fArray.members[i].value, STYLE_INFORMAL, &stack);
+                    printTaggedInner(fp, mp->fArray.members[i].value, STYLE_INFORMAL, &stack);
                 }
                 fputs("}", fp);
             }
@@ -153,6 +153,17 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
         default:
             fprintf(stderr, "unknown tag %d\n", tag);
             abort();
+    }
+}
+
+static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *stackPtr) {
+    ListPtr lp = taggedToPtr(p);
+    struct PrintStack stack;
+    int i;
+    stack.next = stackPtr;
+    stack.p = p;
+    for (i = 0; i < lp->tpArray.length; i++) {
+        printTaggedInner(fp, lp->desc->get(p, i), style, &stack);
     }
 }
 
