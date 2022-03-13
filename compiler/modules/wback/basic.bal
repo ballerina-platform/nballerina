@@ -63,8 +63,7 @@ function buildBranch(wasm:Module module, bir:BranchInsn insn) returns wasm:Expre
 
 function buildCondBranch(wasm:Module module, bir:CondBranchInsn insn) returns wasm:Expression {
     bir:Register operand = insn.operand;
-    Repr repr = semTypeRepr(operand.semType);
-    return module.localGet(operand.number, repr.wasm);
+    return module.localGet(operand.number);
 }
 
 function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) returns wasm:Expression {
@@ -83,7 +82,7 @@ function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) ret
         args.push(buildWideRepr(module, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]));
     }
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
-    wasm:Expression call = module.call(ref.symbol.identifier, args, args.length(), retRepr.wasm);
+    wasm:Expression call = module.call(ref.symbol.identifier, args, retRepr.wasm);
     if retRepr !is VoidRepr {
         return module.localSet(insn.result.number, call);
     }
@@ -95,10 +94,9 @@ function buildAssign(wasm:Module module, Scaffold scaffold, bir:AssignInsn insn)
 }
 
 function buildCondNarrow(wasm:Module module, Scaffold scaffold, bir:CondNarrowInsn insn) returns wasm:Expression {
-    Repr repr = scaffold.getRepr(insn.operand);
-    return module.localSet(insn.result.number, module.localGet(insn.operand.number, repr.wasm));
+    return module.localSet(insn.result.number, module.localGet(insn.operand.number));
 }
 
 function buildBooleanNotInsn(wasm:Module module, bir:BooleanNotInsn insn) returns wasm:Expression {
-    return module.localSet(insn.result.number, module.binary("i32.xor", module.localGet(insn.operand.number, "i32"), module.addConst({ i32: 1 })));
+    return module.localSet(insn.result.number, module.binary("i32.xor", module.localGet(insn.operand.number), module.addConst({ i32: 1 })));
 }

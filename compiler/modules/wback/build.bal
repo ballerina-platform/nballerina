@@ -19,11 +19,11 @@ function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns w
 }
 
 function buildTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Expression value) returns wasm:Expression {
-    return module.call("int_to_tagged", [value], 1, "i64");
+    return module.call("int_to_tagged", [value], "i64");
 }
 
 function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
-    return module.call("tagged_to_int", [tagged], 1, "i64");
+    return module.call("tagged_to_int", [tagged], "i64");
 }
 
 function buildHasTag(wasm:Module module, wasm:Expression tagged, int tag) returns wasm:Expression {
@@ -36,7 +36,7 @@ function buildTestTag(wasm:Module module, wasm:Expression tagged, int tag, int m
 function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand operand) returns [Repr, wasm:Expression] {
     if operand is bir:Register {
         Repr repr = scaffold.getRepr(operand);
-        return [repr, module.localGet(operand.number, repr.wasm)];
+        return [repr, module.localGet(operand.number)];
     }
     else {
         t:SingleValue value = operand.value;
@@ -59,7 +59,7 @@ function buildInt(wasm:Module module, bir:IntOperand operand) returns wasm:Expre
         return module.addConst({ i64: operand.value });
     }
     else {
-        return module.localGet(operand.number, "i64");
+        return module.localGet(operand.number);
     }
 }
 
@@ -103,8 +103,8 @@ function buildTruncateBoolean(wasm:Module module, wasm:Expression val, bir:Regis
 
 function taggedInt(wasm:Module module) {
     module.addGlobal("offset", "i32", true, module.addConst({ i32: 0 }));
-    wasm:Expression value = module.localGet(0, "i64");
-    wasm:Expression offset = module.globalGet("offset", "i32");
+    wasm:Expression value = module.localGet(0);
+    wasm:Expression offset = module.globalGet("offset");
     wasm:Expression valLMax = module.binary("i64.lt_s", value, module.addConst({ i64: MAX_IMMEDIATE_INT }));
     wasm:Expression valGMin = module.binary("i64.gt_s", value, module.addConst({ i64: MIN_IMMEDIATE_INT }));
     wasm:Expression condition = module.binary("i32.and", valGMin, valLMax);
@@ -114,8 +114,8 @@ function taggedInt(wasm:Module module) {
     wasm:Expression store = module.store(8, 0, 0, offset, value, "i64");
     wasm:Expression location = module.localSet(1, offset);
     wasm:Expression incrementOffset = module.globalSet("offset", module.binary("i32.add", offset, module.addConst({ i32: 8 })));
-    wasm:Expression falseReturn = module.addReturn(module.binary("i64.or", module.addConst({ i64: TAG_INT }), module.unary("i64.extend_i32_u", module.localGet(1, "i32"))));
-    wasm:Expression elseBody = module.block((), [store, location, incrementOffset, falseReturn], 4);
+    wasm:Expression falseReturn = module.addReturn(module.binary("i64.or", module.addConst({ i64: TAG_INT }), module.unary("i64.extend_i32_u", module.localGet(1))));
+    wasm:Expression elseBody = module.block([store, location, incrementOffset, falseReturn]);
     wasm:Expression body = module.addIf(condition, trueBody, elseBody);
-    module.addFunction("int_to_tagged", ["i64"], "i64", ["i32"], 1, body);
+    module.addFunction("int_to_tagged", ["i64"], "i64", ["i32"], body);
 }

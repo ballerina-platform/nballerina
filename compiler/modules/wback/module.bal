@@ -23,11 +23,11 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         scaffold.taggedFuncs = taggedFuncs;
         wasm:Expression body = buildFunctionBody(scaffold, module);
         if scaffold.getExceptionTags().length() > 0 {
-            wasm:Expression tryBody = module.try((), body, [], 0, [], 0);
+            wasm:Expression tryBody = module.try(body);
             body = tryBody;
             foreach string tag in scaffold.getExceptionTags() {
                 if tagsAdded.indexOf(tag) == () {
-                    module.addTag(tag, "None", "None");
+                    module.addTag(tag);
                     tagsAdded.push(tag);
                 }
             }
@@ -45,10 +45,10 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         }
         Repr retType = semTypeRepr(scaffold.returnType);
         if retType is TaggedRepr && retType.subtype == t:NIL {
-            module.addFunction(funcName, params, "None", locals, locals.length(), body);
+            module.addFunction(funcName, params, "None", locals, body);
         }
         else {
-            module.addFunction(funcName, params, retType.wasm, locals, locals.length(), body);
+            module.addFunction(funcName, params, retType.wasm, locals, body);
         }
         module.addFunctionExport(funcName, funcName);
         globalSet = scaffold.setMemory;
@@ -135,8 +135,8 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
             if lastInsn is bir:CondBranchInsn {
                 wasm:Expression[] header =  buildBasicBlock(scaffold, module, entry);
                 wasm:Expression condition = header.remove(header.length() - 1);
-                wasm:Expression ifBody = module.block((), renderBlock(scaffold, module, region, lastInsn.ifTrue, exit), 2);
-                wasm:Expression elseBody = module.block((), renderBlock(scaffold, module, region, lastInsn.ifFalse, exit), 2);
+                wasm:Expression ifBody = module.block(renderBlock(scaffold, module, region, lastInsn.ifTrue, exit));
+                wasm:Expression elseBody = module.block(renderBlock(scaffold, module, region, lastInsn.ifFalse, exit));
                 curr.push(...header);
                 if lastInsn.ifFalse == region.exit {
                     curr.push(module.addIf(condition, ifBody), elseBody);
@@ -160,20 +160,20 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
             scaffold.processedBlocks.push(entry.label);
             wasm:Expression[] exitCode = renderBlock(scaffold, module, region, exit);
             if exitCode.length() > 0 {
-                loopExit = module.block((), exitCode, 2);
+                loopExit = module.block(exitCode);
             }
-            wasm:Expression loopBody = module.block((), renderBlock(scaffold, module, region, entry.label + 1, exit), 2);
+            wasm:Expression loopBody = module.block(renderBlock(scaffold, module, region, entry.label + 1, exit));
             wasm:Expression loop;
             if loopHeader.length() > 0 {
                 wasm:Expression condition = loopHeader.remove(loopHeader.length() - 1);
                 loopHeader.push(module.addIf(condition, loopBody));
-                loop = module.loop(loopLabel, module.block((), loopHeader, 2));
+                loop = module.loop(loopLabel, module.block(loopHeader));
             }
             else {
                 loop = module.loop(loopLabel, loopBody);
             }
             if checkForBreak(scaffold.blocks, region.entry, exit) {
-                loop = module.block("$block$" + exit.toString() + "$break", [loop], 1);
+                loop = module.block([loop], "$block$" + exit.toString() + "$break");
             }
             curr.push(loop);
             if loopExit != () {
@@ -195,7 +195,7 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
     }
     wasm:Expression[]? parent = scaffold.renderedRegion[(scaffold.regions.length() - 1).toString()];
     if parent != () {
-        return module.block((), parent, parent.length());
+        return module.block(parent);
     }
     return module.nop();
 }

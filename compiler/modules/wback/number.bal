@@ -36,7 +36,7 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
             scaffold.addExceptionTag("overflow");
             wasm:Expression? overflowCheck = checkOverflow(module, op, operand1, operand2);
             if overflowCheck != () {
-                return module.block("", [overflowCheck, operation], 2, "None");
+                return module.block([overflowCheck, operation]);
             }
             return operation;
         }
@@ -58,7 +58,7 @@ function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm
     wasm:Expression op2GZ = module.binary("i64.gt_s", op2, module.addConst({ i64: 0 }));
     wasm:Expression op1LZ = module.binary("i64.lt_s", op1, module.addConst({ i64: 0 }));
     wasm:Expression op2LZ = module.binary("i64.lt_s", op2, module.addConst({ i64: 0 }));
-    wasm:Expression throw = module.throw("overflow", [], 0);
+    wasm:Expression throw = module.throw("overflow");
     if op == "i64.add" {
         wasm:Expression maxSOp2 = module.binary("i64.sub", MAX_INT, op2);
         wasm:Expression minSOp2 = module.binary("i64.sub", MIN_INT, op2);

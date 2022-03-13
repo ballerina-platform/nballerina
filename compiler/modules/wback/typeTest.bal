@@ -20,6 +20,6 @@ function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn i
 
 function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, wasm:Expression converted, int tag) returns wasm:Expression {
     scaffold.addExceptionTag("bad-conversion");
-    return module.addIf(buildHasTag(module, tagged, tag), converted, module.throw("bad-conversion", [], 0));
+    return module.addIf(buildHasTag(module, tagged, tag), converted, module.throw("bad-conversion"));
 }
 
