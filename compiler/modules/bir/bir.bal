@@ -105,9 +105,9 @@ public type Region record {|
 |};
 
 public enum RegionKind {
-    # Region that represents a basic loop.
+    # Region that represents a loop with LoopHeader as the entry
     REGION_LOOP,
-    # Region that represents a divergence into several possible branches, that eventually rejoin.
+    # Region that has an entry which diverge into several possible branches, that eventually rejoin.
     REGION_MULTIPLE,
     # Region that is neither a Multiple nor a Loop.
     REGION_SIMPLE
