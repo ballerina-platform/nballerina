@@ -508,7 +508,7 @@ function validLoopAssignments(StmtContext cx, Assignment[] assignments) returns 
 
 function codeGenBreakContinueStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
     bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel(stmt.startPos) : check cx.onContinueLabel(stmt.startPos);
-    boolean backward = stmt.breakContinue == "break"? false : true;
+    boolean backward = stmt.breakContinue == "continue";
     bir:BranchInsn branch = { dest, pos: stmt.startPos, backward };
     if stmt.breakContinue == "break" {
         cx.addOnBreakAssignments(env.assignments);
