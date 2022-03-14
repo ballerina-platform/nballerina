@@ -486,7 +486,7 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         exit = breakBlock;
     }
     cx.popLoopContext();
-    cx.closeRegion(exit != () ? exit.label: ());
+    cx.closeRegion(exit != () ? exit.label : ());
     if exitReachable {
         return { block: exit, assignments };
     }
