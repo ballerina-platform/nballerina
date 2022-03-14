@@ -89,7 +89,9 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
             hasType = buildHasTagInSet(builder, tagged, bitSet);
         }
         else {
+            scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_CALL);
             hasType = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFunction), [scaffold.getTypeTest(<t:ComplexSemType>semType), tagged]);
+            scaffold.clearDebugLocation(builder);
             valueToExactify = tagged;
         }
     }
