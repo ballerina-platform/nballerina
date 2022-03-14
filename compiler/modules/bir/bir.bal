@@ -89,7 +89,7 @@ public type FunctionCode record {|
 public type FunctionSignature readonly & record {|
     SemType returnType;
     SemType[] paramTypes;
-    # if non-nil last element in paramTypes will be an array who's member type is restParamType
+    # if non-nil, last member of paramTypes will be an array type whose member type is restParamType
     SemType? restParamType = ();
 |};
 
