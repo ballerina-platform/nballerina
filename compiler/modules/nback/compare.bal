@@ -195,16 +195,16 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
     else {
         match [lhsRepr.base, rhsRepr.base] {
             [BASE_REPR_TAGGED, BASE_REPR_INT] => {
-                buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result, insn.pos);
+                buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             [BASE_REPR_INT, BASE_REPR_TAGGED] => {
-                buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result, insn.pos);
+                buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
             }
             [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
-                buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result, insn.pos);
+                buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
-                buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result, insn.pos);
+                buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
             }
             [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
                 buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
@@ -299,23 +299,21 @@ final readonly & table<TaggedCompareResultTransform> key(op) taggedCompareResult
 
 function buildCompareStore(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs, RuntimeFunction comparator) {
     TaggedCompareResultTransform transform = taggedCompareResultTransforms.get(insn.op);
-    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CALL);
-    llvm:Value result = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(comparator), [lhs, rhs]);
-    scaffold.clearDebugLocation(builder);
+    llvm:Value result = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, comparator, [lhs, rhs]);
     buildStoreBoolean(builder, scaffold, builder.iCmp(transform.predicate, result, llvm:constInt(LLVM_INT, transform.compareResult)), insn.result);
 }
 
-function buildCompareTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result, bir:Position pos) {
+function buildCompareTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     llvm:BasicBlock bbJoin = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
-    llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs, pos);
+    llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs);
     buildCompareInt(builder, scaffold, op, lhsUntagged, rhs, result);
     builder.br(bbJoin);
     builder.positionAtEnd(bbJoin);
 }
 
-function buildCompareTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result, bir:Position pos) {
+function buildCompareTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     llvm:BasicBlock bbJoin = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
-    llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs, pos);
+    llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs);
     buildCompareFloat(builder, scaffold, op, lhsUntagged, rhs, result);
     builder.br(bbJoin);
     builder.positionAtEnd(bbJoin);

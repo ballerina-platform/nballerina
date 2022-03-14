@@ -143,12 +143,12 @@ type ModuleDI record {|
 |};
 
 // Debug location will always be added
-public const int DEBUG_ORIGIN_ERROR_CONSTRUCT = 0;
-public const int DEBUG_ORIGIN_CALL = 1;
+public const int DEBUG_USAGE_ERROR_CONSTRUCT = 0;
+public const int DEBUG_USAGE_CALL = 1;
 // Debug location for these will be added only in full debug
-public const int DEBUG_ORIGIN_OTHER = 2;
+public const int DEBUG_USAGE_OTHER = 2;
 
-public type DebugLocationOrigin DEBUG_ORIGIN_ERROR_CONSTRUCT|DEBUG_ORIGIN_CALL|DEBUG_ORIGIN_OTHER;
+public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL|DEBUG_USAGE_OTHER;
 
 class Scaffold {
     private final Module mod;
@@ -168,6 +168,7 @@ class Scaffold {
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
+    private DILocation? debugLocation = ();
     final t:SemType returnType;
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
@@ -239,6 +240,17 @@ class Scaffold {
         }
     }
 
+    function buildRuntimeFunctionCall(llvm:Builder builder, RuntimeFunction rf, llvm:Value[] args) returns llvm:Value? {
+        return self.buildCall(builder, self.getRuntimeFunctionDecl(rf), args);
+    }
+
+    function buildCall(llvm:Builder builder, llvm:Function fn, llvm:Value[] args) returns llvm:Value? {
+        self.useDebugLocation(builder, DEBUG_USAGE_CALL);
+        llvm:Value? result = builder.call(fn, args);
+        self.useDebugLocation(builder, DEBUG_USAGE_OTHER);
+        return result;
+    }
+
     function getString(string str) returns StringDefn {
         StringDefn? curDefn = self.mod.stringDefns[str];
         if curDefn != () {
@@ -287,39 +299,37 @@ class Scaffold {
         return d:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos, DebugLocationOrigin origin = DEBUG_ORIGIN_OTHER) {
+    function setDebugLocation(llvm:Builder builder, bir:Position pos) {
         DISubprogram? diFunc = self.diFunc;
         if diFunc is () {
             return;
         }
         ModuleDI di = <ModuleDI>self.mod.di;
-        // In the debugFull case, there is no need to do anything for DEBUG_ORIGIN_ERROR_CONSTRUCT
-        // because the full location will have been set earlier.
-        if origin == (di.debugFull ? DEBUG_ORIGIN_ERROR_CONSTRUCT : DEBUG_ORIGIN_OTHER) {
-            return;
-        }
-        DILocation loc;
-        if origin == DEBUG_ORIGIN_ERROR_CONSTRUCT {
-            DILocation? noLineLoc = self.noLineLocation;
-            if noLineLoc == () {
-                loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
-                self.noLineLocation = loc;
-            }
-            else {
-                loc = noLineLoc;
-            }
-        }
-        else {
-            var [line, column] = self.file.lineColumn(pos);
-            loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
-        }
-        builder.setCurrentDebugLocation(loc);
+        var [line, column] = self.file.lineColumn(pos);
+        self.debugLocation = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+        self.useDebugLocation(builder, DEBUG_USAGE_OTHER);
     }
 
-    function clearDebugLocation(llvm:Builder builder) {
-        if !(self.diFunc == ()) {
-            builder.setCurrentDebugLocation(());
+    function useDebugLocation(llvm:Builder builder, DebugLocationUsage usage) {
+        DISubprogram? diFunc = self.diFunc;
+        if diFunc is () {
+            return;
         }
+        ModuleDI di = <ModuleDI>self.mod.di;
+        if !di.debugFull {
+            if usage is DEBUG_USAGE_ERROR_CONSTRUCT {
+                DILocation? noLineLoc = self.noLineLocation;
+                if noLineLoc == () {
+                    self.noLineLocation =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
+                }
+                return builder.setCurrentDebugLocation(<DILocation>self.noLineLocation);
+            }
+            else if usage is DEBUG_USAGE_OTHER {
+                // clear the builders debug location if it already has one
+                return builder.setCurrentDebugLocation(());
+            }
+        }
+        builder.setCurrentDebugLocation(self.debugLocation);
     }
 
     function unimplementedErr(d:Message message, d:Position pos) returns err:Unimplemented {

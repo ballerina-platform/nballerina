@@ -40,7 +40,6 @@ function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos
     buildCallPanic(builder, scaffold, buildErrorForConstPanic(builder, scaffold, PANIC_STACK_OVERFLOW, pos));
     builder.positionAtEnd(firstBlock);
     scaffold.saveParams(builder);
-    scaffold.clearDebugLocation(builder);
 }
 
 function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock block) returns BuildError? {
@@ -146,7 +145,6 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             // nothing to do
             // scaffold.panicAddress uses this to figure out where to store the panic info
         }
-        scaffold.clearDebugLocation(builder);
     }
 }
 
@@ -162,7 +160,7 @@ function buildCondBranch(llvm:Builder builder, Scaffold scaffold, bir:CondBranch
 
 function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
     RetRepr repr = scaffold.getRetRepr();
-    builder.ret(repr is Repr ? check buildWideRepr(builder, scaffold, insn.operand, repr, scaffold.returnType, insn.pos) : ());
+    builder.ret(repr is Repr ? check buildWideRepr(builder, scaffold, insn.operand, repr, scaffold.returnType) : ());
 }
 
 function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
@@ -180,7 +178,7 @@ function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerVal
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
-    builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType, insn.pos),
+    builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType),
                   scaffold.address(insn.result));
 }
 
@@ -192,7 +190,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     t:SemType[] paramTypes = signature.paramTypes;
     t:SemType[] instantiatedParamTypes = funcRef.signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i], insn.pos));
+        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;
@@ -203,16 +201,14 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     else {
         func = check buildFunctionDecl(scaffold, funcSymbol, signature);
     }  
-    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CALL);
-    llvm:Value? retValue = builder.call(func, args);
-    scaffold.clearDebugLocation(builder);
+    llvm:Value? retValue = scaffold.buildCall(builder, func, args);
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
-    buildStoreRet(builder, scaffold, retRepr, retValue, insn.result, insn.pos);
+    buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
-function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg, bir:Position pos) {
+function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) {
     if retRepr is Repr {
-        builder.store(buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg), pos),
+        builder.store(buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
                       scaffold.address(reg));
     }
     else {
@@ -235,20 +231,22 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
 }
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_ERROR_CONSTRUCT);
+    scaffold.useDebugLocation(builder, DEBUG_USAGE_ERROR_CONSTRUCT);
     llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(errorConstructFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),
                                                     llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.pos))
                                                 ]);
+    scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
     builder.store(value, scaffold.address(insn.result));
 }
 
 function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
-    llvm:Value[] operands = [check buildString(builder, scaffold, insn.operands[0]), check buildString(builder, scaffold, insn.operands[1])];
-    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CALL);
-    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringConcatFunction), operands);
-    scaffold.clearDebugLocation(builder);
+    llvm:Value value = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, stringConcatFunction,
+                                                                     [
+                                                                         check buildString(builder, scaffold, insn.operands[0]),
+                                                                         check buildString(builder, scaffold, insn.operands[1])
+                                                                     ]);
     builder.store(value, scaffold.address(insn.result));
 }
 

@@ -146,27 +146,27 @@ function buildCheckPanicCode(llvm:Builder builder, Scaffold scaffold, llvm:Value
 }
 
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
-    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, panicIndex | (scaffold.lineNumber(pos) << 8)), pos);
+    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, panicIndex | (scaffold.lineNumber(pos) << 8)));
 }
 
 function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicIndex, bir:Position pos) returns llvm:PointerValue {
-    return buildErrorForPackedPanic(builder, scaffold, builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, scaffold.lineNumber(pos) << 8)), pos);
+    return buildErrorForPackedPanic(builder, scaffold, builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, scaffold.lineNumber(pos) << 8)));
 }
 
-function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic, bir:Position pos) returns llvm:PointerValue {
-    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_ERROR_CONSTRUCT);
+function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic) returns llvm:PointerValue {
+    scaffold.useDebugLocation(builder, DEBUG_USAGE_ERROR_CONSTRUCT);
     var err = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(panicConstructFunction), [packedPanic]);
-    scaffold.clearDebugLocation(builder);
+    scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
     return err;
 }
 
-function buildStoreInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg, bir:Position pos) {
-    builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedInt(builder, scaffold, value, pos) : value,
+function buildStoreInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedInt(builder, scaffold, value) : value,
                   scaffold.address(reg));
 }
 
-function buildStoreFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg, bir:Position pos) {
-    builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedFloat(builder, scaffold, value, pos) : value,
+function buildStoreFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedFloat(builder, scaffold, value) : value,
                   scaffold.address(reg));
 }
 
@@ -175,21 +175,21 @@ function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value v
                   scaffold.address(reg));
 }
 
-function buildStoreTagged(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg, bir:Position pos) {
-    return builder.store(buildUntagged(builder, scaffold, <llvm:PointerValue>value, scaffold.getRepr(reg), pos), scaffold.address(reg));
+function buildStoreTagged(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    return builder.store(buildUntagged(builder, scaffold, <llvm:PointerValue>value, scaffold.getRepr(reg)), scaffold.address(reg));
 }
 
 function buildStoreDecimal(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     builder.store(value, scaffold.address(reg));
 }
 
-function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue value, Repr targetRepr, bir:Position pos) returns llvm:Value {
+function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue value, Repr targetRepr) returns llvm:Value {
     match targetRepr.base {
         BASE_REPR_INT => {
-            return buildUntagInt(builder, scaffold, value, pos);
+            return buildUntagInt(builder, scaffold, value);
         }
         BASE_REPR_FLOAT => {
-            return buildUntagFloat(builder, scaffold, value, pos);
+            return buildUntagFloat(builder, scaffold, value);
         }
         BASE_REPR_BOOLEAN => {
             return buildUntagBoolean(builder, value);
@@ -201,10 +201,10 @@ function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
     panic err:impossible("unreached in buildUntagged");
 }
 
-function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType, bir:Position pos) returns llvm:Value|BuildError {
-    llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr, pos);
+function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType) returns llvm:Value|BuildError {
+    llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr);
     if operand is bir:Register && operationWidens(scaffold, operand, targetType) {
-        value = buildClearExact(builder, scaffold, value, operand.semType, pos);
+        value = buildClearExact(builder, scaffold, value, operand.semType);
     }
     return value;
 }
@@ -227,12 +227,9 @@ function operationWidens(Scaffold scaffold, bir:Register operand, t:SemType targ
     return sourceStructType != targetStructType && !t:isSubtype(scaffold.typeContext(), targetStructType, sourceStructType);
 }
 
-function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value tagged, t:SemType sourceType, bir:Position pos) returns llvm:Value {
+function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value tagged, t:SemType sourceType) returns llvm:Value {
     RuntimeFunction rf = overloadsExactBit(sourceType) ? taggedClearExactAnyFunction : taggedClearExactPtrFunction;
-    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_CALL);
-    llvm:Value val = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [tagged]);
-    scaffold.clearDebugLocation(builder);
-    return val;
+    return <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, rf, [tagged]);
 }
 
 // Does the tagged representation of semType use the exact bit for other purposes
@@ -245,12 +242,12 @@ function isPotentiallyExact(t:SemType semType) returns boolean {
     return !t:isNever(t:intersect(semType, POTENTIALLY_EXACT));
 }
 
-function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, bir:Position pos) returns llvm:Value|BuildError {
+function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
     var [sourceRepr, value] = check buildReprValue(builder, scaffold, operand);
-    return buildConvertRepr(builder, scaffold, sourceRepr, value, targetRepr, pos);
+    return buildConvertRepr(builder, scaffold, sourceRepr, value, targetRepr);
 }
 
-function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr, bir:Position pos) returns llvm:Value {
+function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value {
     if sourceRepr.base == targetRepr.base {
         return value;
     }
@@ -260,11 +257,11 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
                 return buildImmediateTaggedInt(builder, value);
             }
             else {
-                return buildTaggedInt(builder, scaffold, value, pos);
+                return buildTaggedInt(builder, scaffold, value);
             }
         }
         else if sourceRepr is FloatRepr {
-            return buildTaggedFloat(builder, scaffold, value, pos);
+            return buildTaggedFloat(builder, scaffold, value);
         }
         else if sourceRepr is BooleanRepr {
             return buildTaggedBoolean(builder, value);
@@ -281,11 +278,8 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
 }
 
-function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Position pos) returns llvm:PointerValue {
-    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_CALL);
-    llvm:PointerValue val = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(intToTaggedFunction), [value]);
-    scaffold.clearDebugLocation(builder);
-    return val;
+function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
+    return <llvm:PointerValue>scaffold.buildRuntimeFunctionCall(builder, intToTaggedFunction, [value]);
 }
 
 // only use when compile time know that IMMEDIATE_INT_MIN <= value && value <= IMMEDIATE_INT_MAX
@@ -295,11 +289,8 @@ function buildImmediateTaggedInt(llvm:Builder builder, llvm:Value value) returns
     return builder.getElementPtr(llvm:constNull(LLVM_TAGGED_PTR), [tagged]);
 }
 
-function buildTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Position pos) returns llvm:PointerValue {
-    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_CALL);
-    llvm:PointerValue val = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(floatToTaggedFunction), [value]);
-    scaffold.clearDebugLocation(builder);
-    return val;
+function buildTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
+    return <llvm:PointerValue>scaffold.buildRuntimeFunctionCall(builder, floatToTaggedFunction, [value]);
 }
 
 function buildTaggedPtr(llvm:Builder builder, llvm:PointerValue mem, int tag) returns llvm:PointerValue {
@@ -317,18 +308,12 @@ function buildTestTag(llvm:Builder builder, llvm:PointerValue tagged, int tag, i
 
 }
 
-function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, bir:Position pos) returns llvm:Value {
-    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_CALL);
-    llvm:Value val = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(taggedToIntFunction), [tagged]);
-    scaffold.clearDebugLocation(builder);
-    return val;
+function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
+    return <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, taggedToIntFunction, [tagged]);
 }
 
-function buildUntagFloat(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, bir:Position pos) returns llvm:Value {
-    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_CALL);
-    llvm:Value val = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(taggedToFloatFunction), [tagged]);
-    scaffold.clearDebugLocation(builder);
-    return val;
+function buildUntagFloat(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
+    return <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, taggedToFloatFunction, [tagged]);
 }
 
 function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
