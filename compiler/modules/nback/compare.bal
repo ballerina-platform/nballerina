@@ -350,14 +350,14 @@ function buildCompareFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPr
 
 function buildCompareString(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(op, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringCmpFunction), [lhs, rhs]),
+                      builder.iCmp(op, <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, stringCmpFunction, [lhs, rhs]),
                                    llvm:constInt(LLVM_INT, 0)),
                       result);
 }
 
 function buildCompareDecimal(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(op, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalCmpFunction), [lhs, rhs]),
+                      builder.iCmp(op, <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, decimalCmpFunction, [lhs, rhs]),
                                    llvm:constInt(LLVM_INT, 0)),
                       result);
 }

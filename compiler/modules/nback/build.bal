@@ -155,7 +155,7 @@ function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value 
 
 function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic) returns llvm:PointerValue {
     scaffold.useDebugLocation(builder, DEBUG_USAGE_ERROR_CONSTRUCT);
-    var err = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(panicConstructFunction), [packedPanic]);
+    var err = <llvm:PointerValue>scaffold.buildRuntimeFunctionCall(builder, panicConstructFunction, [packedPanic]);
     scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
     return err;
 }
@@ -367,7 +367,7 @@ function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) re
 }
 
 function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal decimalValue) returns llvm:Value {
-    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalConstFunction), [scaffold.getDecimal(decimalValue)]);
+    return <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, decimalConstFunction, [scaffold.getDecimal(decimalValue)]);
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {

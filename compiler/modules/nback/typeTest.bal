@@ -100,11 +100,11 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
                 builder.iCmp("sge", llvm:constInt(LLVM_INT, intConstraints.max), value));
         }
         else {
-            hasType = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsIntFunction), [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
+            hasType = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, typeContainsIntFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
         }
     }
     else if baseRepr == BASE_REPR_FLOAT {
-        hasType = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFloatFunction), [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
+        hasType = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, typeContainsFloatFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
     }
     else {
         BASE_REPR_BOOLEAN _ = baseRepr;

@@ -227,7 +227,7 @@ class Scaffold {
         return self.mod.llMod.getIntrinsicDeclaration(name);
     }
 
-    function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl {
+    private function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl {
         bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: rf.name };
         llvm:FunctionDecl? decl = self.getImportedFunction(symbol);
         if decl != () {

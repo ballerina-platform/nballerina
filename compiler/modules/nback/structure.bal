@@ -215,7 +215,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.typeContext(), listType);
     ListRepr repr = listAtomicTypeToListRepr(atomic);
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(listType);
-    llvm:PointerValue struct = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(repr.construct),
+    llvm:PointerValue struct = <llvm:PointerValue>scaffold.buildRuntimeFunctionCall(builder, repr.construct,
                                                                [inherentType, llvm:constInt(LLVM_INT, length)]);
 
     if length > 0 {
@@ -250,7 +250,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
         if repr.isSpecialized {
             panic err:impossible("filling-get with type that has specialization");
         }
-        llvm:Value memberWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(listFillingGetFunction), [taggedStruct, index]);
+        llvm:Value memberWithErr = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, listFillingGetFunction, [taggedStruct, index]);
         member = buildCheckPanicCode(builder, scaffold, memberWithErr, insn.pos);
     }
     else {
@@ -393,12 +393,12 @@ function convertValue(llvm:Builder builder, llvm:Value value, llvm:Type fromTy, 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     t:SemType mappingType = insn.result.semType;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
-    llvm:PointerValue m = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(mappingConstructFunction),
+    llvm:PointerValue m = <llvm:PointerValue>scaffold.buildRuntimeFunctionCall(builder, mappingConstructFunction,
                                                           [inherentType, llvm:constInt(LLVM_INT, insn.operands.length())]);
     t:Context tc = scaffold.typeContext();
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, mappingType);  
     foreach var [fieldName, operand] in mappingOrderFields(mat, insn.fieldNames, insn.operands) {
-        _ = builder.call(scaffold.getRuntimeFunctionDecl(mappingInitMemberFunction),
+        _ = scaffold.buildRuntimeFunctionCall(builder, mappingInitMemberFunction,
                          [
                              m,
                              check buildConstString(builder, scaffold, fieldName),
@@ -536,7 +536,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
-    llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(rf),
+    llvm:Value? err = scaffold.buildRuntimeFunctionCall(builder, rf,
                                    [
                                        builder.load(scaffold.address(mappingReg)),
                                        k,

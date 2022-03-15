@@ -173,7 +173,7 @@ function buildPanic(llvm:Builder builder, Scaffold scaffold, bir:PanicInsn insn)
 }
 
 function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue err) {
-    _ = builder.call(scaffold.getRuntimeFunctionDecl(panicFunction), [err]);
+    _ = scaffold.buildRuntimeFunctionCall(builder, panicFunction, [err]);
     builder.unreachable();
 }
 
@@ -232,7 +232,7 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
     scaffold.useDebugLocation(builder, DEBUG_USAGE_ERROR_CONSTRUCT);
-    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(errorConstructFunction),
+    llvm:Value value = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, errorConstructFunction,
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),
                                                     llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.pos))
