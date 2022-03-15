@@ -233,10 +233,10 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
     scaffold.useDebugLocation(builder, DEBUG_USAGE_ERROR_CONSTRUCT);
     llvm:Value value = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, errorConstructFunction,
-                                                [
-                                                    check buildString(builder, scaffold, insn.operand),
-                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.pos))
-                                                ]);
+                                                                     [
+                                                                         check buildString(builder, scaffold, insn.operand),
+                                                                         llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.pos))
+                                                                     ]);
     scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
     builder.store(value, scaffold.address(insn.result));
 }

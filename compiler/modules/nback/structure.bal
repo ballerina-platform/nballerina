@@ -216,7 +216,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     ListRepr repr = listAtomicTypeToListRepr(atomic);
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(listType);
     llvm:PointerValue struct = <llvm:PointerValue>scaffold.buildRuntimeFunctionCall(builder, repr.construct,
-                                                               [inherentType, llvm:constInt(LLVM_INT, length)]);
+                                                                                    [inherentType, llvm:constInt(LLVM_INT, length)]);
 
     if length > 0 {
         // de-refer the member array from the list struct
@@ -394,17 +394,17 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     t:SemType mappingType = insn.result.semType;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
     llvm:PointerValue m = <llvm:PointerValue>scaffold.buildRuntimeFunctionCall(builder, mappingConstructFunction,
-                                                          [inherentType, llvm:constInt(LLVM_INT, insn.operands.length())]);
+                                                                               [inherentType, llvm:constInt(LLVM_INT, insn.operands.length())]);
     t:Context tc = scaffold.typeContext();
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, mappingType);  
     foreach var [fieldName, operand] in mappingOrderFields(mat, insn.fieldNames, insn.operands) {
         _ = scaffold.buildRuntimeFunctionCall(builder, mappingInitMemberFunction,
-                         [
-                             m,
-                             check buildConstString(builder, scaffold, fieldName),
-                             check buildWideRepr(builder, scaffold, operand, REPR_ANY,
-                                                 t:mappingMemberType(tc, mappingType, t:stringConst(fieldName)))
-                         ]);
+                                              [
+                                                  m,
+                                                  check buildConstString(builder, scaffold, fieldName),
+                                                  check buildWideRepr(builder, scaffold, operand, REPR_ANY,
+                                                                      t:mappingMemberType(tc, mappingType, t:stringConst(fieldName)))
+                                              ]);
     }
     builder.store(m, scaffold.address(insn.result));
 }
@@ -537,11 +537,11 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
     llvm:Value? err = scaffold.buildRuntimeFunctionCall(builder, rf,
-                                   [
-                                       builder.load(scaffold.address(mappingReg)),
-                                       k,
-                                       check buildWideRepr(builder, scaffold, newMemberOperand, REPR_ANY, memberType)
-                                   ]);
+                                                        [
+                                                            builder.load(scaffold.address(mappingReg)),
+                                                            k,
+                                                            check buildWideRepr(builder, scaffold, newMemberOperand, REPR_ANY, memberType)
+                                                        ]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
 }
 
