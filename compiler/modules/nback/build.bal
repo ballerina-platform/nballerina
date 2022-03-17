@@ -160,6 +160,26 @@ function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:
     return err;
 }
 
+function buildStoreRepr(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg, Repr sourceRepr) {
+    match sourceRepr.base {
+        BASE_REPR_INT => {
+            buildStoreInt(builder, scaffold, value, reg);
+        }
+        BASE_REPR_FLOAT => {
+            buildStoreFloat(builder, scaffold, value, reg);
+        }
+        BASE_REPR_BOOLEAN => {
+            buildStoreBoolean(builder, scaffold, value, reg);
+        }
+        BASE_REPR_TAGGED => {
+            buildStoreTagged(builder, scaffold, value, reg);
+        }
+        _ => {
+            panic err:impossible("unreached in buildStoreRepr");
+        }
+    }
+}
+
 function buildStoreInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedInt(builder, scaffold, value) : value,
                   scaffold.address(reg));
