@@ -150,6 +150,8 @@ public const int DEBUG_USAGE_OTHER = 2;
 
 public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL|DEBUG_USAGE_OTHER;
 
+type DebugLocation [DILocation, bir:Position];
+
 class Scaffold {
     private final Module mod;
     private final bir:File file;
@@ -168,7 +170,7 @@ class Scaffold {
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
-    private DILocation? debugLocation = ();
+    private DebugLocation? debugLocation = ();
     final t:SemType returnType;
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
@@ -295,7 +297,7 @@ class Scaffold {
         }
         ModuleDI di = <ModuleDI>self.mod.di;
         var [line, column] = self.file.lineColumn(pos);
-        self.debugLocation = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+        self.debugLocation = [di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc), pos];
         self.useDebugLocation(builder, DEBUG_USAGE_OTHER);
     }
 
@@ -318,11 +320,11 @@ class Scaffold {
                 return builder.setCurrentDebugLocation(());
             }
         }
-        builder.setCurrentDebugLocation(self.debugLocation);
+        builder.setCurrentDebugLocation(self.debugLocation != () ? (<DebugLocation>self.debugLocation)[0] : ());
     }
 
-    function unimplementedErr(d:Message message, d:Position pos) returns err:Unimplemented {
-        return err:unimplemented(message, d:location(self.file, pos));
+    function unimplementedErr(d:Message message) returns err:Unimplemented {
+        return err:unimplemented(message, d:location(self.file, (<DebugLocation>self.debugLocation)[1]));
     }
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;
