@@ -105,12 +105,10 @@ public type Region record {|
 |};
 
 public enum RegionKind {
-    # Region that represents a loop with LoopHeader as the entry
+    # Region whose entry block has a CondBranchInsn and is the destination of a backward branch
     REGION_LOOP,
-    # Region that has an entry which diverge into several possible branches, that eventually rejoin.
-    REGION_MULTIPLE,
-    # Region that is neither a Multiple nor a Loop.
-    REGION_SIMPLE
+    # Region whose entry block has a CondBranchInsn and is not a destination of a backward branch
+    REGION_COND
 }
 
 # A basic block.

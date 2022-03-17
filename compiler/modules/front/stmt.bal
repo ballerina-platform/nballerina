@@ -233,7 +233,6 @@ class StmtContext {
 function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
     StmtContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
-    cx.openRegion(startBlock.label, bir:REGION_SIMPLE);
     Binding? bindings = ();
     foreach int i in 0 ..< defn.params.length() {
         var param = defn.params[i];
@@ -245,7 +244,6 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
         bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: defn.body.closeBracePos };
         endBlock.insns.push(ret);
     }
-    cx.closeRegion();
     codeGenOnPanic(cx, defn.body.closeBracePos);
     return cx.code;
 }
@@ -735,7 +733,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
-        cx.openRegion(startBlock.label, bir:REGION_MULTIPLE);
+        cx.openRegion(startBlock.label, bir:REGION_COND);
         var { block: ifContBlock, assignments, narrowings: ifNarrowings } = check codeGenScope(cx, ifBlock, env, ifTrue, ifCondNarrowings);
         bir:BasicBlock contBlock;
         if ifFalse == () {
