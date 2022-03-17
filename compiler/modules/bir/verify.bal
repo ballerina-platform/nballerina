@@ -10,7 +10,8 @@ class VerifyContext {
     private final Module mod;
     private final t:Context tc;
     private final FunctionDefn defn;
-
+    int[] usedTmpRegisters = [];
+    
     function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
         t:Context tc  = mod.getTypeContext();
@@ -63,6 +64,10 @@ class VerifyContext {
     function symbolToString(Symbol sym) returns string {
         return self.mod.symbolToString(self.defn.partIndex, sym);
     }
+
+    function getSignature() returns FunctionSignature {
+        return self.defn.signature;
+    }
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
@@ -82,6 +87,25 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
     }
 }
 
+function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
+    if r !is Register {
+        return;
+    }
+    if r is ParamRegister {
+        if vc.getSignature().paramTypes.indexOf(r.semType, 0) == () {
+            return vc.invalidErr("invalid param register kind for insn: " + r.kind, <Position>r.pos);
+        }
+    }
+    if r is TmpRegister {
+        if vc.usedTmpRegisters.indexOf(r.number, 0) != () {
+            return vc.invalidErr("tmp register used in multiple places", <Position>r.pos);
+        }
+        else {
+            vc.usedTmpRegisters.push(r.number);
+        }
+    }
+}
+
 function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     string name = insn.name;
     if insn is IntBinaryInsn {
@@ -89,28 +113,45 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
         // different rules for bitwise
         check validOperandInt(vc, name, insn.operands[0], insn.pos);
         check validOperandInt(vc, name, insn.operands[1], insn.pos);
+        check verifyRegisterKind(vc, insn.operands[0]);
+        check verifyRegisterKind(vc, insn.operands[1]);
     }
     if insn is FloatArithmeticBinaryInsn {
         check validOperandFloat(vc, name, insn.operands[0], insn.pos);
         check validOperandFloat(vc, name, insn.operands[1], insn.pos);
+        check verifyRegisterKind(vc, insn.operands[0]);
+        check verifyRegisterKind(vc, insn.operands[1]);
     }
     if insn is FloatNegateInsn {
         check validOperandFloat(vc, name, insn.operand, insn.pos);
+        check verifyRegisterKind(vc, insn.operand);
     }
     else if insn is BooleanNotInsn {
         check validOperandBoolean(vc, name, insn.operand, insn.pos);
+        check verifyRegisterKind(vc, insn.operand);
     }
     else if insn is CompareInsn {
         check verifyCompare(vc, insn);
+        check verifyRegisterKind(vc, insn.operands[0]);
     }
     else if insn is EqualityInsn {
         check verifyEquality(vc, insn);
+        if insn.operands[0] !is TmpRegister {
+            check verifyRegisterKind(vc, insn.operands[0]);
+        }
+        check verifyRegisterKind(vc, insn.operands[1]);
     }
     else if insn is AssignInsn {
         check verifyOperandType(vc, insn.operand, insn.result.semType, "value is not a subtype of the LHS", insn.pos);
+        if insn.result is AssignTmpRegister && insn.operand !is TmpRegister {
+            check verifyRegisterKind(vc, insn.operand);
+        }
     }
     else if insn is CondBranchInsn {
         check validOperandBoolean(vc, name, insn.operand, insn.pos);
+        if insn.operand !is TmpRegister {
+            check verifyRegisterKind(vc, insn.operand);
+        }    
     }
     else if insn is RetInsn {
         check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type", insn.pos);
@@ -120,36 +161,65 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is CallInsn {
         check verifyCall(vc, insn);
+        foreach Operand arg in insn.args {
+            check verifyRegisterKind(vc, arg);
+        }
     }
     else if insn is TypeCastInsn {
         check verifyTypeCast(vc, insn);
+        check verifyRegisterKind(vc, insn.operand);
     }
     else if insn is ConvertToIntInsn {
         check verifyConvertToInt(vc, insn);
+        check verifyRegisterKind(vc, insn.operand);
     }
     else if insn is ConvertToFloatInsn {
         check verifyConvertToFloat(vc, insn);
+        check verifyRegisterKind(vc, insn.operand);
     }
     else if insn is ListConstructInsn {
         check verifyListConstruct(vc, insn);
+        foreach Operand op in insn.operands {
+            check verifyRegisterKind(vc, op);
+        }
     }
     else if insn is MappingConstructInsn {
         check verifyMappingConstruct(vc, insn);
+        foreach Operand op in insn.operands {
+            check verifyRegisterKind(vc, op);
+        }
     }
     else if insn is ListGetInsn {
         check verifyListGet(vc, insn);
+        check verifyRegisterKind(vc, insn.operands[0]);
+        check verifyRegisterKind(vc, insn.operands[1]);
     }
     else if insn is ListSetInsn {
         check verifyListSet(vc, insn);
+        if insn.operands[0] !is TmpRegister {
+           check verifyRegisterKind(vc, insn.operands[0]); 
+        }
+        if insn.operands[1] !is TmpRegister {
+           check verifyRegisterKind(vc, insn.operands[1]); 
+        }
+        check verifyRegisterKind(vc, insn.operands[2]);
     }
      else if insn is MappingGetInsn {
         check verifyMappingGet(vc, insn);
+        check verifyRegisterKind(vc, insn.operands[0]);
+        check verifyRegisterKind(vc, insn.operands[1]);
     }
     else if insn is MappingSetInsn {
         check verifyMappingSet(vc, insn);
+        if insn.operands[0] !is TmpRegister {
+           check verifyRegisterKind(vc, insn.operands[0]); 
+        }
+        check verifyRegisterKind(vc, insn.operands[1]);
+        check verifyRegisterKind(vc, insn.operands[2]);
     }
     else if insn is ErrorConstructInsn {
         check validOperandString(vc, name, insn.operand, insn.pos);
+        check verifyRegisterKind(vc, insn.operand);
     }
 }
 
