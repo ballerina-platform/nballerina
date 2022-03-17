@@ -183,6 +183,18 @@ type SingletonMemo readonly & record {|
     ComplexSemType semType;
 |};
 
+type FillerMemo record {|
+    readonly SemType semType;
+    Filler? filler;
+|};
+
+public type Filler WrappedSingleValue|MappingAtomicType|ListFiller;
+
+public type ListFiller readonly & record {|
+    ListAtomicType atomic;
+    Filler[] memberFillers;
+|};
+
 // Operations on types require a Context.
 // There can be multiple contexts for the same Env.
 // Whereas an Env is isolated, a Context is not isolated.
@@ -195,6 +207,8 @@ public class Context {
     BddMemoTable functionMemo = table [];
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
+    final table<FillerMemo> key(semType) fillerMemo = table [];
+
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
 
@@ -795,6 +809,22 @@ public function uniformTypeCode(UniformTypeBitSet bitSet) returns UniformTypeCod
     return <UniformTypeCode>lib:numberOfTrailingZeros(bitSet);
 }
 
+const int RW_ONLY = (1 << UT_FUTURE)|(1 << UT_STREAM);
+
+// This changes every x_RW bit in bitSet to an x_RO bit.
+// This is potentially useful when we are interested in the basic type of a value.
+// (not used currently)
+public function rwToRo(UniformTypeBitSet bitSet) returns UniformTypeBitSet {
+    // save the bits that have 0x10 set but do not have _RO counterparts
+    int rwOnly = bitSet & RW_ONLY;
+    // clear those bits out
+    int roBitSet = bitSet & ~RW_ONLY;
+    // turn every _RO bit into a _RW bit
+    roBitSet |= roBitSet >> 0x10;
+    // add back in the saved bits
+    return <UniformTypeBitSet>(roBitSet|rwOnly);
+}
+
 public function comparable(Context cx, SemType t1, SemType t2) returns boolean {
     SemType semType = diff(union(t1, t2), NIL);
     if isSubtypeSimple(semType, SIMPLE_OR_STRING) {
@@ -825,6 +855,83 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     }
     memo.comparable = true;
     return true;
+}
+
+public function listAtomicFillableFrom(Context cx, ListAtomicType atomic, int specLength) returns boolean {
+    return specLength >= atomic.members.fixedLength || specLength >= listAtomicMinLengthWithFill(cx, atomic);
+}
+
+// Number of members that must be specified in the list constructor
+// Potentially memoizable
+public function listAtomicMinLengthWithFill(Context cx, ListAtomicType atomic) returns int {
+    readonly & SemType[] members = atomic.members.initial;
+    int i = members.length();
+    while i > 0 && filler(cx, members[i - 1]) != () {
+        i -= 1;
+    }
+    return i == members.length() ? atomic.members.fixedLength : i;
+}
+
+public function filler(Context cx, SemType semType) returns Filler? {
+    FillerMemo? existing = cx.fillerMemo[semType];
+    if existing != () {
+        return existing.filler;
+    }
+    FillerMemo memo = { semType, filler: () };
+    // This is to handle recursive tuples
+    cx.fillerMemo.add(memo);
+    Filler? f = computeFiller(cx, semType);
+    memo.filler = f;
+    return f;
+}
+
+function computeFiller(Context cx, SemType t) returns Filler? {
+    if containsNil(t) {
+        return { value: () };
+    }
+    UniformTypeBitSet bitSet = widenToUniformTypes(t);
+    SingleValue value = ();
+    match uniformTypeCode(bitSet) {
+        UT_BOOLEAN => {
+            value = false;
+        }
+        UT_INT => {
+            value = 0; 
+        }
+        UT_DECIMAL => {
+            value = 0d;
+        }
+        UT_FLOAT => {
+            value = 0f;
+        }
+        UT_STRING => {
+            value = "";
+        }
+    }
+    if value != () && (t is UniformTypeBitSet || containsConst(t, value)) {
+        return { value };
+    }
+    WrappedSingleValue? wrapped = singleShape(t);
+    if wrapped != () {
+        return wrapped;
+    }
+    MappingAtomicType? mat = mappingAtomicTypeRw(cx, t);
+    if mat != () && mat.names.length() == 0 {
+        return mat;
+    }
+    ListAtomicType? lat = listAtomicTypeRw(cx, t);
+    if lat != () {
+        Filler[] memberFillers = [];
+        foreach var memberType in lat.members.initial {
+            Filler? f = filler(cx, memberType);
+            if f is () {
+                return ();
+            }
+            memberFillers.push(f);
+        }
+        return { atomic: lat, memberFillers: memberFillers.cloneReadOnly() };
+    }
+    return ();
 }
 
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),

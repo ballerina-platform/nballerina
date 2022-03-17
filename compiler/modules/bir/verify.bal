@@ -186,7 +186,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns E
     foreach int i in 0 ..< operands.length() {
         check validOperandType(vc, operands[i], t:listAtomicTypeMemberAt(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
     }
-    if operands.length() < lat.members.fixedLength {
+    if !t:listAtomicFillableFrom(vc.typeContext(), lat, operands.length()) {
         return vc.semanticErr("not enough members in list constructor", insn.pos);
     }
 }
