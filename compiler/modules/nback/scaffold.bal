@@ -227,7 +227,7 @@ class Scaffold {
         return self.mod.llMod.getIntrinsicDeclaration(name);
     }
 
-    private function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl {
+    function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl {
         bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: rf.name };
         llvm:FunctionDecl? decl = self.getImportedFunction(symbol);
         if decl != () {
@@ -238,17 +238,6 @@ class Scaffold {
             self.addImportedFunction(symbol, f);
             return f;
         }
-    }
-
-    function buildRuntimeFunctionCall(llvm:Builder builder, RuntimeFunction rf, llvm:Value[] args) returns llvm:Value? {
-        return self.buildCall(builder, self.getRuntimeFunctionDecl(rf), args);
-    }
-
-    function buildCall(llvm:Builder builder, llvm:Function fn, llvm:Value[] args) returns llvm:Value? {
-        self.useDebugLocation(builder, DEBUG_USAGE_CALL);
-        llvm:Value? result = builder.call(fn, args);
-        self.useDebugLocation(builder, DEBUG_USAGE_OTHER);
-        return result;
     }
 
     function getString(string str) returns StringDefn {

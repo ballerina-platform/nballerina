@@ -89,7 +89,7 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
             hasType = buildHasTagInSet(builder, tagged, bitSet);
         }
         else {
-            hasType = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, typeContainsFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), tagged]);
+            hasType = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, typeContainsFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), tagged]);
             valueToExactify = tagged;
         }
     }
@@ -100,11 +100,11 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
                 builder.iCmp("sge", llvm:constInt(LLVM_INT, intConstraints.max), value));
         }
         else {
-            hasType = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, typeContainsIntFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
+            hasType = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, typeContainsIntFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
         }
     }
     else if baseRepr == BASE_REPR_FLOAT {
-        hasType = <llvm:Value>scaffold.buildRuntimeFunctionCall(builder, typeContainsFloatFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
+        hasType = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, typeContainsFloatFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
     }
     else {
         BASE_REPR_BOOLEAN _ = baseRepr;
@@ -141,7 +141,7 @@ function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
     if t:mappingAtomicTypeRw(tc, targetType) == () && t:listAtomicTypeRw(tc, targetType) == () {
         return tagged;
     }
-    return <llvm:PointerValue>scaffold.buildRuntimeFunctionCall(builder, structureExactifyFunction, [tagged, scaffold.getExactify(t:diff(targetType, t:READONLY))]);
+    return <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, structureExactifyFunction, [tagged, scaffold.getExactify(t:diff(targetType, t:READONLY))]);
 }
 
 // If we can perform the type test by testing whether the value belongs to a UniformTypeBitSet, then return that bit set.
