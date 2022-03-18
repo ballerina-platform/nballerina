@@ -28,6 +28,7 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
             foreach string tag in scaffold.getExceptionTags() {
                 if tagsAdded.indexOf(tag) == () {
                     module.addTag(tag);
+                    module.addTagExport(tag, tag);
                     tagsAdded.push(tag);
                 }
             }

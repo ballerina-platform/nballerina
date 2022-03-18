@@ -27,6 +27,7 @@ public type Literal LiteralInt32|LiteralInt64;
 public class Module {
     private Function[] functions = [];
     private Expression[] imports = [];
+    private Expression[] tagExports = [];
     private Expression[] exports = [];
     private Expression[] tags = [];
     private Expression[] globals = [];
@@ -105,6 +106,12 @@ public class Module {
         Token[] inst = ["export", "\"" + externalName + "\""];
         inst.push(...appendBraces(["func", "$" + internalName]));
         self.exports.push({ tokens: appendBraces(inst) });
+    }
+
+    public function addTagExport(string internalName, string externalName) {
+        Token[] inst = ["export", "\"" + externalName + "\""];
+        inst.push(...appendBraces(["tag", "$" + internalName]));
+        self.tagExports.push({ tokens: appendBraces(inst) });
     }
 
     public function addGlobal(string name, Type ty, boolean mutable_, Expression init) {
@@ -206,7 +213,7 @@ public class Module {
 
     public function finish() returns string[] {
         Token[] module = [joinTokens(["(", "module"], 0)];
-        Expression[][] orderedSections = [self.imports, self.tags, self.memory, self.globals, self.memoryExport, self.exports];
+        Expression[][] orderedSections = [self.imports, self.tags, self.memory, self.globals, self.memoryExport, self.tagExports, self.exports];
         foreach Expression[] section in orderedSections {
             foreach Expression expr in section {
                 module.push(joinTokens(expr.tokens));

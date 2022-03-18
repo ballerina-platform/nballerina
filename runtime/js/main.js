@@ -5,7 +5,7 @@ const IMMEDIATE_FLAG = 32n << 56n;
 let offset = 0;
 const TAG_INT = 7n
 let memory = null;
-
+let tags = [];
 if (process.argv.length > 2) {
   let fileName = process.argv[2];
   const wasmBuffer = fs.readFileSync(fileName);
@@ -42,8 +42,26 @@ if (process.argv.length > 2) {
     };
     WebAssembly.instantiate(wasmBuffer, importObject).then(obj => {
       memory = new Uint32Array(obj.instance.exports.memory.buffer);
+      let exported = Object.getOwnPropertyNames(obj.instance.exports);
+      exported.forEach(element => {
+        let attr = obj.instance.exports[element];
+        if (typeof attr === "object") {
+          if (attr instanceof WebAssembly.Tag) {
+            tags.push({ name: element, tag: attr});
+          }
+        }
+      });
       obj.instance.exports.main()
-    }).catch((err) => errorHandler(err));
+      
+    }).catch((err) => {
+        if(typeof err == "object" &&  err instanceof WebAssembly.Exception) {
+            let tag = tags.filter(tag => err.is(tag.tag));
+            if (tag.length > 0) {
+              err.message = tag[0].name;
+            }
+        }
+        errorHandler(err);
+    });
   }
   else {
     WebAssembly.instantiate(wasmBuffer).then(obj => {
@@ -55,15 +73,17 @@ if (process.argv.length > 2) {
 
 const errorHandler = err => {
   let msg = "panic: ";
-  // console.log(err.message);
   if (err.message == "divide result unrepresentable") {
     msg += "arithmetic overflow"
   }
   else if (err.message == "remainder by zero") {
     msg += "divide by zero"
   }
-  else if (err.message == "wasm exception") {
+  else if (err.message == "overflow") {
     msg += "arithmetic overflow"
+  }
+  else if (err.message == "bad-conversion") {
+    msg += "bad type cast"
   }
   else if (err.message == "Maximum call stack size exceeded") {
     msg += "stack overflow";
