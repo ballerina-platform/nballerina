@@ -87,6 +87,13 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
     }
 }
 
+function verifyNonFinalRegisterKind(VerifyContext vc, Operand r) returns Error? {
+    if r is FinalRegister {
+            return vc.invalidErr("invalid param register kind for insn: " + r.kind, <Position>r.pos);
+    }
+    check verifyRegisterKind(vc, r);
+}
+ 
 function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
     if r !is Register {
         return;
@@ -197,7 +204,7 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is ListSetInsn {
         check verifyListSet(vc, insn);
         if insn.operands[0] !is TmpRegister {
-           check verifyRegisterKind(vc, insn.operands[0]); 
+           check verifyNonFinalRegisterKind(vc, insn.operands[0]); 
         }
         if insn.operands[1] !is TmpRegister {
            check verifyRegisterKind(vc, insn.operands[1]); 
@@ -212,7 +219,7 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is MappingSetInsn {
         check verifyMappingSet(vc, insn);
         if insn.operands[0] !is TmpRegister {
-           check verifyRegisterKind(vc, insn.operands[0]); 
+           check verifyNonFinalRegisterKind(vc, insn.operands[0]); 
         }
         check verifyRegisterKind(vc, insn.operands[1]);
         check verifyRegisterKind(vc, insn.operands[2]);
