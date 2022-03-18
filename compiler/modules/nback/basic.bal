@@ -31,7 +31,8 @@ final RuntimeFunction stringConcatFunction = {
 };
 
 function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
-    scaffold.setDebugLocation(builder, pos);
+    scaffold.setCurrentPosition(builder, pos);
+    scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
     llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
     llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
@@ -46,7 +47,8 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
     scaffold.setBasicBlock(block);
     builder.positionAtEnd(scaffold.basicBlock(block.label));
     foreach var insn in block.insns {
-        scaffold.setDebugLocation(builder, insn.pos);
+        scaffold.setCurrentPosition(builder, insn.pos);
+        scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
         }
@@ -213,7 +215,7 @@ function buildRuntimeFunctionCall(llvm:Builder builder, Scaffold scaffold, Runti
 function buildFunctionCall(llvm:Builder builder, Scaffold scaffold, llvm:Function fn, llvm:Value[] args) returns llvm:Value? {
     scaffold.useDebugLocation(builder, DEBUG_USAGE_CALL);
     llvm:Value? result = builder.call(fn, args);
-    scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
+    scaffold.clearDebugLocation(builder);
     return result;
 }
 
@@ -248,7 +250,7 @@ function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorC
                                                     check buildString(builder, scaffold, insn.operand),
                                                     llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.pos))
                                                 ]);
-    scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
+    scaffold.clearDebugLocation(builder);
     builder.store(value, scaffold.address(insn.result));
 }
 

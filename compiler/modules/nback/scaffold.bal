@@ -150,8 +150,6 @@ public const int DEBUG_USAGE_OTHER = 2;
 
 public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL|DEBUG_USAGE_OTHER;
 
-type DebugLocation [DILocation, bir:Position];
-
 class Scaffold {
     private final Module mod;
     private final bir:File file;
@@ -170,7 +168,8 @@ class Scaffold {
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
-    private DebugLocation? debugLocation = ();
+    private bir:Position? currentPosition = ();
+    private DILocation? currentDebugLocation = ();
     final t:SemType returnType;
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
@@ -290,15 +289,18 @@ class Scaffold {
         return d:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos) {
-        DISubprogram? diFunc = self.diFunc;
-        if diFunc is () {
-            return;
-        }
+    function setCurrentPosition(llvm:Builder builder, bir:Position pos) {
+        self.currentPosition = pos;
+        self.currentDebugLocation = ();
+    }
+
+    function clearDebugLocation(llvm:Builder builder) {
         ModuleDI di = <ModuleDI>self.mod.di;
-        var [line, column] = self.file.lineColumn(pos);
-        self.debugLocation = [di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc), pos];
-        self.useDebugLocation(builder, DEBUG_USAGE_OTHER);
+        // in debugFull case every instruction must have a debug location
+        if !di.debugFull {
+            builder.setCurrentDebugLocation(());
+            self.currentDebugLocation = ();
+        }
     }
 
     function useDebugLocation(llvm:Builder builder, DebugLocationUsage usage) {
@@ -307,24 +309,35 @@ class Scaffold {
             return;
         }
         ModuleDI di = <ModuleDI>self.mod.di;
-        if !di.debugFull {
-            if usage is DEBUG_USAGE_ERROR_CONSTRUCT {
-                DILocation? noLineLoc = self.noLineLocation;
-                if noLineLoc == () {
-                    self.noLineLocation =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
-                }
-                return builder.setCurrentDebugLocation(<DILocation>self.noLineLocation);
+        // In the debugFull case, there is no need to do anything for DEBUG_USAGE_ERROR_CONSTRUCT
+        // because the full location will have been set earlier.
+        if usage == (di.debugFull ? DEBUG_USAGE_ERROR_CONSTRUCT : DEBUG_USAGE_OTHER) {
+            return;
+        }
+        DILocation loc;
+        if usage == DEBUG_USAGE_ERROR_CONSTRUCT {
+            DILocation? noLineLoc = self.noLineLocation;
+            if noLineLoc == () {
+                loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
+                self.noLineLocation = loc;
             }
-            else if usage is DEBUG_USAGE_OTHER {
-                // clear the builders debug location if it already has one
-                return builder.setCurrentDebugLocation(());
+            else {
+                loc = noLineLoc;
             }
         }
-        builder.setCurrentDebugLocation(self.debugLocation != () ? (<DebugLocation>self.debugLocation)[0] : ());
+        else if self.currentDebugLocation != () {
+            loc = <DILocation>self.currentDebugLocation;
+        }
+        else {
+            var [line, column] = self.file.lineColumn(<bir:Position>self.currentPosition);
+            loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+            self.currentDebugLocation = loc;
+        }
+        builder.setCurrentDebugLocation(loc);
     }
 
     function unimplementedErr(d:Message message) returns err:Unimplemented {
-        return err:unimplemented(message, d:location(self.file, (<DebugLocation>self.debugLocation)[1]));
+        return err:unimplemented(message, d:location(self.file, <bir:Position>self.currentPosition));
     }
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;
