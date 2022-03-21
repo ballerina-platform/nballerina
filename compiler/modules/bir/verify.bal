@@ -113,6 +113,30 @@ function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
     }
 }
 
+type SingleOperandInsn FloatNegateInsn|BooleanNotInsn|AssignInsn|CondBranchInsn|CondNarrowInsn
+    |RetInsn|AbnormalRetInsn|PanicInsn|TypeCastInsn|ConvertToIntInsn|ConvertToFloatInsn|ConvertToDecimalInsn
+    |ErrorConstructInsn|DecimalNegateInsn|TypeTestInsn;
+
+type MultipleOpeandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithmeticBinaryInsn|
+    DecimalArithmeticBinaryInsn|CompareInsn|EqualityInsn;
+
+
+function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
+    if insn is BranchInsn|CatchInsn {
+        return;
+    }
+    else if insn is CallInsn {
+        foreach Operand arg in insn.args {
+            check verifyRegisterKind(vc, arg);
+        }
+    }
+    else if insn is MultipleOpeandInsn {
+        foreach int i in 0..<insn.operands.length() {
+            check verifyRegisterKind(vc, insn.operands[i]);
+        }
+    }
+}
+
 function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     string name = insn.name;
     if insn is IntBinaryInsn {
