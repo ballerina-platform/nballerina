@@ -63,7 +63,7 @@ function functionBddIsEmpty(Context cx, Bdd b, SemType s, Conjunction? pos, Conj
         }
         else {
             SemType[2] [t0, t1] = cx.functionAtomType(neg.atom);
-            return (isSubtype(cx, t0, s) && functionTheta(cx, t0, complement(t1), pos))
+            return (isSubtype(cx, t0, s) && functionPhi(cx, t0, complement(t1), pos))
                 || functionBddIsEmpty(cx, true, s, pos, neg.next);
         }
     }
@@ -75,6 +75,7 @@ function functionBddIsEmpty(Context cx, Bdd b, SemType s, Conjunction? pos, Conj
     }
 }
 
+// pnwamk tutorial
 function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) returns boolean {
     if pos == () {
         // XXX can have function with return type of never
@@ -84,6 +85,39 @@ function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) ret
         SemType[2] [s0, s1] = cx.functionAtomType(pos.atom);
         return (isSubtype(cx, t0, s0) || functionTheta(cx, diff(s0, t0), s1, pos.next))
             && (isSubtype(cx, t1, complement(s1)) || functionTheta(cx, s0, intersect(s1, t1), pos.next));
+    }
+}
+
+// this correspond to phi' in the Castagna paper
+function functionPhi(Context cx, SemType t0, SemType t1, Conjunction? pos) returns boolean {
+    if pos == () {
+        // XXX can have function with return type of never
+        return isEmpty(cx, t0) || isEmpty(cx, t1);
+    }
+    else {
+        SemType[2] [s0, s1] = cx.functionAtomType(pos.atom);   
+        SemType ret = functionIntersectRet(cx, pos.next);  
+        return (isSubtype(cx, t0, s0) || isSubtype(cx, ret, complement(t1)))
+            && functionPhi(cx, t0, intersect(t1, s1), pos.next)
+            && functionPhi(cx, diff(t0, s0), t1, pos.next);
+    }
+}
+
+function functionIntersectRet(Context cx, Conjunction? pos) returns SemType {
+    if pos == () {
+        return NEVER;
+    }
+    Conjunction conj = pos;
+    Conjunction? next = conj.next;
+    SemType t = cx.functionAtomType(conj.atom)[1];
+    while true {
+        if next == () {
+            return t;
+        } else {
+            conj = next;
+            next = conj.next;
+        }
+        t = intersect(t, cx.functionAtomType(conj.atom)[1]);
     }
 }
 
