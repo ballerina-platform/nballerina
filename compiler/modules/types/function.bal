@@ -64,7 +64,8 @@ function functionBddIsEmpty(Context cx, Bdd b, SemType s, Conjunction? pos, Conj
         else {
             SemType[2] [t0, t1] = cx.functionAtomType(neg.atom);
             return (isSubtype(cx, t0, s) && functionPhi(cx, t0, complement(t1), pos))
-                || functionBddIsEmpty(cx, true, s, pos, neg.next);
+                // b is always true
+                || functionBddIsEmpty(cx, b, s, pos, neg.next);
         }
     }
     else {
@@ -91,14 +92,13 @@ function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) ret
 // this correspond to phi' in the Castagna paper
 function functionPhi(Context cx, SemType t0, SemType t1, Conjunction? pos) returns boolean {
     if pos == () {
-        // XXX can have function with return type of never
         return isEmpty(cx, t0) || isEmpty(cx, t1);
     }
     else {
         SemType[2] [s0, s1] = cx.functionAtomType(pos.atom);   
-        SemType ret = pos.next == () ? NEVER : functionIntersectRet(cx, pos.next);  
-        return (isSubtype(cx, t0, s0) || isSubtype(cx, ret, complement(t1)))
-            && functionPhi(cx, t0, intersect(t1, s1), pos.next)
+        // SemType ret = pos.next == () ? NEVER : functionIntersectRet(cx, pos.next);  
+        return // (isSubtype(cx, t0, s0) || isSubtype(cx, ret, complement(t1))) &&
+            functionPhi(cx, t0, intersect(t1, s1), pos.next)
             && functionPhi(cx, diff(t0, s0), t1, pos.next);
     }
 }
