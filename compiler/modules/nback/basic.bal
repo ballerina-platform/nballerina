@@ -32,7 +32,6 @@ final RuntimeFunction stringConcatFunction = {
 
 function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
     scaffold.setCurrentPosition(builder, pos);
-    scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
     llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
     llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
@@ -48,7 +47,6 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
     builder.positionAtEnd(scaffold.basicBlock(block.label));
     foreach var insn in block.insns {
         scaffold.setCurrentPosition(builder, insn.pos);
-        scaffold.useDebugLocation(builder, DEBUG_USAGE_OTHER);
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
         }
