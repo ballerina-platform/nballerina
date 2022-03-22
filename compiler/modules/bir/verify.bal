@@ -86,7 +86,7 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
 
 function verifyNonFinalRegisterKind(VerifyContext vc, Operand r) returns Error? {
     if r is FinalRegister {
-            return vc.invalidErr("invalid param register kind for insn: " + r.kind, <Position>r.pos);
+            return vc.invalidErr("invalid register kind final for insn: " + r.kind, <Position>r.pos);
     }
 }
  
@@ -105,8 +105,8 @@ function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
 }
 
 type MultipleOpeandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithmeticBinaryInsn
-    |DecimalArithmeticBinaryInsn|CompareInsn|EqualityInsn|ListConstructInsn|ListGetInsn|ListSetInsn
-    |MappingConstructInsn|MappingGetInsn|MappingSetInsn|StringConcatInsn;
+    |DecimalArithmeticBinaryInsn|CompareInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn
+    |MappingGetInsn|StringConcatInsn;
 
 
 function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
@@ -122,7 +122,7 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
         check verifyNonFinalRegisterKind(vc, insn.operands[0]);
     }
     else if insn is MultipleOpeandInsn {
-        foreach Operand op in <Operand[]>insn.operands {
+        foreach var op in <Operand[]>insn.operands {
             check verifyRegisterKind(vc, op);
         }
     }
