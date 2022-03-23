@@ -185,8 +185,8 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.typeContext(), listType);
     ListRepr repr = listAtomicTypeToSpecializedListRepr(atomic) ?: GENERIC_LIST_REPR;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(listType);
-    llvm:PointerValue struct = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(repr.construct),
-                                                               [inherentType, llvm:constInt(LLVM_INT, length)]);
+    llvm:PointerValue struct = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, repr.construct,
+                                                                           [inherentType, llvm:constInt(LLVM_INT, length)]);
 
     if length > 0 {
         // de-refer the member array from the list struct
@@ -220,7 +220,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
         if reprIfExact != () {
             panic err:impossible("filling-get with type that has specialization");
         }
-        llvm:Value memberWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(listFillingGetFunction), [taggedStruct, index]);
+        llvm:Value memberWithErr = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, listFillingGetFunction, [taggedStruct, index]);
         member = buildCheckPanicCode(builder, scaffold, memberWithErr, insn.pos);
         memberTmpRepr = REPR_ANY;
     }
@@ -287,8 +287,8 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     bir:IntOperand indexOperand = insn.operands[1];
     bir:Operand newMemberOperand = insn.operands[2];
     llvm:Value taggedStruct = builder.load(scaffold.address(listOperand));
-    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
-                                                                               [taggedStruct, llvm:constInt(LLVM_INT, POINTER_MASK)]),
+    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>buildFunctionCall(builder, scaffold, scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
+                                                                                    [taggedStruct, llvm:constInt(LLVM_INT, POINTER_MASK)]),
                                                heapPointerType(llListType));
     llvm:BasicBlock? bbJoin = ();
     t:SemType listType = listOperand.semType;
@@ -362,18 +362,18 @@ function convertValue(llvm:Builder builder, llvm:Value value, llvm:Type fromTy, 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     t:SemType mappingType = insn.result.semType;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
-    llvm:PointerValue m = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(mappingConstructFunction),
-                                                          [inherentType, llvm:constInt(LLVM_INT, insn.operands.length())]);
+    llvm:PointerValue m = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, mappingConstructFunction,
+                                                                      [inherentType, llvm:constInt(LLVM_INT, insn.operands.length())]);
     t:Context tc = scaffold.typeContext();
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, mappingType);  
     foreach var [fieldName, operand] in mappingOrderFields(mat, insn.fieldNames, insn.operands) {
-        _ = builder.call(scaffold.getRuntimeFunctionDecl(mappingInitMemberFunction),
-                         [
-                             m,
-                             check buildConstString(builder, scaffold, fieldName),
-                             check buildWideRepr(builder, scaffold, operand, REPR_ANY,
-                                                 t:mappingMemberType(tc, mappingType, t:stringConst(fieldName)))
-                         ]);
+        _ = buildRuntimeFunctionCall(builder, scaffold, mappingInitMemberFunction,
+                                     [
+                                         m,
+                                         check buildConstString(builder, scaffold, fieldName),
+                                         check buildWideRepr(builder, scaffold, operand, REPR_ANY,
+                                                             t:mappingMemberType(tc, mappingType, t:stringConst(fieldName)))
+                                     ]);
     }
     builder.store(m, scaffold.address(insn.result));
 }
@@ -419,7 +419,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
     llvm:Value mapping = builder.load(scaffold.address(mappingReg));
-    llvm:Value memberWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [mapping, k]);
+    llvm:Value memberWithErr = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, rf, [mapping, k]);
     llvm:Value member = fill ? buildCheckPanicCode(builder, scaffold, memberWithErr, insn.pos) : memberWithErr;
     t:SemType resultType = insn.result.semType;
     if isPotentiallyExact(resultType) {
@@ -505,12 +505,12 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
-    llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(rf),
-                                   [
-                                       builder.load(scaffold.address(mappingReg)),
-                                       k,
-                                       check buildWideRepr(builder, scaffold, newMemberOperand, REPR_ANY, memberType)
-                                   ]);
+    llvm:Value? err = buildRuntimeFunctionCall(builder, scaffold, rf,
+                                               [
+                                                   builder.load(scaffold.address(mappingReg)),
+                                                   k,
+                                                   check buildWideRepr(builder, scaffold, newMemberOperand, REPR_ANY, memberType)
+                                               ]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
 }
 
@@ -564,7 +564,7 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
 // This clears the exact bit of the member if the structure is not exact.
 function buildMemberClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value structure, llvm:Value member, t:SemType sourceType) returns llvm:Value {
     RuntimeFunction rf = overloadsExactBit(sourceType) ? taggedMemberClearExactAnyFunction : taggedMemberClearExactPtrFunction;
-    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [structure, member]);
+    return <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, rf, [structure, member]);
 }
 
 function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {

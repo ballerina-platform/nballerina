@@ -31,7 +31,7 @@ final RuntimeFunction stringConcatFunction = {
 };
 
 function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
-    scaffold.setDebugLocation(builder, pos);
+    scaffold.setCurrentPosition(builder, pos);
     llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
     llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
@@ -40,14 +40,13 @@ function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos
     buildCallPanic(builder, scaffold, buildErrorForConstPanic(builder, scaffold, PANIC_STACK_OVERFLOW, pos));
     builder.positionAtEnd(firstBlock);
     scaffold.saveParams(builder);
-    scaffold.clearDebugLocation(builder);
 }
 
 function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock block) returns BuildError? {
     scaffold.setBasicBlock(block);
     builder.positionAtEnd(scaffold.basicBlock(block.label));
     foreach var insn in block.insns {
-        scaffold.setDebugLocation(builder, insn.pos);
+        scaffold.setCurrentPosition(builder, insn.pos);
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
         }
@@ -146,7 +145,6 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             // nothing to do
             // scaffold.panicAddress uses this to figure out where to store the panic info
         }
-        scaffold.clearDebugLocation(builder);
     }
 }
 
@@ -175,7 +173,7 @@ function buildPanic(llvm:Builder builder, Scaffold scaffold, bir:PanicInsn insn)
 }
 
 function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue err) {
-    _ = builder.call(scaffold.getRuntimeFunctionDecl(panicFunction), [err]);
+    _ = buildRuntimeFunctionCall(builder, scaffold, panicFunction, [err]);
     builder.unreachable();
 }
 
@@ -185,7 +183,6 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CALL);
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
     llvm:Value[] args = [];
@@ -204,9 +201,20 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     else {
         func = check buildFunctionDecl(scaffold, funcSymbol, signature);
     }  
-    llvm:Value? retValue = builder.call(func, args);
+    llvm:Value? retValue = buildFunctionCall(builder, scaffold, func, args);
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
     buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
+}
+
+function buildRuntimeFunctionCall(llvm:Builder builder, Scaffold scaffold, RuntimeFunction rf, llvm:Value[] args) returns llvm:Value? {
+    return buildFunctionCall(builder, scaffold, scaffold.getRuntimeFunctionDecl(rf), args);
+}
+
+function buildFunctionCall(llvm:Builder builder, Scaffold scaffold, llvm:Function fn, llvm:Value[] args) returns llvm:Value? {
+    scaffold.useDebugLocation(builder, DEBUG_USAGE_CALL);
+    llvm:Value? result = builder.call(fn, args);
+    scaffold.clearDebugLocation(builder);
+    return result;
 }
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) {
@@ -234,21 +242,22 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
 }
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_ERROR_CONSTRUCT);
+    scaffold.useDebugLocation(builder, DEBUG_USAGE_ERROR_CONSTRUCT);
     llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(errorConstructFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),
                                                     llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.pos))
                                                 ]);
+    scaffold.clearDebugLocation(builder);
     builder.store(value, scaffold.address(insn.result));
 }
 
 function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
-    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringConcatFunction),
-                                                [
-                                                    check buildString(builder, scaffold, insn.operands[0]),
-                                                    check buildString(builder, scaffold, insn.operands[1])
-                                                ]);
+    llvm:Value value = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, stringConcatFunction,
+                                                            [
+                                                                check buildString(builder, scaffold, insn.operands[0]),
+                                                                check buildString(builder, scaffold, insn.operands[1])
+                                                            ]);
     builder.store(value, scaffold.address(insn.result));
 }
 
