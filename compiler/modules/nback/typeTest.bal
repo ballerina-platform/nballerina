@@ -89,7 +89,7 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
             hasType = buildHasTagInSet(builder, tagged, bitSet);
         }
         else {
-            hasType = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, typeContainsFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), tagged]);
+            hasType = buildRuntimeFunctionCall(builder, scaffold, typeContainsFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), tagged]);
             valueToExactify = tagged;
         }
     }
@@ -100,11 +100,11 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
                 builder.iCmp("sge", llvm:constInt(LLVM_INT, intConstraints.max), value));
         }
         else {
-            hasType = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, typeContainsIntFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
+            hasType = buildRuntimeFunctionCall(builder, scaffold, typeContainsIntFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
         }
     }
     else if baseRepr == BASE_REPR_FLOAT {
-        hasType = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, typeContainsFloatFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
+        hasType = buildRuntimeFunctionCall(builder, scaffold, typeContainsFloatFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
     }
     else {
         BASE_REPR_BOOLEAN _ = baseRepr;

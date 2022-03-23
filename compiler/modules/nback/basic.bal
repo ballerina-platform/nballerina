@@ -173,7 +173,7 @@ function buildPanic(llvm:Builder builder, Scaffold scaffold, bir:PanicInsn insn)
 }
 
 function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue err) {
-    _ = buildRuntimeFunctionCall(builder, scaffold, panicFunction, [err]);
+    buildVoidRuntimeFunctionCall(builder, scaffold, panicFunction, [err]);
     builder.unreachable();
 }
 
@@ -206,8 +206,12 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
-function buildRuntimeFunctionCall(llvm:Builder builder, Scaffold scaffold, RuntimeFunction rf, llvm:Value[] args) returns llvm:Value? {
-    return buildFunctionCall(builder, scaffold, scaffold.getRuntimeFunctionDecl(rf), args);
+function buildRuntimeFunctionCall(llvm:Builder builder, Scaffold scaffold, RuntimeFunction rf, llvm:Value[] args) returns llvm:Value {
+    return <llvm:Value>buildFunctionCall(builder, scaffold, scaffold.getRuntimeFunctionDecl(rf), args);
+}
+
+function buildVoidRuntimeFunctionCall(llvm:Builder builder, Scaffold scaffold, RuntimeFunction rf, llvm:Value[] args) {
+    return <()>buildFunctionCall(builder, scaffold, scaffold.getRuntimeFunctionDecl(rf), args);
 }
 
 function buildFunctionCall(llvm:Builder builder, Scaffold scaffold, llvm:Function fn, llvm:Value[] args) returns llvm:Value? {
@@ -253,11 +257,11 @@ function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorC
 }
 
 function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
-    llvm:Value value = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, stringConcatFunction,
-                                                            [
-                                                                check buildString(builder, scaffold, insn.operands[0]),
-                                                                check buildString(builder, scaffold, insn.operands[1])
-                                                            ]);
+    llvm:Value value = buildRuntimeFunctionCall(builder, scaffold, stringConcatFunction,
+                                                [
+                                                    check buildString(builder, scaffold, insn.operands[0]),
+                                                    check buildString(builder, scaffold, insn.operands[1])
+                                                ]);
     builder.store(value, scaffold.address(insn.result));
 }
 

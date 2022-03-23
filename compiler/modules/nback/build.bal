@@ -249,7 +249,7 @@ function operationWidens(Scaffold scaffold, bir:Register operand, t:SemType targ
 
 function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value tagged, t:SemType sourceType) returns llvm:Value {
     RuntimeFunction rf = overloadsExactBit(sourceType) ? taggedClearExactAnyFunction : taggedClearExactPtrFunction;
-    return <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, rf, [tagged]);
+    return buildRuntimeFunctionCall(builder, scaffold, rf, [tagged]);
 }
 
 // Does the tagged representation of semType use the exact bit for other purposes
@@ -329,11 +329,11 @@ function buildTestTag(llvm:Builder builder, llvm:PointerValue tagged, int tag, i
 }
 
 function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
-    return <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, taggedToIntFunction, [tagged]);
+    return buildRuntimeFunctionCall(builder, scaffold, taggedToIntFunction, [tagged]);
 }
 
 function buildUntagFloat(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
-    return <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, taggedToFloatFunction, [tagged]);
+    return buildRuntimeFunctionCall(builder, scaffold, taggedToFloatFunction, [tagged]);
 }
 
 function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
@@ -387,7 +387,7 @@ function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) re
 }
 
 function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal decimalValue) returns llvm:Value {
-    return <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, decimalConstFunction, [scaffold.getDecimal(decimalValue)]);
+    return buildRuntimeFunctionCall(builder, scaffold, decimalConstFunction, [scaffold.getDecimal(decimalValue)]);
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {

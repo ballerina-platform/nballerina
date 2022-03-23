@@ -220,7 +220,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
         if reprIfExact != () {
             panic err:impossible("filling-get with type that has specialization");
         }
-        llvm:Value memberWithErr = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, listFillingGetFunction, [taggedStruct, index]);
+        llvm:Value memberWithErr = buildRuntimeFunctionCall(builder, scaffold, listFillingGetFunction, [taggedStruct, index]);
         member = buildCheckPanicCode(builder, scaffold, memberWithErr, insn.pos);
         memberTmpRepr = REPR_ANY;
     }
@@ -367,13 +367,13 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     t:Context tc = scaffold.typeContext();
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, mappingType);  
     foreach var [fieldName, operand] in mappingOrderFields(mat, insn.fieldNames, insn.operands) {
-        _ = buildRuntimeFunctionCall(builder, scaffold, mappingInitMemberFunction,
-                                     [
-                                         m,
-                                         check buildConstString(builder, scaffold, fieldName),
-                                         check buildWideRepr(builder, scaffold, operand, REPR_ANY,
-                                                             t:mappingMemberType(tc, mappingType, t:stringConst(fieldName)))
-                                     ]);
+        _ = buildVoidRuntimeFunctionCall(builder, scaffold, mappingInitMemberFunction,
+                                         [
+                                             m,
+                                             check buildConstString(builder, scaffold, fieldName),
+                                             check buildWideRepr(builder, scaffold, operand, REPR_ANY,
+                                                                 t:mappingMemberType(tc, mappingType, t:stringConst(fieldName)))
+                                         ]);
     }
     builder.store(m, scaffold.address(insn.result));
 }
@@ -419,7 +419,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
     llvm:Value mapping = builder.load(scaffold.address(mappingReg));
-    llvm:Value memberWithErr = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, rf, [mapping, k]);
+    llvm:Value memberWithErr = buildRuntimeFunctionCall(builder, scaffold, rf, [mapping, k]);
     llvm:Value member = fill ? buildCheckPanicCode(builder, scaffold, memberWithErr, insn.pos) : memberWithErr;
     t:SemType resultType = insn.result.semType;
     if isPotentiallyExact(resultType) {
@@ -505,12 +505,12 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
-    llvm:Value? err = buildRuntimeFunctionCall(builder, scaffold, rf,
-                                               [
-                                                   builder.load(scaffold.address(mappingReg)),
-                                                   k,
-                                                   check buildWideRepr(builder, scaffold, newMemberOperand, REPR_ANY, memberType)
-                                               ]);
+    llvm:Value err = buildRuntimeFunctionCall(builder, scaffold, rf,
+                                              [
+                                                  builder.load(scaffold.address(mappingReg)),
+                                                  k,
+                                                  check buildWideRepr(builder, scaffold, newMemberOperand, REPR_ANY, memberType)
+                                              ]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
 }
 
@@ -564,7 +564,7 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
 // This clears the exact bit of the member if the structure is not exact.
 function buildMemberClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value structure, llvm:Value member, t:SemType sourceType) returns llvm:Value {
     RuntimeFunction rf = overloadsExactBit(sourceType) ? taggedMemberClearExactAnyFunction : taggedMemberClearExactPtrFunction;
-    return <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, rf, [structure, member]);
+    return buildRuntimeFunctionCall(builder, scaffold, rf, [structure, member]);
 }
 
 function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {

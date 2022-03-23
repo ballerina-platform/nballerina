@@ -129,7 +129,7 @@ function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean 
 
 function buildEqualFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:Value lhsValue, llvm:Value rhsValue, bir:Register reg) {
     RuntimeFunction eqFunc = exact ? floatExactEqFunction : floatEqFunction;
-    llvm:Value b = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, eqFunc, [lhsValue, rhsValue]);
+    llvm:Value b = buildRuntimeFunctionCall(builder, scaffold, eqFunc, [lhsValue, rhsValue]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -195,7 +195,7 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
 
 function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
     RuntimeFunction func = exact ? exactEqFunction : eqFunction;
-    llvm:Value b = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, func, [tagged1, tagged2]);
+    llvm:Value b = buildRuntimeFunctionCall(builder, scaffold, func, [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -203,7 +203,7 @@ function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean
 }
 
 function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
-    llvm:Value b = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, stringEqFunction, [tagged1, tagged2]);
+    llvm:Value b = buildRuntimeFunctionCall(builder, scaffold, stringEqFunction, [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -213,13 +213,13 @@ function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp
 function buildEqualDecimalDecimal(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
     llvm:Value b;
     if exact {
-        b = <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, decimalExactEqFunction, [tagged1, tagged2]);
+        b = buildRuntimeFunctionCall(builder, scaffold, decimalExactEqFunction, [tagged1, tagged2]);
         if op == "ne" {
             b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
         }
     }
     else {
-        b = builder.iCmp(op, <llvm:Value>buildRuntimeFunctionCall(builder, scaffold, decimalCmpFunction, [tagged1, tagged2]), llvm:constInt(LLVM_INT, 0));
+        b = builder.iCmp(op, buildRuntimeFunctionCall(builder, scaffold, decimalCmpFunction, [tagged1, tagged2]), llvm:constInt(LLVM_INT, 0));
     }
     buildStoreBoolean(builder, scaffold, b, result);
 }
