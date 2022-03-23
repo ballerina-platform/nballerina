@@ -11,6 +11,7 @@ class VerifyContext {
     private final t:Context tc;
     private final FunctionDefn defn;
     int[] usedTmpRegisters = [];
+    int[] definedTmpRegisters = [];
     
     function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
@@ -84,34 +85,27 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
     }
 }
 
-function verifyNonFinalRegisterKind(VerifyContext vc, Operand r) returns Error? {
-    if r is FinalRegister {
-            return vc.invalidErr("invalid register kind final for insn: " + r.kind, <Position>r.pos);
-    }
-}
- 
-function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
-    if r !is Register {
-        return;
-    }
-    if r is TmpRegister {
-        if vc.usedTmpRegisters.indexOf(r.number, 0) != () {
-            return vc.invalidErr("tmp register used in multiple places", <Position>r.pos);
-        }
-        else {
-            vc.usedTmpRegisters.push(r.number);
-        }
-    }
-}
-
 type MultipleOpeandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithmeticBinaryInsn
     |DecimalArithmeticBinaryInsn|CompareInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn
     |MappingGetInsn|StringConcatInsn;
 
+type NonResultInsn MappingSetInsn|ListSetInsn|BranchInsn|CondBranchInsn|CondNarrowInsn|PanicInsn
+    |RetInsn|AbnormalRetInsn;
 
 function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
-    if insn is BranchInsn|CatchInsn|EqualityInsn|AssignInsn|CondBranchInsn|CondNarrowInsn {
+    if insn !is NonResultInsn {
+        vc.definedTmpRegisters.push(insn.result.number);
+    }
+
+    if insn is BranchInsn|CatchInsn {
         return;
+    }
+    else if insn is EqualityInsn {
+        check verifyTmpSet(vc, insn.operands[0]);
+        check verifyRegisterKind(vc, insn.operands[1]);
+    }
+    else if insn is AssignInsn|CondBranchInsn|CondNarrowInsn {
+        check verifyTmpSet(vc, insn.operand);
     }
     else if insn is CallInsn {
         foreach Operand arg in insn.args {
@@ -120,6 +114,8 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is ListSetInsn|MappingSetInsn {
         check verifyNonFinalRegisterKind(vc, insn.operands[0]);
+        check verifyTmpSet(vc, insn.operands[1]);
+        check verifyRegisterKind(vc, insn.operands[2]);
     }
     else if insn is MultipleOpeandInsn {
         foreach var op in <Operand[]>insn.operands {
@@ -128,6 +124,34 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
     }
     else {
         check verifyRegisterKind(vc, insn.operand);
+    }
+}
+
+function verifyNonFinalRegisterKind(VerifyContext vc, Operand r) returns Error? {
+    if r is FinalRegister {
+            return vc.invalidErr("invalid register kind final for insn: " + r.kind, <Position>r.pos);
+    }
+    check verifyTmpSet(vc, r);
+}
+
+function verifyTmpSet(VerifyContext vc, Operand r) returns Error? {
+    if r is TmpRegister && vc.definedTmpRegisters.indexOf(r.number, 0) == () {
+            return vc.invalidErr("tmp register not set", <Position>r.pos);
+    }
+}
+
+function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
+    if r !is Register {
+        return;
+    }
+    if r is TmpRegister {
+        check verifyTmpSet(vc, r);
+        if vc.usedTmpRegisters.indexOf(r.number, 0) != () {
+            return vc.invalidErr("tmp register used in multiple places", <Position>r.pos);
+        }
+        else {
+            vc.usedTmpRegisters.push(r.number);
+        }
     }
 }
 
