@@ -53,49 +53,42 @@ function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return isEmpty;    
 }
 
-function functionBddIsEmpty(Context cx, Bdd b, SemType s, Conjunction? pos, Conjunction? neg) returns boolean {
+function functionBddIsEmpty(Context cx, Bdd b, SemType domain, Conjunction? pos, Conjunction? neg) returns boolean {
     if b is boolean {
         if b == false {
             return true;
         }
-        if neg == () {
-            return false;
-        }
-        else {
-            SemType[2] [t0, t1] = cx.functionAtomType(neg.atom);
-            return (isSubtype(cx, t0, s) && functionPhi(cx, t0, complement(t1), pos))
-                // b is always true
-                || functionBddIsEmpty(cx, b, s, pos, neg.next);
-        }
+        return functionPathIsEmpty(cx, domain, pos, neg);
     }
     else {
         SemType[2] [sd, _] = cx.functionAtomType(b.atom);
-        return functionBddIsEmpty(cx, b.left, union(s, sd), and(b.atom, pos), neg)
-            && functionBddIsEmpty(cx, b.middle, s, pos, neg)
-            && functionBddIsEmpty(cx, b.right, s, pos, and(b.atom, neg));
+        return functionBddIsEmpty(cx, b.left, union(domain, sd), and(b.atom, pos), neg)
+            && functionBddIsEmpty(cx, b.middle, domain, pos, neg)
+            && functionBddIsEmpty(cx, b.right, domain, pos, and(b.atom, neg));
     }
 }
 
-// pnwamk tutorial
-function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) returns boolean {
-    if pos == () {
-        // XXX can have function with return type of never
-        return isEmpty(cx, t0) || isEmpty(cx, t1);
+// `domain` is the union of the ranges in `pos``
+function functionPathIsEmpty(Context cx, SemType domain, Conjunction? pos, Conjunction? neg) returns boolean {
+    if neg == () {
+        return false;
     }
     else {
-        SemType[2] [s0, s1] = cx.functionAtomType(pos.atom);
-        return (isSubtype(cx, t0, s0) || functionTheta(cx, diff(s0, t0), s1, pos.next))
-            && (isSubtype(cx, t1, complement(s1)) || functionTheta(cx, s0, intersect(s1, t1), pos.next));
+        SemType[2] [t0, t1] = cx.functionAtomType(neg.atom);
+        return (isSubtype(cx, t0, domain) && functionPhi(cx, t0, complement(t1), pos))
+               || functionPathIsEmpty(cx, domain, pos, neg.next);
     }
 }
 
-// this correspond to phi' in the Castagna paper
+// This corresponds to phi' in the Castagna paper.
 function functionPhi(Context cx, SemType t0, SemType t1, Conjunction? pos) returns boolean {
     if pos == () {
         return isEmpty(cx, t0) || isEmpty(cx, t1);
     }
     else {
-        SemType[2] [s0, s1] = cx.functionAtomType(pos.atom);   
+        SemType[2] [s0, s1] = cx.functionAtomType(pos.atom);
+        // The commented out code is doing the second version of phi'
+        // Not 100% sure this is right yet
         // SemType ret = pos.next == () ? NEVER : functionIntersectRet(cx, pos.next);  
         return // (isSubtype(cx, t0, s0) || isSubtype(cx, ret, complement(t1))) &&
             functionPhi(cx, t0, intersect(t1, s1), pos.next)
@@ -110,7 +103,19 @@ function functionIntersectRet(Context cx, Conjunction? pos) returns SemType {
     return intersect(cx.functionAtomType(pos.atom)[1], functionIntersectRet(cx, pos.next));
 }
 
- UniformTypeOps functionOps =  {  
+// pnwamk tutorial
+function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) returns boolean {
+    if pos == () {
+        return isEmpty(cx, t0) || isEmpty(cx, t1);
+    }
+    else {
+        SemType[2] [s0, s1] = cx.functionAtomType(pos.atom);
+        return (isSubtype(cx, t0, s0) || functionTheta(cx, diff(s0, t0), s1, pos.next))
+            && (isSubtype(cx, t1, complement(s1)) || functionTheta(cx, s0, intersect(s1, t1), pos.next));
+    }
+}
+
+UniformTypeOps functionOps =  {  
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
