@@ -62,6 +62,9 @@ static enum DemangleResult demangle(const char *mangledName, const char **localN
 static bool demangleModules(const char **mangledModules, FILE *fp);
 static bool demangleCountedName(const char **pp, const char **name);
 static bool isRuntimeFunction(const char* mangledFunctionName);
+static bool isPrefix(const char* prefix, const char* str);
+static bool isStringEq(const char* str1, const char* str2);
+static bool stringEq(const char* str1, const char* str2, int len);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace;
@@ -244,9 +247,31 @@ static bool isRuntimeFunction(const char* mangledFunctionName) {
     const char *runtimePre = "_bal_\0";
     const char *libPre = "_Bb\0";
     const char *initMain = "main\0";
-    return strncmp(runtimePre, mangledFunctionName, strlen(runtimePre)) == 0 ||
-           strncmp(libPre, mangledFunctionName, strlen(libPre)) == 0 ||
-           strcmp(initMain, mangledFunctionName) == 0;
+    return isPrefix(runtimePre, mangledFunctionName) || isPrefix(libPre, mangledFunctionName) || isStringEq(initMain, mangledFunctionName);
+}
+
+static bool isPrefix(const char* prefix, const char* str) {
+    unsigned long len = strlen(prefix);
+    if (strlen(str) < len) {
+        return false;
+    }
+    return stringEq(prefix, str, len);
+}
+
+static bool isStringEq(const char* str1, const char* str2) {
+    unsigned long len = strlen(str1);
+    if (strlen(str2) != len) {
+        return false;
+    }
+    return stringEq(str1, str2, len);
+}
+
+static bool stringEq(const char* str1, const char* str2, int len) {
+    while (--len > 0) {
+        if (*++str1 != *++str2)
+            return false;
+    }
+    return true;
 }
 
 // Implementation of backtrace_error_callback
