@@ -118,7 +118,9 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
         check verifyRegisterKind(vc, insn.operands[2]);
     }
     else if insn is MultipleOpeandInsn {
-        foreach Operand op in <Operand[]>insn.operands {
+        // JBUG #35557 can't iterate insn.operands
+        Operand[] operands = insn.operands;
+        foreach Operand op in operands {
             check verifyRegisterKind(vc, op);
         }
     }
