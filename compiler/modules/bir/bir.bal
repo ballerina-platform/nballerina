@@ -39,6 +39,9 @@ public type ModuleDefn record {|
 # A label is an index of a basic block in the basicBlock.
 public type Label int;
 
+# A RegionIndex is an index of a region in the regions array.
+public type RegionIndex int;
+
 # The definition of a function.
 public type FunctionDefn readonly & record {|
     *ModuleDefn;
@@ -79,6 +82,8 @@ public type FunctionCode record {|
     BasicBlock[] blocks = [];
     # Registers indexed by number
     Register[] registers = [];
+    # Single-entry single-exit regions
+    Region[] regions = [];
 |};
 
 # This represents the signature of a function definition.
@@ -92,6 +97,20 @@ public type FunctionSignature readonly & record {|
     # if non-nil, last member of paramTypes will be an array type whose member type is restParamType
     SemType? restParamType = ();
 |};
+
+public type Region record {|
+    Label entry;
+    Label? exit = ();
+    RegionIndex? parent = ();
+    RegionKind kind;
+|};
+
+public enum RegionKind {
+    # Region whose entry block has a CondBranchInsn and is the destination of a backward branch
+    REGION_LOOP,
+    # Region whose entry block has a CondBranchInsn and is not a destination of a backward branch
+    REGION_COND
+}
 
 # A basic block.
 # Normal control flow proceeds implicitly through the members of the insns array.
@@ -713,6 +732,7 @@ public type BranchInsn readonly & record {|
     *InsnBase;
     INSN_BRANCH name = INSN_BRANCH;
     Label dest;
+    boolean backward = false;
 |};
 
 
