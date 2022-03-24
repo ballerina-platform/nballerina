@@ -61,10 +61,7 @@ static void processInitialPC(PC pc, BacktraceStartLine *backtraceStartLine);
 static enum DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp);
 static bool demangleModules(const char **mangledModules, FILE *fp);
 static bool demangleCountedName(const char **pp, const char **name);
-static bool isRuntimeFunction(const char* mangledFunctionName);
 static bool isPrefix(const char* prefix, const char* str);
-static bool isStringEq(const char* str1, const char* str2);
-static bool stringEq(const char* str1, const char* str2, int len);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace;
@@ -206,7 +203,7 @@ static void processInitialPC(PC pc, BacktraceStartLine *backtraceStartLine) {
 // Implementation of backtrace_full_callback
 static int printBacktraceLineCB(void *data, UNUSED PC pc, const char *filename, int lineno, const char *function) {
     BacktraceStartLine *backtraceStartLine = data;
-    if (function != NULL && !isRuntimeFunction(function)) {
+    if (function != NULL && isPrefix("_B\0", function)) {
         int64_t lineNumber = backtraceStartLine->lineNumber != 0 ? backtraceStartLine->lineNumber : lineno;
         if (backtraceStartLine->lineNumber != 0) {
             backtraceStartLine->lineNumber = 0;
@@ -243,32 +240,13 @@ static void printBacktraceLine(const char *filename, int64_t lineNumber, const c
     fflush(fp);
 }
 
-static bool isRuntimeFunction(const char* mangledFunctionName) {
-    const char *runtimePre = "_bal_\0";
-    const char *libPre = "_Bb\0";
-    const char *initMain = "main\0";
-    return isPrefix(runtimePre, mangledFunctionName) || isPrefix(libPre, mangledFunctionName) || isStringEq(initMain, mangledFunctionName);
-}
-
 static bool isPrefix(const char* prefix, const char* str) {
     unsigned long len = strlen(prefix);
     if (strlen(str) < len) {
         return false;
     }
-    return stringEq(prefix, str, len);
-}
-
-static bool isStringEq(const char* str1, const char* str2) {
-    unsigned long len = strlen(str1);
-    if (strlen(str2) != len) {
-        return false;
-    }
-    return stringEq(str1, str2, len);
-}
-
-static bool stringEq(const char* str1, const char* str2, int len) {
     while (--len > 0) {
-        if (*++str1 != *++str2)
+        if (*++prefix != *++str)
             return false;
     }
     return true;
