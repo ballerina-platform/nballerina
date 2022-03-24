@@ -119,6 +119,7 @@ function syntaxNodeFromFunctionTypeParam(FunctionTypeParam param) returns SubSyn
     string? name = param.name;
     return nonTerminalSyntaxNode(param,
                                  syntaxNodeFromTypeDesc(param.td),
+                                 param.isRest ? { token: "..." } : (),
                                  name != () ? { name, pos: param.namePos } : ());
 }
 

@@ -6,10 +6,10 @@ public type ListAtomicType readonly & record {|
 |};
 
 // Represent a fixed length semtype member list similar to a tuple.
-// The length of the list is `fixedLength`, the last member of the `initial` is repeated to achive this semantic.
+// The length of the list is `fixedLength`, the last member of the `initial` is repeated to achieve this semantic.
 // { initial: [int], fixedLength: 3, } is same as { initial: [int, int, int], fixedLength: 3 }
 // { initial: [string, int], fixedLength: 100 } means `int` is repeated 99 times to get a list of 100 members.
-// `fixedLength` must be `0` when `inital` is empty and the `fixedLength` must be at least `initial.length()`
+// `fixedLength` must be `0` when `initial` is empty and the `fixedLength` must be at least `initial.length()`
 public type FixedLengthArray record {|
     SemType[] initial;
     int fixedLength;
@@ -22,6 +22,10 @@ type ListConjunction record {|
     ListConjunction? next;
 |};
 
+// Member types at the indices that are not contained in `Range` array represent `never.
+// The SemTypes in this list are not `never`.
+public type ListMemberTypes [Range[], SemType[]];
+
 public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
     if i < atomic.members.fixedLength {
         int initialLen = atomic.members.initial.length();
@@ -31,8 +35,6 @@ public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns Sem
         return atomic.rest;
     }
 }
-
-public type ListMemberTypes [Range[], SemType[]];
 
 public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns ListMemberTypes {
     Range[] ranges = [];
@@ -342,8 +344,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         }
         SemType rd = diff(rest, nt.rest);
         if !isEmpty(cx, rd) {
-            // We have checked the posibilities of existance of a shape in list with fixedLength >= 0 and < maxInitialLen.
-            // Now check the existance of a shape with at least `maxInitialLen` members.
+            // We have checked the possibilities of existence of a shape in list with fixedLength >= 0 and < maxInitialLen.
+            // Now check the existence of a shape with at least `maxInitialLen` members.
             FixedLengthArray s = members;
             if len < maxInitialLen {
                 s = fixedArrayShallowCopy(members);
@@ -457,6 +459,18 @@ function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum
     }
 }
 
+function bddListAllRanges(Context cx, Bdd b, Range[] accum) returns Range[] {
+    if b is boolean {
+        return b ? accum : [];
+    }
+    else {
+        var [atomRanges, _] = listAtomicTypeAllMemberTypes(cx.listAtomType(b.atom));
+        return distinctRanges(bddListAllRanges(cx, b.left, distinctRanges(atomRanges, accum)),
+                              distinctRanges(bddListAllRanges(cx, b.middle, accum), 
+                                             bddListAllRanges(cx, b.right, accum)));
+    }
+}
+
 function listAtomicMemberType(ListAtomicType atomic, IntSubtype|true key) returns SemType {
     return listAtomicMemberTypeAt(atomic.members, atomic.rest, key);
 }
@@ -560,6 +574,11 @@ function combineRanges(Range[] ranges1, Range[] ranges2) returns [Range, int?, i
         cur = next;
     }
     return combined;
+}
+
+function distinctRanges(Range[] range1, Range[] range2) returns Range[] {
+    [Range, int?, int?][] combined = combineRanges(range1, range2);
+    return from var [r, _, _] in combined select r;
 }
 
 // Helper function for combineRanges

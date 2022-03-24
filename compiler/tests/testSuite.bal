@@ -257,6 +257,7 @@ function testListProj(t:Context tc, t:SemType t, t:SemType index) returns t:SemT
     if !t:isSubtype(tc, s1, s2) {
         test:assertFail("listProj result is not a subtype of listMemberType");
     }
+    testListAllMemberTypesProjection(tc, t);
     return s1;
 }
 
@@ -267,5 +268,18 @@ function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
     }
     else {
         return t;
+    }
+}
+
+// Validate output of `t:listAllMemberTypes` by repeatedly testing for each range using `t:listProj` function.
+function testListAllMemberTypesProjection(t:Context tc, t:SemType t) {
+    var [ranges, types] = t:listAllMemberTypes(tc, t);
+    foreach int i in 0 ..< ranges.length() {
+        t:Range r = ranges[i];
+        t:SemType it = types[i];
+        t:SemType projected = t:listMemberType(tc, t, t:intConst(r.min));
+        if !t:isSubtype(tc, it, projected) || !t:isSubtype(tc, projected, it) {
+            test:assertFail(string `All projection for member index ${r.min} is not equal to individual projection`);
+        }
     }
 }

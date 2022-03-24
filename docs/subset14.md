@@ -112,7 +112,12 @@ postfix-type-desc =
 
 optional-type-desc = postfix-type-desc "?"
 
-array-type-desc = postfix-type-desc "[" "]"
+array-type-desc := array-member-type-desc array-dimension+
+array-dimension := "[" [ array-length ] "]"
+array-member-type-desc := type-desc *but not* array-type-desc
+array-length :=
+  int-literal
+  | constant-reference-expr
 
 primary-type-desc =
   builtin-type-name
@@ -147,8 +152,9 @@ tuple-member-type-desc-list =
    | [ tuple-rest-desc ]
 tuple-rest-desc = type-desc "..."
 
-param-list = param ["," param]*
+param-list = param ["," param]* ["," rest-param]
 param = type-desc identifier
+rest-param = type-desc "..." identifier
 
 stmt-block = "{" statement* "}"
 
@@ -396,6 +402,7 @@ Two kinds of `import` are supported.
 ## Additions from subset 13
 
 * Tuple types
+* Rest param in function definition
 
 ## Implemented spec changes since 2022R1
 

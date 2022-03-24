@@ -31,7 +31,7 @@ type ExprEffect record {|
 
 type Binding record {|
     string name;
-    bir:Register reg;
+    bir:DeclRegister|bir:NarrowRegister reg;
     boolean isFinal;
     boolean used = false;
     Binding? prev;
@@ -107,11 +107,15 @@ class ExprContext {
     }
 
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TmpRegister {
-        return bir:createTmpRegister(self.code, t, (), pos);
+        return bir:createTmpRegister(self.code, t, pos);
     }
 
-    function createNarrowRegister(bir:SemType t, Position? pos = ()) returns bir:NarrowRegister {
-        return bir:createNarrrowRegister(self.code, t, (), pos);
+    function createAssignTmpRegister(bir:SemType t, Position? pos = ()) returns bir:AssignTmpRegister {
+        return bir:createAssignTmpRegister(self.code, t, pos);
+    }
+
+    function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos = ()) returns bir:NarrowRegister {
+        return bir:createNarrowRegister(self.code, t, underlying, pos);
     }
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {
@@ -171,25 +175,21 @@ function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) re
     return cx.semanticErr("expected string operand", s:range(expr));
 }
 
-final readonly & bir:ExternalSymbol IO_PRINTLN_SYMBOL = {
-    module: { org: "ballerina", names: ["io"] }, 
-    identifier: "println"
-};
-
 function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:FunctionCallExpr callExpr, bir:FunctionRef func, int i) returns ExprEffect|CodeGenError {
     s:Expr arg = callExpr.args[i];
     int n = callExpr is s:FunctionCallExpr ? i : i + 1;
     if n >= func.signature.paramTypes.length() {
-        if func.symbol == IO_PRINTLN_SYMBOL {
-            return cx.unimplementedErr("multiple arguments for io:println not implemented", s:range(arg));
-        }
         return cx.semanticErr("too many arguments for call to function", s:range(arg)); 
     }
-    var { result, block } = check codeGenExpr(cx, bb, func.signature.paramTypes[n], arg);
-    if operandHasType(cx.mod.tc, result, func.signature.paramTypes[n]) {
-        return { result, block };
+    return codeGenExprForType(cx, bb, func.signature.paramTypes[n], arg, "incorrect type for argument");
+}
+
+function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, t:SemType requiredType, s:Expr expr, string msg) returns CodeGenError|ExprEffect {
+    ExprEffect effect = check codeGenExpr(cx, bb, requiredType, expr);
+    if !operandHasType(cx.mod.tc, effect.result, requiredType) {
+        return cx.semanticErr(msg, s:range(expr));
     }
-    return cx.semanticErr("incorrect type for argument", s:range(arg));
+    return effect;
 }
 
 function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -311,7 +311,7 @@ function codeGenNilLiftResult(ExprContext cx, ExprEffect nonNilEffect, bir:Basic
         bir:Operand nonNilResult = nonNilEffect.result;
         bir:BasicBlock nonNilBlock = nonNilEffect.block;
 
-        bir:TmpRegister result = cx.createTmpRegister(t:union(operandSemType(cx.mod.tc, nonNilResult), t:NIL));
+        bir:AssignTmpRegister result = cx.createAssignTmpRegister(t:union(operandSemType(cx.mod.tc, nonNilResult), t:NIL), pos);
         bir:AssignInsn nilAssign = { result, operand: bir:NIL_OPERAND, pos };
         ifNilBlock.insns.push(nilAssign);
         bir:BranchInsn branchInsn = { dest: block.label, pos };
@@ -373,7 +373,7 @@ function codeGenNilLift(ExprContext cx, t:SemType? expected, s:Expr[] operands, 
             nextBlock = cx.createBasicBlock();
             bir:InsnRef testInsnRef = bir:lastInsnRef(currentBlock);
             t:SemType baseType = t:diff(operand.semType, t:NIL);
-            bir:NarrowRegister newOperand = cx.createNarrowRegister(baseType);
+            bir:NarrowRegister newOperand = cx.createNarrowRegister(baseType, operand);
             bir:CondNarrowInsn narrowToBase = {
                 result: newOperand,
                 operand,
@@ -434,7 +434,7 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, index);
             t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r.semType);
             if t:isEmpty(cx.mod.tc, memberType) {
-                return cx.semanticErr("type of member access is never", pos);
+                return cx.semanticErr("index out of range", s:range(index));
             }
             // XXX this isn't correct for singletons
             bir:TmpRegister result = cx.createTmpRegister(memberType, pos);
@@ -695,7 +695,7 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
                                                                                             : [intersectNarrowing, expandedUnionNarrowing];
     Narrowing[] ifTrue = combineNarrowings(lhsIfTrue, rhsIfTrue, ifTrueCombinator);
     Narrowing[] ifFalse = combineNarrowings(lhsIfFalse, rhsIfFalse, ifFalseCombinator);
-    bir:TmpRegister result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:AssignTmpRegister result = cx.createAssignTmpRegister(t:BOOLEAN, pos);
     bir:AssignInsn lhsAssignInsn = { result, operand: lhs, pos };
     shortCircuitBlock.insns.push(lhsAssignInsn);
     bir:AssignInsn rhsAssignInsn = { result, operand: rhs, pos };
@@ -817,19 +817,18 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
 }
 
 function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:ListConstructorExpr expr) returns CodeGenError|ExprEffect {
+    // SUBSET always have contextually expected type for mapping constructor
+    var [resultType, atomicType] = check selectListInherentType(cx, <t:SemType>expected, expr);
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
-
-    // SUBSET always have contextually expected type for list constructor
-    t:SemType resultType = t:intersect(<t:SemType>expected, t:LIST_RW);
-    t:Context tc = cx.mod.tc;
     foreach var [i, member] in expr.members.enumerate() {
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, t:listMemberType(tc, resultType, t:singleton(tc, i)), member);
+        t:SemType requiredType =  t:listAtomicTypeMemberAt(atomicType, i);
+        if t:isNever(requiredType) {
+            return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
+        }
+        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
         operands.push(operand);
-    }
-    if t:isEmpty(cx.mod.tc, resultType) {
-        return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
@@ -837,14 +836,51 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
     return { result, block: nextBlock };
 }
 
+function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListConstructorExpr expr) returns [t:SemType, t:ListAtomicType]|ResolveTypeError {
+    // SUBSET always have contextually expected type for list constructor
+    t:SemType expectedListType = t:intersect(expectedType, t:LIST_RW);
+    t:Context tc = cx.mod.tc;
+    if t:isEmpty(tc, expectedListType) {
+        // don't think this can happen 
+        return cx.semanticErr("list not allowed in this context", s:range(expr));
+    }
+    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, expectedListType);
+    if lat != () {
+        return [expectedListType, lat];
+    }
+    int len = expr.members.length();
+    t:ListAlternative[] alts =
+        from var alt in t:listAlternativesRw(tc, expectedListType)
+        where listAlternativeAllowsLength(alt, len)
+        select alt;
+    if alts.length() == 0 {
+        return cx.semanticErr("no applicable inherent type for list constructor", s:range(expr));
+    }
+    else if alts.length() > 1 {
+        return cx.semanticErr("ambiguous inherent type for list constructor", s:range(expr));
+    }
+    t:SemType semType = alts[0].semType;
+    lat = t:listAtomicTypeRw(tc, semType);
+    if lat is () {
+        return cx.semanticErr("applicable type for list constructor is not atomic", s:range(expr));
+    }
+    return [semType, lat];
+}
+
+function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boolean {
+    foreach t:ListAtomicType a in alt.pos {
+        int minLength = a.members.fixedLength;
+        // This doesn't account for filling. See spec issue #1064
+        if a.rest == t:NEVER ? len != minLength : len < minLength {     
+            return false;
+        }
+    }
+    return true;
+}
+
 function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
     // SUBSET always have contextually expected type for mapping constructor
-    t:SemType resultType = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
-    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.mod.tc, resultType);
-    if mat is () {
-        // XXX can this happen?
-        return cx.semanticErr("mapping not allowed in this context", s:range(expr));
-    }
+    var [resultType, mat] = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
     string[] fieldNames = [];
@@ -865,7 +901,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
             }
         }
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, t:mappingAtomicTypeMemberAt(mat, name), f.value);
+        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAt(mat, name), f.value, "incorrect type for list member");
         operands.push(operand);
         fieldNames.push(name);
     }
@@ -875,11 +911,16 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
     return { result, block: nextBlock };
 }
 
-function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns t:SemType|ResolveTypeError {
+function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns [t:SemType, t:MappingAtomicType]|ResolveTypeError {
     t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING_RW);
     t:Context tc = cx.mod.tc;
-    if t:mappingAtomicTypeRw(tc, expectedMappingType) != () {
-        return expectedMappingType; // easy case
+    if t:isEmpty(tc, expectedMappingType) {
+        // XXX can this happen?
+        return cx.semanticErr("mapping not allowed in this context", s:range(expr));
+    }
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, expectedMappingType);
+    if mat != () { // easy case
+        return [expectedMappingType, mat]; 
     }
     string[] fieldNames = from var f in expr.fields order by f.name select f.name;
     t:MappingAlternative[] alts =
@@ -893,10 +934,11 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
         return cx.semanticErr("ambiguous inherent type for mapping constructor", s:range(expr));
     }
     t:SemType semType = alts[0].semType;
-    if t:mappingAtomicTypeRw(tc, semType) == () {
-        return cx.semanticErr("appplicable type for mapping constructor is not atomic", s:range(expr));
+    mat = t:mappingAtomicTypeRw(tc, semType);
+    if mat is () {
+        return cx.semanticErr("applicable type for mapping constructor is not atomic", s:range(expr));
     }
-    return semType;
+    return [semType, mat];
 }
 
 function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] fieldNames) returns boolean {
@@ -1224,8 +1266,29 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     }
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
-    foreach int i in 0 ..< expr.args.length() {
+    t:SemType? restParamType = func.signature.restParamType;
+    int regularArgCount = restParamType == () ? expr.args.length() : func.signature.paramTypes.length() - 1;
+    foreach int i in 0 ..< regularArgCount {
         var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
+        curBlock = nextBlock;
+        args.push(arg);
+    }
+    s:Expr[] restArgs = from int i in regularArgCount ..< expr.args.length() select expr.args[i];
+    if restParamType != () {
+        Position startPos;
+        Position endPos;
+        int restArgCount = restArgs.length();
+        if restArgCount > 0 {
+            startPos = restArgs[0].startPos;
+            endPos = restArgs[restArgCount - 1].endPos;
+        }
+        else {
+            startPos = expr.openParenPos;
+            endPos = expr.closeParenPos;
+        }
+        s:ListConstructorExpr varArgList = { startPos, endPos, opPos: startPos, members: restArgs};
+        t:SemType restListTy = func.signature.paramTypes[func.signature.paramTypes.length() - 1];
+        var { result: arg, block: nextBlock } = check codeGenListConstructor(cx, curBlock, restListTy, varArgList);
         curBlock = nextBlock;
         args.push(arg);
     }
@@ -1261,10 +1324,8 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
 
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
     int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
-    if nSuppliedArgs < func.signature.paramTypes.length() {
-        if func.symbol == IO_PRINTLN_SYMBOL {
-            return cx.unimplementedErr("io:println without arguments not implemented", call.closeParenPos);
-        }
+    int nExpectedArgs = func.signature.paramTypes.length() - (func.signature.restParamType != () ? 1 : 0);
+    if nSuppliedArgs < nExpectedArgs {
         return cx.semanticErr("too few arguments for call to function", call.closeParenPos);
     }
 }

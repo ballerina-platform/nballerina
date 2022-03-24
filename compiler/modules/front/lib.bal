@@ -23,7 +23,7 @@ function getLangLibFunction(string mod, string func) returns bir:FunctionSignatu
 }
 
 final readonly & map<bir:FunctionSignature> ioLibFunctions = {
-    println: { paramTypes: [t:TOP], returnType: t:NIL }
+    println: { paramTypes: [t:LIST], returnType: t:NIL, restParamType: t:TOP }
 };
 
 type ModuleExportSemtypes readonly & map<t:SemType>;

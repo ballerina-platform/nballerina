@@ -11,7 +11,7 @@ public function listProj(Context cx, SemType t, SemType k) returns SemType {
             return NEVER;
         }
         return union(listProjBdd(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()),
-                listProjBdd(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
+                     listProjBdd(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
     }
 }
 

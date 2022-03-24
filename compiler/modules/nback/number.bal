@@ -177,7 +177,7 @@ function buildFloatArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir
 function buildDecimalArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:DecimalArithmeticBinaryInsn insn) {
     llvm:Value lhs = buildDecimal(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildDecimal(builder, scaffold, insn.operands[1]);
-    llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalArithmeticFuncs.get(insn.op)), [lhs, rhs]);
+    llvm:Value resultWithErr = buildRuntimeFunctionCall(builder, scaffold, decimalArithmeticFuncs.get(insn.op), [lhs, rhs]);
     buildStoreDecimal(builder, scaffold, buildCheckPanicCode(builder, scaffold, resultWithErr, insn.pos), insn.result);                                  
 }
 
@@ -219,17 +219,17 @@ function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertT
         return;
     }
     // convert to int form tagged pointer
-    llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(convertToIntFunction), [val]);
+    llvm:Value resultWithErr = buildRuntimeFunctionCall(builder, scaffold, convertToIntFunction, [val]);
     buildStoreTagged(builder, scaffold, buildCheckOverflow(builder, scaffold, resultWithErr, insn), insn.result);
 }
 
 function buildConvertFloatToInt(llvm:Builder builder, Scaffold scaffold, llvm:Value floatVal, bir:ConvertToIntInsn insn) {
-    llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(floatToIntFunction), [floatVal]);
+    llvm:Value resultWithErr = buildRuntimeFunctionCall(builder, scaffold, floatToIntFunction, [floatVal]);
     buildStoreInt(builder, scaffold, buildCheckOverflow(builder, scaffold, resultWithErr, insn), insn.result);
 }
 
 function buildConvertDecimalToInt(llvm:Builder builder, Scaffold scaffold, llvm:Value decimalVal, bir:ConvertToIntInsn insn) {
-    llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalToIntFunction), [decimalVal]);
+    llvm:Value resultWithErr = buildRuntimeFunctionCall(builder, scaffold, decimalToIntFunction, [decimalVal]);
     buildStoreInt(builder, scaffold, buildCheckOverflow(builder, scaffold, resultWithErr, insn), insn.result);
 }
 
@@ -255,7 +255,7 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
         return;
     }
     // convert to float form tagged pointer
-    llvm:Value result = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(convertToFloatFunction), [val]);
+    llvm:Value result = buildRuntimeFunctionCall(builder, scaffold, convertToFloatFunction, [val]);
     buildStoreTagged(builder, scaffold, result, insn.result);
 }
 
@@ -264,7 +264,7 @@ function buildConvertIntToFloat(llvm:Builder builder, Scaffold scaffold, llvm:Va
 }
 
 function buildConvertDecimalToFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value decimalVal, bir:ConvertToFloatInsn insn) {
-    llvm:Value result = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalToFloatFunction), [decimalVal]);
+    llvm:Value result = buildRuntimeFunctionCall(builder, scaffold, decimalToFloatFunction, [decimalVal]);
     buildStoreFloat(builder, scaffold, result, insn.result);
 }
 
@@ -279,7 +279,7 @@ function buildConvertToDecimal(llvm:Builder builder, Scaffold scaffold, bir:Conv
         return;
     }
     // convert to decimal from tagged pointer
-    llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(convertToDecimalFunction), [val]);
+    llvm:Value resultWithErr = buildRuntimeFunctionCall(builder, scaffold, convertToDecimalFunction, [val]);
     buildStoreDecimal(builder, scaffold, buildCheckPanicCode(builder, scaffold, resultWithErr, insn.pos), insn.result);   
 }
 
@@ -290,17 +290,17 @@ function buildConvertIntToDecimal(llvm:Builder builder, Scaffold scaffold, llvm:
     builder.positionAtEnd(errBlock);
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
-    buildStoreDecimal(builder, scaffold, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalFromIntFunction), [intVal]), insn.result);
+    buildStoreDecimal(builder, scaffold, buildRuntimeFunctionCall(builder, scaffold, decimalFromIntFunction, [intVal]), insn.result);
 }
 
 function buildConvertFloatToDecimal(llvm:Builder builder, Scaffold scaffold, llvm:Value floatVal, bir:ConvertToDecimalInsn insn) {
-    llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalFromFloatFunction), [floatVal]);
+    llvm:Value resultWithErr = buildRuntimeFunctionCall(builder, scaffold, decimalFromFloatFunction, [floatVal]);
     buildStoreDecimal(builder, scaffold, buildCheckPanicCode(builder, scaffold, resultWithErr, insn.pos), insn.result);   
 }
 
 function buildDecimalNegate(llvm:Builder builder, Scaffold scaffold, bir:DecimalNegateInsn insn) {
     llvm:Value operand = buildDecimal(builder, scaffold, insn.operand);
-    llvm:Value result = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalNegFunction), [operand]);
+    llvm:Value result = buildRuntimeFunctionCall(builder, scaffold, decimalNegFunction, [operand]);
     buildStoreDecimal(builder, scaffold, result, insn.result);
 }
 
