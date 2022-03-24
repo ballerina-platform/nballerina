@@ -118,8 +118,8 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
         check verifyRegisterKind(vc, insn.operands[2]);
     }
     else if insn is MultipleOpeandInsn {
-        foreach int i in 0..<insn.operands.length() {
-            check verifyRegisterKind(vc, insn.operands[i]);
+        foreach Operand op in <Operand[]>insn.operands {
+            check verifyRegisterKind(vc, op);
         }
     }
     else {
