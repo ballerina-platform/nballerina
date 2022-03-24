@@ -1,5 +1,6 @@
 public type IntType "i64"|"i32";
-public type Type "None"|IntType;
+public type RefType "anyref";
+public type Type "None"|IntType|RefType;
 public type Op "i32.add"|"i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.or"|"i32.xor"|"i32.and"|"i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|"i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.or"|"i64.xor"|"i64.and"|"i64.extend_i32_u"|"i64.shl"|"i64.eqz";
 
 
@@ -29,10 +30,8 @@ public class Module {
     private Expression[] imports = [];
     private Expression[] tagExports = [];
     private Expression[] exports = [];
+    private Expression[] types = [];
     private Expression[] tags = [];
-    private Expression[] globals = [];
-    private Expression[] memory = [];
-    private Expression[] memoryExport = [];
 
     public function call(string target, Expression[] operands, Type returnType) returns Expression {
         Token[] inst = ["call", "$" + target];
@@ -44,10 +43,6 @@ public class Module {
 
     public function localGet(int index) returns Expression {
         return { tokens: appendBraces(["local.get", "$" + index.toString()]) };
-    }
-
-    public function globalGet(string name) returns Expression {
-        return { tokens: appendBraces(["global.get", "$" + name]) };
     }
 
     public function addConst(Literal value) returns Expression {
@@ -114,24 +109,6 @@ public class Module {
         self.tagExports.push({ tokens: appendBraces(inst) });
     }
 
-    public function addGlobal(string name, Type ty, boolean mutable_, Expression init) {
-        Token[] inst = ["global", "$" + name];
-        if mutable_ {
-            inst.push(...appendBraces(["mut", ty]));
-        }
-        inst.push(...init.tokens);
-        self.globals.push({ tokens: appendBraces(inst) });
-    }
-
-    public function setMemory(int initial, int maximum, string exportName) {
-        string[] memInst = ["memory", "$0"];
-        string[] exportInst = ["export", "\"" + exportName + "\""];
-        exportInst.push(...appendBraces(memInst));
-        memInst.push(initial.toString(), maximum.toString());
-        self.memory.push({ tokens: appendBraces(memInst) });
-        self.memoryExport.push({ tokens: appendBraces(exportInst) });
-    }
-
     public function binary(Op op, Expression left, Expression right) returns Expression {
         Token[] inst = [op];
         inst.push(...left.tokens);
@@ -147,12 +124,6 @@ public class Module {
 
     public function localSet(int index, Expression value) returns Expression {
         Token[] inst = ["local.set", "$" + index.toString()];
-        inst.push(...value.tokens);
-        return { tokens: appendBraces(inst) };
-    }
-
-    public function globalSet(string name, Expression value) returns Expression {
-        Token[] inst = ["global.set", "$" + name];
         inst.push(...value.tokens);
         return { tokens: appendBraces(inst) };
     }
@@ -188,13 +159,6 @@ public class Module {
         return { tokens: appendBraces(["throw", "$" + tag]) };
     }
 
-    public function store(int bytes, int offset, int align, Expression ptr, Expression value, Type ty) returns Expression {
-        Token[] inst = [ty is "i64" ? "i64.store": "i32.store"];
-        inst.push(...ptr.tokens);
-        inst.push(...value.tokens);
-        return { tokens: appendBraces(inst) };
-    }
-
     public function try(Expression body) returns Expression {
         Token[] tryBody = ["try"];
         Token[] doBody = ["do"];
@@ -211,9 +175,87 @@ public class Module {
         return { tokens: appendBraces(["br", name]) };
     }
 
+    public function struct(string[] fields, Type[] fieldTypes) returns Expression {
+        Token[] inst = ["struct"];
+        foreach int i in 0..<fields.length() {
+            inst.push(...appendBraces(["field", "$" + fields[i], fieldTypes[i]]));
+        }
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function addType(string name, Expression ty) {
+        Token[] inst = ["type", "$" + name];
+        inst.push(...ty.tokens);
+        self.types.push({ tokens: appendBraces(inst) });
+    }
+
+    public function structNew(string kind, Expression value, Expression rtt) returns Expression {
+        Token[] inst = ["struct.new_with_rtt", "$" + kind];
+        inst.push(...value.tokens);
+        inst.push(...rtt.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function structGet(string kind, string key, Expression value) returns Expression {
+        Token[] inst = ["struct.get", "$" + kind, "$" + key];
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function refCast(Expression value, Expression ty) returns Expression {
+        Token[] inst = ["ref.cast"];
+        inst.push(...value.tokens);
+        inst.push(...ty.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function refAsData(Expression value) returns Expression {
+        Token[] inst = ["ref.as_data"];
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function refAsI31(Expression value) returns Expression {
+        Token[] inst = ["ref.as_i31"];
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function refIsI31(Expression value) returns Expression {
+        Token[] inst = ["ref.is_i31"];
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function refNull() returns Expression {
+        return { tokens: appendBraces(["ref.null", "data"]) };
+    }
+
+    public function refIsNull(Expression value) returns Expression {
+        Token[] inst = ["ref.is_null"];
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function rtt(string kind) returns Expression {
+        return { tokens: appendBraces(["rtt.canon", "$" + kind]) };
+    }
+
+    public function i31New(Expression value) returns Expression {
+        Token[] inst = ["i31.new"];
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function i31Get(Expression i31Ref) returns Expression {
+        Token[] inst = ["i31.get_u"];
+        inst.push(...i31Ref.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
     public function finish() returns string[] {
         Token[] module = [joinTokens(["(", "module"], 0)];
-        Expression[][] orderedSections = [self.imports, self.tags, self.memory, self.globals, self.memoryExport, self.tagExports, self.exports];
+        Expression[][] orderedSections = [self.types, self.imports, self.tags, self.tagExports, self.exports];
         foreach Expression[] section in orderedSections {
             foreach Expression expr in section {
                 module.push(joinTokens(expr.tokens));

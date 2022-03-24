@@ -94,8 +94,8 @@ class Scaffold {
 
 final Repr REPR_INT = { base: BASE_REPR_INT, wasm: WASM_INT };
 final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, wasm: WASM_BOOLEAN };
-final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, wasm: "i64", subtype: t:NIL };
-final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, wasm: "i64" , subtype: t:ANY };
+final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, wasm: "anyref", subtype: t:NIL };
+final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, wasm: "anyref" , subtype: t:ANY };
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, wasm: WASM_VOID };
 
 final readonly & record {|

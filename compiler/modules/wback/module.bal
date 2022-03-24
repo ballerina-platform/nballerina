@@ -55,10 +55,11 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         globalSet = scaffold.setMemory;
         taggedFuncs = scaffold.taggedFuncs;
     }
-    module.addFunctionImport("println", "console", "log", ["i64"], "None");
-    module.addFunctionImport("tagged_to_int", "bal", "taggedToInt", ["i64"], "i64");
+    module.addFunctionImport("println", "console", "log", ["anyref"], "None");
     taggedInt(module);
-    module.setMemory(1, 256, "memory");
+    unTagInt(module);
+    unTagBoolean(module);
+    getType(module);
     return module.finish();
 }
 

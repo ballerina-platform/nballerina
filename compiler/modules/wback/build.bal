@@ -2,20 +2,14 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.wasm;
 
-const TAG_SHIFT = 56;
-const int TAG_MASK = 15 << TAG_SHIFT;
-const int TAG_INT = t:UT_INT << TAG_SHIFT;
-const int TAG_BOOLEAN  = t:UT_BOOLEAN << TAG_SHIFT;
-const int FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
-const int TAG_NIL      = 0;
-const int TRUNCATE = (1 << TAG_SHIFT) - 1;
-const int MAX_IMMEDIATE_INT = (1 << (TAG_SHIFT - 1)) - 1;
-const int MIN_IMMEDIATE_INT = - (1 << (TAG_SHIFT - 1));
+const int TYPE_INT = 0;
+const int TYPE_BOOLEAN = 1;
+const int TYPE_NIL = 2;
+
 
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
-    wasm:Expression immediate = module.binary("i64.or", module.addConst({ i64: FLAG_IMMEDIATE }), module.unary("i64.extend_i32_u", value));
-    return module.binary("i64.or", immediate, module.addConst({ i64: TAG_BOOLEAN }));
+    return module.i31New(value);
 }
 
 function buildTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Expression value) returns wasm:Expression {
@@ -26,13 +20,10 @@ function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression ta
     return module.call("tagged_to_int", [tagged], "i64");
 }
 
-function buildHasTag(wasm:Module module, wasm:Expression tagged, int tag) returns wasm:Expression {
-    return buildTestTag(module, tagged, tag, TAG_MASK);
+function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
+    return  module.binary("i32.eq", module.call("get_type", [tagged], "i32"), module.addConst({ i32: ty }));
 }
 
-function buildTestTag(wasm:Module module, wasm:Expression tagged, int tag, int mask) returns wasm:Expression {
-    return module.binary("i64.eq", module.addConst({ i64: tag }), module.binary("i64.and", tagged, module.addConst({ i64: mask })));
-}
 function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand operand) returns [Repr, wasm:Expression] {
     if operand is bir:Register {
         Repr repr = scaffold.getRepr(operand);
@@ -41,7 +32,7 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
     else {
         t:SingleValue value = operand.value;
         if value == () {
-            return [REPR_NIL, module.addConst({ i64: FLAG_IMMEDIATE })];
+            return [REPR_NIL, module.refNull()];
         }
         else if value is boolean {
             return [REPR_BOOLEAN, module.addConst({ i32: value ? 1 : 0 })];
@@ -94,28 +85,37 @@ function buildConvertRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr
 }
 
 function buildUntagBoolean(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
-    return module.binary("i64.and", module.addConst({ i64: 1 }), tagged);
-}
-
-function buildTruncateBoolean(wasm:Module module, wasm:Expression val, bir:Register result) returns wasm:Expression {
-    return module.addIf(module.unary("i64.eqz", val), module.localSet(result.number, module.addConst({ i32: 0 })), module.localSet(result.number, module.addConst({ i32: 1 })));
+    return module.call("tagged_to_boolean", [tagged], "i32");
 }
 
 function taggedInt(wasm:Module module) {
-    module.addGlobal("offset", "i32", true, module.addConst({ i32: 0 }));
-    wasm:Expression value = module.localGet(0);
-    wasm:Expression offset = module.globalGet("offset");
-    wasm:Expression valLMax = module.binary("i64.lt_s", value, module.addConst({ i64: MAX_IMMEDIATE_INT }));
-    wasm:Expression valGMin = module.binary("i64.gt_s", value, module.addConst({ i64: MIN_IMMEDIATE_INT }));
-    wasm:Expression condition = module.binary("i32.and", valGMin, valLMax);
-    wasm:Expression truncated = module.binary("i64.and", value, module.addConst({ i64: TRUNCATE }));
-    wasm:Expression immediated = module.binary("i64.or", truncated, module.addConst({ i64: FLAG_IMMEDIATE }));
-    wasm:Expression trueBody = module.addReturn(module.binary("i64.or", immediated, module.addConst({ i64: TAG_INT })));
-    wasm:Expression store = module.store(8, 0, 0, offset, value, "i64");
-    wasm:Expression location = module.localSet(1, offset);
-    wasm:Expression incrementOffset = module.globalSet("offset", module.binary("i32.add", offset, module.addConst({ i32: 8 })));
-    wasm:Expression falseReturn = module.addReturn(module.binary("i64.or", module.addConst({ i64: TAG_INT }), module.unary("i64.extend_i32_u", module.localGet(1))));
-    wasm:Expression elseBody = module.block([store, location, incrementOffset, falseReturn]);
-    wasm:Expression body = module.addIf(condition, trueBody, elseBody);
-    module.addFunction("int_to_tagged", ["i64"], "i64", ["i32"], body);
+    module.addType("BoxedInt", module.struct(["val"], ["i64"]));
+    wasm:Expression struct = module.structNew("BoxedInt", module.localGet(0), module.rtt("BoxedInt"));
+    // change param
+    module.addFunction("int_to_tagged", ["i64"], "anyref", [], module.addReturn(struct));
+}
+
+function unTagInt(wasm:Module module) {
+    wasm:Expression asData = module.refAsData(module.localGet(0));
+    wasm:Expression cast = module.refCast(asData, module.rtt("BoxedInt"));
+    wasm:Expression structGet = module.structGet("BoxedInt", "val", cast);
+    module.addFunction("tagged_to_int", ["anyref"], "i64", [], module.addReturn(structGet));
+    module.addFunctionExport("tagged_to_int", "tagged_to_int");
+}
+
+function unTagBoolean(wasm:Module module) {
+    wasm:Expression asI31 = module.refAsI31(module.localGet(0));
+    wasm:Expression i31Get = module.i31Get(asI31);
+    module.addFunction("tagged_to_boolean", ["anyref"], "i32", [], module.addReturn(i31Get));
+    module.addFunctionExport("tagged_to_boolean", "tagged_to_boolean");
+
+}
+
+function getType(wasm:Module module) {
+    wasm:Expression isI31 = module.refIsI31(module.localGet(0));
+    wasm:Expression isNull = module.refIsNull(module.localGet(0));
+    wasm:Expression notI31 = module.addIf(isNull, module.addReturn(module.addConst({ i32: TYPE_NIL })), module.addReturn(module.addConst({ i32: TYPE_INT })));
+    wasm:Expression ifExpr = module.addIf(isI31, module.addReturn(module.addConst({ i32: TYPE_BOOLEAN })), notI31);
+    module.addFunction("get_type", ["anyref"], "i32", [], ifExpr);
+    module.addFunctionExport("get_type", "get_type");
 }
