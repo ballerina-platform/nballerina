@@ -175,18 +175,10 @@ function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) re
     return cx.semanticErr("expected string operand", s:range(expr));
 }
 
-final readonly & bir:ExternalSymbol IO_PRINTLN_SYMBOL = {
-    module: { org: "ballerina", names: ["io"] }, 
-    identifier: "println"
-};
-
 function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:FunctionCallExpr callExpr, bir:FunctionRef func, int i) returns ExprEffect|CodeGenError {
     s:Expr arg = callExpr.args[i];
     int n = callExpr is s:FunctionCallExpr ? i : i + 1;
     if n >= func.signature.paramTypes.length() {
-        if func.symbol == IO_PRINTLN_SYMBOL {
-            return cx.unimplementedErr("multiple arguments for io:println not implemented", s:range(arg));
-        }
         return cx.semanticErr("too many arguments for call to function", s:range(arg)); 
     }
     return codeGenExprForType(cx, bb, func.signature.paramTypes[n], arg, "incorrect type for argument");
@@ -442,7 +434,7 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, index);
             t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r.semType);
             if t:isEmpty(cx.mod.tc, memberType) {
-                return cx.semanticErr("type of member access is never", pos);
+                return cx.semanticErr("index out of range", s:range(index));
             }
             // XXX this isn't correct for singletons
             bir:TmpRegister result = cx.createTmpRegister(memberType, pos);
@@ -1274,8 +1266,29 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     }
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
-    foreach int i in 0 ..< expr.args.length() {
+    t:SemType? restParamType = func.signature.restParamType;
+    int regularArgCount = restParamType == () ? expr.args.length() : func.signature.paramTypes.length() - 1;
+    foreach int i in 0 ..< regularArgCount {
         var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
+        curBlock = nextBlock;
+        args.push(arg);
+    }
+    s:Expr[] restArgs = from int i in regularArgCount ..< expr.args.length() select expr.args[i];
+    if restParamType != () {
+        Position startPos;
+        Position endPos;
+        int restArgCount = restArgs.length();
+        if restArgCount > 0 {
+            startPos = restArgs[0].startPos;
+            endPos = restArgs[restArgCount - 1].endPos;
+        }
+        else {
+            startPos = expr.openParenPos;
+            endPos = expr.closeParenPos;
+        }
+        s:ListConstructorExpr varArgList = { startPos, endPos, opPos: startPos, members: restArgs};
+        t:SemType restListTy = func.signature.paramTypes[func.signature.paramTypes.length() - 1];
+        var { result: arg, block: nextBlock } = check codeGenListConstructor(cx, curBlock, restListTy, varArgList);
         curBlock = nextBlock;
         args.push(arg);
     }
@@ -1311,10 +1324,8 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
 
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
     int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
-    if nSuppliedArgs < func.signature.paramTypes.length() {
-        if func.symbol == IO_PRINTLN_SYMBOL {
-            return cx.unimplementedErr("io:println without arguments not implemented", call.closeParenPos);
-        }
+    int nExpectedArgs = func.signature.paramTypes.length() - (func.signature.restParamType != () ? 1 : 0);
+    if nSuppliedArgs < nExpectedArgs {
         return cx.semanticErr("too few arguments for call to function", call.closeParenPos);
     }
 }

@@ -60,6 +60,7 @@ class StmtContext {
     final bir:FunctionCode code;
     final t:SemType returnType;
     LoopContext? loopContext = ();
+    bir:RegionIndex[] openRegions = [];
 
     function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
@@ -103,6 +104,19 @@ class StmtContext {
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {
         return bir:createBasicBlock(self.code, name);
+    }
+
+    function openRegion(bir:Label entry, bir:RegionKind kind, bir:Label? exit = ()) {
+        bir:RegionIndex regionIndex = self.code.regions.length();
+        int openCount = self.openRegions.length();
+        bir:RegionIndex? parent = openCount > 0 ? self.openRegions[openCount - 1] : ();
+        self.code.regions.push({ entry, kind, exit, parent });
+        self.openRegions.push(regionIndex);
+    }
+
+    function closeRegion(bir:Label? exit = ()) {
+        int regionIndex = self.openRegions.pop();
+        self.code.regions[regionIndex].exit = exit;
     }
 
     function qNameRange(Position startPos) returns Range {
@@ -422,8 +436,9 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
 
 function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:WhileStmt stmt) returns CodeGenError|StmtEffect {
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
-    bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
-    startBlock.insns.push(branchToLoopHead);
+    cx.openRegion(loopHead.label, bir:REGION_LOOP);
+    bir:BranchInsn forwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
+    startBlock.insns.push(forwardBranchToLoopHead);
     bir:BasicBlock loopBody = cx.createBasicBlock();
     bir:BasicBlock? exit = ();
 
@@ -455,7 +470,8 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     cx.pushLoopContext(exit, loopHead);
     var { block: loopEnd, assignments } = check codeGenScope(cx, loopBody, env, stmt.body, ifTrue);
     if loopEnd != () {
-        loopEnd.insns.push(branchToLoopHead);
+        bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
+        loopEnd.insns.push(backwardBranchToLoopHead);
         check validLoopAssignments(cx, assignments);
     }
     check validLoopAssignments(cx, cx.onContinueAssignments());
@@ -468,7 +484,7 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         exit = breakBlock;
     }
     cx.popLoopContext();
-   
+    cx.closeRegion(exit != () ? exit.label : ());
     if exitReachable {
         return { block: exit, assignments };
     }
@@ -490,14 +506,15 @@ function validLoopAssignments(StmtContext cx, Assignment[] assignments) returns 
 
 function codeGenBreakContinueStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
     bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel(stmt.startPos) : check cx.onContinueLabel(stmt.startPos);
-    bir:BranchInsn branch = { dest, pos: stmt.startPos };
-    startBlock.insns.push(branch);
+    boolean backward = stmt.breakContinue == "continue";
+    bir:BranchInsn branch = { dest, pos: stmt.startPos, backward };
     if stmt.breakContinue == "break" {
         cx.addOnBreakAssignments(env.assignments);
     }
     else {
         cx.addOnContinueAssignments(env.assignments);
     }
+    startBlock.insns.push(branch);
     return { block: () };
 }
 
@@ -552,7 +569,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
                 patternType = t:singleton(tc, value);
                 bir:ConstOperand operand = { value, semType: patternType };
                 EqualMatchTest mt = { value, operand, clauseIndex: i, pos: clause.opPos };
-                equalMatchTests.add(mt);    
+                equalMatchTests.add(mt);
                 matchTests.push(mt);
             }
             else {
@@ -716,6 +733,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
+        cx.openRegion(startBlock.label, bir:REGION_COND);
         var { block: ifContBlock, assignments, narrowings: ifNarrowings } = check codeGenScope(cx, ifBlock, env, ifTrue, ifCondNarrowings);
         bir:BasicBlock contBlock;
         if ifFalse == () {
@@ -728,6 +746,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
                 ifContBlock.insns.push(branch);
             }
             Narrowing[] narrowings = combineIfElseNarrowings(ifNarrowings, ifContBlock != (), elseCondNarrowings, true);
+            cx.closeRegion(contBlock.label);
             return { block: contBlock, assignments, narrowings };
         }
         else {
@@ -737,6 +756,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
             bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: elseBlock.label, pos: stmt.condition.startPos };
             branchBlock.insns.push(condBranch);
             if ifContBlock == () && elseContBlock == () {
+                cx.closeRegion();
                 // e.g. both arms have a return
                 return { block: () };
             }
@@ -751,6 +771,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
             }
             assignments.push(...elseAssignments);
             Narrowing[] narrowings = combineIfElseNarrowings(ifNarrowings, ifContBlock != (), elseNarrowings, elseContBlock != ());
+            cx.closeRegion(contBlock.label);
             return { block: contBlock, assignments, narrowings };
         }
     }
@@ -964,6 +985,9 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Enviro
         else {
             var { result: index, block: nextBlock } = check cx.codeGenExprForInt(block1, env, lValue.index);
             t:SemType memberType = t:listMemberType(cx.mod.tc, reg.semType, index.semType);
+            if t:isEmpty(cx.mod.tc, memberType) {
+                return cx.semanticErr("index out of range", s:range(lValue.index));
+            }
             { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, env, memberType, expr);
             bir:ListSetInsn insn = { operands: [reg, index, operand], pos: lValue.opPos };
             nextBlock.insns.push(insn);
@@ -1042,7 +1066,7 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
     var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, env, lValue.index);
     t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, index.semType);
     if t:isEmpty(cx.mod.tc, memberType) {
-        return cx.semanticErr("type of member access is never", pos);
+        return cx.semanticErr("index out of range", s:range(lValue.index));
     }
     bir:TmpRegister member = cx.createTmpRegister(memberType, lValue.opPos);
     bir:ListGetInsn getInsn = { result: member, operands: [list, index], pos: lValue.opPos };

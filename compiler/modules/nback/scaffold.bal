@@ -143,12 +143,10 @@ type ModuleDI record {|
 |};
 
 // Debug location will always be added
-public const int DEBUG_ORIGIN_ERROR_CONSTRUCT = 0;
-public const int DEBUG_ORIGIN_CALL = 1;
-// Debug location for these will be added only in full debug
-public const int DEBUG_ORIGIN_OTHER = 2;
+public const int DEBUG_USAGE_ERROR_CONSTRUCT = 0;
+public const int DEBUG_USAGE_CALL = 1;
 
-public type DebugLocationOrigin DEBUG_ORIGIN_ERROR_CONSTRUCT|DEBUG_ORIGIN_CALL|DEBUG_ORIGIN_OTHER;
+public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL;
 
 class Scaffold {
     private final Module mod;
@@ -168,6 +166,8 @@ class Scaffold {
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
+    private bir:Position? currentPosition = ();
+    private DILocation? currentDebugLocation = ();
     final t:SemType returnType;
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
@@ -187,6 +187,7 @@ class Scaffold {
 
         builder.positionAtEnd(entry);
         self.addresses = [];
+        self.setCurrentPosition(builder, defn.position);
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
             self.addresses.push(builder.alloca(reprs[i].llvm, (), register.name));
@@ -287,22 +288,43 @@ class Scaffold {
         return d:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos, DebugLocationOrigin origin = DEBUG_ORIGIN_OTHER) {
+    function setCurrentPosition(llvm:Builder builder, bir:Position pos) {
+        self.currentPosition = pos;
+        ModuleDI? di = self.mod.di;
+        if di != () && di.debugFull {
+            self.currentDebugLocation = self.debugLocation(pos);
+            builder.setCurrentDebugLocation(self.currentDebugLocation);
+        }
+        else {
+            self.currentDebugLocation = ();
+        }
+    }
+
+    function clearDebugLocation(llvm:Builder builder) {
+        // in debugFull case every instruction must have a debug location
+        ModuleDI? di = self.mod.di;
+        if di == () || !di.debugFull {
+            builder.setCurrentDebugLocation(());
+            self.currentDebugLocation = ();
+        }
+    }
+
+    function useDebugLocation(llvm:Builder builder, DebugLocationUsage usage) {
         DISubprogram? diFunc = self.diFunc;
         if diFunc is () {
             return;
         }
         ModuleDI di = <ModuleDI>self.mod.di;
-        // In the debugFull case, there is no need to do anything for DEBUG_ORIGIN_ERROR_CONSTRUCT
+        // In the debugFull case, there is no need to do anything for DEBUG_USAGE_ERROR_CONSTRUCT
         // because the full location will have been set earlier.
-        if origin == (di.debugFull ? DEBUG_ORIGIN_ERROR_CONSTRUCT : DEBUG_ORIGIN_OTHER) {
+        if usage == DEBUG_USAGE_ERROR_CONSTRUCT && di.debugFull {
             return;
         }
         DILocation loc;
-        if origin == DEBUG_ORIGIN_ERROR_CONSTRUCT {
+        if usage == DEBUG_USAGE_ERROR_CONSTRUCT {
             DILocation? noLineLoc = self.noLineLocation;
             if noLineLoc == () {
-                loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
+                loc = di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
                 self.noLineLocation = loc;
             }
             else {
@@ -310,20 +332,22 @@ class Scaffold {
             }
         }
         else {
-            var [line, column] = self.file.lineColumn(pos);
-            loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+            if self.currentDebugLocation == () {
+                self.currentDebugLocation = self.debugLocation(<bir:Position>self.currentPosition);
+            }
+            loc = <DILocation>self.currentDebugLocation;
         }
         builder.setCurrentDebugLocation(loc);
     }
 
-    function clearDebugLocation(llvm:Builder builder) {
-        if !(self.diFunc == ()) {
-            builder.setCurrentDebugLocation(());
-        }
+    private function debugLocation(bir:Position pos) returns DILocation {
+        ModuleDI di = <ModuleDI>self.mod.di;
+        var [line, column] = self.file.lineColumn(pos);
+        return di.builder.createDebugLocation(self.mod.llContext, line, column, <DISubprogram>self.diFunc);
     }
 
-    function unimplementedErr(d:Message message, d:Position pos) returns err:Unimplemented {
-        return err:unimplemented(message, d:location(self.file, pos));
+    function unimplementedErr(d:Message message) returns err:Unimplemented {
+        return err:unimplemented(message, d:location(self.file, <bir:Position>self.currentPosition));
     }
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;
@@ -474,6 +498,8 @@ function padBytes(byte[] bytes, int headerSize) returns int {
 
 final FloatRepr REPR_FLOAT = { };
 final BooleanRepr REPR_BOOLEAN = { };
+final IntRepr REPR_INT = { alwaysInImmediateRange: false, constraints: () };
+final IntRepr REPR_BYTE = { alwaysInImmediateRange: true, constraints: { min: 0, max: 255, all: true } };
 
 final TaggedRepr REPR_NIL = { subtype: t:NIL, alwaysImmediate: true };
 final TaggedRepr REPR_LIST_RW = { subtype: t:LIST_RW, alwaysImmediate: false };

@@ -299,7 +299,7 @@ final readonly & table<TaggedCompareResultTransform> key(op) taggedCompareResult
 
 function buildCompareStore(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs, RuntimeFunction comparator) {
     TaggedCompareResultTransform transform = taggedCompareResultTransforms.get(insn.op);
-    llvm:Value result = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(comparator), [lhs, rhs]);
+    llvm:Value result = buildRuntimeFunctionCall(builder, scaffold, comparator, [lhs, rhs]);
     buildStoreBoolean(builder, scaffold, builder.iCmp(transform.predicate, result, llvm:constInt(LLVM_INT, transform.compareResult)), insn.result);
 }
 
@@ -350,14 +350,14 @@ function buildCompareFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPr
 
 function buildCompareString(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(op, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringCmpFunction), [lhs, rhs]),
+                      builder.iCmp(op, buildRuntimeFunctionCall(builder, scaffold, stringCmpFunction, [lhs, rhs]),
                                    llvm:constInt(LLVM_INT, 0)),
                       result);
 }
 
 function buildCompareDecimal(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(op, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalCmpFunction), [lhs, rhs]),
+                      builder.iCmp(op, buildRuntimeFunctionCall(builder, scaffold, decimalCmpFunction, [lhs, rhs]),
                                    llvm:constInt(LLVM_INT, 0)),
                       result);
 }
