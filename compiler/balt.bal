@@ -6,7 +6,7 @@ import wso2/nballerina.nback;
 import ballerina/io;
 import ballerina/file;
 
-type TestKind "output" | "panic" | "error";
+type TestKind "output" | "panic" | "error" | "parser-error";
 
 type BaltTestHeader record {|
     TestKind 'Test\-Case;
@@ -16,12 +16,14 @@ type BaltTestHeader record {|
 type BaltTestCase record {|
     int offset;
     BaltTestHeader header;
+    string[] labels;
     string[] content;
 |};
 
 enum State {
     BOF,
     HEADER,
+    LABEL,
     CONTENT
 }
 
@@ -31,10 +33,15 @@ const CONTINUATION_WS = " ";
 
 function compileBaltFile(string filename, string outDir, nback:Options nbackOptions, Options options) returns error? {
     BaltTestCase[] tests = check parseBalt(filename);
+    io:println(filename);
     foreach var [i, t] in tests.enumerate() {
-        if t.header.Test\-Case == "error" || t.header["Fail-Issue"] != () {
+        if t.header.Test\-Case is "error"|"parser-error" || t.header["Fail-Issue"] != () {
             continue;
         }
+        if !supportedTest(t) {
+            continue;
+        }
+        io:println("\t", t.labels);
         string outBasename = chooseBaltCaseOutputFilename(t, i);
         string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
         string[] lines = t.content;
@@ -43,6 +50,16 @@ function compileBaltFile(string filename, string outDir, nback:Options nbackOpti
         string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
         check io:fileWriteLines(expectFilename, expect(t.content));
     }
+}
+
+function supportedTest(BaltTestCase test) returns boolean {
+    string[] unsupportedLabels = ["unary-minus", "var", "optional-field-access-expr", "module-class-defn"];
+    foreach string testLabel in test.labels {
+        if unsupportedLabels.indexOf(testLabel, 0) is int {
+            return false;
+        }
+    }
+    return true;
 }
 
 function compileAndOutputModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename) returns CompileError? {
@@ -67,27 +84,43 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
     BaltTestHeader? maybeHeader = ();
     string? prevFiledBody  = ();
     string? prevFiledName  = ();
-    string[] content = [];
+    // pr-todo:
+    string[] content = ["import ballerina/io;"];
+    string[] labels = [];
     int offset = 0;
-
     State s = BOF;
     foreach var [i, l] in lines.enumerate() {
         if l.startsWith("Test-Case:") {
             if s != BOF {
                 BaltTestHeader header = <BaltTestHeader>maybeHeader;
-                tests.push({ offset, header, content });
+                tests.push({ offset, header, content, labels });
             }
             s = HEADER;
 
             offset = i + 1;
-            content = [];
+            // pr-todo:
+            content = ["import ballerina/io;"];
+            labels = [];
             var [fName, fBody] = parseField(l);
             maybeHeader = {Test\-Case: <TestKind>fBody};
             prevFiledBody = fBody;
             prevFiledName = fName;
         }
+        else if l.startsWith("Labels:") {
+            var [_, fBody] = parseField(l);
+            labels = parseLabels(fBody);
+            s = LABEL;
+        }
+        else if s == LABEL {
+            if l.trim() == "" {
+                s = CONTENT;
+            }
+            else {
+                labels.push(...parseLabels(l));
+            }
+        }
         else if s == HEADER {
-            if l == "" {
+            if l.trim() == "" {
                 s = CONTENT;
             }
             else {
@@ -123,9 +156,30 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
     }
     else {
         BaltTestHeader header = <BaltTestHeader>maybeHeader;
-        tests.push({offset, header, content});
+        tests.push({offset, header, content, labels });
     }
     return tests;
+}
+
+function parseLabels(string s) returns string[] {
+    string[] labels = [];
+    string[] content = [];
+    foreach string:Char c in s {
+        if c == "," {
+            labels.push("".'join(...content));
+            content = [];
+        }
+        else if c == " " {
+            continue;
+        }
+        else {
+            content.push(c);
+        }
+    }
+    if content.length() != 0 {
+        labels.push("".'join(...content));
+    }
+    return labels;
 }
 
 function parseField(string s) returns [string, string] {
