@@ -96,7 +96,7 @@ public type FunctionCode record {|
     BasicBlock[] blocks = [];
     # Registers indexed by number
     Register[] registers = [];
-    # Entry and Exit Regions
+    # Single-entry single-exit regions
     Region[] regions = [];
 |};
 

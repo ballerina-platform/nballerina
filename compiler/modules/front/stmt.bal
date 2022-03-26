@@ -433,8 +433,8 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
 function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:WhileStmt stmt) returns CodeGenError|StmtEffect {
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
     cx.openRegion(loopHead.label, bir:REGION_LOOP);
-    bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
-    startBlock.insns.push(branchToLoopHead);
+    bir:BranchInsn forwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
+    startBlock.insns.push(forwardBranchToLoopHead);
     bir:BasicBlock loopBody = cx.createBasicBlock();
     bir:BasicBlock? exit = ();
     boolean exitReachable = false;
@@ -465,8 +465,8 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     cx.pushLoopContext(exit, loopHead);
     var { block: loopEnd, assignments } = check codeGenScope(cx, loopBody, env, stmt.body, ifTrue);
     if loopEnd != () {
-        bir:BranchInsn branchToLoopHeadFromBottom = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
-        loopEnd.insns.push(branchToLoopHeadFromBottom);
+        bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
+        loopEnd.insns.push(backwardBranchToLoopHead);
         check validLoopAssignments(cx, assignments);
     }
     check validLoopAssignments(cx, cx.onContinueAssignments());
