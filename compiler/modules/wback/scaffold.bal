@@ -5,11 +5,6 @@ import wso2/nballerina.types as t;
 const WASM_INT = "i64";
 const WASM_BOOLEAN = "i32";
 const WASM_VOID = "None";
-// final llvm:PointerType LLVM_TAGGED_PTR = heapPointerType("i8");
-
-
-// A Repr is way of representing values.
-// It's a mapping from a SemType to an WASM type.
 
 enum UniformBaseRepr {
     BASE_REPR_INT,
@@ -27,7 +22,6 @@ type UniformRepr readonly & record {|
     t:UniformTypeBitSet subtype?;
 |};
 
-// Maps any Ballerina value to a tagged pointer
 type TaggedRepr readonly & record {|
     BASE_REPR_TAGGED base;
     t:UniformTypeBitSet subtype;
@@ -44,39 +38,41 @@ type VoidRepr readonly & record {|
 type RetRepr Repr|VoidRepr;
 
 class Scaffold {
+    private wasm:Module module;
     map<wasm:Expression[]> renderedRegion = {};
     int[] processedBlocks = [];
     final bir:BasicBlock[] blocks;
     final bir:Region[] regions;
-    string[] taggedFuncs = [];
     bir:FunctionDefn defn;
-    boolean setMemory = false;
     private Repr[] reprs = [];
     final t:SemType returnType;
     private final RetRepr retRepr;
     private string[] exceptionTags = [];
-    function init(bir:FunctionCode code, bir:FunctionDefn def) {
+    private string[] addedExceptionTags = [];
+    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, string[] exceptionTags) {
+        self.module = module;
         self.blocks = code.blocks;
-        self.regions = code.regions;
+        self.regions = code.regions.reverse();
         self.defn = def;
         self.returnType = def.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
         self.initializeReprs(code.registers);
+        self.addedExceptionTags = exceptionTags;
     }
 
     public function initializeReprs(bir:Register[] registers) {
         Repr[] reprs = [];
         foreach bir:Register reg in registers {
             Repr repr = semTypeRepr(reg.semType);
-            // if repr != REPR_NIL {
-                reprs.push(repr);
-            // }
+            reprs.push(repr);
         }
         self.reprs = reprs;
     }
 
     public function addExceptionTag(string tag) {
-        if self.exceptionTags.indexOf(tag) == () {
+        if self.exceptionTags.indexOf(tag) == () && self.addedExceptionTags.indexOf(tag) == () {
+            self.module.addTag(tag);
+            self.module.addTagExport(tag, tag);
             self.exceptionTags.push(tag);
         }
     }
@@ -88,7 +84,6 @@ class Scaffold {
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
 
     function getRetRepr() returns RetRepr => self.retRepr;
-
 
 }
 
@@ -102,7 +97,6 @@ final readonly & record {|
     t:UniformTypeBitSet domain;
     Repr repr;
 |}[] typeReprs = [
-    // These are ordered from most to least specific
     { domain: t:INT, repr: REPR_INT },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },
@@ -117,7 +111,6 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr {
     return semTypeRepr(ty);
 }
 
-// Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr {
     t:UniformTypeBitSet w = t:widenToUniformTypes(ty);
     foreach var tr in typeReprs {
@@ -126,5 +119,9 @@ function semTypeRepr(t:SemType ty) returns Repr {
         }
     }
     return REPR_NIL;
-    // panic error("unimplemented type (" + w.toHexString() + ")");
+}
+
+function semTypeReprWasm(t:SemType ty) returns wasm:Type {
+    Repr repr = semTypeRepr(ty);
+    return repr.wasm;
 }

@@ -10,59 +10,41 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     wasm:Module module = new;
     string[] tagsAdded = [];
-    boolean globalSet = false;
-    string[] taggedFuncs = [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
-        bir:Region[] sorted = from var e in code.regions
-                        order by e.entry descending select e;
-        code.regions = sorted;
-        Scaffold scaffold = new(code, functionDefns[i]);
-        scaffold.setMemory = globalSet;
-        scaffold.taggedFuncs = taggedFuncs;
+        Scaffold scaffold = new(module, code, functionDefns[i], tagsAdded);
         wasm:Expression body = buildFunctionBody(scaffold, module);
         if scaffold.getExceptionTags().length() > 0 {
-            wasm:Expression tryBody = module.try(body);
-            body = tryBody;
-            foreach string tag in scaffold.getExceptionTags() {
-                if tagsAdded.indexOf(tag) == () {
-                    module.addTag(tag);
-                    module.addTagExport(tag, tag);
-                    tagsAdded.push(tag);
-                }
-            }
+            body = module.try(body);
+            tagsAdded.push(...scaffold.getExceptionTags());
         }
         string funcName = functionDefns[i].symbol.identifier;
         wasm:Type[] params = [];
         wasm:Type[] locals = [];
         foreach bir:SemType ty in functionDefns[i].signature.paramTypes {
-            Repr repr = semTypeRepr(ty);
-            params.push(repr.wasm);
+            params.push(semTypeReprWasm(ty));
         }
         foreach int j in params.length()..<code.registers.length() {
-            Repr repr = semTypeRepr(code.registers[j].semType);
-            locals.push(repr.wasm);
+            locals.push(semTypeReprWasm(code.registers[j].semType));
         }
         Repr retType = semTypeRepr(scaffold.returnType);
-        if retType is TaggedRepr && retType.subtype == t:NIL {
-            module.addFunction(funcName, params, "None", locals, body);
+        module.addFunction(funcName, params, retType is TaggedRepr && retType.subtype == t:NIL ? "None": retType.wasm, locals, body);
+        if functionDefns[i].symbol.isPublic {
+            module.addFunctionExport(funcName, funcName);
         }
-        else {
-            module.addFunction(funcName, params, retType.wasm, locals, body);
-        }
-        module.addFunctionExport(funcName, funcName);
-        globalSet = scaffold.setMemory;
-        taggedFuncs = scaffold.taggedFuncs;
     }
     module.addFunctionImport("println", "console", "log", ["anyref"], "None");
-    taggedInt(module);
-    unTagInt(module);
-    unTagBoolean(module);
-    getType(module);
+    addRttFunctions(module);
     return module.finish();
 }
 
+function addRttFunctions(wasm:Module module) {
+    addFuncIntToTagged(module);
+    addFuncTaggedToInt(module);
+    addFuncTaggedToBoolean(module);
+    addFuncGetType(module);
+}
 
 function checkForEntry(bir:Region[] regions, bir:Label label, bir:BasicBlock[] blocks, bir:Label? exit = ()) returns int? {
     int? index = ();
@@ -78,7 +60,7 @@ function checkForEntry(bir:Region[] regions, bir:Label label, bir:BasicBlock[] b
         if lastInsn is bir:BranchInsn {
             if lastInsn.dest != exit {
                 index = checkForEntry(regions, lastInsn.dest, blocks, exit);
-                if index != () && regions[index].kind != "LOOP" {
+                if index != () && regions[index].kind != bir:REGION_LOOP {
                     index = ();
                 }
             }
@@ -108,15 +90,14 @@ function checkForBreak(bir:BasicBlock[] blocks, bir:Label entry, bir:Label exit)
     return false;
 }
 
-function renderBlock(Scaffold scaffold, wasm:Module module, bir:Region curr, bir:Label label, bir:Label? exit = ()) returns wasm:Expression[] {
+function buildBlockInRegion(Scaffold scaffold, wasm:Module module, bir:Region? curr, bir:Label label, bir:Label? exit = ()) returns wasm:Expression[] {
     wasm:Expression[] children = [];
     int? index = checkForEntry(scaffold.regions, label, scaffold.blocks, exit);
     if scaffold.processedBlocks.indexOf(label) == () {
-        scaffold.processedBlocks.push(label);
         children.push(...buildBasicBlock(scaffold, module, scaffold.blocks[label]));
     }
     if index != () {
-        if (curr.parent == () && scaffold.regions[index].parent == 0) || (curr.parent + 1 == scaffold.regions[index].parent) {
+        if (curr == () && scaffold.regions[index].parent == ()) || curr != ()  {
             wasm:Expression[]? rendered = scaffold.renderedRegion[index.toString()];
             if rendered != () {
                 children.push(...rendered);
@@ -127,44 +108,35 @@ function renderBlock(Scaffold scaffold, wasm:Module module, bir:Region curr, bir
 }
 
 function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:Expression {
+    wasm:Expression[] body = [];
     foreach int index in 0..<scaffold.regions.length() {
         bir:Region region = scaffold.regions[index];
-        wasm:Expression[] curr = [];
+        wasm:Expression[] cur = [];
         bir:BasicBlock entry = scaffold.blocks[region.entry];
         bir:Label? exit = region.exit;
-        if region.kind == "MULTIPLE" {
+        if region.kind == bir:REGION_COND {
             bir:Insn lastInsn = entry.insns[entry.insns.length() - 1];
             if lastInsn is bir:CondBranchInsn {
                 wasm:Expression[] header =  buildBasicBlock(scaffold, module, entry);
                 wasm:Expression condition = header.remove(header.length() - 1);
-                wasm:Expression ifBody = module.block(renderBlock(scaffold, module, region, lastInsn.ifTrue, exit));
-                wasm:Expression elseBody = module.block(renderBlock(scaffold, module, region, lastInsn.ifFalse, exit));
-                curr.push(...header);
+                wasm:Expression ifBody = module.block(buildBlockInRegion(scaffold, module, region, lastInsn.ifTrue, exit));
+                wasm:Expression elseBody = module.block(buildBlockInRegion(scaffold, module, region, lastInsn.ifFalse, exit));
+                cur.push(...header);
                 if lastInsn.ifFalse == region.exit {
-                    curr.push(module.addIf(condition, ifBody), elseBody);
+                    cur.push(module.addIf(condition, ifBody), elseBody);
                 }
                 else {
-                    curr.push(module.addIf(condition, ifBody, elseBody));
-                    if exit != () {
-                        curr.push(...renderBlock(scaffold, module, region, exit));
+                    cur.push(module.addIf(condition, ifBody, elseBody));
+                     if exit != () {
+                        cur.push(...buildBlockInRegion(scaffold, module, region, exit));
                     }
                 }
-                scaffold.processedBlocks.push(entry.label, lastInsn.ifFalse, lastInsn.ifTrue);
-            }
-            else {
-                panic error("impossible");
             }
         }
-        else if region.kind == "LOOP" && exit != () {
-            wasm:Expression? loopExit = ();
+        else if region.kind == bir:REGION_LOOP && exit != () {
             string loopLabel = "$block$" + region.entry.toString() + "$break";
             wasm:Expression[] loopHeader = buildBasicBlock(scaffold, module, entry);
-            scaffold.processedBlocks.push(entry.label);
-            wasm:Expression[] exitCode = renderBlock(scaffold, module, region, exit);
-            if exitCode.length() > 0 {
-                loopExit = module.block(exitCode);
-            }
-            wasm:Expression loopBody = module.block(renderBlock(scaffold, module, region, entry.label + 1, exit));
+            wasm:Expression loopBody = module.block(buildBlockInRegion(scaffold, module, region, entry.label + 1, exit));
             wasm:Expression loop;
             if loopHeader.length() > 0 {
                 wasm:Expression condition = loopHeader.remove(loopHeader.length() - 1);
@@ -177,29 +149,18 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
             if checkForBreak(scaffold.blocks, region.entry, exit) {
                 loop = module.block([loop], "$block$" + exit.toString() + "$break");
             }
-            curr.push(loop);
-            if loopExit != () {
-                curr.push(loopExit);
+            cur.push(loop);
+            wasm:Expression[] exitCode = buildBlockInRegion(scaffold, module, region, exit);
+            if exitCode.length() > 0 {
+                cur.push(module.block(exitCode));
             }
         }
-        else if region.kind == "SIMPLE" {
-            int last = exit != () ? exit: scaffold.regions.length();
-            if last == region.entry {
-                curr.push(...renderBlock(scaffold, module, region, last));
-            }
-            else {
-                foreach int j in region.entry..<last {
-                    curr.push(...renderBlock(scaffold, module, region, j));
-                }
-            }
-        }
-        scaffold.renderedRegion[index.toString()] = curr;
+        scaffold.renderedRegion[index.toString()] = cur;
     }
-    wasm:Expression[]? parent = scaffold.renderedRegion[(scaffold.regions.length() - 1).toString()];
-    if parent != () {
-        return module.block(parent);
+    foreach int j in 0..<scaffold.blocks.length() {
+        body.push(...buildBlockInRegion(scaffold, module, (), j));
     }
-    return module.nop();
+    return module.block(body);
 }
 
 public function compileModule(bir:Module mod, string? outputFilename) returns io:Error? {

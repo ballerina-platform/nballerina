@@ -51,6 +51,7 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
             continue;
         }
     }
+    scaffold.processedBlocks.push(block.label);
     return body;
 }
 
@@ -62,8 +63,7 @@ function buildBranch(wasm:Module module, bir:BranchInsn insn) returns wasm:Expre
 }
 
 function buildCondBranch(wasm:Module module, bir:CondBranchInsn insn) returns wasm:Expression {
-    bir:Register operand = insn.operand;
-    return module.localGet(operand.number);
+    return module.localGet(insn.operand.number);
 }
 
 function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) returns wasm:Expression {

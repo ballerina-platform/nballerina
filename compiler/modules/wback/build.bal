@@ -2,11 +2,9 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.wasm;
 
-const int TYPE_INT = 0;
+const int TYPE_INT     = 0;
 const int TYPE_BOOLEAN = 1;
-const int TYPE_NIL = 2;
-
-
+const int TYPE_NIL     = 2;
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     return module.i31New(value);
@@ -44,7 +42,6 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
     panic error("type not handled");
 }
 
-// Build a value as REPR_INT
 function buildInt(wasm:Module module, bir:IntOperand operand) returns wasm:Expression {
     if operand is bir:IntConstOperand {
         return module.addConst({ i64: operand.value });
@@ -56,9 +53,6 @@ function buildInt(wasm:Module module, bir:IntOperand operand) returns wasm:Expre
 
 function buildWideRepr(wasm:Module module, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType) returns wasm:Expression {
     wasm:Expression value = buildRepr(module, scaffold, operand, targetRepr);
-    // if operand is bir:Register && operationWidens(scaffold, operand, targetType) {
-    //     value = buildClearExact(module, scaffold, value, operand.semType);
-    // }
     return value;
 }
 
@@ -88,14 +82,13 @@ function buildUntagBoolean(wasm:Module module, wasm:Expression tagged) returns w
     return module.call("tagged_to_boolean", [tagged], "i32");
 }
 
-function taggedInt(wasm:Module module) {
+function addFuncIntToTagged(wasm:Module module) {
     module.addType("BoxedInt", module.struct(["val"], ["i64"]));
     wasm:Expression struct = module.structNew("BoxedInt", module.localGet(0), module.rtt("BoxedInt"));
-    // change param
     module.addFunction("int_to_tagged", ["i64"], "anyref", [], module.addReturn(struct));
 }
 
-function unTagInt(wasm:Module module) {
+function addFuncTaggedToInt(wasm:Module module) {
     wasm:Expression asData = module.refAsData(module.localGet(0));
     wasm:Expression cast = module.refCast(asData, module.rtt("BoxedInt"));
     wasm:Expression structGet = module.structGet("BoxedInt", "val", cast);
@@ -103,15 +96,13 @@ function unTagInt(wasm:Module module) {
     module.addFunctionExport("tagged_to_int", "tagged_to_int");
 }
 
-function unTagBoolean(wasm:Module module) {
-    wasm:Expression asI31 = module.refAsI31(module.localGet(0));
-    wasm:Expression i31Get = module.i31Get(asI31);
+function addFuncTaggedToBoolean(wasm:Module module) {
+    wasm:Expression i31Get = module.i31Get(module.refAsI31(module.localGet(0)));
     module.addFunction("tagged_to_boolean", ["anyref"], "i32", [], module.addReturn(i31Get));
     module.addFunctionExport("tagged_to_boolean", "tagged_to_boolean");
-
 }
 
-function getType(wasm:Module module) {
+function addFuncGetType(wasm:Module module) {
     wasm:Expression isI31 = module.refIsI31(module.localGet(0));
     wasm:Expression isNull = module.refIsNull(module.localGet(0));
     wasm:Expression notI31 = module.addIf(isNull, module.addReturn(module.addConst({ i32: TYPE_NIL })), module.addReturn(module.addConst({ i32: TYPE_INT })));
