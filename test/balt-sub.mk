@@ -12,7 +12,7 @@ balt_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*.balt)
 ll_files = $(wildcard ll/*.ll)
 llmod_files = $(wildcard ll/*-[vpo].ll)
 diff_files = $(addsuffix .diff, $(addprefix result/, $(basename $(notdir $(llmod_files)))))
-exe_files = $(addsuffix .exe, $(addprefix result/, $(basename $(notdir $(ll_files)))))
+exe_files = $(addsuffix .exe, $(addprefix result/, $(basename $(notdir $(llmod_files)))))
 expect_files = $(wildcard ./expect/*.txt)
 
 test: all
