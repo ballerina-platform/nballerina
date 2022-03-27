@@ -11,7 +11,7 @@ type TestCaseMap map<[string, int, BaltTestHeader, string[]]>;
 //     dataProvider: parseBalts
 // }
 function testBalt(string baltName, int offset, BaltTestHeader header, string[] lines) returns error? {
-    LlvmModule|CompileError compileResult = compileModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], {});
+    [LlvmModule, LlvmModule]|CompileError compileResult = compileModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], {});
     CompileError? err = compileResult is error ? compileResult : ();
 
     if header["Fail-Issue"] != () {

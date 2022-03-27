@@ -1,4 +1,4 @@
-TARGETS=test all compile testll
+TARGETS=test all compile testll conformance
 
 TDIRS= $(sort $(basename $(notdir $(wildcard ../compiler/testSuite/*))))
 

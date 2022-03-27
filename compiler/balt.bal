@@ -6,7 +6,7 @@ import wso2/nballerina.nback;
 import ballerina/io;
 import ballerina/file;
 
-type TestKind "output" | "panic" | "error" | "parser-error";
+type TestKind "output" | "panic" | "error" | "parser-error" | "skip";
 
 type BaltTestHeader record {|
     TestKind 'Test\-Case;
@@ -31,21 +31,23 @@ enum State {
 // http://www.bitdance.com/blog/2011/04/11_01_Email6_Rewriting_Header_Folding/
 const CONTINUATION_WS = " ";
 
-function compileBaltFile(string filename, string outDir, nback:Options nbackOptions, Options options) returns error? {
+function compileBaltFile(string filename, string basename, string outDir, nback:Options nbackOptions, Options options) returns error? {
     BaltTestCase[] tests = check parseBalt(filename);
     io:println(filename);
     foreach var [i, t] in tests.enumerate() {
-        if t.header.Test\-Case is "error"|"parser-error" || t.header["Fail-Issue"] != () {
+        if t.header.Test\-Case is "error"|"parser-error"|"skip"|"panic" || t.header["Fail-Issue"] != () {
             continue;
         }
         if !supportedTest(t) {
             continue;
         }
         io:println("\t", t.labels);
-        string outBasename = chooseBaltCaseOutputFilename(t, i);
+        string outBasename = check chooseBaltCaseOutputFilename(filename, t, i);
+        string initFilename = check file:joinPath(outDir, outBasename) + "._init" + OUTPUT_EXTENSION;
         string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
         string[] lines = t.content;
-        check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename);
+        CompileContext cx = new(basename, check file:joinPath(outDir, outBasename), nbackOptions, options);
+        check compileAndOutputModule(cx, DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename, initFilename);
         string? expectOutDir = options.expectOutDir;
         string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
         check io:fileWriteLines(expectFilename, expect(t.content));
@@ -53,7 +55,10 @@ function compileBaltFile(string filename, string outDir, nback:Options nbackOpti
 }
 
 function supportedTest(BaltTestCase test) returns boolean {
-    string[] unsupportedLabels = ["unary-minus", "var", "optional-field-access-expr", "module-class-defn"];
+    string[] unsupportedLabels = ["unary-minus", "unary-plus", "var", "optional-field-access-expr", "module-class-defn", "byte-array-literal",
+                                  "value:toBalString", "defaultable-param", "method-call-expr", "table-constructor-expr", "member-access-expr",
+                                  "value:toString", "raw-template-expr", "HexFloatingPointLiteral", "int:MIN_VALUE", "let-expr", "ternary-conditional-expr",
+                                  "BacktickString", "xml"];
     foreach string testLabel in test.labels {
         if unsupportedLabels.indexOf(testLabel, 0) is int {
             return false;
@@ -62,19 +67,24 @@ function supportedTest(BaltTestCase test) returns boolean {
     return true;
 }
 
-function compileAndOutputModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename) returns CompileError? {
-    LlvmModule llMod = check compileModule(modId, sources, nbackOptions);
-    if outFilename != () {
-        check outputModule(llMod, outFilename, outOptions);
-    }
+function compileAndOutputModule(CompileContext cx, bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename, string? initFilename) returns CompileError? {
+    front:ResolvedModule mod = check processModule(cx, modId, sources, cx.outputFilename());
+    check mod.validMain();
+    check generateInitModule(cx, mod);
 }
 
-function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns LlvmModule|CompileError {
+function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns [LlvmModule, LlvmModule]|CompileError {
     t:Env env = new;
     front:ScannedModule scanned = check front:scanModule(sources, modId);
     bir:Module birMod = check front:resolveModule(scanned, env, []);
-    var [llMod, _] = check nback:buildModule(birMod, nbackOptions);
-    return llMod;
+
+    var [llMod, typeUsage] = check nback:buildModule(birMod, nbackOptions);
+    LlvmModule initModule = check baltInitModule(env, {id: modId, typeUsage }, birMod);
+    return [llMod, initModule];
+}
+
+function baltInitModule(t:Env env, nback:ProgramModule programMod, bir:Module birMod) returns LlvmModule|CompileError {
+    return nback:buildInitModule(env, [programMod], {});
 }
 
 function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Diagnostic {
@@ -223,8 +233,10 @@ function expect(string[] src) returns string[] {
     return expect;
 }
 
-function chooseBaltCaseOutputFilename(BaltTestCase t, int i) returns string {
-   return pad4(i.toString()) + "L" + pad4(t.offset.toString()) + "-" + testKindToLetter(t.header.Test\-Case);
+function chooseBaltCaseOutputFilename(string filename, BaltTestCase t, int i) returns string|file:Error {
+   string basename = check file:basename(filename);
+   basename = basename.substring(0, basename.length()-5);
+   return basename + pad4(i.toString()) + "L" + pad4(t.offset.toString()) + "-" + testKindToLetter(t.header.Test\-Case);
 }
 
 function testKindToLetter(TestKind k) returns string:Char {
