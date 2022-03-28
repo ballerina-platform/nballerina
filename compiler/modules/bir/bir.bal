@@ -69,20 +69,6 @@ public type FunctionRef readonly & record {|
     FunctionSignature signature;
 |};
 
-public type Region record {|
-    Label entry;
-    Label? exit = ();
-    RegionIndex? parent = ();
-    RegionKind kind;
-|};
-
-public enum RegionKind {
-    # Region whose entry block has a CondBranchInsn and is the destination of a backward branch
-    REGION_LOOP,
-    # Region whose entry block has a CondBranchInsn and is not a destination of a backward branch
-    REGION_COND
-}
-
 # A function's code is represented as a factored control flow graph.
 # (as described in Choi et al 1999 https://dl.acm.org/doi/abs/10.1145/381788.316171)
 # This is like a control flow graph, except that basic blocks
