@@ -39,7 +39,7 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
             body.push(buildCondBranch(module, insn));
         }
         else if insn is bir:BranchInsn {
-            wasm:Expression? expr = buildBranch(module, insn);
+            wasm:Expression? expr = buildBranch(module, scaffold, insn, block.label);
             if expr != () {
                 body.push(expr);
             }
@@ -55,8 +55,8 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
     return body;
 }
 
-function buildBranch(wasm:Module module, bir:BranchInsn insn) returns wasm:Expression? {
-    if insn.backward {
+function buildBranch(wasm:Module module, Scaffold scaffold, bir:BranchInsn insn, bir:Label label) returns wasm:Expression? {
+    if insn.backward || scaffold.brBlockLabels.indexOf(label) != () {
         return module.br("$block$" + insn.dest.toString() + "$break");
     }
     return ();

@@ -49,6 +49,8 @@ class Scaffold {
     private final RetRepr retRepr;
     private string[] exceptionTags = [];
     private string[] addedExceptionTags = [];
+    bir:Label[] brBlockLabels = [];
+    bir:Label[] regionsWithBr = [];
     function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, string[] exceptionTags) {
         self.module = module;
         self.blocks = code.blocks;
