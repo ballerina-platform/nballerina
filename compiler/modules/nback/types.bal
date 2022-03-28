@@ -21,27 +21,46 @@ final llvm:ConstPointerValue llNoFillerDesc = llvm:constNull(llStructureDescPtrT
 // This is an approximation, but close enough since we are only accessing the pointer in C.
 final llvm:StructType llComplexType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
 
-final readonly & llvm:FunctionType[6] llListDescFuncTypes = [
+final readonly & llvm:FunctionType[] llListDescFuncTypes = [
     llvm:functionType(LLVM_TAGGED_PTR, [LLVM_TAGGED_PTR, LLVM_INT]),
+    llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_TAGGED_PTR]),
     llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_TAGGED_PTR]),
     llvm:functionType(LLVM_INT, [LLVM_TAGGED_PTR, LLVM_INT]),
     llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_INT]),
+    llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_INT]),
     llvm:functionType(LLVM_DOUBLE, [LLVM_TAGGED_PTR, LLVM_INT]),
+    llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_DOUBLE]),
     llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_DOUBLE])
 ];
 
-type ListReprPrefix "generic"|"int_array"|"float_array";
+type ListReprPrefix "generic"|"int_array"|"byte_array"|"float_array";
 
 final readonly & string[] listDescFuncSuffixes = [
     "get_tagged",
     "set_tagged",
+    "inexact_set_tagged",
     "get_int",
     "set_int",
+    "inexact_set_int",
     "get_float",
-    "set_float"
+    "set_float",
+    "inexact_set_float"
 ];
 
-final readonly & string[] listDescNullFuncNames = ["float_array_get_int", "int_array_get_float"];
+final readonly & map<string?> listDescFuncOverrides = {
+    int_array_get_float: (),
+    int_array_inexact_set_tagged: "int_array_set_tagged",
+    int_array_inexact_set_int: "int_array_set_int",
+    int_array_inexact_set_float: "int_array_set_float",
+    byte_array_get_float: (),
+    byte_array_inexact_set_tagged: "byte_array_set_tagged",
+    byte_array_inexact_set_int: "byte_array_set_int",
+    byte_array_inexact_set_float: "byte_array_set_float",
+    float_array_get_int: (),
+    float_array_inexact_set_tagged: "float_array_set_tagged",
+    float_array_inexact_set_int: "float_array_set_int",
+    float_array_inexact_set_float: "float_array_set_float"
+};
 
 final llvm:StructType llListDescType = createLlListDescType();
 final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType),          // ListDesc *desc
@@ -80,25 +99,31 @@ function createInitTypes(llvm:Context cx) returns InitTypes {
     return { uniformSubtype, uniformSubtypePtr, subtypeContainsFunction, subtypeContainsFunctionPtr };
 }
 
-// When Ballerina gets the spread operator in list constructors,
-// we can inline the one use of this.
-function createLlListDescType() returns llvm:StructType {
-    llvm:Type[] types = [LLVM_TID];
+function createLlListDescType(int nMemberTypes = 0) returns llvm:StructType {
+    // TID, nMemberTypes, minLength
+    llvm:Type[] types = [LLVM_TID, "i32", "i64"];
     foreach var ty in llListDescFuncTypes {
         types.push(llvm:pointerType(ty));
     }
     // JBUG cast
     types.push(<llvm:Type>LLVM_MEMBER_TYPE);
     types.push(llStructureDescPtrType);
+    types.push(llvm:arrayType(LLVM_MEMBER_TYPE, nMemberTypes));
     return llvm:structType(types);
 }
 
-function memberTypeToListReprPrefix(t:SemType memberType) returns ListReprPrefix {
-    if memberType == t:INT {
-        return "int_array";
-    }
-    else if memberType == t:FLOAT {
-        return "float_array";
+function listAtomicTypeToListReprPrefix(t:ListAtomicType? atomic) returns ListReprPrefix {
+    if atomic != () && atomic.members.fixedLength == 0 {
+        t:SemType rest = atomic.rest;
+        if rest == t:INT {
+            return "int_array";
+        }
+        else if rest == t:FLOAT {
+            return "float_array";
+        }
+        else if rest == t:BYTE {
+            return "byte_array";
+        }
     }
     return "generic";
 }

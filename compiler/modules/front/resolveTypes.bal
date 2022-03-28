@@ -43,12 +43,21 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
     // JBUG doing this as a from/select panics if resolveSubsetTypeDesc returns an error
     // e.g.10-intersect/never2-e.bal
     t:SemType[] paramTypes = [];
+    t:SemType? restParamType = ();
     foreach var x in defn.params {
-        paramTypes.push(check resolveSubsetTypeDesc(mod, defn, x.td));
+        if x.isRest {
+            restParamType = check resolveSubsetTypeDesc(mod, defn, x.td);
+            t:ListDefinition d = new;
+            t:SemType arrTy = d.define(mod.tc.env, rest = <t:SemType>restParamType);
+            paramTypes.push(arrTy);
+        }
+        else {
+            paramTypes.push(check resolveSubsetTypeDesc(mod, defn, x.td));
+        }
     }
     s:TypeDesc? retTy = defn.typeDesc.ret;
     t:SemType ret = retTy != () ? check resolveSubsetTypeDesc(mod, defn, retTy) : t:NIL;
-    return { paramTypes: paramTypes.cloneReadOnly(), returnType: ret };
+    return { paramTypes: paramTypes.cloneReadOnly(), returnType: ret, restParamType };
 }
 
 function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:TypeDesc td) returns t:SemType|ResolveTypeError {
@@ -144,9 +153,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     if td is s:TupleTypeDesc {
         t:ListDefinition? defn = td.defn;
         if defn == () {
-            if !mod.allowAllTypes && td.members.length() > 0 {
-                return err:unimplemented("tuple types not implemented", s:locationInDefn(modDefn, td.startPos));
-            }
             t:ListDefinition d = new;
             td.defn = d;
             t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
@@ -172,10 +178,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                     t = d.define(env, rest = t);
                 }
                 else {
-                    if !mod.allowAllTypes {
-                        return err:unimplemented("fixed length array types not implemented", s:locationInDefn(modDefn, td.startPos));
-                    }
-                    int length = check resolveConstIntExpr(mod, modDefn, len);
+                    int length = check resolveConstExprForInt(mod, modDefn, len, "array length should be a non-negative integer constant");
                     t = d.define(env, [t], length);
                 }
             }
@@ -258,8 +261,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if td is s:SingletonTypeDesc {
-        s:ResolvedConst resolved =  check resolveConstExpr(mod, modDefn, td.valueExpr, ());
-        return resolved[0];
+        var  [ty, _] =  check resolveConstExpr(mod, modDefn, td.valueExpr, ());
+        return ty;
     }
     if td is s:UnaryTypeDesc && td.op != "!" {
         if td.op == "?" {

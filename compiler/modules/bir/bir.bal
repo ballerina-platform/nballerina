@@ -108,8 +108,23 @@ public type FunctionCode record {|
 public type FunctionSignature readonly & record {|
     SemType returnType;
     SemType[] paramTypes;
+    # if non-nil, last member of paramTypes will be an array type whose member type is restParamType
     SemType? restParamType = ();
 |};
+
+public type Region record {|
+    Label entry;
+    Label? exit = ();
+    RegionIndex? parent = ();
+    RegionKind kind;
+|};
+
+public enum RegionKind {
+    # Region whose entry block has a CondBranchInsn and is the destination of a backward branch
+    REGION_LOOP,
+    # Region whose entry block has a CondBranchInsn and is not a destination of a backward branch
+    REGION_COND
+}
 
 # A basic block.
 # Normal control flow proceeds implicitly through the members of the insns array.
@@ -151,24 +166,110 @@ public function lastInsnRef(BasicBlock bb) returns InsnRef {
     return { block: bb.label, index: bb.insns.length() - 1 };
 }
 
-public type Register readonly & record {|
+public const PARAM_REGISTER_KIND = "param";
+public const VAR_REGISTER_KIND = "var";
+public const FINAL_REGISTER_KIND = "final";
+
+public const NARROW_REGISTER_KIND = "narrow";
+public const TMP_REGISTER_KIND = "tmp";
+public const ASSIGN_TMP_REGISTER_KIND = "=tmp";
+
+public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
+public type RegisterKind DeclRegisterKind|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
+
+public type RegisterBase record {|
+    RegisterKind kind;
     # Unique identifier within a function
     # Always >= 0
     int number;
     SemType semType;
-    string? varName;
     Position? pos;
+    string? name;
 |};
 
-public function createRegister(FunctionCode code, SemType semType, string? varName = (), Position? pos = ()) returns Register {
-    int number = code.registers.length();
-    Register r = { number, semType, varName, pos };
+public type DeclRegister ParamRegister|VarRegister|FinalRegister;
+public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
+
+public type DeclRegisterBase record {|
+    *RegisterBase;
+    Position pos;
+    string name;
+    DeclRegisterKind kind;
+|};
+
+public type TmpRegister readonly & record {|
+    *RegisterBase;
+    TMP_REGISTER_KIND kind = TMP_REGISTER_KIND;
+|};
+
+public type AssignTmpRegister readonly & record {|
+    *RegisterBase;
+    ASSIGN_TMP_REGISTER_KIND kind = ASSIGN_TMP_REGISTER_KIND;
+|};
+
+public type NarrowRegister readonly & record {|
+    *RegisterBase;
+    // number of the register that was narrowed
+    // Could be another NarrowRegister.
+    int underlying;
+    // It's name comes from the underlying register.
+    () name = ();
+    NARROW_REGISTER_KIND kind = NARROW_REGISTER_KIND;
+|};
+
+public type ParamRegister readonly & record {|
+    *DeclRegisterBase;
+    PARAM_REGISTER_KIND kind = PARAM_REGISTER_KIND;
+|};
+
+public type VarRegister readonly & record {|
+    *DeclRegisterBase;
+    VAR_REGISTER_KIND kind = VAR_REGISTER_KIND;
+|};
+
+public type FinalRegister readonly & record {|
+    *DeclRegisterBase;
+    FINAL_REGISTER_KIND kind = FINAL_REGISTER_KIND;
+|};
+
+public function createVarRegister(FunctionCode code, SemType semType, Position pos, string name) returns VarRegister {
+    VarRegister r = { number: code.registers.length(), semType, pos, name };
     code.registers.push(r);
     return r;
 }
 
-public function getRegister(FunctionCode code, int registerNum) returns Register {
-    return code.registers[registerNum];
+public function createFinalRegister(FunctionCode code, SemType semType, Position pos, string name) returns FinalRegister {
+    FinalRegister r = { number: code.registers.length(), semType, pos, name };
+    code.registers.push(r);
+    return r;
+}
+
+public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, Position? pos = ()) returns NarrowRegister {
+    NarrowRegister r = { number: code.registers.length(), underlying: underlying.number, semType, pos };
+    code.registers.push(r);
+    return r;
+}
+
+public function createParamRegister(FunctionCode code, SemType semType, Position pos, string name) returns ParamRegister {
+    ParamRegister r = { number: code.registers.length(), semType, pos, name  };
+    code.registers.push(r);
+    return r;
+}
+
+public function createTmpRegister(FunctionCode code, SemType semType, Position? pos = (), string? name = ()) returns TmpRegister {
+    TmpRegister r = { number: code.registers.length(), semType, pos, name };
+    code.registers.push(r);
+    return r;
+}
+
+public function createAssignTmpRegister(FunctionCode code, SemType semType, Position? pos = (), string? name = ()) returns AssignTmpRegister {
+    AssignTmpRegister r = { number: code.registers.length(), semType, pos, name };
+    code.registers.push(r);
+    return r;
+}
+
+public function getRegister(FunctionCode code, int number) returns Register {
+    return code.registers[number];
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
@@ -225,6 +326,11 @@ public type InsnBase record {
     # Position based on the AST node that generated the instruction
     Position pos;
 };
+
+public type ResultInsnBase record {|
+    *InsnBase;
+    TmpRegister result;
+|};
 
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
@@ -291,18 +397,16 @@ public function operandHasType(t:Context tc, Operand operand, t:SemType semType)
 # Perform a arithmetic operand on ints with two operands.
 # This is a PPI.
 public type IntArithmeticBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_INT_ARITHMETIC_BINARY name = INSN_INT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Register result;
     IntOperand[2] operands;
 |};
 
 # Concatenate strings, returns a new string
 public type StringConcatInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_STR_CONCAT name = INSN_STR_CONCAT;
-    Register result;
     StringOperand[2] operands;
 |};
 
@@ -310,59 +414,52 @@ public type StringConcatInsn readonly & record {|
 # It is an optimization to be used only when the compiler can prove that a panic is impossible;
 # the NO_PANIC version of % must not be used if first operand is int:MIN_VALUE and second operand is -1.
 public type IntNoPanicArithmeticBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY name = INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Register result;
     IntOperand[2] operands;
 |};
 
 public type IntBitwiseBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_INT_BITWISE_BINARY name = INSN_INT_BITWISE_BINARY;
     BitwiseBinaryOp op;
-    Register result;
     IntOperand[2] operands;
 |};
 
 # Perform logical not operation on a boolean.
 public type BooleanNotInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_BOOLEAN_NOT name = INSN_BOOLEAN_NOT;
-    Register result;
     Register operand;
 |};
 
 // This is not a PPI
 public type FloatArithmeticBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_FLOAT_ARITHMETIC_BINARY name = INSN_FLOAT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Register result;
     FloatOperand[2] operands;
 |};
 
 // This panics for overflows, invalid decimals, divide by zero.
 // So this is a PPI.
 public type DecimalArithmeticBinaryInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_DECIMAL_ARITHMETIC_BINARY name = INSN_DECIMAL_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Register result;
     DecimalOperand[2] operands;
 |};
 
 public type FloatNegateInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_FLOAT_NEGATE name = INSN_FLOAT_NEGATE;
-    Register result;
     Register operand;
 |};
 
 public type DecimalNegateInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_DECIMAL_NEGATE name = INSN_DECIMAL_NEGATE;
-    Register result;
     Register operand;
 |};
 
@@ -373,9 +470,8 @@ public type DecimalNegateInsn readonly & record {|
 # where T is the operand type.
 # This panics if the conversion cannot be performed, so is a PPI.
 public type ConvertToIntInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_CONVERT_TO_INT name = INSN_CONVERT_TO_INT;
-    Register result;
     Register operand;
 |};
 
@@ -386,9 +482,8 @@ public type ConvertToIntInsn readonly & record {|
 # where T is the operand type.
 # This is not a PPI.
 public type ConvertToFloatInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_CONVERT_TO_FLOAT name = INSN_CONVERT_TO_FLOAT;
-    Register result;
     Register operand;
 |};
 
@@ -399,39 +494,35 @@ public type ConvertToFloatInsn readonly & record {|
 # where T is the operand type.
 # This panics if the conversion cannot be performed, so is a PPI.
 public type ConvertToDecimalInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_CONVERT_TO_DECIMAL name = INSN_CONVERT_TO_DECIMAL;
-    Register result;
     Register operand;
 |};
 
 # This does ordered comparison
 # Equality and inequality are done by equal
 public type CompareInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
-    Register result;
     Operand[2] operands;
 |};
 
 # Constructs a new mutable list value.
 public type ListConstructInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_LIST_CONSTRUCT_RW name = INSN_LIST_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
-    Register result;
     Operand[] operands;
 |};
 
 # Gets a member of a list at a specified index.
 # This is a PPI (since the index may be out of bounds).
 public type ListGetInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_LIST_GET name = INSN_LIST_GET;
     // fill must be false unless the result type is a subtype of list or mapping
     boolean fill = false;  // if true do a filling read
-    Register result;
     [Register, IntOperand] operands;
 |};
 
@@ -445,10 +536,9 @@ public type ListSetInsn readonly & record {|
 
 # Constructs a new mutable list value.
 public type MappingConstructInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_MAPPING_CONSTRUCT_RW name = INSN_MAPPING_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
-    Register result;
     string[] fieldNames;
     Operand[] operands;
 |};
@@ -458,9 +548,8 @@ public type MappingConstructInsn readonly & record {|
 # INSN_MAPPING_FILLING_GET fills if there is no such member; this is a PPI
 # The filling version 
 public type MappingGetInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_MAPPING_GET|INSN_MAPPING_FILLING_GET name;
-    Register result;
     [Register, StringOperand] operands;
 |};
 
@@ -475,9 +564,8 @@ public type MappingSetInsn readonly & record {|
 # Constructs an error value.
 # Operand must be of type string.
 public type ErrorConstructInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
-    Register result;
     StringOperand operand;
 |};
 
@@ -488,10 +576,9 @@ public type ErrorConstructInsn readonly & record {|
 // Should this mean this is a PPI? Should we distinguish these as different
 // kind of instruction.
 public type EqualityInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_EQUALITY name = INSN_EQUALITY;
     EqualityOp op;
-    Register result;
     Operand[2] operands;
 |};
 
@@ -504,10 +591,9 @@ public type EqualityInsn readonly & record {|
 # XXX This does not handle functions that don't return
 # (i.e. with return type of never)
 public type CallInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     # Position in the source that resulted in the instruction
     INSN_CALL name = INSN_CALL;
-    Register result;
     FunctionOperand func;
     Operand[] args;
 |};
@@ -518,7 +604,7 @@ public type CallInsn readonly & record {|
 public type AssignInsn readonly & record {|
     *InsnBase;
     INSN_ASSIGN name = INSN_ASSIGN;
-    Register result;
+    AssignTmpRegister|VarRegister|FinalRegister result;
     Operand operand;
 |};
 
@@ -531,9 +617,8 @@ public type AssignInsn readonly & record {|
 # typeof(result) <: typeof(operand)
 # semType not empty
 public type TypeCastInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_TYPE_CAST name = INSN_TYPE_CAST;
-    Register result;
     Register operand;
     SemType semType;
 |};
@@ -547,11 +632,10 @@ public type TypeCastInsn readonly & record {|
 # and can require memory allocation and thus can potentially
 # panic. Probably need to distinguish these.
 public type TypeTestInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_TYPE_TEST name = INSN_TYPE_TEST;
     # Gets result of test.
     # Must be exactly type boolean
-    Register result;
     # Holds value to be tested.
     Register operand;
     SemType semType;
@@ -576,7 +660,7 @@ public type TypeTestInsn readonly & record {|
 public type CondNarrowInsn readonly & record {|
     *InsnBase;
     INSN_COND_NARROW name = INSN_COND_NARROW;
-    Register result;
+    NarrowRegister result;
     Register operand;
     Result basis;
 |};
@@ -641,9 +725,8 @@ public type PanicInsn readonly & record {|
 # with the panic to be stored in the result register.
 # This is a very simplified form of a LLVM landingpad.
 public type CatchInsn readonly & record {|
-    *InsnBase;
+    *ResultInsnBase;
     INSN_CATCH name = INSN_CATCH;
-    Register result;
 |};
 
 # Conditionally branch to one of two labels based on a boolean operand.

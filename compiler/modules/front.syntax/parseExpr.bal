@@ -7,7 +7,7 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Position startPos = tok.currentStartPos();
     if t == "[" {
         check tok.advance();
-        Expr[] members = check parseExprList(tok, "]");
+        var [members, _] = check parseExprList(tok, "]");
         Position endPos = tok.previousEndPos();
         ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members };
         return expr;
@@ -411,20 +411,20 @@ function parseIdentifierOrMethodName(Tokenizer tok) returns string|err:Syntax {
 function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position startPos, Position namePos, Position opPos) returns MethodCallExpr|err:Syntax {
     Position openParenPos = tok.currentStartPos();
     check tok.advance();
-    Expr[] args = check parseExprList(tok, ")");
+    var [args, closeParenPos] = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, opPos, namePos, openParenPos, target, methodName, args };
+    return { startPos, endPos, opPos, namePos, openParenPos, closeParenPos, target, methodName, args };
 }
 
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position startPos) returns FunctionCallExpr|err:Syntax {
     Position openParenPos = tok.currentStartPos();
     check tok.advance();
-    Expr[] args = check parseExprList(tok, ")");
+    var [args, closeParenPos] = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, openParenPos, qNamePos: startPos, funcName, args, prefix };
+    return { startPos, endPos, openParenPos, closeParenPos, qNamePos: startPos, funcName, args, prefix };
 }
 
-function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {
+function parseExprList(Tokenizer tok, "]"|")" terminator) returns [Expr[], Position]|err:Syntax {
     Expr[] exprs = [];
     if tok.current() != terminator {
         while true {
@@ -442,8 +442,9 @@ function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syn
             }
         }
     }
+    Position closeTerminatorPos = tok.currentStartPos();
     check tok.advance();
-    return exprs;
+    return [exprs, closeTerminatorPos];
 }
 
 function parseFields(Tokenizer tok) returns Field[]|err:Syntax {
@@ -503,15 +504,6 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
         return expr;
     }
     match t {
-        [IDENTIFIER, var identifier] => {
-            Position endPos = tok.currentEndPos();
-            check tok.advance();
-            var [prefix, name] = check parseOptQualIdentifier(tok, identifier);
-            if prefix != () {
-                endPos = tok.previousEndPos();
-            }
-            return { startPos, endPos, prefix, name, qNamePos: startPos };
-        }
         [STRING_LITERAL, var value] => {
             Position endPos = tok.currentEndPos();
             LiteralExpr expr = { startPos, endPos, value };
@@ -535,9 +527,29 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             LiteralExpr expr = {  startPos, endPos, value: t == "true" };
             return expr;
         }
+        [DECIMAL_FP_NUMBER, _, _] => {
+            return parseNumericLiteralExpr(tok);
+        }
+    }
+    return parseArrayLengthExpr(tok);
+}
+
+function parseArrayLengthExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
+    Token? t = tok.current();
+    Position startPos = tok.currentStartPos();
+    
+    match t {
+        [IDENTIFIER, var identifier] => {
+            Position endPos = tok.currentEndPos();
+            check tok.advance();
+            var [prefix, name] = check parseOptQualIdentifier(tok, identifier);
+            if prefix != () {
+                endPos = tok.previousEndPos();
+            }
+            return { startPos, endPos, prefix, name, qNamePos: startPos };
+        }
         [DECIMAL_NUMBER, _]
-        | [HEX_INT_LITERAL, _]
-        | [DECIMAL_FP_NUMBER, _, _] => {
+        | [HEX_INT_LITERAL, _] => {
             return parseNumericLiteralExpr(tok);
         }
     }

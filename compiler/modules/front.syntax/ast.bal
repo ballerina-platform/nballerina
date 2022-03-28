@@ -47,6 +47,7 @@ public type FunctionParam record {|
     string name;
     Position namePos;
     TypeDesc td;
+    boolean isRest = false;
 |};
 
 public type ResolvedConst readonly & [t:SemType, t:SingleValue];
@@ -253,6 +254,7 @@ public type ErrorConstructorExpr record {|
 public type FunctionCallExpr record {|
     *PositionFields;
     Position openParenPos;
+    Position closeParenPos;
     Position qNamePos;
     string? prefix = ();
     string funcName;
@@ -263,6 +265,7 @@ public type MethodCallExpr record {|
     *PositionFields;
     Position opPos; // position of .
     Position openParenPos;
+    Position closeParenPos;
     Position namePos;
     string methodName;
     Expr target;
@@ -460,6 +463,7 @@ public type FunctionTypeParam record {|
     string? name;
     Position? namePos;
     TypeDesc td;
+    boolean isRest = false;
 |};
 
 public type ErrorTypeDesc record {|

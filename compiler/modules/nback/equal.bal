@@ -59,20 +59,18 @@ final RuntimeFunction decimalExactEqFunction = {
 type CmpEqOp "ne"|"eq";
 
 function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn insn) returns BuildError? {
-    var [lhsRepr, lhsValue] = check buildReprValue(builder, scaffold, insn.operands[0]);
-    var [rhsRepr, rhsValue] = check buildReprValue(builder, scaffold, insn.operands[1]);
+    var [lhs, rhs] = insn.operands;
+    var [lhsRepr, lhsValue] = check buildReprValue(builder, scaffold, lhs);
+    var [rhsRepr, rhsValue] = check buildReprValue(builder, scaffold, rhs);
     CmpEqOp op = insn.op[0] == "!" ?  "ne" : "eq"; 
     boolean exact = insn.op.length() == 3; // either "===" or "!=="
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
-            if reprIsImmediate(lhsRepr) || reprIsImmediate(rhsRepr) {
+            if reprIsImmediate(lhsRepr) || reprIsImmediate(rhsRepr) || reprIsImmediate(semTypeRepr(t:intersect(lhs.semType, rhs.semType))) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
-                if isAnyOperandSmallString(insn.operands) {
-                    return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
-                }
                 return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
             else if reprIsDecimal(lhsRepr) && reprIsDecimal(rhsRepr) {
@@ -89,10 +87,10 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
             return buildEqualTaggedBoolean(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, result);
         }
         [BASE_REPR_TAGGED, BASE_REPR_INT] => {
-            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>lhsValue, rhsValue, result);
+            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>lhsValue, rhsValue, <IntRepr>rhsRepr, result);
         }
         [BASE_REPR_INT, BASE_REPR_TAGGED] => {
-            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, result);
+            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, <IntRepr>lhsRepr, result);
         }
         [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN]
         | [BASE_REPR_INT, BASE_REPR_INT] => {
@@ -109,7 +107,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
             return buildEqualFloat(builder, scaffold, exact, op, lhsValue, rhsValue, result);
         }
     }
-    return scaffold.unimplementedErr("equality with two different untagged representations", insn.pos);
+    return scaffold.unimplementedErr("equality with two different untagged representations");
 }
 
 function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result) {
@@ -131,7 +129,7 @@ function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean 
 
 function buildEqualFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:Value lhsValue, llvm:Value rhsValue, bir:Register reg) {
     RuntimeFunction eqFunc = exact ? floatExactEqFunction : floatEqFunction;
-    llvm:Value b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(eqFunc), [lhsValue, rhsValue]);
+    llvm:Value b = buildRuntimeFunctionCall(builder, scaffold, eqFunc, [lhsValue, rhsValue]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -164,8 +162,9 @@ function reprIsDecimal(Repr repr) returns boolean {
     return repr is TaggedRepr && repr.subtype == t:DECIMAL;
 }
 
+// JBUG can't inline this function
 function reprIsImmediate(Repr repr) returns boolean {
-    return repr !is TaggedRepr || (repr.subtype & ~(t:NIL|t:BOOLEAN)) == 0;
+    return repr.alwaysImmediate;
 }
 
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
@@ -174,7 +173,10 @@ function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqO
                       result);
 }
 
-function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result) {
+function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, IntRepr untaggedRepr, bir:Register result) {
+    if untaggedRepr.alwaysInImmediateRange {
+        return buildStoreBoolean(builder, scaffold, builder.iCmp(op, tagged, buildImmediateTaggedInt(builder, untagged)), result);
+    }
     llvm:BasicBlock intTagBlock = scaffold.addBasicBlock();
     llvm:BasicBlock otherTagBlock = scaffold.addBasicBlock();
     llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
@@ -193,7 +195,7 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
 
 function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
     RuntimeFunction func = exact ? exactEqFunction : eqFunction;
-    llvm:Value b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(func), [tagged1, tagged2]);
+    llvm:Value b = buildRuntimeFunctionCall(builder, scaffold, func, [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -201,7 +203,7 @@ function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean
 }
 
 function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
-    llvm:Value b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringEqFunction), [tagged1, tagged2]);
+    llvm:Value b = buildRuntimeFunctionCall(builder, scaffold, stringEqFunction, [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -211,13 +213,13 @@ function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp
 function buildEqualDecimalDecimal(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
     llvm:Value b;
     if exact {
-        b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalExactEqFunction), [tagged1, tagged2]);
+        b = buildRuntimeFunctionCall(builder, scaffold, decimalExactEqFunction, [tagged1, tagged2]);
         if op == "ne" {
             b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
         }
     }
     else {
-        b = builder.iCmp(op, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalCmpFunction), [tagged1, tagged2]), llvm:constInt(LLVM_INT, 0));
+        b = builder.iCmp(op, buildRuntimeFunctionCall(builder, scaffold, decimalCmpFunction, [tagged1, tagged2]), llvm:constInt(LLVM_INT, 0));
     }
     buildStoreBoolean(builder, scaffold, b, result);
 }

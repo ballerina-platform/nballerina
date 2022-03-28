@@ -278,7 +278,11 @@ public distinct class Builder {
     public function call(Function|PointerValue fn, Value[] args, string? name = ()) returns Value? {
         string reg = self.extractName(name);
         PointerPointer arr = PointerPointerFromValues(args);
-        return new (jLLVMBuildCall(self.LLVMBuilder, fn.LLVMValueRef, arr.jObject, args.length(), java:fromString(reg)));
+        handle llvmVal = jLLVMBuildCall(self.LLVMBuilder, fn.LLVMValueRef, arr.jObject, args.length(), java:fromString(reg));
+        if jLLVMGetReturnType(jLLVMGetCalledFunctionType(llvmVal)).toString() == typeToLLVMType("void", self.context).toString() {
+            return;
+        }
+        return new (llvmVal);
     }
 
     public function extractValue(Value value, int index, string? name = ()) returns Value {
@@ -598,4 +602,16 @@ function jLLVMSetCurrentDebugLocation2(handle builder, handle loc) = @java:Metho
     name: "LLVMSetCurrentDebugLocation2",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef"]
+} external;
+
+function jLLVMGetReturnType(handle functionTy) returns handle = @java:Method {
+    name: "LLVMGetReturnType",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef"]
+} external;
+
+function jLLVMGetCalledFunctionType(handle c) returns handle = @java:Method {
+    name: "LLVMGetCalledFunctionType",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef"]
 } external;

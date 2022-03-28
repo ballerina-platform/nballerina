@@ -5,14 +5,15 @@ const double F0 = +0.0;
 static bool tidListContains(const Tid *start, const Tid *end, Tid tid);
 
 static inline TaggedPtr listConstruct(ListDescPtr desc, int64_t capacity) {
-    return ptrAddFlags(_bal_list_construct(desc, capacity),
+    return ptrAddFlags(_bal_list_construct_8(desc, capacity),
                        ((uint64_t)TAG_LIST_RW << TAG_SHIFT)|EXACT_FLAG);
 }
 
 Fillability _bal_structure_create_filler(MemberType memberType, StructureDescPtr fillerDesc, TaggedPtr *valuePtr) {
+    ComplexTypePtr ctp;
     uint32_t bitSet;
     if ((memberType & 1) == 0) {
-        ComplexTypePtr ctp = (ComplexTypePtr)memberType;
+        ctp = (ComplexTypePtr)memberType;
         bitSet = ctp->all | ctp->some;
         if (fillerDesc != 0) {
             switch (bitSet) {
@@ -26,27 +27,33 @@ Fillability _bal_structure_create_filler(MemberType memberType, StructureDescPtr
         }         
     }
     else {
+        ctp = 0;
         bitSet = (uint32_t)(memberType >> 1);
-        switch (bitSet) {
-            case (1 << TAG_BOOLEAN):
-                *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
-                return FILL_COPY;
-            case (1 << TAG_INT):
-                *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
-                return FILL_COPY;
-            case (1 << TAG_FLOAT):
-                {
-                    GC double *fp = (GC double *)&F0;
-                    *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
-                    return FILL_COPY;
-                }
-            case (1 << TAG_STRING):
-                _bal_string_alloc(0, 0, valuePtr);
-                return FILL_COPY;
-        }
     }
-    if (bitSet & (1 << TAG_NIL)) {
-        *valuePtr = 0;
+    switch (bitSet) {
+        case (1 << TAG_BOOLEAN):
+            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
+            break;
+        case (1 << TAG_INT):
+            *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
+            break;
+        case (1 << TAG_FLOAT):
+            {
+                GC double *fp = (GC double *)&F0;
+                *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
+                break;
+            }
+        case (1 << TAG_STRING):
+            _bal_string_alloc(0, 0, valuePtr);
+            break;
+        default:
+            if (bitSet & (1 << TAG_NIL)) {
+                *valuePtr = 0;
+                return FILL_COPY;
+            }
+            return FILL_NONE;
+    }
+    if (ctp == 0 || complexTypeContainsTagged(ctp, *valuePtr)) {
         return FILL_COPY;
     }
     return FILL_NONE;

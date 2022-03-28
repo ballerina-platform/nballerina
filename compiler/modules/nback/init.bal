@@ -161,7 +161,7 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
     int tid = defns.length();
     llvm:StructType llType;
     if basic == STRUCTURE_LIST {
-        llType = llListDescType;        
+        llType = createListDescType(cx.tc, semType);        
     }
     else {
         llType = createMappingDescType(cx.tc, semType);        
@@ -178,19 +178,32 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
         initValue = createMappingDescInit(cx, tid, semType);
     }
     cx.llMod.setInitializer(ptr, initValue);
-
     return ptr;
 }
 
+
+function createListDescType(t:Context tc, t:SemType semType) returns llvm:StructType {
+    t:ListAtomicType lat = <t:ListAtomicType>t:listAtomicTypeRw(tc, semType);
+    return createLlListDescType(lat.members.initial.length());
+}
+
 function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
-    t:SemType memberType = <t:SemType>t:arrayMemberType(cx.tc, semType);
-    FunctionRef[] functionRefs = getListDescFunctionRefs(cx, memberType);
-    llvm:Value[] initStructValues = [llvm:constInt(LLVM_TID, tid)];
+    t:Context tc = cx.tc;
+    t:ListAtomicType atomic = <t:ListAtomicType>t:listAtomicTypeRw(tc, semType);
+    FunctionRef[] functionRefs = getListDescFunctionRefs(cx, atomic);
+    llvm:Value[] initStructValues = [
+        llvm:constInt(LLVM_TID, tid),
+        llvm:constInt("i32", atomic.members.initial.length()),
+        llvm:constInt("i64", atomic.members.fixedLength)
+    ];
     foreach FunctionRef fr in functionRefs {
         initStructValues.push(fr);
     }
-    initStructValues.push(getMemberType(cx, memberType));
-    initStructValues.push(getFillerDesc(cx, memberType)); 
+    t:SemType restType = atomic.rest;
+    initStructValues.push(getMemberType(cx, restType));
+    initStructValues.push(getFillerDesc(cx, restType));
+    llvm:ConstValue[] llMembers = from var ty in atomic.members.initial select getMemberType(cx, ty);
+    initStructValues.push(cx.llContext.constArray(LLVM_MEMBER_TYPE, llMembers));
     return cx.llContext.constStruct(initStructValues);    
 }
 
@@ -454,7 +467,7 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
     t:ListAtomicType? lat = t:listAtomicTypeRw(cx.tc, semType);
     if lat != () {
         t:SemType rest = lat.rest;
-        if rest is t:UniformTypeBitSet {
+        if rest is t:UniformTypeBitSet && lat.members.fixedLength == 0 {
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_ARRAY);
         }
     }
@@ -516,15 +529,19 @@ function createRecordSubtypeStruct(InitModuleContext cx, string[] fieldNames, t:
     };
 }
 
-function getListDescFunctionRefs(InitModuleContext cx, t:SemType memberType) returns FunctionRef[] {
+function getListDescFunctionRefs(InitModuleContext cx, t:ListAtomicType atomic) returns FunctionRef[] {
     FunctionRef[] functionRefs = [];
-    string prefix = memberTypeToListReprPrefix(memberType);
+    string prefix = listAtomicTypeToListReprPrefix(atomic);
     foreach int i in 0 ..< listDescFuncSuffixes.length() {
         string suffix = listDescFuncSuffixes[i];
-        string name = prefix + "_" + suffix;
+        string tentativeName = prefix + "_" + suffix;
         llvm:FunctionType llType = llListDescFuncTypes[i];
         FunctionRef ref;
-        if listDescNullFuncNames.indexOf(name) == () {
+        string? name = tentativeName;
+        if listDescFuncOverrides.hasKey(tentativeName) {
+            name = listDescFuncOverrides[tentativeName];
+        }
+        if name != () {
             ref = getInitRuntimeFunction(cx, mangleRuntimeSymbol("list_" + name), llType);
         }
         else {

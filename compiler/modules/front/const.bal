@@ -21,26 +21,38 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
         s:SubsetBuiltinTypeDesc? td = defn.td;
         t:SemType? expectedType = td == () ? () : resolveBuiltinTypeDesc(mod.tc, td);
         s:ResolvedConst resolvedConst = check resolveConstExpr(mod, defn, defn.expr, expectedType);
+        if !resolvedConstHasType(resolvedConst, expectedType) {
+            return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
+        }
         defn.resolved = resolvedConst;
         return resolvedConst;
     }
+}
+
+function resolveConstExprForInt(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, string msg) returns int|ResolveTypeError {
+    [t:SemType, t:SingleValue] [_, value] = check resolveConstExprForType(mod, defn, expr, t:INT, msg);
+    return <int>value;
+}
+
+function resolveConstExprForType(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, t:SemType? expectedType, string msg) returns s:ResolvedConst|ResolveTypeError {
+    s:ResolvedConst resolvedConst = check resolveConstExpr(mod, defn, expr, expectedType);
+    if !resolvedConstHasType(resolvedConst, expectedType) {
+        return err:semantic(msg, s:locationInDefn(defn, s:range(expr)));
+    }
+    return resolvedConst;
+}
+
+function resolvedConstHasType(s:ResolvedConst resolvedConst, t:SemType? expectedType) returns boolean {
+    return expectedType == () || t:containsConst(expectedType, resolvedConst[1]);
 }
 
 function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, t:SemType? expectedType) returns s:ResolvedConst|ResolveTypeError {
     ExprContext cx = new ExprContext(mod, defn, constCode, constEnvironment, ());
     var { result } = check codeGenExpr(cx, constBasicBlock, expectedType, expr);
     bir:ConstOperand operand = <bir:ConstOperand>result;
-    if expectedType != () && !t:isSubtype(mod.tc, operand.semType, expectedType) {
-        return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
-    }
     t:SemType semType = operand.semType;
     if t:singleShape(semType) == () {
         semType = t:singleton(mod.tc, operand.value);
     }
     return [semType, operand.value];
-}
-
-function resolveConstIntExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr) returns int|ResolveTypeError {
-    [t:SemType, t:SingleValue] [_, resolved] = check resolveConstExpr(mod, defn, expr, t:INT);
-    return <int>resolved;
 }

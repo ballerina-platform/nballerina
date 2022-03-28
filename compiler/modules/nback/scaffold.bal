@@ -14,6 +14,7 @@ type DICompileUnit llvm:Metadata;
 type DISubroutineType llvm:Metadata;
 
 const LLVM_INT = "i64";
+const LLVM_BYTE = "i8";
 const LLVM_DOUBLE = "double";
 const LLVM_BOOLEAN = "i1";
 const LLVM_VOID = "void";
@@ -37,20 +38,50 @@ const BASE_REPR_TAGGED = "BASE_REPR_TAGGED";
 type BaseRepr UniformBaseRepr|BASE_REPR_TAGGED;
 type RetBaseRepr BaseRepr|BASE_REPR_VOID;
 
-type UniformRepr readonly & record {|
-    UniformBaseRepr base;
+type ReprFields record {|
+    BaseRepr base;
     llvm:SingleValueType llvm;
-    t:UniformTypeBitSet subtype?;
+    boolean alwaysImmediate;
+|};
+
+// Maps int to i1
+type BooleanRepr readonly & record {|
+    *ReprFields;
+    BASE_REPR_BOOLEAN base = BASE_REPR_BOOLEAN;
+    LLVM_BOOLEAN llvm = LLVM_BOOLEAN;
+    true alwaysImmediate = true;
+|};
+
+// Maps int to i64
+type IntRepr readonly & record {|
+    *ReprFields;
+    BASE_REPR_INT base = BASE_REPR_INT;
+    LLVM_INT llvm = LLVM_INT;
+    true alwaysImmediate = true;
+
+    t:IntSubtypeConstraints? constraints;
+    boolean alwaysInImmediateRange;
+|};
+
+// Maps float to llvm double
+type FloatRepr readonly & record {|
+    *ReprFields;
+    BASE_REPR_FLOAT base = BASE_REPR_FLOAT;
+    LLVM_DOUBLE llvm = LLVM_DOUBLE;
+    true alwaysImmediate = true;
 |};
 
 // Maps any Ballerina value to a tagged pointer
 type TaggedRepr readonly & record {|
-    BASE_REPR_TAGGED base;
+    *ReprFields;
+    BASE_REPR_TAGGED base = BASE_REPR_TAGGED;
+    llvm:IntegralType llvm = LLVM_TAGGED_PTR;
+    boolean alwaysImmediate;
+
     t:UniformTypeBitSet subtype;
-    llvm:IntegralType llvm;
 |};
 
-type Repr UniformRepr|TaggedRepr;
+type Repr BooleanRepr|IntRepr|FloatRepr|TaggedRepr;
 
 type VoidRepr readonly & record {|
     BASE_REPR_VOID base;
@@ -112,12 +143,10 @@ type ModuleDI record {|
 |};
 
 // Debug location will always be added
-public const int DEBUG_ORIGIN_ERROR_CONSTRUCT = 0;
-public const int DEBUG_ORIGIN_CALL = 1;
-// Debug location for these will be added only in full debug
-public const int DEBUG_ORIGIN_OTHER = 2;
+public const int DEBUG_USAGE_ERROR_CONSTRUCT = 0;
+public const int DEBUG_USAGE_CALL = 1;
 
-public type DebugLocationOrigin DEBUG_ORIGIN_ERROR_CONSTRUCT|DEBUG_ORIGIN_CALL|DEBUG_ORIGIN_OTHER;
+public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL;
 
 class Scaffold {
     private final Module mod;
@@ -137,6 +166,8 @@ class Scaffold {
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
+    private bir:Position? currentPosition = ();
+    private DILocation? currentDebugLocation = ();
     final t:SemType returnType;
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
@@ -156,9 +187,10 @@ class Scaffold {
 
         builder.positionAtEnd(entry);
         self.addresses = [];
+        self.setCurrentPosition(builder, defn.position);
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
-            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.varName));
+            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.name));
         }
     }
 
@@ -256,22 +288,43 @@ class Scaffold {
         return d:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos, DebugLocationOrigin origin = DEBUG_ORIGIN_OTHER) {
+    function setCurrentPosition(llvm:Builder builder, bir:Position pos) {
+        self.currentPosition = pos;
+        ModuleDI? di = self.mod.di;
+        if di != () && di.debugFull {
+            self.currentDebugLocation = self.debugLocation(pos);
+            builder.setCurrentDebugLocation(self.currentDebugLocation);
+        }
+        else {
+            self.currentDebugLocation = ();
+        }
+    }
+
+    function clearDebugLocation(llvm:Builder builder) {
+        // in debugFull case every instruction must have a debug location
+        ModuleDI? di = self.mod.di;
+        if di == () || !di.debugFull {
+            builder.setCurrentDebugLocation(());
+            self.currentDebugLocation = ();
+        }
+    }
+
+    function useDebugLocation(llvm:Builder builder, DebugLocationUsage usage) {
         DISubprogram? diFunc = self.diFunc;
         if diFunc is () {
             return;
         }
         ModuleDI di = <ModuleDI>self.mod.di;
-        // In the debugFull case, there is no need to do anything for DEBUG_ORIGIN_ERROR_CONSTRUCT
+        // In the debugFull case, there is no need to do anything for DEBUG_USAGE_ERROR_CONSTRUCT
         // because the full location will have been set earlier.
-        if origin == (di.debugFull ? DEBUG_ORIGIN_ERROR_CONSTRUCT : DEBUG_ORIGIN_OTHER) {
+        if usage == DEBUG_USAGE_ERROR_CONSTRUCT && di.debugFull {
             return;
         }
         DILocation loc;
-        if origin == DEBUG_ORIGIN_ERROR_CONSTRUCT {
+        if usage == DEBUG_USAGE_ERROR_CONSTRUCT {
             DILocation? noLineLoc = self.noLineLocation;
             if noLineLoc == () {
-                loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
+                loc = di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
                 self.noLineLocation = loc;
             }
             else {
@@ -279,20 +332,22 @@ class Scaffold {
             }
         }
         else {
-            var [line, column] = self.file.lineColumn(pos);
-            loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+            if self.currentDebugLocation == () {
+                self.currentDebugLocation = self.debugLocation(<bir:Position>self.currentPosition);
+            }
+            loc = <DILocation>self.currentDebugLocation;
         }
         builder.setCurrentDebugLocation(loc);
     }
 
-    function clearDebugLocation(llvm:Builder builder) {
-        if !(self.diFunc == ()) {
-            builder.setCurrentDebugLocation(());
-        }
+    private function debugLocation(bir:Position pos) returns DILocation {
+        ModuleDI di = <ModuleDI>self.mod.di;
+        var [line, column] = self.file.lineColumn(pos);
+        return di.builder.createDebugLocation(self.mod.llContext, line, column, <DISubprogram>self.diFunc);
     }
 
-    function unimplementedErr(d:Message message, d:Position pos) returns err:Unimplemented {
-        return err:unimplemented(message, d:location(self.file, pos));
+    function unimplementedErr(d:Message message) returns err:Unimplemented {
+        return err:unimplemented(message, d:location(self.file, <bir:Position>self.currentPosition));
     }
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;
@@ -441,24 +496,21 @@ function padBytes(byte[] bytes, int headerSize) returns int {
     return nBytesPadded;
 }
 
-// Maps int to i64
-final Repr REPR_INT = { base: BASE_REPR_INT, llvm: LLVM_INT };
-// Maps float to llvm double
-final Repr REPR_FLOAT = { base: BASE_REPR_FLOAT, llvm: LLVM_DOUBLE };
-// Maps int to i1
-final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, llvm: LLVM_BOOLEAN };
+final FloatRepr REPR_FLOAT = { };
+final BooleanRepr REPR_BOOLEAN = { };
+final IntRepr REPR_INT = { alwaysInImmediateRange: false, constraints: () };
+final IntRepr REPR_BYTE = { alwaysInImmediateRange: true, constraints: { min: 0, max: 255, all: true } };
 
-final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:NIL };
-final TaggedRepr REPR_STRING = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:STRING };
-final TaggedRepr REPR_LIST_RW = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:LIST_RW };
-final TaggedRepr REPR_LIST = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:LIST };
-final TaggedRepr REPR_MAPPING_RW = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING_RW };
-final TaggedRepr REPR_MAPPING = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING };
-final TaggedRepr REPR_ERROR = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ERROR };
-final TaggedRepr REPR_DECIMAL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:DECIMAL };
+final TaggedRepr REPR_NIL = { subtype: t:NIL, alwaysImmediate: true };
+final TaggedRepr REPR_LIST_RW = { subtype: t:LIST_RW, alwaysImmediate: false };
+final TaggedRepr REPR_LIST = { subtype: t:LIST, alwaysImmediate: false };
+final TaggedRepr REPR_MAPPING_RW = { subtype: t:MAPPING_RW, alwaysImmediate: false };
+final TaggedRepr REPR_MAPPING = { subtype: t:MAPPING, alwaysImmediate: false };
+final TaggedRepr REPR_ERROR = { subtype: t:ERROR, alwaysImmediate: false };
+final TaggedRepr REPR_DECIMAL = { subtype: t:DECIMAL, alwaysImmediate: false };
 
-final TaggedRepr REPR_TOP = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:TOP };
-final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ANY };
+final TaggedRepr REPR_TOP = { subtype: t:TOP, alwaysImmediate: false };
+final TaggedRepr REPR_ANY = { subtype: t:ANY, alwaysImmediate: false };
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, llvm: LLVM_VOID };
 
 final readonly & record {|
@@ -466,12 +518,10 @@ final readonly & record {|
     Repr repr;
 |}[] typeReprs = [
     // These are ordered from most to least specific
-    { domain: t:INT, repr: REPR_INT },
     { domain: t:FLOAT, repr: REPR_FLOAT },
     { domain: t:DECIMAL, repr: REPR_DECIMAL },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },
-    { domain: t:STRING, repr: REPR_STRING },
     { domain: t:LIST_RW, repr: REPR_LIST_RW },
     { domain: t:LIST, repr: REPR_LIST },
     { domain: t:MAPPING_RW, repr: REPR_MAPPING_RW },
@@ -491,6 +541,11 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr {
 // Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr {
     t:UniformTypeBitSet w = t:widenToUniformTypes(ty);    
+    if w == t:INT {
+        t:IntSubtypeConstraints? constraints = t:intSubtypeConstraints(ty);
+        IntRepr repr = { constraints, alwaysInImmediateRange: isIntConstrainedToImmediate(constraints) };
+        return repr;
+    }
     foreach var tr in typeReprs {
         if w == tr.domain {
             return tr.repr;
@@ -502,8 +557,47 @@ function semTypeRepr(t:SemType ty) returns Repr {
     int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:DECIMAL|t:STRING|t:LIST|t:MAPPING|t:ERROR;
     int maximized = w | supported;
     if maximized == t:TOP || maximized == (t:NON_BEHAVIOURAL|t:ERROR) || (w & supported) == w {
-        TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };
+        TaggedRepr repr = { subtype: w, alwaysImmediate: isSemTypeAlwaysImmediate(ty, w) };
         return repr;
     }
     panic error("unimplemented type (" + w.toHexString() + ")");
+}
+
+function isSemTypeAlwaysImmediate(t:SemType ty, t:UniformTypeBitSet widenedTy) returns boolean {
+    if (widenedTy & ~(t:NIL|t:BOOLEAN|t:INT|t:STRING)) != 0 {
+        return false;
+    }
+    if (widenedTy & t:STRING) != 0 && !isStringSubtypeAlwaysImmediate(ty) {
+        return false;
+    }
+    if (widenedTy & t:INT) != 0 && !isIntSubtypeAlwaysImmediate(ty) {
+        return false;
+    }
+    return true;
+}
+
+function isStringSubtypeAlwaysImmediate(t:SemType ty) returns boolean {
+    t:StringSubtype|boolean strSubtype = t:stringSubtype(ty);
+    if strSubtype is boolean || strSubtype.nonChar.allowed == false {
+        return false;
+    }
+    foreach var s in strSubtype.nonChar.values {
+        byte[] bytes = s.toBytes();
+        int nBytes = bytes.length();
+        if !isSmallString(s.length(), bytes, nBytes) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function isIntSubtypeAlwaysImmediate(t:SemType ty) returns boolean {
+    return isIntConstrainedToImmediate(t:intSubtypeConstraints(ty));
+}
+
+function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean {
+    if c == () {
+        return false;
+    }
+    return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
 }

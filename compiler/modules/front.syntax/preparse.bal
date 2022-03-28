@@ -16,7 +16,16 @@ final readonly & map<CLOSE_BRACKET> closeBracketMap = {
 // (implying that the statement is a local variable declaration rather than a method call).
 // This is a preparse: the statement will be parsed again according to the value returned.
 function preparseParenTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
-    boolean? parenResult = check preparseBracketed(tok, ")");
+    return preparseBracketedTypeDesc(tok, ")");
+}
+
+function preparseTupleTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
+    return preparseBracketedTypeDesc(tok, "]");
+}
+
+function preparseBracketedTypeDesc(Tokenizer tok, CLOSE_BRACKET close) returns boolean|err:Syntax {
+    check tok.advance();
+    boolean? parenResult = check preparseBracketed(tok, close);
     if parenResult != () {
         return parenResult;
     }
@@ -32,7 +41,7 @@ function preparseParenTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
     if t == () {
         return tok.err("incomplete statement");
     }
-    return t != ".";
+    return t != "." && t !is AssignOp;
 }
 
 function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Syntax|boolean? {
@@ -80,8 +89,5 @@ function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
         check tok.advance();
         _ = check tok.expectIdentifier();
     }
-    check tok.expect("[");
-
-    // SUBSET fixed length array types / tuples are not supported, is a td only if no token between `[` `]`
-    return tok.current() == "]";
+    return preparseBracketedTypeDesc(tok, "]");
 }

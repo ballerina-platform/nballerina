@@ -87,18 +87,18 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     if insn is IntBinaryInsn {
         // XXX need to check result also
         // different rules for bitwise
-        check verifyOperandInt(vc, name, insn.operands[0], insn.pos);
-        check verifyOperandInt(vc, name, insn.operands[1], insn.pos);
+        check validOperandInt(vc, name, insn.operands[0], insn.pos);
+        check validOperandInt(vc, name, insn.operands[1], insn.pos);
     }
     if insn is FloatArithmeticBinaryInsn {
-        check verifyOperandFloat(vc, name, insn.operands[0], insn.pos);
-        check verifyOperandFloat(vc, name, insn.operands[1], insn.pos);
+        check validOperandFloat(vc, name, insn.operands[0], insn.pos);
+        check validOperandFloat(vc, name, insn.operands[1], insn.pos);
     }
     if insn is FloatNegateInsn {
-        check verifyOperandFloat(vc, name, insn.operand, insn.pos);
+        check validOperandFloat(vc, name, insn.operand, insn.pos);
     }
     else if insn is BooleanNotInsn {
-        check verifyOperandBoolean(vc, name, insn.operand, insn.pos);
+        check validOperandBoolean(vc, name, insn.operand, insn.pos);
     }
     else if insn is CompareInsn {
         check verifyCompare(vc, insn);
@@ -110,13 +110,13 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
         check verifyOperandType(vc, insn.operand, insn.result.semType, "value is not a subtype of the LHS", insn.pos);
     }
     else if insn is CondBranchInsn {
-        check verifyOperandBoolean(vc, name, insn.operand, insn.pos);
+        check validOperandBoolean(vc, name, insn.operand, insn.pos);
     }
     else if insn is RetInsn {
         check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type", insn.pos);
     }
     else if insn is PanicInsn {
-        check verifyOperandError(vc, name, insn.operand, insn.pos);
+        check validOperandError(vc, name, insn.operand, insn.pos);
     }
     else if insn is CallInsn {
         check verifyCall(vc, insn);
@@ -125,10 +125,10 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
         check verifyTypeCast(vc, insn);
     }
     else if insn is ConvertToIntInsn {
-        check verifyConvertToIntInsn(vc, insn);
+        check verifyConvertToInt(vc, insn);
     }
     else if insn is ConvertToFloatInsn {
-        check verifyConvertToFloatInsn(vc, insn);
+        check verifyConvertToFloat(vc, insn);
     }
     else if insn is ListConstructInsn {
         check verifyListConstruct(vc, insn);
@@ -149,11 +149,11 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
         check verifyMappingSet(vc, insn);
     }
     else if insn is ErrorConstructInsn {
-        check verifyOperandString(vc, name, insn.operand, insn.pos);
+        check validOperandString(vc, name, insn.operand, insn.pos);
     }
 }
 
-function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
+function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     // XXX verify insn.semType
     FunctionRef func = <FunctionRef>insn.func;
     FunctionSignature sig = func.signature;
@@ -162,67 +162,59 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
     if nSuppliedArgs != nExpectedArgs {
         string name = vc.symbolToString(func.symbol);
         if nSuppliedArgs < nExpectedArgs {
-            return vc.semanticErr(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
         else {
-            return vc.semanticErr(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
+        check validOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
     }
 }
 
 function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns Error? {
     t:SemType ty = insn.result.semType;
-    // XXX verify ty exactly
     if !vc.isSubtype(ty, t:LIST_RW) {
         return vc.invalidErr("inherent type of list construct is not a mutable list", insn.pos);
     }
     t:ListAtomicType? lat = t:listAtomicTypeRw(vc.typeContext(), ty);
-    if lat == () {
+    if lat is () {
         return vc.invalidErr("inherent type of list is not atomic", insn.pos);
     }
-    else {
-        if lat.members.fixedLength > 0 {
-            return vc.invalidErr("tuples and fixed length arrays not supported as list inherent type", insn.pos);
-        }
-        foreach var operand in insn.operands {
-            check verifyOperandType(vc, operand, lat.rest, "type of list constructor member is not allowed by the list type", insn.pos);
-        }
+    Operand[] operands = insn.operands;
+    foreach int i in 0 ..< operands.length() {
+        check validOperandType(vc, operands[i], t:listAtomicTypeMemberAt(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
+    }
+    if !t:listAtomicFillableFrom(vc.typeContext(), lat, operands.length()) {
+        return vc.semanticErr("not enough members in list constructor", insn.pos);
     }
 }
 
 function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns Error? {
     t:SemType ty = insn.result.semType;
-    // XXX verify ty exactly
     if !vc.isSubtype(ty, t:MAPPING_RW) {
         return vc.invalidErr("inherent type of mapping construct is not a mutable mapping", insn.pos);
     }
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(vc.typeContext(), ty);
-    foreach int i in 0 ..< insn.operands.length() {
-        t:Context cx = vc.typeContext();
-        t:SemType memberType = t:mappingMemberType(cx, ty, t:singleton(cx, insn.fieldNames[i]));
-        if memberType == t:NEVER {
-            return vc.semanticErr(`field ${insn.fieldNames[i]} is not allowed by the type`, insn.pos);
-        }
-        check verifyOperandType(vc, insn.operands[i], memberType,
-                                "type of mapping constructor member is not allowed by the mapping type", insn.pos);
-    }
     if mat == () {
         return vc.invalidErr("inherent type of map is not atomic", insn.pos);
     }
-    else if insn.operands.length() < mat.names.length() {
+    foreach int i in 0 ..< insn.operands.length() {
+        check validOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAt(mat, insn.fieldNames[i]), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
+    }
+    if insn.operands.length() < mat.names.length() {
         return vc.semanticErr("missing record fields in mapping constructor", insn.pos);
     }
 }
 
 function verifyListGet(VerifyContext vc, ListGetInsn insn) returns Error? {
-    check verifyOperandInt(vc, insn.name, insn.operands[1], insn.pos);
+    IntOperand indexOperand = insn.operands[1];
+    check validOperandInt(vc, insn.name, indexOperand, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.semanticErr("list get applied to non-list", insn.pos);
     }
-    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType, indexOperand.semType);
     if !vc.isSameType(memberType, insn.result.semType) {
         return vc.invalidErr("ListGet result type is not same as member type", pos=insn.pos);
     }
@@ -230,17 +222,17 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns Error? {
 
 function verifyListSet(VerifyContext vc, ListSetInsn insn) returns Error? {
     IntOperand i = insn.operands[1];
-    check verifyOperandInt(vc, insn.name, i, insn.pos);
+    check validOperandInt(vc, insn.name, i, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.semanticErr("list set applied to non-list", insn.pos);
     }
-    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type", insn.pos);
 }
 
 function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? {
     StringOperand keyOperand = insn.operands[1];
-    check verifyOperandString(vc, insn.name, keyOperand, insn.pos);
+    check validOperandString(vc, insn.name, keyOperand, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping get applied to non-mapping", insn.pos);
     }
@@ -255,7 +247,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? 
 
 function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns Error? {
     StringOperand keyOperand = insn.operands[1];
-    check verifyOperandString(vc, insn.name, keyOperand, insn.pos);
+    check validOperandString(vc, insn.name, keyOperand, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping set applied to non-mapping", insn.pos);
     }
@@ -277,7 +269,7 @@ function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Interna
     }
 }
 
-function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns err:Internal? {
+function verifyConvertToInt(VerifyContext vc, ConvertToIntInsn insn) returns err:Internal? {
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:INT), t:NUMBER)) {
         return vc.invalidErr("operand type of ConvertToInt has no non-integral numeric component", insn.pos);
     }
@@ -289,7 +281,7 @@ function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns
     }
 }
 
-function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) returns err:Internal? {
+function verifyConvertToFloat(VerifyContext vc, ConvertToFloatInsn insn) returns err:Internal? {
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:FLOAT), t:NUMBER)) {
         return vc.invalidErr("operand type of ConvertToFloat has no non-float numeric component", insn.pos);
     }
@@ -327,40 +319,46 @@ function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType,
     }
 }
 
-function verifyOperandString(VerifyContext vc, string insnName, StringOperand operand, Position pos) returns err:Internal? {
-    if operand is Register {
-        return verifyRegisterSemType(vc, insnName, operand, t:STRING, "string", pos);
+function validOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Internal? {
+    if !vc.operandHasType(operand, semType) {
+        return vc.invalidErr(msg, pos);
     }
 }
 
-function verifyOperandInt(VerifyContext vc, string insnName, IntOperand operand, Position pos) returns err:Internal? {
+function validOperandString(VerifyContext vc, string insnName, StringOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
-        return verifyRegisterSemType(vc, insnName, operand, t:INT, "int", pos);
+        return validRegisterSemType(vc, insnName, operand, t:STRING, "string", pos);
     }
 }
 
-function verifyOperandFloat(VerifyContext vc, string insnName, FloatOperand operand, Position pos) returns err:Internal? {
+function validOperandInt(VerifyContext vc, string insnName, IntOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
-        return verifyRegisterSemType(vc, insnName, operand, t:FLOAT, "float", pos);
+        return validRegisterSemType(vc, insnName, operand, t:INT, "int", pos);
     }
 }
 
-function verifyOperandBoolean(VerifyContext vc, string insnName, BooleanOperand operand, Position pos) returns err:Internal? {
+function validOperandFloat(VerifyContext vc, string insnName, FloatOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
-        return verifyRegisterSemType(vc,insnName, operand, t:BOOLEAN, "boolean", pos);
+        return validRegisterSemType(vc, insnName, operand, t:FLOAT, "float", pos);
     }
 }
 
-function verifyOperandError(VerifyContext vc, string insnName, Register operand, Position pos) returns err:Internal? {
-    return verifyRegisterSemType(vc, insnName, operand, t:ERROR, "error", pos);
+function validOperandBoolean(VerifyContext vc, string insnName, BooleanOperand operand, Position pos) returns err:Internal? {
+    if operand is Register {
+        return validRegisterSemType(vc,insnName, operand, t:BOOLEAN, "boolean", pos);
+    }
 }
 
-function verifyRegisterSemType(VerifyContext vc, string insnName, Register operand, t:SemType semType, string typeName, Position pos) returns err:Internal? {
+function validOperandError(VerifyContext vc, string insnName, Register operand, Position pos) returns err:Internal? {
+    return validRegisterSemType(vc, insnName, operand, t:ERROR, "error", pos);
+}
+
+function validRegisterSemType(VerifyContext vc, string insnName, Register operand, t:SemType semType, string typeName, Position pos) returns err:Internal? {
     if !vc.isSubtype(operand.semType, semType) {
-        return operandTypeErr(vc, insnName, typeName, pos);
+        return invalidTypeErr(vc, insnName, typeName, pos);
     }
 }
 
-function operandTypeErr(VerifyContext vc, string insnName, string typeName, Position pos) returns err:Internal {
+function invalidTypeErr(VerifyContext vc, string insnName, string typeName, Position pos) returns err:Internal {
     return vc.invalidErr(`operands of ${insnName} must be subtype of ${typeName}`, pos);
 }
