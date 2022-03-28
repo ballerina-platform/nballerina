@@ -61,7 +61,7 @@ static void processInitialPC(PC pc, BacktraceStartLine *backtraceStartLine);
 static enum DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp);
 static bool demangleModules(const char **mangledModules, FILE *fp);
 static bool demangleCountedName(const char **pp, const char **name);
-static bool isPrefix(const char* prefix, const char* str);
+static bool isPrefix(const char *prefix, const char *str);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace;
@@ -240,16 +240,13 @@ static void printBacktraceLine(const char *filename, int64_t lineNumber, const c
     fflush(fp);
 }
 
-static bool isPrefix(const char* prefix, const char* str) {
-    unsigned long len = strlen(prefix);
-    if (strlen(str) < len) {
-        return false;
+static bool isPrefix(const char *prefix, const char *str) {
+    while (*++prefix == *++str) {
+        if (*prefix == '\0') {
+            break;
+        }
     }
-    while (--len > 0) {
-        if (*++prefix != *++str)
-            return false;
-    }
-    return true;
+    return *prefix == '\0';
 }
 
 // Implementation of backtrace_error_callback
