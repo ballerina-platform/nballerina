@@ -144,6 +144,15 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
+    public function blockSetName(Expression expr, string name) returns Expression {
+        Token[] updated = ["block"];
+        if expr.tokens[1] == "block" {
+            updated.push(name, ...expr.tokens.slice(2, expr.tokens.length() - 1));
+            return { tokens: appendBraces(updated) };
+        }
+        panic error("not a block");
+    }
+
     public function addIf(Expression condition, Expression ifTrue, Expression? ifFalse = ()) returns Expression {
         Token[] inst = ["if"];
         inst.push(...condition.tokens);

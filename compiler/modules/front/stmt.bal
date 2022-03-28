@@ -401,9 +401,10 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
+    cx.openRegion(loopHead.label, bir:REGION_LOOP);
     bir:BasicBlock exit = cx.createBasicBlock();
-    bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
-    initLoopVar.insns.push(branchToLoopHead);
+    bir:BranchInsn forwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
+    initLoopVar.insns.push(forwardBranchToLoopHead);
     bir:TmpRegister condition = cx.createTmpRegister(t:BOOLEAN, stmt.range.opPos);
     bir:CompareInsn compare = { op: "<", pos: stmt.range.opPos, operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
@@ -428,9 +429,11 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
         bir:TmpRegister nextLoopVal = cx.createTmpRegister(t:INT);
         bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: nextLoopVal };
         bir:AssignInsn incrementAssign = { result: loopVar, operand: nextLoopVal, pos: stmt.kwPos };
-        loopStep.insns.push(increment, incrementAssign, branchToLoopHead);
+        bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
+        loopStep.insns.push(increment, incrementAssign, backwardBranchToLoopHead);
     }
     cx.popLoopContext();
+    cx.closeRegion(exit.label);
     // XXX shouldn't we be passing up assignments here
     return { block: exit };
 }

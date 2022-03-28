@@ -8,6 +8,9 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         if insn is bir:IntArithmeticBinaryInsn {
             body.push(buildArithmeticBinary(module, scaffold, insn));
         }
+        else if insn is bir:IntNoPanicArithmeticBinaryInsn {
+            body.push(buildNoPanicArithmeticBinary(module, scaffold, insn));
+        }
         else if insn is bir:CompareInsn {
             body.push(buildCompare(module, scaffold, insn));
         }

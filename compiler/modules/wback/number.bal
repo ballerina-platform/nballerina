@@ -50,6 +50,16 @@ function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToI
     return module.localSet(insn.result.number, val);
 }
 
+function buildNoPanicArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntNoPanicArithmeticBinaryInsn insn) returns wasm:Expression {
+    wasm:Expression lhs = buildInt(module, insn.operands[0]);
+    wasm:Expression rhs = buildInt(module, insn.operands[1]);
+    wasm:Op? op = signedInt64ArithmeticOps[insn.op];
+    if op != () {
+        return module.localSet(insn.result.number, module.binary(op, lhs, rhs));
+    }
+    panic error("invalid operation");
+}
+
 
 function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm:Expression op2) returns wasm:Expression? {
     wasm:Expression MAX_INT = module.addConst({ i64: 9223372036854775807 });
