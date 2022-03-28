@@ -226,7 +226,7 @@ public function main() {
     io:println(0x1a != 0x1a); // @output false
 }
 
-Test-Case: skip
+Test-Case: output
 Description: Test equality for DecimalNumbers and HexIntLiteral.
 Labels: DecimalNumber, equality, HexIntLiteral
 

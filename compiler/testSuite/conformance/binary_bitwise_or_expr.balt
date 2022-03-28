@@ -1427,9 +1427,9 @@ function printResult(int result) {
     io:println(result);
 }
 
-Test-Case: skip
+Test-Case: output
 Description: Test check expression as operands.
-Labels: binary-bitwise-expr, check, checkpanic, DecimalNumber, error-type, if-else-stmt, int, optional-type
+Labels: binary-bitwise-expr, check, checkpanic, DecimalNumber, error-type, if-else-stmt, int, optional-type, main-return
 
 public function main() returns error? {
     printResult(check getData(4) | 5); // @output 5

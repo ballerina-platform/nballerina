@@ -610,7 +610,7 @@ public function main() {
     io:println(z); // @output Hello from ballerina!
 }
 
-Test-Case: skip
+Test-Case: output
 Description: Test string concatenation with conditional expressions as operands.
 Labels: additive-expr, string, union-type, optional-type, error, conditional-expr
 
@@ -621,7 +621,7 @@ public function main() {
     io:println(u); // @output hello world
 }
 
-Test-Case: skip
+Test-Case: output
 Description: Test string concatenation with checking expressions as operands.
 Labels: additive-expr, string, union-type, optional-type, error, check, checkpanic
 

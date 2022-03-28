@@ -3350,9 +3350,9 @@ public function main() {
     io:println(c); // @output 6
 }
 
-Test-Case: skip
+Test-Case: output
 Description: Test checking expressions as integer division operands.
-Labels: multiplicative-expr, int, DecimalNumber, check, checkpanic, union-type, error
+Labels: multiplicative-expr, int, DecimalNumber, check, checkpanic, union-type, error, main-return
 
 public function main() returns error? {
     int|error a = 12;
@@ -3360,10 +3360,10 @@ public function main() returns error? {
     io:println(c); // @output 1
 }
 
-Test-Case: skip
+Test-Case: output
 Description: Test integer division with operands of different int subtypes.
 Labels: multiplicative-expr, int, DecimalNumber, byte, int:Signed8, int:Signed16,
-        int:Signed32, int:Unsigned8, int:Unsigned16, int:Unsigned32, module-type-defn, union-type, singleton-type
+        int:Signed32, int:Unsigned8, int:Unsigned16, int:Unsigned32, module-type-defn, union-type, singleton-type, main-return
 
 type Ints -9|9;
 
@@ -3595,10 +3595,10 @@ public function main() returns error? {
     io:println(v); // @output -1
 }
 
-Test-Case: skip
+Test-Case: output
 Description: Test 1 for integer division with operands of different optional int subtypes.
 Labels: multiplicative-expr, int, DecimalNumber, byte, int:Signed8, int:Signed16, 
-        int:Signed32, int:Unsigned8, int:Unsigned16, int:Unsigned32, nil-literal, module-type-defn, union-type, singleton-type, optional-type, value:toBalString, numeric-nil-lifting
+        int:Signed32, int:Unsigned8, int:Unsigned16, int:Unsigned32, nil-literal, module-type-defn, union-type, singleton-type, optional-type, value:toBalString, numeric-nil-lifting, main-return
 
 type Ints -9|9;
 
@@ -3750,10 +3750,10 @@ public function main() returns error? {
     io:println(v.toBalString()); // @output ()
 }
 
-Test-Case: skip
+Test-Case: output
 Description: Test 2 for integer division with operands of different optional int subtypes.
 Labels: multiplicative-expr, int, DecimalNumber, byte, int:Signed8, int:Signed16, 
-        int:Signed32, int:Unsigned8, int:Unsigned16, int:Unsigned32, nil-literal, module-type-defn, union-type, singleton-type, optional-type, value:toBalString, numeric-nil-lifting
+        int:Signed32, int:Unsigned8, int:Unsigned16, int:Unsigned32, nil-literal, module-type-defn, union-type, singleton-type, optional-type, value:toBalString, numeric-nil-lifting, main-return
 
 type Ints -9|9;
 

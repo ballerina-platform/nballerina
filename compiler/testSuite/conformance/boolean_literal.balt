@@ -90,7 +90,7 @@ public function main() {
     io:println(true || false); // @output true
 }
 
-Test-Case: skip
+Test-Case: output
 Description: Equality check of boolean literals.
 Labels: boolean-literal, equality
 

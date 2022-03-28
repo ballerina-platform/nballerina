@@ -56,11 +56,24 @@ function compileBaltFile(string filename, string basename, string outDir, nback:
 
 function supportedTest(BaltTestCase test) returns boolean {
     string[] unsupportedLabels = ["unary-minus", "unary-plus", "var", "optional-field-access-expr", "module-class-defn", "byte-array-literal",
-                                  "value:toBalString", "defaultable-param", "method-call-expr", "table-constructor-expr", "member-access-expr",
+                                  "value:toBalString", "defaultable-param", "method-call-expr", "table-constructor-expr",
                                   "value:toString", "raw-template-expr", "HexFloatingPointLiteral", "int:MIN_VALUE", "let-expr", "ternary-conditional-expr",
-                                  "BacktickString", "xml"];
+                                  "BacktickString", "xml", "main-return"];
+    string[][] unsupportedGroups = [["member-access-expr","string"], ["optional-type", "string"], ["boolean-literal", "equality"], ["DecimalNumber", "equality"]];
     foreach string testLabel in test.labels {
         if unsupportedLabels.indexOf(testLabel, 0) is int {
+            return false;
+        }
+    }
+    foreach string[] group in unsupportedGroups {
+        boolean foundAll = true;
+        foreach string label in group {
+            if test.labels.indexOf(label, 0) is () {
+                foundAll = false;
+                break;
+            }
+        }
+        if foundAll {
             return false;
         }
     }
