@@ -218,7 +218,7 @@ function expect(string[] src) returns string[] {
         int begin = <int> comment + 2;
         int? output = l.indexOf(OUTPUT_MARKER, begin);
         if output != () {
-            expect.push(l.substring(output + OUTPUT_MARKER.length()).trim());
+            expect.push(l.substring(output + OUTPUT_MARKER.length() + 1));
         }
         int? err = l.indexOf(ERROR_MARKER, begin);
         if err != () {
@@ -226,7 +226,7 @@ function expect(string[] src) returns string[] {
         }
         int? pnk = l.indexOf(PANIC_MARKER, begin);
         if pnk != () {
-            string msg = l.substring(pnk + PANIC_MARKER.length()).trim();
+            string msg = l.substring(pnk + PANIC_MARKER.length() + 1);
             expect.push("panic: line " + (i + 1).toString() + ": " + msg);
         }
     }

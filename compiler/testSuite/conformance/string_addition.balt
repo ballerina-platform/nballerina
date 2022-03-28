@@ -577,7 +577,7 @@ public function main() {
     io:println(s); // @output hello world!
 }
 
-Test-Case: output
+Test-Case: error
 Description: Test string concatenation with type cast expressions as operands.
 Labels: additive-expr, string, type-cast-expr, optional-type, string:Char
 

@@ -253,7 +253,7 @@ public function main() {
 
     io:println(<float> 13245); // @output 13245.0
 
-    io:println(<float> 0xabde12a); // @output 1.80216106E8
+    io:println(<float> 0xabde12a); // @output 180216106.0
 }
 
 Test-Case: output
