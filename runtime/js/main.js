@@ -1,9 +1,10 @@
 const fs = require('fs');
-
 let tags = [];
 let getType = null;
 let untagInt = null;
 let untagBoolean = null;
+let len = null;
+let arrayGet = null;
 if (process.argv.length > 2) {
   let fileName = process.argv[2];
   const wasmBuffer = fs.readFileSync(fileName);
@@ -11,21 +12,7 @@ if (process.argv.length > 2) {
     let importObject = {
       console: {
         log: function(arg) {
-          let type = getType(arg);
-          if (type == 1) {
-            if (untagBoolean(arg)) {
-              console.log("true");
-            }
-            else {
-              console.log("false");
-            }
-          }
-          else if (type == 0) {
-            console.log(untagInt(arg).toString());
-          }
-          else {
-            console.log("");
-          }
+          console.log(getValue(arrayGet(arg, 0)));
         },
       }
     };
@@ -42,6 +29,8 @@ if (process.argv.length > 2) {
       getType = obj.instance.exports.get_type;
       untagInt = obj.instance.exports.tagged_to_int;
       untagBoolean = obj.instance.exports.tagged_to_boolean;
+      len = obj.instance.exports.arr_len;
+      arrayGet = obj.instance.exports.arr_get;
       obj.instance.exports.main()
     }).catch((err) => {
         if(typeof err == "object" &&  err instanceof WebAssembly.Exception) {
@@ -57,6 +46,32 @@ if (process.argv.length > 2) {
     WebAssembly.instantiate(wasmBuffer).then(obj => {
       obj.instance.exports.main()
     }).catch((err) => errorHandler(err));
+  }
+}
+
+const getValue = (ref) => {
+  let type = getType(ref);
+  if (type == 1) {
+    return untagBoolean(ref).toString();
+  }
+  else if (type == 0) {
+    try {
+      return untagInt(ref).toString();
+    }
+    catch (error) {
+      let length = len(ref);
+      let output = "[";
+      for (let index = 0; index < length; index++) {
+        let element = arrayGet(ref, index);
+        output += getValue(element) + ",";
+      }
+      output = output.substring(0, output.length - 1)
+      output += "]"
+      return output;
+    }
+  }
+  else {
+    return "";
   }
 }
 

@@ -210,6 +210,40 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
+    public function array(Type fieldType) returns Expression {
+        Token[] inst = ["array"];
+        inst.push(...appendBraces(["mut", fieldType]));
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function arrayNew(string kind, Expression size, Expression rtt) returns Expression {
+        Token[] inst = ["array.new_default_with_rtt", "$" + kind];
+        inst.push(...size.tokens);
+        inst.push(...rtt.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function arrayGet(string kind, Expression arr, Expression index) returns Expression {
+        Token[] inst = ["array.get", "$" + kind];
+        inst.push(...arr.tokens);
+        inst.push(...index.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function arraySet(string kind, Expression arr, Expression index, Expression value) returns Expression {
+        Token[] inst = ["array.set", "$" + kind];
+        inst.push(...arr.tokens);
+        inst.push(...index.tokens);
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function arrayLen(string kind, Expression arr) returns Expression {
+        Token[] inst = ["array.len", "$" + kind];
+        inst.push(...arr.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
     public function refCast(Expression value, Expression ty) returns Expression {
         Token[] inst = ["ref.cast"];
         inst.push(...value.tokens);

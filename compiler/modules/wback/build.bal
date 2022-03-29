@@ -110,3 +110,19 @@ function addFuncGetType(wasm:Module module) {
     module.addFunction("get_type", ["anyref"], "i32", [], ifExpr);
     module.addFunctionExport("get_type", "get_type");
 }
+
+function addFuncGetArrayLength(wasm:Module module) {
+    wasm:Expression asData = module.refAsData(module.localGet(0));
+    wasm:Expression cast = module.refCast(asData, module.rtt("AnyList"));
+    wasm:Expression len = module.arrayLen("AnyList", cast);
+    module.addFunction("arr_len", ["anyref"], "i32", [], module.addReturn(len));
+    module.addFunctionExport("arr_len", "arr_len");
+}
+
+function addFuncGetValueOfIndex(wasm:Module module) {
+    wasm:Expression asData = module.refAsData(module.localGet(0));
+    wasm:Expression cast = module.refCast(asData, module.rtt("AnyList"));
+    wasm:Expression get = module.arrayGet("AnyList", cast, module.localGet(1));
+    module.addFunction("arr_get", ["anyref", "i32"], "anyref", [], module.addReturn(get));
+    module.addFunctionExport("arr_get", "arr_get");
+}

@@ -106,7 +106,3 @@ function buildCondNarrow(wasm:Module module, Scaffold scaffold, bir:CondNarrowIn
 function buildBooleanNotInsn(wasm:Module module, bir:BooleanNotInsn insn) returns wasm:Expression {
     return module.localSet(insn.result.number, module.binary("i32.xor", module.localGet(insn.operand.number), module.addConst({ i32: 1 })));
 }
-
-function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConstructInsn insn) returns wasm:Expression {
-    return module.localSet(insn.result.number, buildWideRepr(module, scaffold, insn.operands[0], scaffold.getRepr(insn.result), insn.result.semType));
-}

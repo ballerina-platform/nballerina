@@ -44,6 +44,9 @@ function addRttFunctions(wasm:Module module) {
     addFuncTaggedToInt(module);
     addFuncTaggedToBoolean(module);
     addFuncGetType(module);
+    addFuncGetArrayLength(module);
+    addFuncGetValueOfIndex(module);
+    module.addType("AnyList", module.array("anyref"));
 }
 
 function checkForEntry(bir:Region[] regions, bir:Label label, bir:BasicBlock[] blocks, bir:Label? exit = ()) returns int? {
