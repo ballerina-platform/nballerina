@@ -1,6 +1,6 @@
 TARGETS=test all compile testll
 
-TDIR= $(sort $(basename $(notdir ../compiler/testSuite/conformance)))
+TDIR= $(sort $(basename $(notdir ../conformance/tests)))
 
 $(TARGETS): $(TDIR)
 

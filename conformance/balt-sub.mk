@@ -1,5 +1,5 @@
 COMPILER_JAR=../../../build/bin/nballerina.jar
-JAVA ?= $(shell ../../findJava.sh)
+JAVA ?= $(shell ../../../test/findJava.sh)
 TARGETS=all test testll compile
 LLVM_SUFFIX ?=-12
 CLANG ?= clang$(LLVM_SUFFIX)
@@ -7,7 +7,7 @@ LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 CFLAGS ?= -O2
 RT=../../../runtime/balrt.a
 RT_INLINE=../../../runtime/balrt_inline.bc
-balt_files = $(wildcard ../../../conformanc/$(tdir)/*.balt)
+balt_files = $(wildcard ../../$(tdir)/*.balt)
 
 ll_files = $(wildcard ll/*.ll)
 llmod_files = $(wildcard ll/*-[vpo].ll)
@@ -44,7 +44,7 @@ fail.txt: $(diff_files)
 	@test ! -s $@
 
 result/%.diff: result/%.exe expect/%.txt
-	-../../runcheck.sh $^ >$@
+	-../../../test/runcheck.sh $^ >$@
 
 result/%.bc: ll/%.ll $(RT_INLINE)
 	@mkdir -p result

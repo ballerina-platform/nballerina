@@ -58,8 +58,8 @@ function supportedTest(BaltTestCase test) returns boolean {
     string[] unsupportedLabels = ["unary-minus", "unary-plus", "var", "optional-field-access-expr", "module-class-defn", "byte-array-literal",
                                   "value:toBalString", "defaultable-param", "method-call-expr", "table-constructor-expr",
                                   "value:toString", "raw-template-expr", "HexFloatingPointLiteral", "int:MIN_VALUE", "let-expr", "ternary-conditional-expr",
-                                  "BacktickString", "xml", "main-return"];
-    string[][] unsupportedGroups = [["member-access-expr","string"], ["optional-type", "string"], ["boolean-literal", "equality"], ["DecimalNumber", "equality"]];
+                                  "BacktickString", "xml", "main-return", "mod-var-decl"];
+    string[][] unsupportedGroups = [["member-access-expr","string"], ["optional-type", "string"], ["boolean-literal", "equality"], ["DecimalNumber", "equality"], ["boolean-literal","exact-equality"]];
     foreach string testLabel in test.labels {
         if unsupportedLabels.indexOf(testLabel, 0) is int {
             return false;
