@@ -51,37 +51,35 @@ if (process.argv.length > 2) {
 
 const getValue = (ref) => {
   let type = getType(ref);
-  if (type == 1) {
+  if (type == 0) {
+    return untagInt(ref).toString();
+  }
+  else if (type == 1) {
     if (untagBoolean(ref).toString() === "1") {
       return "true";
     }
     return "false";
   }
-  else if (type == 0) {
-    try {
-      return untagInt(ref).toString();
-    }
-    catch (error) {
-      let length = len(ref);
-      let output = "[";
-      for (let index = 0; index < length; index++) {
-        let element = arrayGet(ref, index);
-        let val = getValue(element);
-        if (val === "") {
-          val = "null"
-        }
-        output += val + ",";
-      }
-      if (output.indexOf(",") != -1) {
-        output = output.substring(0, output.length - 1)
-
-      }
-      output += "]"
-      return output;
-    }
-  }
-  else {
+  else if (type == 2){
     return "";
+  }
+  else if (type == 3) {
+    let length = len(ref);
+    let output = "[";
+    for (let index = 0; index < length; index++) {
+      let element = arrayGet(ref, index);
+      let val = getValue(element);
+      if (val === "") {
+        val = "null"
+      }
+      output += val + ",";
+    }
+    if (output.indexOf(",") != -1) {
+      output = output.substring(0, output.length - 1)
+
+    }
+    output += "]"
+    return output;
   }
 }
 

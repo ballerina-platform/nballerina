@@ -133,7 +133,7 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function block(Expression[] children, string? name = ()) returns Expression {
+    public function block(Expression[] children, string? name = (), Expression? ty = ()) returns Expression {
         Token[] inst = ["block"];
         if name != () {
             inst.push(name);
@@ -141,6 +141,17 @@ public class Module {
         foreach Expression child in children {
             inst.push(...child.tokens);
         }
+        if ty != () {
+            Token[] result = ["result"];
+            result.push(...ty.tokens);
+            inst.push(...appendBraces(result));
+        }
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function drop(Expression value) returns Expression {
+        Token[] inst = ["drop"];
+        inst.push(...value.tokens);
         return { tokens: appendBraces(inst) };
     }
 
@@ -181,6 +192,13 @@ public class Module {
 
     public function br(string name) returns Expression {
         return { tokens: appendBraces(["br", name]) };
+    }
+
+    public function brOnCastFail(string target, Expression val, Expression ty) returns Expression {
+        Token[] inst = ["br_on_cast_fail", target];
+        inst.push(...val.tokens);
+        inst.push(...ty.tokens);
+        return { tokens: appendBraces(inst) };
     }
 
     public function struct(string[] fields, Type[] fieldTypes) returns Expression {
@@ -269,8 +287,8 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function refNull() returns Expression {
-        return { tokens: appendBraces(["ref.null", "data"]) };
+    public function refNull(string kind = "data") returns Expression {
+        return { tokens: appendBraces(["ref.null", kind]) };
     }
 
     public function refIsNull(Expression value) returns Expression {

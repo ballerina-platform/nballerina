@@ -5,6 +5,7 @@ import wso2/nballerina.print.wasm;
 const int TYPE_INT     = 0;
 const int TYPE_BOOLEAN = 1;
 const int TYPE_NIL     = 2;
+const int TYPE_LIST    = 3;
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     return module.i31New(value);
@@ -105,9 +106,14 @@ function addFuncTaggedToBoolean(wasm:Module module) {
 function addFuncGetType(wasm:Module module) {
     wasm:Expression isI31 = module.refIsI31(module.localGet(0));
     wasm:Expression isNull = module.refIsNull(module.localGet(0));
-    wasm:Expression notI31 = module.addIf(isNull, module.addReturn(module.addConst({ i32: TYPE_NIL })), module.addReturn(module.addConst({ i32: TYPE_INT })));
-    wasm:Expression ifExpr = module.addIf(isI31, module.addReturn(module.addConst({ i32: TYPE_BOOLEAN })), notI31);
-    module.addFunction("get_type", ["anyref"], "i32", [], ifExpr);
+    wasm:Expression trycastToStruct = module.brOnCastFail("$blockInt", module.refAsData(module.localGet(0)), module.rtt("BoxedInt"));
+    wasm:Expression dropCast = module.drop(trycastToStruct);
+    wasm:Expression setToInt = module.localSet(1, module.addConst({ i32 : TYPE_INT }));
+    wasm:Expression blockInt = module.block([dropCast, setToInt, module.br("$blockList"), module.refNull("any")], "$blockInt", module.refNull("any"));
+    wasm:Expression blockList = module.block([module.drop(blockInt), module.localSet(1, module.addConst({ i32 : TYPE_LIST }))], "$blockList");
+    wasm:Expression notI31 = module.addIf(isNull, module.localSet(1, module.addConst({ i32: TYPE_NIL })), blockList);
+    wasm:Expression ifExpr = module.addIf(isI31, module.localSet(1, module.addConst({ i32: TYPE_BOOLEAN })), notI31);
+    module.addFunction("get_type", ["anyref"], "i32", ["i32"], module.block([ifExpr, module.addReturn(module.localGet(1))]));
     module.addFunctionExport("get_type", "get_type");
 }
 
