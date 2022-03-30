@@ -65,6 +65,7 @@ function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm
     wasm:Expression MAX_INT = module.addConst({ i64: 9223372036854775807 });
     wasm:Expression MIN_INT = module.addConst({ i64: -9223372036854775808 });
     wasm:Expression op1GZ = module.binary("i64.gt_s", op1, module.addConst({ i64: 0 }));
+    wasm:Expression op1GEZ = module.binary("i64.ge_s", op1, module.addConst({ i64: 0 }));
     wasm:Expression op2GZ = module.binary("i64.gt_s", op2, module.addConst({ i64: 0 }));
     wasm:Expression op1LZ = module.binary("i64.lt_s", op1, module.addConst({ i64: 0 }));
     wasm:Expression op2LZ = module.binary("i64.lt_s", op2, module.addConst({ i64: 0 }));
@@ -84,7 +85,7 @@ function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm
     else if op == "i64.sub" {
         wasm:Expression maxAOp2 = module.binary("i64.add", MAX_INT, op2);
         wasm:Expression minAOp2 = module.binary("i64.add", MIN_INT, op2);
-        wasm:Expression cond1 = module.binary("i32.and", op1GZ, op2LZ);
+        wasm:Expression cond1 = module.binary("i32.and", op1GEZ, op2LZ);
         wasm:Expression cond1Inner = module.binary("i64.gt_s", op1, maxAOp2);
         wasm:Expression cond2 = module.binary("i32.and", op1LZ, op2GZ);
         wasm:Expression cond2Inner = module.binary("i64.lt_s", op1, minAOp2);
