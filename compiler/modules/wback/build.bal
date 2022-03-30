@@ -86,57 +86,57 @@ function buildUntagBoolean(wasm:Module module, wasm:Expression tagged) returns w
 function addFuncIntToTagged(wasm:Module module) {
     module.addType("BoxedInt", module.struct(["val"], ["i64"]));
     wasm:Expression struct = module.structNew("BoxedInt", module.localGet(0), module.rtt("BoxedInt"));
-    module.addFunction("int_to_tagged", ["i64"], "anyref", [], module.addReturn(struct));
+    module.addFunction("int_to_tagged", ["i64"], "eqref", [], module.addReturn(struct));
 }
 
 function addFuncTaggedToInt(wasm:Module module) {
-    wasm:Expression asData = module.refAsData(module.localGet(0));
+    wasm:Expression asData = module.refAs("ref.as_data", module.localGet(0));
     wasm:Expression cast = module.refCast(asData, module.rtt("BoxedInt"));
     wasm:Expression structGet = module.structGet("BoxedInt", "val", cast);
-    module.addFunction("tagged_to_int", ["anyref"], "i64", [], module.addReturn(structGet));
+    module.addFunction("tagged_to_int", ["eqref"], "i64", [], module.addReturn(structGet));
     module.addFunctionExport("tagged_to_int", "tagged_to_int");
 }
 
 function addFuncTaggedToBoolean(wasm:Module module) {
-    wasm:Expression i31Get = module.i31Get(module.refAsI31(module.localGet(0)));
-    module.addFunction("tagged_to_boolean", ["anyref"], "i32", [], module.addReturn(i31Get));
+    wasm:Expression i31Get = module.i31Get(module.refAs("ref.as_i31", module.localGet(0)));
+    module.addFunction("tagged_to_boolean", ["eqref"], "i32", [], module.addReturn(i31Get));
     module.addFunctionExport("tagged_to_boolean", "tagged_to_boolean");
 }
 
 function addFuncGetType(wasm:Module module) {
-    wasm:Expression isI31 = module.refIsI31(module.localGet(0));
-    wasm:Expression isNull = module.refIsNull(module.localGet(0));
-    wasm:Expression trycastToStruct = module.brOnCastFail("$blockInt", module.refAsData(module.localGet(0)), module.rtt("BoxedInt"));
+    wasm:Expression isI31 = module.refIs("ref.is_i31", module.localGet(0));
+    wasm:Expression isNull = module.refIs("ref.is_null", module.localGet(0));
+    wasm:Expression trycastToStruct = module.brOnCastFail("$blockInt", module.refAs("ref.as_data", module.localGet(0)), module.rtt("BoxedInt"));
     wasm:Expression dropCast = module.drop(trycastToStruct);
     wasm:Expression setToInt = module.localSet(1, module.addConst({ i32 : TYPE_INT }));
     wasm:Expression blockInt = module.block([dropCast, setToInt, module.br("$blockList"), module.refNull("any")], "$blockInt", { tokens: ["(", "ref", "null", "any", ")"] });
     wasm:Expression blockList = module.block([module.drop(blockInt), module.localSet(1, module.addConst({ i32 : TYPE_LIST }))], "$blockList");
     wasm:Expression notI31 = module.addIf(isNull, module.localSet(1, module.addConst({ i32: TYPE_NIL })), blockList);
     wasm:Expression ifExpr = module.addIf(isI31, module.localSet(1, module.addConst({ i32: TYPE_BOOLEAN })), notI31);
-    module.addFunction("get_type", ["anyref"], "i32", ["i32"], module.block([ifExpr, module.addReturn(module.localGet(1))]));
+    module.addFunction("get_type", ["eqref"], "i32", ["i32"], module.block([ifExpr, module.addReturn(module.localGet(1))]));
     module.addFunctionExport("get_type", "get_type");
 }
 
 function addFuncGetArrayLength(wasm:Module module) {
-    wasm:Expression asData = module.refAsData(module.localGet(0));
+    wasm:Expression asData = module.refAs("ref.as_data", module.localGet(0));
     wasm:Expression cast = module.refCast(asData, module.rtt("AnyList"));
     wasm:Expression len = module.arrayLen("AnyList", cast);
-    module.addFunction("length", ["anyref"], "i32", [], module.addReturn(len));
+    module.addFunction("length", ["eqref"], "i32", [], module.addReturn(len));
     module.addFunctionExport("length", "arr_len");
 }
 
 function addFuncGetValueOfIndex(wasm:Module module) {
-    wasm:Expression asData = module.refAsData(module.localGet(0));
+    wasm:Expression asData = module.refAs("ref.as_data", module.localGet(0));
     wasm:Expression cast = module.refCast(asData, module.rtt("AnyList"));
     wasm:Expression get = module.arrayGet("AnyList", cast, module.localGet(1));
-    module.addFunction("arr_get", ["anyref", "i32"], "anyref", [], module.addReturn(get));
+    module.addFunction("arr_get", ["eqref", "i32"], "eqref", [], module.addReturn(get));
     module.addFunctionExport("arr_get", "arr_get");
 }
 
 function addFuncArrayPush(wasm:Module module) {
     wasm:Expression list = module.localGet(0);
-    wasm:Expression castList = module.refCast(module.refAsData(list), module.rtt("AnyList"));
+    wasm:Expression castList = module.refCast(module.refAs("ref.as_data", list), module.rtt("AnyList"));
     wasm:Expression curLength = module.call("length", [list], "i32");
     wasm:Expression setVal = module.arraySet("AnyList", castList, curLength, module.localGet(1));
-    module.addFunction("push", ["anyref", "anyref"], "None", [], module.addReturn(setVal));
+    module.addFunction("push", ["eqref", "eqref"], "None", [], module.addReturn(setVal));
 }

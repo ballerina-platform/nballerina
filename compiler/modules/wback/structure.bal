@@ -6,7 +6,7 @@ function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConst
     wasm:Expression[] children = [];
     wasm:Expression list = module.arrayNew("AnyList", module.addConst({ i32: length }), module.rtt("AnyList"));
     wasm:Expression setList = module.localSet(insn.result.number, list);
-    wasm:Expression castList = module.refCast(module.refAsData(module.localGet(insn.result.number)), module.rtt("AnyList"));
+    wasm:Expression castList = module.refCast(module.refAs("ref.as_data", module.localGet(insn.result.number)), module.rtt("AnyList"));
     children.push(setList);
     if length > 0 {
         foreach int i in 0 ..< length {
@@ -21,6 +21,6 @@ function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConst
 function buildListGet(wasm:Module module, Scaffold scaffold, bir:ListGetInsn insn) returns wasm:Expression {
     bir:Register listReg = insn.operands[0];
     bir:IntOperand indexOperand = insn.operands[1];
-    wasm:Expression call = module.call("arr_get", [module.localGet(listReg.number), module.unary("i32.wrap_i64", buildRepr(module, scaffold, indexOperand, REPR_INT))], "anyref");
+    wasm:Expression call = module.call("arr_get", [module.localGet(listReg.number), module.unary("i32.wrap_i64", buildRepr(module, scaffold, indexOperand, REPR_INT))], "eqref");
     return module.localSet(insn.result.number, call);
 }

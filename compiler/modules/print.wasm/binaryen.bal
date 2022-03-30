@@ -1,7 +1,8 @@
 public type IntType "i64"|"i32";
-public type RefType "anyref";
+public type RefType "anyref"|"eqref";
 public type Type "None"|IntType|RefType;
-public type Op "i32.add"|"i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.or"|"i32.xor"|"i32.and"|"i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|"i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.or"|"i64.xor"|"i64.and"|"i64.extend_i32_u"|"i64.shl"|"i64.eqz"|"i32.wrap_i64";
+
+public type Op "i32.add"|"i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.or"|"i32.xor"|"i32.and"|"i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|"i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.or"|"i64.xor"|"i64.and"|"i64.extend_i32_u"|"i64.shl"|"i64.eqz"|"i32.wrap_i64"|"ref.is_null"|"ref.is_i31"|"ref.as_data"|"ref.as_i31";
 
 public type Token string;
 
@@ -269,32 +270,27 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function refAsData(Expression value) returns Expression {
-        Token[] inst = ["ref.as_data"];
+    public function refAs(Op operand, Expression value) returns Expression {
+        Token[] inst = [operand];
         inst.push(...value.tokens);
         return { tokens: appendBraces(inst) };
     }
 
-    public function refAsI31(Expression value) returns Expression {
-        Token[] inst = ["ref.as_i31"];
+    public function refIs(Op operand, Expression value) returns Expression {
+        Token[] inst = [operand];
         inst.push(...value.tokens);
         return { tokens: appendBraces(inst) };
     }
 
-    public function refIsI31(Expression value) returns Expression {
-        Token[] inst = ["ref.is_i31"];
-        inst.push(...value.tokens);
+    public function refEq(Expression left, Expression right) returns Expression {
+        Token[] inst = ["ref.eq"];
+        inst.push(...left.tokens);
+        inst.push(...right.tokens);
         return { tokens: appendBraces(inst) };
     }
 
     public function refNull(string kind = "data") returns Expression {
         return { tokens: appendBraces(["ref.null", kind]) };
-    }
-
-    public function refIsNull(Expression value) returns Expression {
-        Token[] inst = ["ref.is_null"];
-        inst.push(...value.tokens);
-        return { tokens: appendBraces(inst) };
     }
 
     public function rtt(string kind) returns Expression {

@@ -34,7 +34,7 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
             module.addFunctionExport(funcName, funcName);
         }
     }
-    module.addFunctionImport("println", "console", "log", ["anyref"], "None");
+    module.addFunctionImport("println", "console", "log", ["eqref"], "None");
     addRttFunctions(module);
     return module.finish();
 }
@@ -47,7 +47,7 @@ function addRttFunctions(wasm:Module module) {
     addFuncGetArrayLength(module);
     addFuncGetValueOfIndex(module);
     addFuncArrayPush(module);
-    module.addType("AnyList", module.array("anyref"));
+    module.addType("AnyList", module.array("eqref"));
 }
 
 function checkForEntry(bir:Region[] regions, bir:Label label, bir:BasicBlock[] blocks, bir:Label? exit = ()) returns int? {
