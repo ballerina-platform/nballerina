@@ -90,22 +90,27 @@ type MultipleOpeandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithm
     |MappingGetInsn|StringConcatInsn;
 
 type NonResultInsn MappingSetInsn|ListSetInsn|BranchInsn|CondBranchInsn|CondNarrowInsn|PanicInsn
-    |RetInsn|AbnormalRetInsn;
+    |RetInsn|AbnormalRetInsn|AssignInsn;
 
 function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
     if insn !is NonResultInsn {
-        vc.definedTmpRegisters.push(insn.result.number);
+        if vc.definedTmpRegisters.indexOf(insn.result.number, 0) != () {
+            return vc.invalidErr("tmp register defined in multiple places", <Position>insn.result.pos);
+        }
+        else {
+            vc.definedTmpRegisters.push(insn.result.number);
+        }
     }
 
     if insn is BranchInsn|CatchInsn {
         return;
     }
     else if insn is EqualityInsn {
-        check verifyTmpSet(vc, insn.operands[0]);
+        check verifyTmpInit(vc, insn.operands[0]);
         check verifyRegisterKind(vc, insn.operands[1]);
     }
     else if insn is AssignInsn|CondBranchInsn|CondNarrowInsn {
-        check verifyTmpSet(vc, insn.operand);
+        check verifyTmpInit(vc, insn.operand);
     }
     else if insn is CallInsn {
         foreach Operand arg in insn.args {
@@ -114,7 +119,7 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is ListSetInsn|MappingSetInsn {
         check verifyNonFinalRegisterKind(vc, insn.operands[0]);
-        check verifyTmpSet(vc, insn.operands[1]);
+        check verifyTmpInit(vc, insn.operands[1]);
         check verifyRegisterKind(vc, insn.operands[2]);
     }
     else if insn is MultipleOpeandInsn {
@@ -133,12 +138,12 @@ function verifyNonFinalRegisterKind(VerifyContext vc, Operand r) returns Error? 
     if r is FinalRegister {
             return vc.invalidErr("invalid register kind final for insn: " + r.kind, <Position>r.pos);
     }
-    check verifyTmpSet(vc, r);
+    check verifyTmpInit(vc, r);
 }
 
-function verifyTmpSet(VerifyContext vc, Operand r) returns Error? {
+function verifyTmpInit(VerifyContext vc, Operand r) returns Error? {
     if r is TmpRegister && vc.definedTmpRegisters.indexOf(r.number, 0) == () {
-            return vc.invalidErr("tmp register not set", <Position>r.pos);
+            return vc.invalidErr("tmp register not initialized", <Position>r.pos);
     }
 }
 
@@ -147,7 +152,7 @@ function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
         return;
     }
     if r is TmpRegister {
-        check verifyTmpSet(vc, r);
+        check verifyTmpInit(vc, r);
         if vc.usedTmpRegisters.indexOf(r.number, 0) != () {
             return vc.invalidErr("tmp register used in multiple places", <Position>r.pos);
         }
