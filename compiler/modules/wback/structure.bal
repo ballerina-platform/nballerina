@@ -17,3 +17,10 @@ function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConst
     }
     return module.block(children);
 }
+
+function buildListGet(wasm:Module module, Scaffold scaffold, bir:ListGetInsn insn) returns wasm:Expression {
+    bir:Register listReg = insn.operands[0];
+    bir:IntOperand indexOperand = insn.operands[1];
+    wasm:Expression call = module.call("arr_get", [module.localGet(listReg.number), module.unary("i32.wrap_i64", buildRepr(module, scaffold, indexOperand, REPR_INT))], "anyref");
+    return module.localSet(insn.result.number, call);
+}

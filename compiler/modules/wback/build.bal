@@ -115,8 +115,8 @@ function addFuncGetArrayLength(wasm:Module module) {
     wasm:Expression asData = module.refAsData(module.localGet(0));
     wasm:Expression cast = module.refCast(asData, module.rtt("AnyList"));
     wasm:Expression len = module.arrayLen("AnyList", cast);
-    module.addFunction("arr_len", ["anyref"], "i32", [], module.addReturn(len));
-    module.addFunctionExport("arr_len", "arr_len");
+    module.addFunction("length", ["anyref"], "i32", [], module.addReturn(len));
+    module.addFunctionExport("length", "arr_len");
 }
 
 function addFuncGetValueOfIndex(wasm:Module module) {
@@ -125,4 +125,12 @@ function addFuncGetValueOfIndex(wasm:Module module) {
     wasm:Expression get = module.arrayGet("AnyList", cast, module.localGet(1));
     module.addFunction("arr_get", ["anyref", "i32"], "anyref", [], module.addReturn(get));
     module.addFunctionExport("arr_get", "arr_get");
+}
+
+function addFuncArrayPush(wasm:Module module) {
+    wasm:Expression list = module.localGet(0);
+    wasm:Expression castList = module.refCast(module.refAsData(list), module.rtt("AnyList"));
+    wasm:Expression curLength = module.call("length", [list], "i32");
+    wasm:Expression setVal = module.arraySet("AnyList", castList, curLength, module.localGet(1));
+    module.addFunction("push", ["anyref", "anyref"], "None", [], module.addReturn(setVal));
 }
