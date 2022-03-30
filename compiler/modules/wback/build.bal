@@ -109,7 +109,7 @@ function addFuncGetType(wasm:Module module) {
     wasm:Expression trycastToStruct = module.brOnCastFail("$blockInt", module.refAsData(module.localGet(0)), module.rtt("BoxedInt"));
     wasm:Expression dropCast = module.drop(trycastToStruct);
     wasm:Expression setToInt = module.localSet(1, module.addConst({ i32 : TYPE_INT }));
-    wasm:Expression blockInt = module.block([dropCast, setToInt, module.br("$blockList"), module.refNull("any")], "$blockInt", module.refNull("any"));
+    wasm:Expression blockInt = module.block([dropCast, setToInt, module.br("$blockList"), module.refNull("any")], "$blockInt", { tokens: ["(", "ref", "null", "any", ")"] });
     wasm:Expression blockList = module.block([module.drop(blockInt), module.localSet(1, module.addConst({ i32 : TYPE_LIST }))], "$blockList");
     wasm:Expression notI31 = module.addIf(isNull, module.localSet(1, module.addConst({ i32: TYPE_NIL })), blockList);
     wasm:Expression ifExpr = module.addIf(isI31, module.localSet(1, module.addConst({ i32: TYPE_BOOLEAN })), notI31);

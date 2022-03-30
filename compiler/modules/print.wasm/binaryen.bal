@@ -138,13 +138,13 @@ public class Module {
         if name != () {
             inst.push(name);
         }
-        foreach Expression child in children {
-            inst.push(...child.tokens);
-        }
         if ty != () {
             Token[] result = ["result"];
             result.push(...ty.tokens);
             inst.push(...appendBraces(result));
+        }
+        foreach Expression child in children {
+            inst.push(...child.tokens);
         }
         return { tokens: appendBraces(inst) };
     }
