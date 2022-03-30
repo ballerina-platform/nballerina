@@ -6,7 +6,7 @@ import wso2/nballerina.nback;
 import ballerina/io;
 import ballerina/file;
 
-type TestKind "output" | "panic" | "error" | "parser-error" | "skip";
+type TestKind "output" | "panic" | "error" | "parser-error";
 
 type BaltTestHeader record {|
     TestKind 'Test\-Case;
@@ -33,55 +33,34 @@ const CONTINUATION_WS = " ";
 
 function compileBaltFile(string filename, string basename, string outDir, nback:Options nbackOptions, Options options) returns error? {
     BaltTestCase[] tests = check parseBalt(filename);
-    io:println(filename);
     foreach var [i, t] in tests.enumerate() {
-        if t.header.Test\-Case is "error"|"parser-error"|"skip"|"panic" || t.header["Fail-Issue"] != () {
+        if t.header["Fail-Issue"] != () {
             continue;
         }
-        if !supportedTest(t) {
-            continue;
-        }
-        io:println("\t", t.labels);
         string outBasename = check chooseBaltCaseOutputFilename(filename, t, i);
         string initFilename = check file:joinPath(outDir, outBasename) + "._init" + OUTPUT_EXTENSION;
         string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
         string[] lines = t.content;
         CompileContext cx = new(basename, check file:joinPath(outDir, outBasename), nbackOptions, options);
-        check compileAndOutputModule(cx, DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename, initFilename);
+        CompileError? err = compileAndOutputModule(cx, DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename, initFilename);
+        if t.header.Test\-Case is "parser-error"|"error" {
+            if err is () {
+                // pr-todo: throw a proper error
+                panic error("expected error in " + filename + " test: " + (i + 1).toString());
+            }
+        }
+        else if err != () {
+            io:println("unexpected error in ", filename, " test: ", i + 1);
+            return err;
+        }
         string? expectOutDir = options.expectOutDir;
         string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
         check io:fileWriteLines(expectFilename, expect(t.content));
     }
 }
 
-function supportedTest(BaltTestCase test) returns boolean {
-    string[] unsupportedLabels = ["unary-minus", "unary-plus", "var", "optional-field-access-expr", "module-class-defn", "byte-array-literal",
-                                  "value:toBalString", "defaultable-param", "method-call-expr", "table-constructor-expr",
-                                  "value:toString", "raw-template-expr", "HexFloatingPointLiteral", "int:MIN_VALUE", "let-expr", "ternary-conditional-expr",
-                                  "BacktickString", "xml", "main-return", "mod-var-decl"];
-    string[][] unsupportedGroups = [["member-access-expr","string"], ["optional-type", "string"], ["boolean-literal", "equality"], ["DecimalNumber", "equality"], ["boolean-literal","exact-equality"]];
-    foreach string testLabel in test.labels {
-        if unsupportedLabels.indexOf(testLabel, 0) is int {
-            return false;
-        }
-    }
-    foreach string[] group in unsupportedGroups {
-        boolean foundAll = true;
-        foreach string label in group {
-            if test.labels.indexOf(label, 0) is () {
-                foundAll = false;
-                break;
-            }
-        }
-        if foundAll {
-            return false;
-        }
-    }
-    return true;
-}
-
 function compileAndOutputModule(CompileContext cx, bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename, string? initFilename) returns CompileError? {
-    front:ResolvedModule mod = check processModule(cx, modId, sources, cx.outputFilename());
+    front:ResolvedModule mod = check processModule(cx, modId, sources, <string>cx.outputFilename());
     check mod.validMain();
     check generateInitModule(cx, mod);
 }
@@ -107,8 +86,7 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
     BaltTestHeader? maybeHeader = ();
     string? prevFiledBody  = ();
     string? prevFiledName  = ();
-    // pr-todo:
-    string[] content = ["import ballerina/io;"];
+    string[] content = [];
     string[] labels = [];
     int offset = 0;
     State s = BOF;
@@ -121,8 +99,7 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
             s = HEADER;
 
             offset = i + 1;
-            // pr-todo:
-            content = ["import ballerina/io;"];
+            content = [];
             labels = [];
             var [fName, fBody] = parseField(l);
             maybeHeader = {Test\-Case: <TestKind>fBody};
@@ -254,7 +231,7 @@ function chooseBaltCaseOutputFilename(string filename, BaltTestCase t, int i) re
 
 function testKindToLetter(TestKind k) returns string:Char {
     match k {
-        "error" => {
+        "error"|"parser-error" => {
             return "e";
         }
         "panic" => {

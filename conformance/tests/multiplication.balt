@@ -1,0 +1,768 @@
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, for positive non-zero integers.
+Labels: multiplicative-expr, int, DecimalNumber
+
+import ballerina/io;
+public function main() {
+    int a = 1;
+    int b = 2;
+    int c = 4611686018427387903;
+    int d = 6917529027641081853;
+    int e = 9223372036854775807;
+
+    io:println(a * a); // @output 1
+    io:println(a * b); // @output 2
+    io:println(a * c); // @output 4611686018427387903
+    io:println(a * d); // @output 6917529027641081853
+    io:println(a * e); // @output 9223372036854775807
+
+    io:println(b * a); // @output 2
+    io:println(b * b); // @output 4
+    io:println(b * c); // @output 9223372036854775806
+
+    io:println(c * a); // @output 4611686018427387903
+    io:println(c * b); // @output 9223372036854775806
+
+    io:println(d * a); // @output 6917529027641081853
+
+    io:println(e * a); // @output 9223372036854775807
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow.
+Labels: multiplicative-expr, int, DecimalNumber
+
+public function main() {
+    int a = 9223372036854775807;
+    int b = 2;    
+    int _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: error
+Description: Test 2 for integer multiplication overflow.
+Labels: multiplicative-expr, int, DecimalNumber
+
+public function main() {
+    int _ = 2 * 4611686018427387904; // @error pr-todo
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, for positive non-zero integers, for int:Unsigned8.
+Labels: multiplicative-expr, DecimalNumber, int:Unsigned8
+
+import ballerina/io;
+public function main() {
+    int:Unsigned8 a = 1;
+    int:Unsigned8 b = 2;
+    int:Unsigned8 c = 3;
+    int:Unsigned8 d = 86;
+    int:Unsigned8 e = 255;
+
+    io:println(a * a); // @output 1
+    io:println(a * b); // @output 2
+    io:println(a * c); // @output 3
+    io:println(a * d); // @output 86
+    io:println(a * e); // @output 255
+
+    io:println(b * a); // @output 2
+    io:println(b * b); // @output 4
+    io:println(b * c); // @output 6
+    io:println(b * d); // @output 172
+    io:println(b * e); // @output 510
+
+    io:println(c * a); // @output 3
+    io:println(c * b); // @output 6
+    io:println(c * c); // @output 9
+    io:println(c * d); // @output 258
+    io:println(c * e); // @output 765
+
+    io:println(d * a); // @output 86
+    io:println(d * b); // @output 172
+    io:println(d * c); // @output 258
+    io:println(d * d); // @output 7396
+    io:println(d * e); // @output 21930
+
+    io:println(e * a); // @output 255
+    io:println(e * b); // @output 510
+    io:println(e * c); // @output 765
+    io:println(e * d); // @output 21930
+    io:println(e * e); // @output 65025
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, where at least one operand is zero, for int:Unsigned8.
+Labels: multiplicative-expr, DecimalNumber, int:Unsigned8
+
+import ballerina/io;
+public function main() {
+    int:Unsigned8 a = 0;
+    int:Unsigned8 b = 1;
+    int:Unsigned8 c = 128;
+    int:Unsigned8 d = 255;
+
+    io:println(a * a); // @output 0
+
+    io:println(a * b); // @output 0
+    io:println(a * c); // @output 0
+    io:println(a * d); // @output 0
+
+    io:println(b * a); // @output 0
+    io:println(c * a); // @output 0
+    io:println(d * a); // @output 0
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, for positive non-zero integers, for byte.
+Labels: multiplicative-expr, DecimalNumber, byte
+
+import ballerina/io;
+public function main() {
+    byte a = 1;
+    byte b = 2;
+    byte c = 3;
+    byte d = 86;
+    byte e = 255;
+
+    io:println(a * a); // @output 1
+    io:println(a * b); // @output 2
+    io:println(a * c); // @output 3
+    io:println(a * d); // @output 86
+    io:println(a * e); // @output 255
+
+    io:println(b * a); // @output 2
+    io:println(b * b); // @output 4
+    io:println(b * c); // @output 6
+    io:println(b * d); // @output 172
+    io:println(b * e); // @output 510
+
+    io:println(c * a); // @output 3
+    io:println(c * b); // @output 6
+    io:println(c * c); // @output 9
+    io:println(c * d); // @output 258
+    io:println(c * e); // @output 765
+
+    io:println(d * a); // @output 86
+    io:println(d * b); // @output 172
+    io:println(d * c); // @output 258
+    io:println(d * d); // @output 7396
+    io:println(d * e); // @output 21930
+
+    io:println(e * a); // @output 255
+    io:println(e * b); // @output 510
+    io:println(e * c); // @output 765
+    io:println(e * d); // @output 21930
+    io:println(e * e); // @output 65025
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, where at least one operand is zero, for byte.
+Labels: multiplicative-expr, DecimalNumber, byte
+
+import ballerina/io;
+public function main() {
+    byte a = 0;
+    byte b = 1;
+    byte c = 128;
+    byte d = 255;
+
+    io:println(a * a); // @output 0
+
+    io:println(a * b); // @output 0
+    io:println(a * c); // @output 0
+    io:println(a * d); // @output 0
+
+    io:println(b * a); // @output 0
+    io:println(c * a); // @output 0
+    io:println(d * a); // @output 0
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, where one operand is of type byte.
+Labels: multiplicative-expr, int, DecimalNumber, byte
+
+public function main() {
+    byte a = 255;
+    int b = 36170086419038337;    
+    int _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 2 for integer multiplication overflow, where one operand is of type byte.
+Labels: multiplicative-expr, int, DecimalNumber, byte
+
+public function main() {
+    int a = -461168601842738791;
+    byte b = 20;  
+    int _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, for positive non-zero integers, for int:Unsigned16.
+Labels: multiplicative-expr, DecimalNumber, int:Unsigned16
+
+import ballerina/io;
+public function main() {
+    int:Unsigned16 a = 1;
+    int:Unsigned16 b = 2;
+    int:Unsigned16 c = 5;
+    int:Unsigned16 d = 40123;
+    int:Unsigned16 e = 65535;
+
+    io:println(a * a); // @output 1
+    io:println(a * b); // @output 2
+    io:println(a * c); // @output 5
+    io:println(a * d); // @output 40123
+    io:println(a * e); // @output 65535
+
+    io:println(b * a); // @output 2
+    io:println(b * b); // @output 4
+    io:println(b * c); // @output 10
+    io:println(b * d); // @output 80246
+    io:println(b * e); // @output 131070
+
+    io:println(c * a); // @output 5
+    io:println(c * b); // @output 10
+    io:println(c * c); // @output 25
+    io:println(c * d); // @output 200615
+    io:println(c * e); // @output 327675
+
+    io:println(d * a); // @output 40123
+    io:println(d * b); // @output 80246
+    io:println(d * c); // @output 200615
+    io:println(d * d); // @output 1609855129
+    io:println(d * e); // @output 2629460805
+
+    io:println(e * a); // @output 65535
+    io:println(e * b); // @output 131070
+    io:println(e * c); // @output 327675
+    io:println(e * d); // @output 2629460805
+    io:println(e * e); // @output 4294836225
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, where at least one operand is zero, for int:Unsigned16.
+Labels: multiplicative-expr, DecimalNumber, int:Unsigned16
+
+import ballerina/io;
+public function main() {
+    int:Unsigned16 a = 0;
+    int:Unsigned16 b = 1;
+    int:Unsigned16 c = 128;
+    int:Unsigned16 d = 255;
+
+    io:println(a * a); // @output 0
+
+    io:println(a * b); // @output 0
+    io:println(a * c); // @output 0
+    io:println(a * d); // @output 0
+
+    io:println(b * a); // @output 0
+    io:println(c * a); // @output 0
+    io:println(d * a); // @output 0
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, where one operand is of type int:Unsigned16.
+Labels: multiplicative-expr, int, DecimalNumber, int:Unsigned16
+
+public function main() {
+    int:Unsigned16 a = 65534;
+    int b = 140741783453701;    
+    int _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, for positive non-zero integers, for int:Unsigned32.
+Labels: multiplicative-expr, DecimalNumber, int:Unsigned32
+
+import ballerina/io;
+public function main() {
+    int:Unsigned32 a = 1;
+    int:Unsigned32 b = 2;
+    int:Unsigned32 c = 10;
+    int:Unsigned32 d = 12034;
+    int:Unsigned32 e = 429496729;
+
+    io:println(a * a); // @output 1
+    io:println(a * b); // @output 2
+    io:println(a * c); // @output 10
+    io:println(a * d); // @output 12034
+    io:println(a * e); // @output 429496729
+
+    io:println(b * a); // @output 2
+    io:println(b * b); // @output 4
+    io:println(b * c); // @output 20
+    io:println(b * d); // @output 24068
+    io:println(b * e); // @output 858993458
+
+    io:println(c * a); // @output 10
+    io:println(c * b); // @output 20
+    io:println(c * c); // @output 100
+    io:println(c * d); // @output 120340
+    io:println(c * e); // @output 4294967290
+
+    io:println(d * a); // @output 12034
+    io:println(d * b); // @output 24068
+    io:println(d * c); // @output 120340
+    io:println(d * d); // @output 144817156
+    io:println(d * e); // @output 5168563636786
+
+    io:println(e * a); // @output 429496729
+    io:println(e * b); // @output 858993458
+    io:println(e * c); // @output 4294967290
+    io:println(e * d); // @output 5168563636786
+    io:println(e * e); // @output 184467440221699441
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, where at least one operand is zero, for int:Unsigned32.
+Labels: multiplicative-expr, DecimalNumber, int:Unsigned32
+
+import ballerina/io;
+public function main() {
+    int:Unsigned32 a = 0;
+    int:Unsigned32 b = 1;
+    int:Unsigned32 c = 1259273;
+    int:Unsigned32 d = 4294967295;
+
+    io:println(a * a); // @output 0
+
+    io:println(a * b); // @output 0
+    io:println(a * c); // @output 0
+    io:println(a * d); // @output 0
+
+    io:println(b * a); // @output 0
+    io:println(c * a); // @output 0
+    io:println(d * a); // @output 0
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, where one operand is of type int:Unsigned32.
+Labels: multiplicative-expr, int, DecimalNumber, int:Unsigned32
+
+public function main() {
+    int:Unsigned32 a = 4294127249;
+    int b = 2147903754;    
+    int _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 3 for integer multiplication overflow, where both operands are of type int:Unsigned32.
+Labels: multiplicative-expr, int, DecimalNumber, int:Unsigned32
+
+public function main() {
+    int:Unsigned32 a = 4294967295;  
+    int _ = a * a; // @panic integer overflow on multiplication
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, for positive non-zero integers, for int:Signed8.
+Labels: multiplicative-expr, DecimalNumber, int:Signed8
+
+import ballerina/io;
+public function main() {
+    int:Signed8 a = 1;
+    int:Signed8 b = 2;
+    int:Signed8 c = 10;
+    int:Signed8 d = 100;
+    int:Signed8 e = 127;
+
+    io:println(a * a); // @output 1
+    io:println(a * b); // @output 2
+    io:println(a * c); // @output 10
+    io:println(a * d); // @output 100
+    io:println(a * e); // @output 127
+
+    io:println(b * a); // @output 2
+    io:println(b * b); // @output 4
+    io:println(b * c); // @output 20
+    io:println(b * d); // @output 200
+    io:println(b * e); // @output 254
+
+    io:println(c * a); // @output 10
+    io:println(c * b); // @output 20
+    io:println(c * c); // @output 100
+    io:println(c * d); // @output 1000
+    io:println(c * e); // @output 1270
+
+    io:println(d * a); // @output 100
+    io:println(d * b); // @output 200
+    io:println(d * c); // @output 1000
+    io:println(d * d); // @output 10000
+    io:println(d * e); // @output 12700
+
+    io:println(e * a); // @output 127
+    io:println(e * b); // @output 254
+    io:println(e * c); // @output 1270
+    io:println(e * d); // @output 12700
+    io:println(e * e); // @output 16129
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, for int:Signed8.
+Labels: multiplicative-expr, int, DecimalNumber, int:Signed8
+
+public function main() {
+    int a = 72624976668147842;
+    int:Signed8 b = 127;    
+    int _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, for positive non-zero integers, for int:Signed16.
+Labels: multiplicative-expr, DecimalNumber, int:Signed16
+
+import ballerina/io;
+public function main() {
+    int:Signed16 a = 1;
+    int:Signed16 b = 2;
+    int:Signed16 c = 10;
+    int:Signed16 d = 12345;
+    int:Signed16 e = 32767;
+
+    io:println(a * a); // @output 1
+    io:println(a * b); // @output 2
+    io:println(a * c); // @output 10
+    io:println(a * d); // @output 12345
+    io:println(a * e); // @output 32767
+
+    io:println(b * a); // @output 2
+    io:println(b * b); // @output 4
+    io:println(b * c); // @output 20
+    io:println(b * d); // @output 24690
+    io:println(b * e); // @output 65534
+
+    io:println(c * a); // @output 10
+    io:println(c * b); // @output 20
+    io:println(c * c); // @output 100
+    io:println(c * d); // @output 123450
+    io:println(c * e); // @output 327670
+
+    io:println(d * a); // @output 12345
+    io:println(d * b); // @output 24690
+    io:println(d * c); // @output 123450
+    io:println(d * d); // @output 152399025
+    io:println(d * e); // @output 404508615
+
+    io:println(e * a); // @output 32767
+    io:println(e * b); // @output 65534
+    io:println(e * c); // @output 327670
+    io:println(e * d); // @output 404508615
+    io:println(e * e); // @output 1073676289
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, for int:Signed16.
+Labels: multiplicative-expr, int, DecimalNumber, int:Signed16
+
+public function main() {
+    int a = 281483566907401;
+    int:Signed16 b = 32767;    
+    int _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: output
+Description: Test integer multiplication non-overflow scenarios, for positive non-zero integers, for int:Signed32.
+Labels: multiplicative-expr, DecimalNumber, int:Signed32
+
+import ballerina/io;
+public function main() {
+    int:Signed32 a = 1;
+    int:Signed32 b = 2;
+    int:Signed32 c = 10;
+    int:Signed32 d = 1000;
+    int:Signed32 e = 2147483647;
+
+    io:println(a * a); // @output 1
+    io:println(a * b); // @output 2
+    io:println(a * c); // @output 10
+    io:println(a * d); // @output 1000
+    io:println(a * e); // @output 2147483647
+
+    io:println(b * a); // @output 2
+    io:println(b * b); // @output 4
+    io:println(b * c); // @output 20
+    io:println(b * d); // @output 2000
+    io:println(b * e); // @output 4294967294
+
+    io:println(c * a); // @output 10
+    io:println(c * b); // @output 20
+    io:println(c * c); // @output 100
+    io:println(c * d); // @output 10000
+    io:println(c * e); // @output 21474836470
+
+    io:println(d * a); // @output 1000
+    io:println(d * b); // @output 2000
+    io:println(d * c); // @output 10000
+    io:println(d * d); // @output 1000000
+    io:println(d * e); // @output 2147483647000
+
+    io:println(e * a); // @output 2147483647
+    io:println(e * b); // @output 4294967294
+    io:println(e * c); // @output 21474836470
+    io:println(e * d); // @output 2147483647000
+    io:println(e * e); // @output 4611686014132420609
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, for int:Signed32.
+Labels: multiplicative-expr, int, DecimalNumber, int:Signed32
+
+public function main() {
+    int a = 4294967399;
+    int:Signed32 b = 2147483646;    
+    int _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow with optional type-descriptors.
+Labels: multiplicative-expr, int, optional-type, DecimalNumber, numeric-nil-lifting
+
+public function main() {
+    int? a = 9223372036854775807;
+    int? b = 2;    
+    int? _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, where one operand is of type optional byte.
+Labels: multiplicative-expr, int, byte, optional-type, DecimalNumber, numeric-nil-lifting
+
+public function main() {
+    byte? a = 255;
+    int b = 36170086419038337;    
+    int? _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 2 for integer multiplication overflow, where one operand is of type optional byte.
+Labels: multiplicative-expr, int, byte, optional-type, DecimalNumber, numeric-nil-lifting
+
+public function main() {
+    int? a = -461168601842738791;
+    byte? b = 20;  
+    int? _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, where one operand is of type optional int:Unsigned16.
+Labels: multiplicative-expr, int:Unsigned16, optional-type, DecimalNumber, numeric-nil-lifting
+
+public function main() {
+    int:Unsigned16? a = 65534;
+    int? b = 140741783453701;    
+    int? _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, where one operand is of type optional int:Unsigned32.
+Labels: multiplicative-expr, int:Unsigned32, optional-type, DecimalNumber, numeric-nil-lifting
+
+public function main() {
+    int:Unsigned32? a = 4294127249;
+    int b = 2147903754;
+    int? _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 3 for integer multiplication overflow, where both operands are of type optional int:Unsigned32.
+Labels: multiplicative-expr, int:Unsigned32, optional-type, DecimalNumber, numeric-nil-lifting
+
+public function main() {
+    int:Unsigned32? a = 4294967295;
+    int? _ = a * a; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, for optional int:Signed8.
+Labels: multiplicative-expr, int:Signed8, optional-type, DecimalNumber, numeric-nil-lifting
+
+public function main() {
+    int? a = 72624976668147842;
+    int:Signed8? b = 127;
+    int? _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 2 for integer multiplication overflow, for optional int:Signed16.
+Labels: multiplicative-expr, DecimalNumber, int:Signed16, numeric-nil-lifting
+
+public function main() {
+    int:Signed16? a = -32768;
+    int b = 281474976710666;
+    int? _ = b * a; // @panic integer overflow on multiplication
+}
+
+Test-Case: panic
+Description: Test 1 for integer multiplication overflow, for optional int:Signed32.
+Labels: multiplicative-expr, int:Signed32, optional-type, DecimalNumber, numeric-nil-lifting
+
+public function main() {
+    int? a = 4294967399;
+    int:Signed32? b = 2147483646;
+    int? _ = a * b; // @panic integer overflow on multiplication
+}
+
+Test-Case: output
+Description: Test variable reference as integer multiplication operands.
+Labels: multiplicative-expr, int, DecimalNumber, variable-reference-expr, numeric-nil-lifting
+
+import ballerina/io;
+public function main() {
+    int a = 2;
+    int b = a * a;
+    io:println(b); // @output 4
+}
+
+Test-Case: output
+Description: Test field and member access as integer multiplication operands.
+Labels: multiplicative-expr, int, DecimalNumber, record-type, mapping-constructor-expr, array-type, list-constructor-expr, module-type-defn
+
+import ballerina/io;
+public function main() {
+    Record c = {x: 10};
+    int[] d = [30, 40];
+    int e = c.x * d[0];
+    io:println(e); // @output 300
+}
+
+type Record record {
+    int x;
+};
+
+Test-Case: output
+Description: Test type cast expression in integer multiplication operands.
+Labels: multiplicative-expr, int, DecimalNumber, type-cast-expr
+
+import ballerina/io;
+public function main() {
+    int i = <int> 6 * 7;
+    io:println(i); // @output 42
+}
+
+Test-Case: output
+Description: Test 1 for multiplicative expression in integer multiplication operands.
+Labels: multiplicative-expr, int, DecimalNumber
+
+import ballerina/io;
+public function main() {
+    int o = 2 * 404 % 10 / 4;
+    io:println(o); // @output 2
+}
+
+Test-Case: output
+Description: Test 2 for multiplicative expression in integer multiplication operands.
+Labels: multiplicative-expr, int, DecimalNumber
+
+import ballerina/io;
+public function main() {
+    int o = 2 * (404 % 10 / 4);
+    io:println(o); // @output 2
+}
+
+Test-Case: output
+Description: Test additive expressions as integer multiplication operands.
+Labels: multiplicative-expr, int, DecimalNumber, additive-expr
+
+import ballerina/io;
+public function main() {
+    int p = (1 + 2) * (3 + 4);
+    io:println(p); // @output 21
+}
+
+Test-Case: output
+Description: Test shift expressions as integer multiplication operands.
+Labels: multiplicative-expr, int, DecimalNumber, shift-expr
+
+import ballerina/io;
+public function main() {
+    int p = (1 << 2) * (100 >> 4);
+    io:println(p); // @output 24
+}
+
+Test-Case: output
+Description: Test binary bitwise expressions as integer multiplication operands.
+Labels: multiplicative-expr, int, DecimalNumber, binary-bitwise-expr
+
+import ballerina/io;
+public function main() {
+    int p = (2 & 6) * (2 ^ 6);
+    io:println(p); // @output 8
+}
+
+Test-Case: output
+Description: Test integer multiplication where at least one operand is of an int subtype union.
+Fail-Issue: ballerina-platform/ballerina-lang#32912
+Labels: multiplicative-expr, int, DecimalNumber, byte, int:Signed8, int:Signed16, int:Signed32, int:Unsigned8, int:Unsigned16, int:Unsigned32, module-type-defn, union-type, singleton-type
+
+import ballerina/io;
+type T1 1|2;
+
+type T2 int:Signed16|int:Signed32|int:Unsigned8|int:MAX_VALUE;
+
+type T3 int:Unsigned16|int:Unsigned32|byte|int:Signed8;
+
+type T4 T1|T2;
+
+public function main() {
+    T1 a = 1;
+    T2 b = 2;
+    T3 c = 3;
+    T4 d = 4;
+
+    int v = 2 * a;
+    io:println(v); // @output 2
+
+    v = 2 * b;
+    io:println(v); // @output 4
+
+    v = 2 * c;
+    io:println(v); // @output 6
+
+    v = 2 * d;
+    io:println(v); // @output 8
+
+    v = a * a;
+    io:println(v); // @output 1
+
+    v = a * b;
+    io:println(v); // @output 2
+
+    v = a * c;
+    io:println(v); // @output 3
+
+    v = a * d;
+    io:println(v); // @output 4
+
+    v = b * b;
+    io:println(v); // @output 4
+
+    v = b * c;
+    io:println(v); // @output 6
+
+    v = b * d;
+    io:println(v); // @output 8
+
+    v = c * c;
+    io:println(v); // @output 9
+
+    v = c * d;
+    io:println(v); // @output 12
+
+    v = d * d;
+    io:println(v); // @output 16
+}
+
+Test-Case: output
+Description: Test integer multiplication with HexIntLiterals.
+Labels: multiplicative-expr, int, DecimalNumber, HexIntLiteral
+
+import ballerina/io;
+public function main() {
+    int a = 0xdef;
+    int b = a * 0x12;
+    io:println(b); // @output 64206
+    io:println(a * 18); // @output 64206
+    io:println(0Xdef * 18); // @output 64206
+}
+

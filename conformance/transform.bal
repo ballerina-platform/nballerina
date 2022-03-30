@@ -14,15 +14,24 @@ enum State {
     CONTENT
 }
 
-public function main(string[] paths) {
+public type Options record {
+    string? skipList = ();
+};
+
+public function main(string[] paths, *Options opts) returns error? {
+    string? skipList = opts.skipList;
+    string[][] skipLables = skipList != () ? check parseSkipList(skipList) : [];
+    int skipped = 0;
+    int total = 0;
     foreach string path in paths {
-        BaltTestCase[] tests = checkpanic parseTest(path);
-        if tests.length() == 0 {
-            continue;
-        }
-        string filename = checkpanic file:basename(path);
-        checkpanic outputTest(tests, filename);
+        BaltTestCase[] tests = check parseTest(path);
+        total += tests.length();
+        string filename = check file:basename(path);
+        skipped += check outputTest(tests, filename, skipLables);
     }
+    io:println("skipped: ", skipped);
+    io:println("updated: ", total - skipped);
+    io:println("total: ", total);
 }
 
 function parseTest(string path) returns BaltTestCase[]|io:Error {
@@ -31,14 +40,21 @@ function parseTest(string path) returns BaltTestCase[]|io:Error {
     string[] header = [];
     string[] labels = [];
     string[] content = [];
+    boolean useIoLib = false;
     State s = BOF;
     foreach string line in lines {
         if line.startsWith("Test-Case:") {
             if s != BOF {
+                if useIoLib {
+                    string[] newContent = ["import ballerina/io;"];
+                    newContent.push(...content);
+                    content = newContent;
+                }
                 testCases.push({ header, labels, content });
                 header = [];
                 labels = [];
                 content = [];
+                useIoLib = false;
             }
             s = HEADER;
             header.push(line);
@@ -46,7 +62,7 @@ function parseTest(string path) returns BaltTestCase[]|io:Error {
         }
         else if line.startsWith("Labels:") {
             var [_, fBody] = parseField(line);
-            labels = parseLabels(fBody);
+            labels = parseCommaSeperatedList(fBody);
             s = LABEL;
         }
         else {
@@ -59,10 +75,11 @@ function parseTest(string path) returns BaltTestCase[]|io:Error {
                     header.push(line);
                 }
                 LABEL => {
-                    labels.push(...parseLabels(line));
+                    labels.push(...parseCommaSeperatedList(line));
                 }
                 CONTENT => {
                     var [contentLine, newLabels] = transformContent(line);
+                    useIoLib = useIoLib ? useIoLib : contentLine.indexOf("io:") != ();
                     content.push(contentLine);
                     labels.push(...newLabels);
                 }
@@ -70,9 +87,18 @@ function parseTest(string path) returns BaltTestCase[]|io:Error {
         }
     }
     if s != BOF {
+        if useIoLib {
+            string[] newContent = ["import ballerina/io;"];
+            newContent.push(...content);
+            content = newContent;
+        }
         testCases.push({ header, labels, content });
     }
     return testCases;
+}
+
+function parseSkipList(string skipListPath) returns string[][]|io:Error {
+    return from string line in check io:fileReadLines(skipListPath) select parseCommaSeperatedList(line);
 }
 
 function transformContent(string line) returns [string, string[]] {
@@ -105,7 +131,7 @@ function parseField(string s) returns [string, string] {
     }
 }
 
-function parseLabels(string s) returns string[] {
+function parseCommaSeperatedList(string s) returns string[] {
     string[] labels = [];
     string[] content = [];
     foreach string:Char c in s {
@@ -126,16 +152,39 @@ function parseLabels(string s) returns string[] {
     return labels;
 }
 
-function outputTest(BaltTestCase[] tests, string filename) returns io:Error? {
+function outputTest(BaltTestCase[] tests, string filename, string[][] skipLables) returns int|io:Error {
     string[] body = [];
+    int skipped = 0;
     foreach BaltTestCase test in tests {
+        if !testValid(test, skipLables) {
+            skipped += 1;
+            continue;
+        }
         body.push(...test.header);
         body.push("Labels: " + ", ".'join(...test.labels));
         body.push("");
         body.push(...test.content);
     }
-    // change root dir
+    if body.length() == 0 {
+        return skipped;
+    }
     string outputFileName = "./tests/" + filename;
-
     check io:fileWriteLines(outputFileName, body);
+    return skipped;
+}
+
+function testValid(BaltTestCase test, string[][] skipLables) returns boolean {
+    foreach string[] labelGroup in skipLables {
+        boolean invalid = true;
+        foreach string label in labelGroup {
+            if test.labels.indexOf(label, 0) == () {
+                invalid = false;
+                break;
+            }
+        }
+        if invalid {
+            return false;
+        }
+    }
+    return true;
 }

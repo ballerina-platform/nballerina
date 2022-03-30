@@ -44,7 +44,7 @@ fail.txt: $(diff_files)
 	@test ! -s $@
 
 result/%.diff: result/%.exe expect/%.txt
-	-../../../test/runcheck.sh $^ >$@
+	-../../runcheck.sh $^ >$@
 
 result/%.bc: ll/%.ll $(RT_INLINE)
 	@mkdir -p result

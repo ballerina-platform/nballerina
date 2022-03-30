@@ -2,12 +2,12 @@ TARGETS=test all compile testll
 
 TDIR= $(sort $(basename $(notdir ../conformance/tests)))
 
-TESTS = $(shell find . -name "*.balt")
+TESTS = $(shell find ./ballerina-spec/ -name "*.balt")
 
 update: $(TESTS)
 	rm -rf tests
 	mkdir -p tests
-	bal run transform.bal -- $^
+	bal run transform.bal -- $^ --skipList skiplist.txt
 
 clean:
 	rm -rf out

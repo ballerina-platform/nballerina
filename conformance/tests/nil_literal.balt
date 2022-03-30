@@ -1,0 +1,117 @@
+Test-Case: output
+Description: Test equality of the nil literals.
+Labels: equality, nil-literal, null
+
+import ballerina/io;
+public function main() {
+    io:println(null == null); // @output true
+
+    io:println(null != null); // @output false
+
+    io:println(() == ()); // @output true
+
+    io:println(() != ()); // @output false
+
+    io:println(null == ()); // @output true
+
+    io:println(null != ()); // @output false
+}
+
+Test-Case: output
+Description: Test exact-equality of the nil literalS.
+Labels: exact-equality, nil-literal, null
+
+import ballerina/io;
+public function main() {
+    io:println(null === null); // @output true
+
+    io:println(null !== null); // @output false
+
+    io:println(() === ()); // @output true
+
+    io:println(() !== ()); // @output false
+
+    io:println(null === ()); // @output true
+
+    io:println(null !== ()); // @output false
+}
+
+Test-Case: output
+Description: Test nil literal '()' with is-expr.
+Labels: is-expr, nil-literal, nil-type
+
+import ballerina/io;
+public function main() {
+    io:println(() is ()); // @output true
+}
+
+Test-Case: output
+Description: Test nil literal 'null' with is-expr.
+Labels: is-expr, nil-type, null
+
+import ballerina/io;
+public function main() {
+    io:println(null is ()); // @output true
+}
+
+Test-Case: error
+Description: Test nil literal '()' with invalid type casts.
+Labels: any, boolean, decimal, float, int, nil-literal, string, type-cast-expr
+
+public function main() {
+    any x = <boolean> (); // @error '()' cannot be cast to 'boolean'
+
+    x = <decimal> (); // @error '()' cannot be cast to 'decimal'
+
+    x = <float> (); // @error '()' cannot be cast to 'float'
+
+    x = <int> (); // @error '()' cannot be cast to 'int'
+
+    x = <string> (); // @error '()' cannot be cast to 'string'
+}
+
+Test-Case: error
+Description: Test nil literal 'null' with invalid type casts.
+Labels: any, boolean, decimal, float, int, null, string, type-cast-expr
+
+public function main() {
+    any x = <boolean> null; // @error '()' cannot be cast to 'boolean'
+
+    x = <decimal> null; // @error '()' cannot be cast to 'decimal'
+
+    x = <float> null; // @error '()' cannot be cast to 'float'
+
+    x = <int> null; // @error '()' cannot be cast to 'int'
+
+    x = <string> null; // @error '()' cannot be cast to 'string'
+}
+
+Test-Case: error
+Description: Test invalid nil literals.
+Labels: nil-type
+
+public function main() {
+    () a = Null; // @error expected a '()', but found an undefined symbol 'Null'
+
+    () b = NULL; // @error expected a '()', but found an undefined symbol 'NULL'
+
+    () c = nul; // @error expected a '()', but found an undefined symbol 'nul'
+
+    () d = nil; // @error expected a '()', but found an undefined symbol 'nil'
+
+    () e = Nil; // @error expected a '()', but found an undefined symbol 'Nil'
+}
+
+Test-Case: parser-error
+Description: Test invalid nil literals.
+Labels: nil-type
+
+public function main() {
+    () f = ()); // @error missing '(' token
+
+    () g = ((); // @error missing ')' token
+
+    () f = ); // @error missing '(' token
+
+    () g = (; // @error missing ')' token
+}
