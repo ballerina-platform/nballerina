@@ -94,7 +94,7 @@ type NonResultInsn MappingSetInsn|ListSetInsn|BranchInsn|CondBranchInsn|CondNarr
 
 function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
     if insn !is NonResultInsn {
-        if vc.definedTmpRegisters.indexOf(insn.result.number, 0) != () {
+        if vc.definedTmpRegisters.indexOf(insn.result.number) != () {
             return vc.invalidErr("tmp register defined in multiple places", <Position>insn.result.pos);
         }
         else {
@@ -136,14 +136,14 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
 
 function verifyNonFinalRegisterKind(VerifyContext vc, Operand r) returns Error? {
     if r is FinalRegister {
-            return vc.invalidErr("invalid register kind final for insn: " + r.kind, <Position>r.pos);
+        return vc.invalidErr("invalid register kind final for insn: " + r.kind, <Position>r.pos);
     }
     check verifyTmpInit(vc, r);
 }
 
 function verifyTmpInit(VerifyContext vc, Operand r) returns Error? {
-    if r is TmpRegister && vc.definedTmpRegisters.indexOf(r.number, 0) == () {
-            return vc.invalidErr("tmp register not initialized", <Position>r.pos);
+    if r is TmpRegister && vc.definedTmpRegisters.indexOf(r.number) == () {
+        return vc.invalidErr("tmp register not initialized", <Position>r.pos);
     }
 }
 
@@ -153,7 +153,7 @@ function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
     }
     if r is TmpRegister {
         check verifyTmpInit(vc, r);
-        if vc.usedTmpRegisters.indexOf(r.number, 0) != () {
+        if vc.usedTmpRegisters.indexOf(r.number) != () {
             return vc.invalidErr("tmp register used in multiple places", <Position>r.pos);
         }
         else {
