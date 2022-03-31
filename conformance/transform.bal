@@ -81,7 +81,12 @@ function parseTest(string path) returns BaltTestCase[]|io:Error {
                     var [contentLine, newLabels] = transformContent(line);
                     useIoLib = useIoLib ? useIoLib : contentLine.indexOf("io:") != ();
                     content.push(contentLine);
-                    labels.push(...newLabels);
+                    // pr-todo: make this more efficient
+                    foreach var label in newLabels {
+                        if labels.indexOf(label) == () {
+                            labels.push(label);
+                        }
+                    }
                 }
             }
         }
@@ -107,8 +112,8 @@ function transformContent(string line) returns [string, string[]] {
     string newLine;
     if line.startsWith(initFunc) {
         newLine = "public function main()" + line.substring(initFunc.length());
-        if line.indexOf("returns") != () {
-            newLabels.push("main-return");
+        if line.indexOf("returns error") != () {
+            newLabels.push("main-error");
         }
     }
     else {
@@ -117,12 +122,20 @@ function transformContent(string line) returns [string, string[]] {
     if line.startsWith("int") {
         newLabels.push("mod-var-decl");
     }
+    // pr-todo: remove this since we can't calculate the output automatically
     string intMax = "9223372036854775808";
     int? intMaxIndex = line.indexOf(intMax);
     while intMaxIndex is int {
         int intMaxEnd = intMaxIndex + intMax.length();
         newLine = newLine.substring(0, intMaxIndex) + "9223372036854775807" + newLine.substring(intMaxEnd);
         intMaxIndex = line.indexOf(intMax, intMaxEnd);
+    }
+    if line.indexOf("toBalString()") is int {
+        newLabels.push("value:toBalString");
+    }
+    // pr-todo: make this a regex to better match pattern
+    if line.indexOf("= +") is int {
+        newLabels.push("unary-plus");
     }
     return [newLine, newLabels];
 }

@@ -15,7 +15,7 @@ let-expr
 ternary-conditional-expr
 BacktickString
 xml
-main-return
+main-error
 mod-var-decl
 member-access-expr, string
 optional-type, string
