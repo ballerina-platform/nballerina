@@ -19,6 +19,3 @@ main-error
 mod-var-decl
 member-access-expr, string
 optional-type, string
-boolean-literal, equality
-DecimalNumber, equality
-boolean-literal, exact-equality

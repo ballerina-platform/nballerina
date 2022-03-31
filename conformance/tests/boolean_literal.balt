@@ -76,6 +76,21 @@ public function main() {
 }
 
 Test-Case: output
+Description: Equality check of boolean literals.
+Labels: boolean-literal, equality
+
+import ballerina/io;
+public function main() {
+    io:println(true == true); // @output true
+
+    io:println(true != true); // @output false
+
+    io:println(false == false); // @output true
+
+    io:println(false != false); // @output false
+}
+
+Test-Case: output
 Description: Equality check of boolean literals with variable references.
 Labels: boolean, equality
 
@@ -88,6 +103,21 @@ public function main() {
     io:println(x == false); // @output false
     io:println(y == true); // @output false
     io:println(y == false); // @output true
+}
+
+Test-Case: output
+Description: Exact-equality check of boolean literals.
+Labels: boolean-literal, exact-equality
+
+import ballerina/io;
+public function main() {
+    io:println(true === true); // @output true
+
+    io:println(true !== true); // @output false
+
+    io:println(false === false); // @output true
+
+    io:println(false !== false); // @output false
 }
 
 Test-Case: output

@@ -162,6 +162,17 @@ function errorFunction() {
 }
 
 Test-Case: output
+Description: Test equality for DecimalNumbers.
+Labels: DecimalNumber, equality
+
+import ballerina/io;
+public function main() {
+    io:println(10 == 10); // @output true
+
+    io:println(10 != 10); // @output false
+}
+
+Test-Case: output
 Description: Test equality for HexIntLiteral.
 Labels: equality, HexIntLiteral
 
@@ -170,6 +181,17 @@ public function main() {
     io:println(0x1a == 0x1a); // @output true
 
     io:println(0x1a != 0x1a); // @output false
+}
+
+Test-Case: output
+Description: Test equality for DecimalNumbers and HexIntLiteral.
+Labels: DecimalNumber, equality, HexIntLiteral
+
+import ballerina/io;
+public function main() {
+    io:println(0x1234abdef1 == 78193090289); // @output true
+
+    io:println(9223372036854775807 != 0x7FFFFFFFFFFFFFFF); // @output false
 }
 
 Test-Case: output
