@@ -135,8 +135,15 @@ function addFuncGetValueOfIndex(wasm:Module module) {
 
 function addFuncArrayPush(wasm:Module module) {
     wasm:Expression list = module.localGet(0);
-    wasm:Expression castList = module.refCast(module.refAs("ref.as_data", list), module.rtt("AnyList"));
-    wasm:Expression curLength = module.call("length", [list], "i32");
-    wasm:Expression setVal = module.arraySet("AnyList", castList, curLength, module.localGet(1));
-    module.addFunction("push", ["eqref", "eqref"], "None", [], module.addReturn(setVal));
+    wasm:Expression arrLength = module.localSet(2, module.call("length", [list], "i32"));
+    wasm:Expression i = module.localSet(3, module.addConst({ i32 : 0 }));
+    wasm:Expression newArr = module.localSet(4, module.arrayNew("AnyList", module.binary("i32.add", module.localGet(2), module.addConst({ i32 : 1 })), module.rtt("AnyList")));
+    wasm:Expression loopCond = module.binary("i32.lt_s", module.localGet(3), module.localGet(2));
+    wasm:Expression loopSet = module.arraySet("AnyList", module.refCast(module.refAs("ref.as_data", module.localGet(4)), module.rtt("AnyList")), module.localGet(3), module.call("arr_get", [module.localGet(0), module.localGet(3)], "eqref"));
+    wasm:Expression loopStep = module.localSet(3, module.binary("i32.add", module.localGet(3), module.addConst({ i32 : 1 })));
+    wasm:Expression loopBody = module.addIf(loopCond, module.block([loopSet, loopStep, module.br("$block1$continue")]));
+    wasm:Expression loop = module.loop("$block1$continue", loopBody);
+    wasm:Expression newElementPush = module.arraySet("AnyList", module.refCast(module.refAs("ref.as_data", module.localGet(4)), module.rtt("AnyList")), module.localGet(2), module.localGet(1));
+    wasm:Expression body = module.block([arrLength, i, newArr, loop, newElementPush, module.addReturn(module.localGet(4))]);
+    module.addFunction("push", ["eqref", "eqref"], "eqref", ["i32", "i32", "eqref"], body);
 }
