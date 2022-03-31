@@ -45,6 +45,32 @@ function errorFunction(int a, float b, decimal c,
 }
 
 Test-Case: error
+Description: Test the static type of operands belonging to non-numeric basic types resulting in an error.
+Labels: multiplicative-expr, int, string, float, decimal, optional-type, numeric-nil-lifting
+
+function errorFunction(int a, float b, decimal c, int? d, float? e, decimal? f,
+                     string g, string? h) {
+    string _ = g * g; // @error * is not allowed with operands of non-numeric basic types
+    string _ = g / g; // @error / is not allowed with operands of non-numeric basic types
+    string _ = g % g; // @error % is not allowed with operands of non-numeric basic types
+    string _ = h * h; // @error * is not allowed with operands of non-numeric basic types
+    string _ = h / h; // @error / is not allowed with operands of non-numeric basic types
+    string _ = h % h; // @error % is not allowed with operands of non-numeric basic types
+    string _ = g * h; // @error * is not allowed with operands of non-numeric basic types
+    string _ = g / h; // @error / is not allowed with operands of non-numeric basic types
+    string _ = g % h; // @error % is not allowed with operands of non-numeric basic types
+    string _ = h * g; // @error * is not allowed with operands of non-numeric basic types
+    string _ = h / g; // @error / is not allowed with operands of non-numeric basic types
+    string _ = h % g; // @error % is not allowed with operands of non-numeric basic types
+    string _ = a * g; // @error * is not allowed with operands of different basic types
+    string _ = d / g; // @error / is not allowed with operands of different basic types
+    string _ = b % h; // @error % is not allowed with operands of different basic types
+    string _ = c * h; // @error * is not allowed with operands of different basic types
+    string? _ = e / h; // @error / is not allowed with operands of different basic types
+    string _ = f % h; // @error % is not allowed with operands of different basic types
+}
+
+Test-Case: error
 Description: Test the static type of operand expressions belonging to different basic types resulting in an error
              when the static type of at least one operand includes a subtype of a numeric type.
 Labels: multiplicative-expr, int, float, decimal, optional-type, byte, union-type, singleton-type, module-type-defn, DecimalNumber, DecimalFloatingPointNumber, int:Signed8, int:Signed16, int:Signed32, int:Unsigned8, int:Unsigned16, int:Unsigned32, numeric-nil-lifting

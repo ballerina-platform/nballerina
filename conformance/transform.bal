@@ -137,6 +137,10 @@ function transformContent(string line) returns [string, string[]] {
     if line.indexOf("= +") is int {
         newLabels.push("unary-plus");
     }
+    
+    if line.indexOf("?:") is int {
+        newLabels.push("ternary-conditional-expr");
+    }
     return [newLine, newLabels];
 }
 

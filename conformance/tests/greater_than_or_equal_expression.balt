@@ -965,6 +965,36 @@ public function main() {
 }
 
 Test-Case: output
+Description: Test greater than or equal expression when one operand is optional string.
+Fail-Issue: ballerina-platform/ballerina-lang#35195
+Labels: optional-type, relational-expr, string
+
+import ballerina/io;
+public function main() {
+   string? a = "ABCD";
+   string b = "ABCDE";
+   string? c = "DCBA";
+   io:println(a >= b); // @output false
+   io:println(b >= a); // @output true
+}
+
+Test-Case: output
+Description: Test greater than or equal expression when both operands are optional string.
+Labels: optional-type, relational-expr, string
+
+import ballerina/io;
+public function main() {
+   string? a = "ABCD";
+   string? b = "ABCDE";
+   string? c = "DCBA";
+   io:println(a >= b); // @output false
+   io:println(b >= a); // @output true
+   io:println(a >= c); // @output false
+   io:println(c >= a); // @output true
+   io:println(c >= c); // @output true
+}
+
+Test-Case: output
 Description: Test greater than or equal expression when both operands are positive decimals.
 Labels: decimal, DecimalFloatingPointNumber, DecimalNumber, relational-expr
 
@@ -1194,6 +1224,28 @@ function getOne() returns int{
 
 function getTwo() returns int{
     return 2;
+}
+
+Test-Case: output
+Description: Test greater than or equal expression with list as operands.
+Labels: array-type, decimal, DecimalFloatingPointNumber, DecimalNumber, int, float, list-constructor-expr, nil-literal, optional-type, relational-expr, string
+
+import ballerina/io;
+public function main() {
+   int[] a = [12, 100, 2000000];
+   int[] b = [13, 3];
+   int[] c = [];
+   int[] d = [];
+   float?[] g = [12.5, 43, ()];
+   float?[] h = [12.5, 43, 4];
+   decimal?[] i = [45, 23.54232, 44];
+   decimal?[] j = [45, 23.54232, 44, ()];
+
+   io:println(a >= b); // @output false
+   io:println(c >= d); // @output true
+   io:println(c >= b); // @output false
+   io:println(h >= g); // @output false
+   io:println(i >= j); // @output false
 }
 
 Test-Case: output

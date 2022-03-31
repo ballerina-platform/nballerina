@@ -71,6 +71,41 @@ function errorFunction(string a, string:Char|Strings b, Strings|Chars c) {
     int _ = c + c; // @error static type of string concatenation is string
 }
 
+Test-Case: error
+Description: Test invalid optional string concatenation.
+Labels: additive-expr, string, optional-type
+
+function errorFunction(string? a, string? b, string c) {
+    string _ = a + b; // @error cannot concatenate optional strings
+    string? _ = a + b; // @error cannot concatenate optional strings
+    string _ = a + c; // @error cannot concatenate string and optional string
+    string _ = c + a + c; // @error cannot concatenate string and optional string
+}
+
+Test-Case: error
+Description: Test invalid optional string:Char concatenation.
+Labels: additive-expr, string, string:Char, optional-type
+
+function errorFunction(string:Char? a, string:Char? b, string:Char c) {
+    string:Char _ = a + b; // @error cannot concatenate optional strings
+    string:Char? _ = a + b; // @error cannot concatenate optional strings
+    string:Char _ = a + c; // @error cannot concatenate string and optional string
+    string:Char _ = a + a + c + c; // @error cannot concatenate string and optional string
+}
+
+Test-Case: error
+Description: Test invalid optional user-defined string type concatenation.
+Labels: additive-expr, string, string:Char, optional-type
+
+type Strings "a"|"bc";
+
+function errorFunction(Strings? a, Strings? b, Strings c) {
+    Strings _ = a + b; // @error cannot concatenate optional strings
+    Strings? _ = a + b; // @error cannot concatenate optional strings
+    Strings _ = a + c; // @error cannot concatenate string and optional string
+    Strings _ = a + c + b; // @error cannot concatenate string and optional string
+}
+
 Test-Case: output
 Description: Test concatenation of string with NumericEscape.
 Labels: additive-expr, string, StringNumericEscape
@@ -168,6 +203,17 @@ public function main() {
 
 function printString(string s) {
     io:println(s);
+}
+
+Test-Case: output
+Description: Test string concatenation with type cast expressions as operands.
+Labels: additive-expr, string, type-cast-expr, optional-type, string:Char
+
+import ballerina/io;
+public function main() {
+    string s = "!";
+    string? t = "hi";
+    io:println(<string> t + <string:Char> s); // @output hi!
 }
 
 Test-Case: output

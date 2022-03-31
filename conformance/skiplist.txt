@@ -18,4 +18,3 @@ xml
 main-error
 mod-var-decl
 member-access-expr, string
-optional-type, string
