@@ -287,9 +287,9 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         return true;
     }
     else {
-        int len = members.fixedLength;
-        ListAtomicType nt = neg.listType;
-        int negLen = nt.members.fixedLength;
+        final int len = members.fixedLength;
+        final ListAtomicType nt = neg.listType;
+        final int negLen = nt.members.fixedLength;
         if len < negLen {
             if isNever(rest) {
                 return listInhabited(cx, members, rest, neg.next);
@@ -332,7 +332,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-        int maxInitialLen = int:max(members.initial.length(), neg.maxInitialLen);
+        final int maxInitialLen = int:max(members.initial.length(), neg.maxInitialLen);
         foreach int i in 0 ..< maxInitialLen {
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
@@ -342,19 +342,22 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
                 }
             }
         }
-        SemType rd = diff(rest, nt.rest);
-        if !isEmpty(cx, rd) {
-            // We have checked the possibilities of existence of a shape in list with fixedLength >= 0 and < maxInitialLen.
-            // Now check the existence of a shape with at least `maxInitialLen` members.
-            FixedLengthArray s = members;
-            if len < maxInitialLen {
-                s = fixedArrayShallowCopy(members);
-                fixedArrayFill(s, maxInitialLen, rest);
-            }
-            if listInhabited(cx, s, rest, neg.next) {
-                return true;
+    
+        // We still need to explore the possibility of a shape that has length > maxInitialLen and
+        // avoids being cancelled out by this negative because of its rest type.
+        // We are going to try an array with a fixedLength of len + 1.
+        // If len < maxInitialLen, then we will already have tried that above.
+        if len >= maxInitialLen {
+            SemType rd = diff(rest, nt.rest);
+            if !isEmpty(cx, rd) {
+                FixedLengthArray s = fixedArrayShallowCopy(members);
+                fixedArraySet(s, len, rd);
+                if listInhabited(cx, s, rest, neg.next) {
+                    return true;
+                }
             }
         }
+       
         // This is correct for length 0, because we know that the length of the
         // negative is 0, and [] - [] is empty.
         return false;
