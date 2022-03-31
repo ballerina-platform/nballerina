@@ -120,8 +120,8 @@ function addFuncGetType(wasm:Module module) {
 function addFuncGetArrayLength(wasm:Module module) {
     wasm:Expression asData = module.refAs("ref.as_data", module.localGet(0));
     wasm:Expression cast = module.refCast(asData, module.rtt("AnyList"));
-    wasm:Expression len = module.arrayLen("AnyList", cast);
-    module.addFunction("length", ["eqref"], "i32", [], module.addReturn(len));
+    wasm:Expression len = module.unary("i64.extend_i32_u", module.arrayLen("AnyList", cast));
+    module.addFunction("length", ["eqref"], "i64", [], module.addReturn(len));
     module.addFunctionExport("length", "arr_len");
 }
 
@@ -135,7 +135,7 @@ function addFuncGetValueOfIndex(wasm:Module module) {
 
 function addFuncArrayPush(wasm:Module module) {
     wasm:Expression list = module.localGet(0);
-    wasm:Expression arrLength = module.localSet(2, module.call("length", [list], "i32"));
+    wasm:Expression arrLength = module.localSet(2, module.unary("i32.wrap_i64", module.call("length", [list], "i64")));
     wasm:Expression i = module.localSet(3, module.addConst({ i32 : 0 }));
     wasm:Expression newArr = module.localSet(4, module.arrayNew("AnyList", module.binary("i32.add", module.localGet(2), module.addConst({ i32 : 1 })), module.rtt("AnyList")));
     wasm:Expression loopCond = module.binary("i32.lt_s", module.localGet(3), module.localGet(2));
