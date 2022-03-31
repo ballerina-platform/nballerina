@@ -70,11 +70,27 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
     }
+    foreach Region r in code.regions {
+        check verifyRegion(cx, r, code.blocks);
+    }
 }
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
 type Error err:Semantic|err:Internal;
+
+function verifyRegion(VerifyContext vc, Region region, BasicBlock[] blocks) returns Error? {
+    BasicBlock entry = blocks[region.entry];
+    Insn insn = entry.insns[entry.insns.length() - 1];
+    if region.kind == REGION_COND && insn !is CondBranchInsn {
+        return vc.invalidErr("condional region is not a conditional insn", pos=insn.pos);
+    }
+    //if region.kind == REGION_LOOP {
+    //    if insn.ifFalse != region.exit {
+    //        return vc.invalidErr("error in loop region", pos=insn.pos);
+    //    }
+    //}
+}
 
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
     foreach Insn insn in bb.insns {
