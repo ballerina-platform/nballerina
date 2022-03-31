@@ -117,6 +117,13 @@ function transformContent(string line) returns [string, string[]] {
     if line.startsWith("int") {
         newLabels.push("mod-var-decl");
     }
+    string intMax = "9223372036854775808";
+    int? intMaxIndex = line.indexOf(intMax);
+    while intMaxIndex is int {
+        int intMaxEnd = intMaxIndex + intMax.length();
+        newLine = newLine.substring(0, intMaxIndex) + "9223372036854775807" + newLine.substring(intMaxEnd);
+        intMaxIndex = line.indexOf(intMax, intMaxEnd);
+    }
     return [newLine, newLabels];
 }
 

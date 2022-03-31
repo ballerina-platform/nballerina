@@ -1,4 +1,3 @@
-unary-minus
 unary-plus
 var
 optional-field-access-expr

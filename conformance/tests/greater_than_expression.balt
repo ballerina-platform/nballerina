@@ -17,6 +17,42 @@ public function main() {
 }
 
 Test-Case: output
+Description: Test greater than expression for negative integers.
+Labels: DecimalNumber, int, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int a = -1;
+   int b = -101;
+   int c = -10;
+   int d = -9223372036854775807;
+   io:println(a > b); // @output true
+   io:println(c > a); // @output false
+   io:println(a > c); // @output true
+   io:println(d > a); // @output false
+   io:println(b > d); // @output true
+   io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression where one operand is negative integer and other one is positive integer.
+Labels: DecimalNumber, int, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int a = -1;
+   int b = 101;
+   int c = -10;
+   int d = 9223372036854775807;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(d > c); // @output true
+   io:println(c > d); // @output false
+   io:println(a > d); // @output false
+   io:println(d > a); // @output true
+}
+
+Test-Case: output
 Description: Test greater than expression using HexIntLiteral.
 Labels: HexIntLiteral, relational-expr
 
@@ -119,6 +155,43 @@ public function main() {
 }
 
 Test-Case: output
+Description: Test greater than expression for negative int:Signed8.
+Labels: DecimalNumber, int:Signed8, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed8 a = -1;
+   int:Signed8 b = -101;
+   int:Signed8 c = -10;
+   int:Signed8 d = -127;
+   io:println(a > b); // @output true
+   io:println(c > a); // @output false
+   io:println(a > c); // @output true
+   io:println(d > a); // @output false
+   io:println(b > d); // @output true
+   io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression where one operand is negative int:Signed8 and other one is positive
+             int:Signed8.
+Labels: DecimalNumber, int:Signed8, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed8 a = -1;
+   int:Signed8 b = 101;
+   int:Signed8 c = -10;
+   int:Signed8 d = 127;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(d > c); // @output true
+   io:println(c > d); // @output false
+   io:println(a > d); // @output false
+   io:println(d > a); // @output true
+}
+
+Test-Case: output
 Description: Test greater than expression for positive int:Signed16.
 Labels: DecimalNumber, int:Signed16, relational-expr
 
@@ -134,6 +207,43 @@ public function main() {
    io:println(d > a); // @output true
    io:println(b > d); // @output false
    io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression for negative int:Signed16.
+Labels: DecimalNumber, int:Signed16, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed16 a = -1;
+   int:Signed16 b = -1010;
+   int:Signed16 c = -100;
+   int:Signed16 d = -32768;
+   io:println(a > b); // @output true
+   io:println(c > a); // @output false
+   io:println(a > c); // @output true
+   io:println(d > a); // @output false
+   io:println(b > d); // @output true
+   io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression where one operand is negative int:Signed16 and other one is positive
+             int:Signed16.
+Labels: DecimalNumber, int:Signed16, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed16 a = -1;
+   int:Signed16 b = 101;
+   int:Signed16 c = -32768;
+   int:Signed16 d = 32767;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(d > c); // @output true
+   io:println(c > d); // @output false
+   io:println(a > d); // @output false
+   io:println(d > a); // @output true
 }
 
 Test-Case: output
@@ -155,6 +265,43 @@ public function main() {
 }
 
 Test-Case: output
+Description: Test greater than expression for negative int:Signed32.
+Labels: DecimalNumber, int:Signed32, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed32 a = -1;
+   int:Signed32 b = -2324;
+   int:Signed32 c = -1073;
+   int:Signed32 d = -2147483648;
+   io:println(a > b); // @output true
+   io:println(c > a); // @output false
+   io:println(a > c); // @output true
+   io:println(d > a); // @output false
+   io:println(b > d); // @output true
+   io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression where one operand is negative int:Signed16 and other one is positive
+             int:Signed16.
+Labels: DecimalNumber, int:Signed16, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed32 a = -1;
+   int:Signed32 b = 2;
+   int:Signed32 c = -40123;
+   int:Signed32 d = 2147483647;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(d > c); // @output true
+   io:println(c > d); // @output false
+   io:println(a > d); // @output false
+   io:println(d > a); // @output true
+}
+
+Test-Case: output
 Description: Test greater than expression for user defined sub types of positive int.
 Labels: DecimalNumber, module-type-defn, relational-expr, singleton-type, union-type
 
@@ -172,6 +319,50 @@ public function main() {
    io:println(c > a); // @output false
    io:println(b > c); // @output true
    io:println(c > b); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression for user defined sub types of negative int.
+Labels: DecimalNumber, module-type-defn, relational-expr, singleton-type, unary-minus, union-type
+
+import ballerina/io;
+type Ints -2|-1|-3|1|2;
+
+public function main() {
+   Ints a = -1;
+   Ints b = -2;
+   Ints c = -3;
+
+   io:println(a > b); // @output true
+   io:println(b > a); // @output false
+   io:println(a > c); // @output true
+   io:println(c > a); // @output false
+   io:println(b > c); // @output true
+   io:println(c > b); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression for user defined sub types where one operand is positive int and other one is
+             negative int.
+Labels: DecimalNumber, module-type-defn, relational-expr, singleton-type, unary-minus, union-type
+
+import ballerina/io;
+type Ints -2|-1|0|1|2;
+
+public function main() {
+   Ints a = 1;
+   Ints b = 2;
+   Ints c = -1;
+   Ints d = -2;
+
+   io:println(a > c); // @output true
+   io:println(c > a); // @output false
+   io:println(b > c); // @output true
+   io:println(c > b); // @output false
+   io:println(a > d); // @output true
+   io:println(d > a); // @output false
+   io:println(d > b); // @output false
+   io:println(b > d); // @output true
 }
 
 Test-Case: output
@@ -235,6 +426,43 @@ public function main() {
    io:println(d > a); // @output true
    io:println(b > d); // @output false
    io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression for optional negative integers.
+Labels: DecimalNumber, int, optional-type, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int? a = -1;
+   int? b = -101;
+   int? c = -10;
+   int? d = -9223372036854775807;
+   io:println(a > b); // @output true
+   io:println(c > a); // @output false
+   io:println(a > c); // @output true
+   io:println(d > a); // @output false
+   io:println(b > d); // @output true
+   io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression where one operand is negative integer and other one is positive integer, with
+             optional type-descriptors.
+Labels: DecimalNumber, int, optional-type, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int? a = -1;
+   int? b = 101;
+   int? c = -10;
+   int? d = 9223372036854775807;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(d > c); // @output true
+   io:println(c > d); // @output false
+   io:println(a > d); // @output false
+   io:println(d > a); // @output true
 }
 
 Test-Case: output
@@ -414,6 +642,43 @@ public function main() {
 }
 
 Test-Case: output
+Description: Test greater than expression for negative optional int:Signed8.
+Labels: DecimalNumber, int:Signed8, relational-expr, optional-type, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed8? a = -1;
+   int:Signed8? b = -101;
+   int:Signed8? c = -10;
+   int:Signed8? d = -127;
+   io:println(a > b); // @output true
+   io:println(c > a); // @output false
+   io:println(a > c); // @output true
+   io:println(d > a); // @output false
+   io:println(b > d); // @output true
+   io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression where one operand is negative int:Signed8 and other one is positive
+             int:Signed8.
+Labels: DecimalNumber, int:Signed8, relational-expr, optional-type, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed8? a = -1;
+   int:Signed8? b = 101;
+   int:Signed8? c = -10;
+   int:Signed8? d = 127;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(d > c); // @output true
+   io:println(c > d); // @output false
+   io:println(a > d); // @output false
+   io:println(d > a); // @output true
+}
+
+Test-Case: output
 Description: Test greater than expression where one operand is optional int:Signed8 and other is not.
 Fail-Issue: ballerina-platform/ballerina-lang#35195
 Labels: DecimalNumber, int:Signed8, optional-type, relational-expr
@@ -449,6 +714,43 @@ public function main() {
 }
 
 Test-Case: output
+Description: Test greater than expression for negative optional int:Signed16.
+Labels: DecimalNumber, int:Signed16, optional-type, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed16? a = -1;
+   int:Signed16? b = -1010;
+   int:Signed16? c = -100;
+   int:Signed16? d = -32768;
+   io:println(a > b); // @output true
+   io:println(c > a); // @output false
+   io:println(a > c); // @output true
+   io:println(d > a); // @output false
+   io:println(b > d); // @output true
+   io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression where one operand is optional negative int:Signed16 and other one is optional
+             positive int:Signed16.
+Labels: DecimalNumber, int:Signed16, optional-type, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed16? a = -1;
+   int:Signed16? b = 101;
+   int:Signed16? c = -32768;
+   int:Signed16? d = 32767;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(d > c); // @output true
+   io:println(c > d); // @output false
+   io:println(a > d); // @output false
+   io:println(d > a); // @output true
+}
+
+Test-Case: output
 Description: Test greater than expression for optional positive int:Signed32.
 Labels: DecimalNumber, int:Signed32, optional-type, relational-expr
 
@@ -464,6 +766,43 @@ public function main() {
    io:println(d > a); // @output true
    io:println(b > d); // @output false
    io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression for negative optional int:Signed32.
+Labels: DecimalNumber, int:Signed32, optional-type, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed32? a = -1;
+   int:Signed32? b = -2324;
+   int:Signed32? c = -1073;
+   int:Signed32? d = -2147483648;
+   io:println(a > b); // @output true
+   io:println(c > a); // @output false
+   io:println(a > c); // @output true
+   io:println(d > a); // @output false
+   io:println(b > d); // @output true
+   io:println(a > a); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression where one operand is optional negative int:Signed16 and other one is optional
+             positive int:Signed16.
+Labels: DecimalNumber, int:Signed16, optional-type, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   int:Signed32? a = -1;
+   int:Signed32? b = 2;
+   int:Signed32? c = -40123;
+   int:Signed32? d = 2147483647;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(d > c); // @output true
+   io:println(c > d); // @output false
+   io:println(a > d); // @output false
+   io:println(d > a); // @output true
 }
 
 Test-Case: output
@@ -484,6 +823,50 @@ public function main() {
    io:println(c > a); // @output false
    io:println(b > c); // @output true
    io:println(c > b); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression for user defined sub types of negative optional int.
+Labels: DecimalNumber, module-type-defn, optional-type, relational-expr, singleton-type, unary-minus, union-type
+
+import ballerina/io;
+type Ints -2|-1|-3|1|2;
+
+public function main() {
+   Ints? a = -1;
+   Ints? b = -2;
+   Ints? c = -3;
+
+   io:println(a > b); // @output true
+   io:println(b > a); // @output false
+   io:println(a > c); // @output true
+   io:println(c > a); // @output false
+   io:println(b > c); // @output true
+   io:println(c > b); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression for user defined sub types where one operand is optional positive int and
+             other one is optional negative int.
+Labels: DecimalNumber, module-type-defn, optional-type, relational-expr, singleton-type, unary-minus, union-type
+
+import ballerina/io;
+type Ints -2|-1|0|1|2;
+
+public function main() {
+   Ints? a = 1;
+   Ints? b = 2;
+   Ints? c = -1;
+   Ints? d = -2;
+
+   io:println(a > c); // @output true
+   io:println(c > a); // @output false
+   io:println(b > c); // @output true
+   io:println(c > b); // @output false
+   io:println(a > d); // @output true
+   io:println(d > a); // @output false
+   io:println(d > b); // @output false
+   io:println(b > d); // @output true
 }
 
 Test-Case: output
@@ -597,6 +980,38 @@ public function main() {
 }
 
 Test-Case: output
+Description: Test greater than expression when both operands are negative decimals.
+Labels: decimal, DecimalFloatingPointNumber, DecimalNumber, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   decimal a = -32.45;
+   decimal b = -32;
+   decimal c = -3.12345678888888888888888888888889999999;
+   decimal d = -3.1234567888888888888888888888888999999900000000000000000000000000000000000000000000001;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(c > d); // @output false
+   io:println(d > c); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression when one operand is positive decimal and other one is negative.
+Labels: decimal, DecimalFloatingPointNumber, DecimalNumber, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   decimal a = -32.45;
+   decimal b = 32;
+   decimal c = -3.12345678888888888888888888888889999999;
+   decimal d = 3.1234567888888888888888888888888999999900000000000000000000000000000000000000000000001;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output true
+   io:println(c > d); // @output false
+   io:println(d > c); // @output true
+}
+
+Test-Case: output
 Description: Test greater than expression when both operands are positive floats.
 Labels: DecimalFloatingPointNumber, DecimalNumber, float, multiplicative-expr, relational-expr
 
@@ -613,6 +1028,22 @@ public function main() {
 }
 
 Test-Case: output
+Description: Test greater than expression when both operands are negative floats.
+Labels: DecimalFloatingPointNumber, DecimalNumber, float, multiplicative-expr, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   float a = -0/0;
+   float b = -2.0;
+   float c = -343545.45;
+   float d = -32345.54;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output false
+   io:println(c > d); // @output false
+   io:println(d > c); // @output true
+}
+
+Test-Case: output
 Description: Test greater than expression when both operands are positive optional floats.
 Labels: DecimalFloatingPointNumber, DecimalNumber, float, multiplicative-expr, optional-type, relational-expr
 
@@ -626,6 +1057,22 @@ public function main() {
    io:println(b > a); // @output false
    io:println(c > d); // @output true
    io:println(d > c); // @output false
+}
+
+Test-Case: output
+Description: Test greater than expression when both operands are negative optional floats.
+Labels: DecimalFloatingPointNumber, DecimalNumber, float, multiplicative-expr, optional-type, relational-expr, unary-minus
+
+import ballerina/io;
+public function main() {
+   float? a = -0/0;
+   float? b = -2.0;
+   float? c = -343545.45;
+   float? d = -32345.54;
+   io:println(a > b); // @output false
+   io:println(b > a); // @output false
+   io:println(c > d); // @output false
+   io:println(d > c); // @output true
 }
 
 Test-Case: output

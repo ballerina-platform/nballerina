@@ -41,6 +41,82 @@ public function main() {
     io:println(e % e); // @output 0
 }
 
+Test-Case: output
+Description: Test integer remainder non-panic scenarios, for negative non-zero integers.
+Labels: multiplicative-expr, int, DecimalNumber, unary-minus
+
+import ballerina/io;
+public function main() {
+    int a = -1;
+    int b = -2;
+    int c = -4611686018427387903;
+    int d = -6917529027641081853;
+    int e = -9223372036854775807;
+
+    io:println(a % a); // @output 0
+    io:println(a % b); // @output -1
+    io:println(a % c); // @output -1
+    io:println(a % d); // @output -1
+    io:println(a % e); // @output -1
+
+    io:println(b % a); // @output 0
+    io:println(b % b); // @output 0
+    io:println(b % c); // @output -2
+    io:println(b % d); // @output -2
+    io:println(b % e); // @output -2
+
+    io:println(c % a); // @output 0
+    io:println(c % b); // @output -1
+    io:println(c % c); // @output 0
+    io:println(c % d); // @output -4611686018427387903
+    io:println(c % e); // @output -4611686018427387903
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output -1
+    io:println(d % c); // @output -2305843009213693950
+    io:println(d % d); // @output 0
+    io:println(d % e); // @output -6917529027641081853
+
+    io:println(e % a); // @output 0
+    io:println(e % b); // @output -1
+    io:println(e % c); // @output -1
+    io:println(e % d); // @output -2305843009213693954
+    io:println(e % e); // @output 0
+}
+
+Test-Case: panic
+Description: Test 3 for integer remainder panic on remainder by zero.
+Labels: multiplicative-expr, int, DecimalNumber, unary-minus
+
+public function main() {
+    int a = -0;
+    int b = 0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 4 for integer remainder panic on remainder by zero.
+Labels: multiplicative-expr, int, DecimalNumber, unary-minus
+
+public function main() {
+    int a = 0;
+    int b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 5 for integer remainder panic on remainder by zero.
+Labels: multiplicative-expr, int, DecimalNumber, unary-minus
+
+public function main() {
+    int a = 9223372036854775807;
+    int b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
 Test-Case: panic
 Description: Test 6 for integer remainder panic on remainder by zero.
 Labels: multiplicative-expr, int, DecimalNumber
@@ -472,6 +548,216 @@ public function main() {
     int _ = a % b; // @panic remainder by zero
 }
 
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, for negative non-zero integers, for int:Signed8.
+Labels: multiplicative-expr, DecimalNumber, int:Signed8, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed8 a = 1;
+    int:Signed8 b = 2;
+    int:Signed8 c = 10;
+    int:Signed8 d = 100;
+    int:Signed8 e = 127;
+
+    io:println(a % a); // @output 0
+    io:println(a % b); // @output 1
+    io:println(a % c); // @output 1
+    io:println(a % d); // @output 1
+    io:println(a % e); // @output 1
+
+    io:println(b % a); // @output 0
+    io:println(b % b); // @output 0
+    io:println(b % c); // @output 2
+    io:println(b % d); // @output 2
+    io:println(b % e); // @output 2
+
+    io:println(c % a); // @output 0
+    io:println(c % b); // @output 0
+    io:println(c % c); // @output 0
+    io:println(c % d); // @output 10
+    io:println(c % e); // @output 10
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output 0
+    io:println(d % c); // @output 0
+    io:println(d % d); // @output 0
+    io:println(d % e); // @output 100
+
+    io:println(e % a); // @output 0
+    io:println(e % b); // @output 1
+    io:println(e % c); // @output 7
+    io:println(e % d); // @output 27
+    io:println(e % e); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, for negative non-zero integers, for int:Signed8.
+Labels: multiplicative-expr, DecimalNumber, int:Signed8, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed8 a = -1;
+    int:Signed8 b = -2;
+    int:Signed8 c = -100;
+    int:Signed8 d = -121;
+    int:Signed8 e = -128;
+
+    io:println(a % a); // @output 0
+    io:println(a % b); // @output -1
+    io:println(a % c); // @output -1
+    io:println(a % d); // @output -1
+    io:println(a % e); // @output -1
+
+    io:println(b % a); // @output 0
+    io:println(b % b); // @output 0
+    io:println(b % c); // @output -2
+    io:println(b % d); // @output -2
+    io:println(b % e); // @output -2
+
+    io:println(c % a); // @output 0
+    io:println(c % b); // @output 0
+    io:println(c % c); // @output 0
+    io:println(c % d); // @output -100
+    io:println(c % e); // @output -100
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output -1
+    io:println(d % c); // @output -21
+    io:println(d % d); // @output 0
+    io:println(d % e); // @output -121
+
+    io:println(e % a); // @output 0
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output -28
+    io:println(e % d); // @output -7
+    io:println(e % e); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where one operand is negative
+             and the other is positive, for int:Signed8.
+Labels: multiplicative-expr, DecimalNumber, int:Signed8, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed8 a = -128;
+    int:Signed8 b = -100;
+    int:Signed8 c = -1;
+    int:Signed8 d = 1;
+    int:Signed8 e = 100;
+    int:Signed8 f = 127;
+
+    io:println(a % d); // @output 0
+    io:println(a % e); // @output -28
+    io:println(a % f); // @output -1
+
+    io:println(b % d); // @output 0
+    io:println(b % e); // @output 0
+    io:println(b % f); // @output -100
+
+    io:println(c % d); // @output 0
+    io:println(c % e); // @output -1
+    io:println(c % f); // @output -1
+
+    io:println(d % a); // @output 1
+    io:println(d % b); // @output 1
+    io:println(d % c); // @output 0
+
+    io:println(e % a); // @output 100
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output 0
+
+    io:println(f % a); // @output 127
+    io:println(f % b); // @output 27
+    io:println(f % c); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where the first operand is zero, for int:Signed8.
+Labels: multiplicative-expr, DecimalNumber, int:Signed8, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed8 a = -128;
+    int:Signed8 b = -100;
+    int:Signed8 c = -1;
+    int:Signed8 d = -0;
+    int:Signed8 e = 0;
+    int:Signed8 f = 1;
+    int:Signed8 g = 100;
+    int:Signed8 h = 127;
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output 0
+    io:println(d % c); // @output 0
+    io:println(d % f); // @output 0
+    io:println(d % g); // @output 0
+    io:println(d % h); // @output 0
+
+    io:println(e % a); // @output 0
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output 0
+    io:println(e % f); // @output 0
+    io:println(e % g); // @output 0
+    io:println(e % h); // @output 0
+}
+
+Test-Case: panic
+Description: Test 1 for integer remainder panic on remainder by zero, for int:Signed8.
+Labels: multiplicative-expr, int:Signed8, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8 a = -128;
+    int:Signed8 b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 2 for integer remainder panic on remainder by zero, for int:Signed8.
+Labels: multiplicative-expr, int:Signed8, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8 a = -128;
+    int:Signed8 b = 0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 3 for integer remainder panic on remainder by zero, for int:Signed8.
+Labels: multiplicative-expr, int:Signed8, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8 a = -0;
+    int:Signed8 b = 0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 4 for integer remainder panic on remainder by zero, for int:Signed8.
+Labels: multiplicative-expr, int:Signed8, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8 a = 0;
+    int:Signed8 b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 5 for integer remainder panic on remainder by zero, for int:Signed8.
+Labels: multiplicative-expr, int:Signed8, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8 a = 127;
+    int:Signed8 b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
 Test-Case: panic
 Description: Test 6 for integer remainder panic on remainder by zero, for int:Signed8.
 Labels: multiplicative-expr, int:Signed8, DecimalNumber
@@ -524,6 +810,173 @@ public function main() {
     io:println(e % c); // @output 7
     io:println(e % d); // @output 8077
     io:println(e % e); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, for negative non-zero integers, for int:Signed16.
+Labels: multiplicative-expr, DecimalNumber, int:Signed16, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed16 a = -1;
+    int:Signed16 b = -2;
+    int:Signed16 c = -100;
+    int:Signed16 d = -20000;
+    int:Signed16 e = -32768;
+
+    io:println(a % a); // @output 0
+    io:println(a % b); // @output -1
+    io:println(a % c); // @output -1
+    io:println(a % d); // @output -1
+    io:println(a % e); // @output -1
+
+    io:println(b % a); // @output 0
+    io:println(b % b); // @output 0
+    io:println(b % c); // @output -2
+    io:println(b % d); // @output -2
+    io:println(b % e); // @output -2
+
+    io:println(c % a); // @output 0
+    io:println(c % b); // @output 0
+    io:println(c % c); // @output 0
+    io:println(c % d); // @output -100
+    io:println(c % e); // @output -100
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output 0
+    io:println(d % c); // @output 0
+    io:println(d % d); // @output 0
+    io:println(d % e); // @output -20000
+
+    io:println(e % a); // @output 0
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output -68
+    io:println(e % d); // @output -12768
+    io:println(e % e); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where one operand is negative
+             and the other is positive, for int:Signed16.
+Labels: multiplicative-expr, DecimalNumber, int:Signed16, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed16 a = -32768;
+    int:Signed16 b = -200;
+    int:Signed16 c = -1;
+    int:Signed16 d = 1;
+    int:Signed16 e = 200;
+    int:Signed16 f = 32767;
+
+    io:println(a % d); // @output 0
+    io:println(a % e); // @output -168
+    io:println(a % f); // @output -1
+
+    io:println(b % d); // @output 0
+    io:println(b % e); // @output 0
+    io:println(b % f); // @output -200
+
+    io:println(c % d); // @output 0
+    io:println(c % e); // @output -1
+    io:println(c % f); // @output -1
+
+    io:println(d % a); // @output 1
+    io:println(d % b); // @output 1
+    io:println(d % c); // @output 0
+
+    io:println(e % a); // @output 200
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output 0
+
+    io:println(f % a); // @output 32767
+    io:println(f % b); // @output 167
+    io:println(f % c); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where the first operand is zero, for int:Signed16.
+Labels: multiplicative-expr, DecimalNumber, int:Signed16, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed16 a = -32768;
+    int:Signed16 b = -100;
+    int:Signed16 c = -1;
+    int:Signed16 d = -0;
+    int:Signed16 e = 0;
+    int:Signed16 f = 1;
+    int:Signed16 g = 1100;
+    int:Signed16 h = 32767;
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output 0
+    io:println(d % c); // @output 0
+    io:println(d % f); // @output 0
+    io:println(d % g); // @output 0
+    io:println(d % h); // @output 0
+
+    io:println(e % a); // @output 0
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output 0
+    io:println(e % f); // @output 0
+    io:println(e % g); // @output 0
+    io:println(e % h); // @output 0
+}
+
+Test-Case: panic
+Description: Test 1 for integer remainder panic on remainder by zero, for int:Signed16.
+Labels: multiplicative-expr, int:Signed16, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16 a = -32768;
+    int:Signed16 b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 2 for integer remainder panic on remainder by zero, for int:Signed16.
+Labels: multiplicative-expr, int:Signed16, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16 a = -32767;
+    int:Signed16 b = 0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 3 for integer remainder panic on remainder by zero, for int:Signed16.
+Labels: multiplicative-expr, int:Signed16, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16 a = -0;
+    int:Signed16 b = 0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 4 for integer remainder panic on remainder by zero, for int:Signed16.
+Labels: multiplicative-expr, int:Signed16, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16 a = 0;
+    int:Signed16 b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 5 for integer remainder panic on remainder by zero, for int:Signed16.
+Labels: multiplicative-expr, int:Signed16, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16 a = 32767;
+    int:Signed16 b = -0;
+
+    int _ = a % b; // @panic remainder by zero
 }
 
 Test-Case: panic
@@ -580,6 +1033,173 @@ public function main() {
     io:println(e % e); // @output 0
 }
 
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, for negative non-zero integers, for int:Signed32.
+Labels: multiplicative-expr, DecimalNumber, int:Signed32, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed32 a = -1;
+    int:Signed32 b = -2;
+    int:Signed32 c = -100;
+    int:Signed32 d = -20000;
+    int:Signed32 e = -2147483648;
+
+    io:println(a % a); // @output 0
+    io:println(a % b); // @output -1
+    io:println(a % c); // @output -1
+    io:println(a % d); // @output -1
+    io:println(a % e); // @output -1
+
+    io:println(b % a); // @output 0
+    io:println(b % b); // @output 0
+    io:println(b % c); // @output -2
+    io:println(b % d); // @output -2
+    io:println(b % e); // @output -2
+
+    io:println(c % a); // @output 0
+    io:println(c % b); // @output 0
+    io:println(c % c); // @output 0
+    io:println(c % d); // @output -100
+    io:println(c % e); // @output -100
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output 0
+    io:println(d % c); // @output 0
+    io:println(d % d); // @output 0
+    io:println(d % e); // @output -20000
+
+    io:println(e % a); // @output 0
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output -48
+    io:println(e % d); // @output -3648
+    io:println(e % e); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where one operand is negative
+             and the other is positive, for int:Signed32.
+Labels: multiplicative-expr, DecimalNumber, int:Signed32, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed32 a = -2147483648;
+    int:Signed32 b = -200;
+    int:Signed32 c = -1;
+    int:Signed32 d = 1;
+    int:Signed32 e = 200;
+    int:Signed32 f = 2147483647;
+
+    io:println(a % d); // @output 0
+    io:println(a % e); // @output -48
+    io:println(a % f); // @output -1
+
+    io:println(b % d); // @output 0
+    io:println(b % e); // @output 0
+    io:println(b % f); // @output -200
+
+    io:println(c % d); // @output 0
+    io:println(c % e); // @output -1
+    io:println(c % f); // @output -1
+
+    io:println(d % a); // @output 1
+    io:println(d % b); // @output 1
+    io:println(d % c); // @output 0
+
+    io:println(e % a); // @output 200
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output 0
+
+    io:println(f % a); // @output 2147483647
+    io:println(f % b); // @output 47
+    io:println(f % c); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where the first operand is zero, for int:Signed32.
+Labels: multiplicative-expr, DecimalNumber, int:Signed32, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed32 a = -2147483648;
+    int:Signed32 b = -12342340;
+    int:Signed32 c = -1;
+    int:Signed32 d = -0;
+    int:Signed32 e = 0;
+    int:Signed32 f = 1;
+    int:Signed32 g = 139456264;
+    int:Signed32 h = 2147483647;
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output 0
+    io:println(d % c); // @output 0
+    io:println(d % f); // @output 0
+    io:println(d % g); // @output 0
+    io:println(d % h); // @output 0
+
+    io:println(e % a); // @output 0
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output 0
+    io:println(e % f); // @output 0
+    io:println(e % g); // @output 0
+    io:println(e % h); // @output 0
+}
+
+Test-Case: panic
+Description: Test 1 for integer remainder panic on remainder by zero, for int:Signed32.
+Labels: multiplicative-expr, int:Signed32, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32 a = -2147483648;
+    int:Signed32 b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 2 for integer remainder panic on remainder by zero, for int:Signed32.
+Labels: multiplicative-expr, int:Signed32, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32 a = -2147483647;
+    int:Signed32 b = 0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 3 for integer remainder panic on remainder by zero, for int:Signed32.
+Labels: multiplicative-expr, int:Signed32, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32 a = -0;
+    int:Signed32 b = 0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 4 for integer remainder panic on remainder by zero, for int:Signed32.
+Labels: multiplicative-expr, int:Signed32, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32 a = 0;
+    int:Signed32 b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 5 for integer remainder panic on remainder by zero, for int:Signed32.
+Labels: multiplicative-expr, int:Signed32, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32 a = 2147483647;
+    int:Signed32 b = -0;
+
+    int _ = a % b; // @panic remainder by zero
+}
+
 Test-Case: panic
 Description: Test 6 for integer remainder panic on remainder by zero, for int:Signed32.
 Labels: multiplicative-expr, int:Signed32, DecimalNumber
@@ -589,6 +1209,98 @@ public function main() {
     int:Signed32 b = 0;
 
     int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, for positive non-zero integers,
+             for user-defined subtype of int.
+Labels: multiplicative-expr, union-type, singleton-type, DecimalNumber, unary-minus, module-type-defn
+
+import ballerina/io;
+type Ints -2|-1|0|1|2;
+
+public function main() {
+    Ints a = 1;
+    Ints b = 2;
+
+    io:println(a % a); // @output 0
+    io:println(a % b); // @output 1
+
+    io:println(b % a); // @output 0
+    io:println(b % b); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, for negative non-zero integers,
+             for user-defined subtype of int.
+Labels: multiplicative-expr, union-type, singleton-type, DecimalNumber, unary-minus, module-type-defn
+
+import ballerina/io;
+type Ints -2|-1|0|1|2;
+
+public function main() {
+    Ints a = -1;
+    Ints b = -2;
+
+    io:println(a % a); // @output 0
+    io:println(a % b); // @output -1
+
+    io:println(b % a); // @output 0
+    io:println(b % b); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where one operand is negative
+             and the other is positive, for user-defined subtype of int.
+Labels: multiplicative-expr, union-type, singleton-type, DecimalNumber, unary-minus, module-type-defn
+
+import ballerina/io;
+type Ints -2|-1|0|1|2;
+
+public function main() {
+    Ints a = -1;
+    Ints b = -2;
+    Ints c = 1;
+    Ints d = 2;
+
+    io:println(a % c); // @output 0
+    io:println(a % d); // @output -1
+
+    io:println(b % c); // @output 0
+    io:println(b % d); // @output 0
+
+    io:println(c % a); // @output 0
+    io:println(c % b); // @output 1
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output 0
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where the first operand is zero, for
+             user-defined subtype of int.
+Labels: multiplicative-expr, union-type, singleton-type, DecimalNumber, unary-minus, module-type-defn
+
+import ballerina/io;
+type Ints -2|-1|0|1|2;
+
+public function main() {
+    Ints a = -2;
+    Ints b = -1;
+    Ints c = -0;
+    Ints d = 0;
+    Ints e = 1;
+    Ints f = 2;
+
+    io:println(c % a); // @output 0
+    io:println(c % b); // @output 0
+    io:println(c % e); // @output 0
+    io:println(c % f); // @output 0
+
+    io:println(d % a); // @output 0
+    io:println(d % b); // @output 0
+    io:println(d % e); // @output 0
+    io:println(d % f); // @output 0
 }
 
 Test-Case: panic
@@ -602,6 +1314,54 @@ public function main() {
     Ints b = 0;
 
     int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 1 for integer remainder panic on remainder by zero, for user-defined subtype of int.
+Labels: multiplicative-expr, union-type, singleton-type, DecimalNumber, unary-minus, module-type-defn
+
+type Ints -2|-1|0|1|2;
+
+public function main() {
+    Ints a = -1;
+    Ints b = 0;
+    int _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 3 for integer remainder panic on remainder by zero,
+             with optional int type-descriptors.
+Labels: multiplicative-expr, int, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int? a = -0;
+    int? b = 0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 4 for integer remainder panic on remainder by zero,
+             with optional int type-descriptors.
+Labels: multiplicative-expr, int, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int? a = 0;
+    int? b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 5 for integer remainder panic on remainder by zero,
+             with optional int type-descriptors.
+Labels: multiplicative-expr, int, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int? a = 9223372036854775807;
+    int? b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
 }
 
 Test-Case: panic
@@ -792,6 +1552,100 @@ public function main() {
     int? _ = a % b; // @panic remainder by zero
 }
 
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where one operand is negative
+             and the other is positive, for optional int:Signed8.
+Labels: multiplicative-expr, int:Signed8, optional-type, DecimalNumber, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed8? a = -128;
+    int:Signed8? b = -100;
+    int:Signed8? c = -1;
+    int:Signed8? d = 1;
+    int:Signed8? e = 100;
+    int:Signed8? f = 127;
+
+    io:println(a % d); // @output 0
+    io:println(a % e); // @output -28
+    io:println(a % f); // @output -1
+
+    io:println(b % d); // @output 0
+    io:println(b % e); // @output 0
+    io:println(b % f); // @output -100
+
+    io:println(c % d); // @output 0
+    io:println(c % e); // @output -1
+    io:println(c % f); // @output -1
+
+    io:println(d % a); // @output 1
+    io:println(d % b); // @output 1
+    io:println(d % c); // @output 0
+
+    io:println(e % a); // @output 100
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output 0
+
+    io:println(f % a); // @output 127
+    io:println(f % b); // @output 27
+    io:println(f % c); // @output 0
+}
+
+Test-Case: panic
+Description: Test 1 for integer remainder panic on remainder by zero, for optional int:Signed8.
+Labels: multiplicative-expr, int:Signed8, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8? a = -128;
+    int:Signed8? b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 2 for integer remainder panic on remainder by zero, for optional int:Signed8.
+Labels: multiplicative-expr, int:Signed8, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8? a = -128;
+    int:Signed8? b = 0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 3 for integer remainder panic on remainder by zero, for optional int:Signed8.
+Labels: multiplicative-expr, int:Signed8, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8? a = -0;
+    int:Signed8 b = 0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 4 for integer remainder panic on remainder by zero, for optional int:Signed8.
+Labels: multiplicative-expr, int:Signed8, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8 a = 0;
+    int:Signed8? b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 5 for integer remainder panic on remainder by zero, for optional int:Signed8.
+Labels: multiplicative-expr, int:Signed8, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed8? a = 127;
+    int:Signed8 b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
 Test-Case: panic
 Description: Test 6 for integer remainder panic on remainder by zero, for optional int:Signed8.
 Labels: multiplicative-expr, int:Signed8, optional-type, DecimalNumber
@@ -803,6 +1657,100 @@ public function main() {
     int? _ = a % b; // @panic remainder by zero
 }
 
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where one operand is negative
+             and the other is positive, for optional int:Signed16.
+Labels: multiplicative-expr, int:Signed16, optional-type, DecimalNumber, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed16? a = -32768;
+    int:Signed16? b = -200;
+    int:Signed16? c = -1;
+    int:Signed16? d = 1;
+    int:Signed16? e = 200;
+    int:Signed16? f = 32767;
+
+    io:println(a % d); // @output 0
+    io:println(a % e); // @output -168
+    io:println(a % f); // @output -1
+
+    io:println(b % d); // @output 0
+    io:println(b % e); // @output 0
+    io:println(b % f); // @output -200
+
+    io:println(c % d); // @output 0
+    io:println(c % e); // @output -1
+    io:println(c % f); // @output -1
+
+    io:println(d % a); // @output 1
+    io:println(d % b); // @output 1
+    io:println(d % c); // @output 0
+
+    io:println(e % a); // @output 200
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output 0
+
+    io:println(f % a); // @output 32767
+    io:println(f % b); // @output 167
+    io:println(f % c); // @output 0
+}
+
+Test-Case: panic
+Description: Test 1 for integer remainder panic on remainder by zero, for optional int:Signed16.
+Labels: multiplicative-expr, int:Signed16, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16? a = -32768;
+    int:Signed16? b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 2 for integer remainder panic on remainder by zero, for optional int:Signed16.
+Labels: multiplicative-expr, int:Signed16, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16? a = -32767;
+    int:Signed16 b = 0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 3 for integer remainder panic on remainder by zero, for optional int:Signed16.
+Labels: multiplicative-expr, int:Signed16, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16 a = -0;
+    int:Signed16? b = 0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 4 for integer remainder panic on remainder by zero, for optional int:Signed16.
+Labels: multiplicative-expr, int:Signed16, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16? a = 0;
+    int:Signed16 b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 5 for integer remainder panic on remainder by zero, for optional int:Signed16.
+Labels: multiplicative-expr, int:Signed16, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed16? a = 32767;
+    int:Signed16? b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
 Test-Case: panic
 Description: Test 6 for integer remainder panic on remainder by zero, for optional int:Signed16.
 Labels: multiplicative-expr, int:Signed16, optional-type, DecimalNumber
@@ -810,6 +1758,100 @@ Labels: multiplicative-expr, int:Signed16, optional-type, DecimalNumber
 public function main() {
     int:Signed16? a = 3276;
     int:Signed16? b = 0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: output
+Description: Test integer remainder non-overflow scenarios, where one operand is negative
+             and the other is positive, for optional int:Signed32.
+Labels: multiplicative-expr, int:Signed32, optional-type, DecimalNumber, unary-minus
+
+import ballerina/io;
+public function main() {
+    int:Signed32? a = -2147483648;
+    int:Signed32? b = -200;
+    int:Signed32? c = -1;
+    int:Signed32? d = 1;
+    int:Signed32? e = 200;
+    int:Signed32? f = 2147483647;
+
+    io:println(a % d); // @output 0
+    io:println(a % e); // @output -48
+    io:println(a % f); // @output -1
+
+    io:println(b % d); // @output 0
+    io:println(b % e); // @output 0
+    io:println(b % f); // @output -200
+
+    io:println(c % d); // @output 0
+    io:println(c % e); // @output -1
+    io:println(c % f); // @output -1
+
+    io:println(d % a); // @output 1
+    io:println(d % b); // @output 1
+    io:println(d % c); // @output 0
+
+    io:println(e % a); // @output 200
+    io:println(e % b); // @output 0
+    io:println(e % c); // @output 0
+
+    io:println(f % a); // @output 2147483647
+    io:println(f % b); // @output 47
+    io:println(f % c); // @output 0
+}
+
+Test-Case: panic
+Description: Test 1 for integer remainder panic on remainder by zero, for optional int:Signed32.
+Labels: multiplicative-expr, int:Signed32, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32? a = -2147483648;
+    int:Signed32 b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 2 for integer remainder panic on remainder by zero, for optional int:Signed32.
+Labels: multiplicative-expr, int:Signed32, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32? a = -2147483647;
+    int:Signed32? b = 0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 3 for integer remainder panic on remainder by zero, for optional int:Signed32.
+Labels: multiplicative-expr, int:Signed32, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32 a = -0;
+    int:Signed32? b = 0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 4 for integer remainder panic on remainder by zero, for optional int:Signed32.
+Labels: multiplicative-expr, int:Signed32, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32? a = 0;
+    int:Signed32? b = -0;
+
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 5 for integer remainder panic on remainder by zero, for optional int:Signed32.
+Labels: multiplicative-expr, int:Signed32, optional-type, DecimalNumber, unary-minus
+
+public function main() {
+    int:Signed32? a = 2147483647;
+    int:Signed32? b = -0;
 
     int? _ = a % b; // @panic remainder by zero
 }
@@ -835,6 +1877,18 @@ public function main() {
     Ints? a = 1;
     Ints? b = 0;
 
+    int? _ = a % b; // @panic remainder by zero
+}
+
+Test-Case: panic
+Description: Test 1 for integer remainder panic on remainder by zero, for user-defined subtype of optional int.
+Labels: multiplicative-expr, union-type, singleton-type, DecimalNumber, unary-minus, module-type-defn, optional-type
+
+type Ints -2|-1|0|1|2?;
+
+public function main() {
+    Ints a = -1;
+    Ints b = 0;
     int? _ = a % b; // @panic remainder by zero
 }
 
