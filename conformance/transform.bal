@@ -26,8 +26,10 @@ public function main(string[] paths, *Options opts) returns error? {
     foreach string path in paths {
         BaltTestCase[] tests = check parseTest(path);
         total += tests.length();
-        string filename = check file:basename(path);
-        skipped += check outputTest(tests, filename, skipLables);
+        string[] parts = check file:splitPath(path);
+        string filename = parts[parts.length() - 1];
+        string dir = parts[parts.length() - 2];
+        skipped += check outputTest(tests, dir, filename, skipLables);
     }
     io:println("skipped: ", skipped);
     io:println("updated: ", total - skipped);
@@ -176,7 +178,7 @@ function parseCommaSeperatedList(string s) returns string[] {
     return labels;
 }
 
-function outputTest(BaltTestCase[] tests, string filename, string[][] skipLables) returns int|io:Error {
+function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLables) returns int|io:Error {
     string[] body = [];
     int skipped = 0;
     foreach BaltTestCase test in tests {
@@ -192,7 +194,7 @@ function outputTest(BaltTestCase[] tests, string filename, string[][] skipLables
     if body.length() == 0 {
         return skipped;
     }
-    string outputFileName = "./tests/" + filename;
+    string outputFileName = string `./tests/${dir}/${filename}`;
     check io:fileWriteLines(outputFileName, body);
     return skipped;
 }

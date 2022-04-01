@@ -1,6 +1,6 @@
 TARGETS=test all compile testll
 
-TDIR= $(sort $(basename $(notdir ../conformance/tests)))
+TDIR= $(sort $(basename $(notdir $(wildcard ../conformance/tests/*))))
 
 TESTS = $(shell find ./ballerina-spec/ -name "*.balt")
 

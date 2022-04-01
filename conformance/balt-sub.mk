@@ -7,7 +7,7 @@ LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 CFLAGS ?= -O2
 RT=../../../runtime/balrt.a
 RT_INLINE=../../../runtime/balrt_inline.bc
-balt_files = $(wildcard ../../$(tdir)/*.balt)
+balt_files = $(wildcard ../../tests/$(tdir)/*.balt)
 
 ll_files = $(wildcard ll/*.ll)
 llmod_files = $(wildcard ll/*-[vpo].ll)
