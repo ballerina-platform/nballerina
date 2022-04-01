@@ -760,8 +760,8 @@ static READNONE inline bool taggedStringIsChar(TaggedPtr p) {
         }
         else {
             // This char uses one byte.
-            // So it's one char 1 if the other bytes are all padding (0xFF).
-            return (~bits >> 8) == 0;
+            // So it's one char if the bytes other than the top byte and the bottom byte are all 1's.
+            return (bits | (~POINTER_MASK | 0xFF)) == (uint64_t)-1;
         }
     }
     else {
