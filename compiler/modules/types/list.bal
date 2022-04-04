@@ -290,17 +290,34 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         final int len = members.fixedLength;
         final ListAtomicType nt = neg.listType;
         final int negLen = nt.members.fixedLength;
+        if negLen < len ? isNever(nt.rest) : (len < negLen && isNever(rest)) {
+            // Either
+            // - the negative has a fixed length that is shorter than the minimum
+            // length of the positive, or
+            // - the positive has a fixed length that is shorter than the minimum
+            // length of the negative.
+            // In either case this negative cannot cancel out the positive,
+            // so we can just skip over this negative.
+            return listInhabited(cx, members, rest, neg.next);
+        }
         if len < negLen {
-            if isNever(rest) {
-                return listInhabited(cx, members, rest, neg.next);
-            }
-            // For list shapes with length less than negLen,
-            // this neg type is not relevant.
+            // Note in this case we know positive rest is not never.
+
+            // Explore the possibility of shapes with a length less than the
+            // minimum required by negLen.
+
+            // First a shape with exactly len members
+            // No need to copy members here
             if listInhabited(cx, members, NEVER, neg.next) {
                 return true;
             }
             // Check list types with fixedLength >= `len` and  < `negLen`
-            foreach int i in len ..< int:min(negLen, neg.maxInitialLen + 1) {
+            // XXX this is wrong
+            // if nt.rest is never, then the 
+            if negLen - len > 200 {
+                panic error("fixed length too big " + negLen.toString());
+            }
+            foreach int i in len + 1 ..< negLen {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
                 if listInhabited(cx, s, NEVER, neg.next) {
@@ -308,11 +325,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
                 }
             }
         }
-        else if negLen < len && isNever(nt.rest) {
-            return listInhabited(cx, members, rest, neg.next);
-        }
-        // Now we have negLen <= len.
-
+        // Now we need to explore the possibility of shapes with length >= neglen
         // This is the heart of the algorithm.
         // For [v0, v1] not to be in [t0,t1], there are two possibilities
         // (1) v0 is not in t0, or
@@ -332,8 +345,16 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-        final int maxInitialLen = int:max(members.initial.length(), neg.maxInitialLen);
-        foreach int i in 0 ..< maxInitialLen {
+        // XXX not sure computation of maxInitialLen is right
+        // XXX when there's a rest, I suspect we need to use fixedLength not initial.length()
+       
+        // The +1 is to explore the possibility of a shape that has length > maxInitialLen and
+        // avoids being cancelled out by this negative because of its rest type.
+        final int maxLen = int:max(len + 1, negLen);
+        if maxLen > 200 {
+            panic error("fixed length too big " + maxLen.toString());
+        }
+        foreach int i in 0 ..< maxLen {
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
@@ -342,22 +363,6 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
                 }
             }
         }
-    
-        // We still need to explore the possibility of a shape that has length > maxInitialLen and
-        // avoids being cancelled out by this negative because of its rest type.
-        // We are going to try an array with a fixedLength of len + 1.
-        // If len < maxInitialLen, then we will already have tried that above.
-        if len >= maxInitialLen {
-            SemType rd = diff(rest, nt.rest);
-            if !isEmpty(cx, rd) {
-                FixedLengthArray s = fixedArrayShallowCopy(members);
-                fixedArraySet(s, len, rd);
-                if listInhabited(cx, s, rest, neg.next) {
-                    return true;
-                }
-            }
-        }
-       
         // This is correct for length 0, because we know that the length of the
         // negative is 0, and [] - [] is empty.
         return false;
@@ -439,14 +444,26 @@ function fixedArrayReplace(FixedLengthArray array, int index, SemType t, SemType
 }
 
 function listConjunction(Context cx, Conjunction? con) returns ListConjunction? {
-    if con != () {
-        ListAtomicType listType = cx.listAtomType(con.atom);
-        int len = listType.members.initial.length();
-        ListConjunction? next = listConjunction(cx, con.next);
-        int maxInitialLen = next == () ? len : int:max(len, next.maxInitialLen);
-        return { listType, maxInitialLen, next };
+    Conjunction? c = con;
+    ListAtomicType[] atoms = [];
+    while true {
+        if c is () {
+            break;
+        }
+        atoms.push(cx.listAtomType(c.atom));
+        c = c.next;
     }
-    return ();
+    // This is in ascending order.
+    // It gets reversed as we cons it up.
+    atoms = from var a in atoms let int len = a.members.fixedLength order by len select a;
+    ListConjunction? next = ();
+    int maxInitialLen = 0;
+    foreach var listType in atoms {
+        maxInitialLen = int:max(maxInitialLen, listType.members.initial.length());
+        ListConjunction lc = { listType, maxInitialLen, next };
+        next = lc;
+    }
+    return next;
 }
 
 function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {
