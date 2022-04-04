@@ -10,14 +10,15 @@ class VerifyContext {
     private final Module mod;
     private final t:Context tc;
     private final FunctionDefn defn;
-    int[] usedTmpRegisters = [];
+    final FunctionCode code;
     int[] definedTmpRegisters = [];
     
-    function init(Module mod, FunctionDefn defn) {
+    function init(Module mod, FunctionDefn defn, FunctionCode code) {
         self.mod = mod;
         t:Context tc  = mod.getTypeContext();
         self.tc = tc;
         self.defn = defn;
+        self.code = code;
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
@@ -68,7 +69,7 @@ class VerifyContext {
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
-    VerifyContext cx = new(mod, defn);
+    VerifyContext cx = new(mod, defn, code);
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
     }
@@ -87,7 +88,7 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
 
 type MultipleOpeandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithmeticBinaryInsn
     |DecimalArithmeticBinaryInsn|CompareInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn
-    |MappingGetInsn|StringConcatInsn;
+    |MappingGetInsn|StringConcatInsn|EqualityInsn;
 
 type NonResultInsn MappingSetInsn|ListSetInsn|BranchInsn|CondBranchInsn|CondNarrowInsn|PanicInsn
     |RetInsn|AbnormalRetInsn|AssignInsn;
@@ -105,13 +106,6 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
     if insn is BranchInsn|CatchInsn {
         return;
     }
-    else if insn is EqualityInsn {
-        check verifyTmpInit(vc, insn.operands[0]);
-        check verifyRegisterKind(vc, insn.operands[1]);
-    }
-    else if insn is AssignInsn|CondBranchInsn|CondNarrowInsn {
-        check verifyTmpInit(vc, insn.operand);
-    }
     else if insn is CallInsn {
         foreach Operand arg in insn.args {
             check verifyRegisterKind(vc, arg);
@@ -119,7 +113,7 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is ListSetInsn|MappingSetInsn {
         check verifyNonFinalRegisterKind(vc, insn.operands[0]);
-        check verifyTmpInit(vc, insn.operands[1]);
+        check verifyRegisterKind(vc, insn.operands[1]);
         check verifyRegisterKind(vc, insn.operands[2]);
     }
     else if insn is MultipleOpeandInsn {
@@ -138,26 +132,20 @@ function verifyNonFinalRegisterKind(VerifyContext vc, Operand r) returns Error? 
     if r is FinalRegister {
         return vc.invalidErr("invalid register kind final for insn: " + r.kind, <Position>r.pos);
     }
-    check verifyTmpInit(vc, r);
-}
-
-function verifyTmpInit(VerifyContext vc, Operand r) returns Error? {
-    if r is TmpRegister && vc.definedTmpRegisters.indexOf(r.number) == () {
-        return vc.invalidErr("tmp register not initialized", <Position>r.pos);
-    }
+    check verifyRegisterKind(vc, r);
 }
 
 function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
     if r !is Register {
         return;
     }
-    if r is TmpRegister {
-        check verifyTmpInit(vc, r);
-        if vc.usedTmpRegisters.indexOf(r.number) != () {
-            return vc.invalidErr("tmp register used in multiple places", <Position>r.pos);
-        }
-        else {
-            vc.usedTmpRegisters.push(r.number);
+    if r is TmpRegister && vc.definedTmpRegisters.indexOf(r.number) == () {
+        return vc.invalidErr("tmp register not initialized", <Position>r.pos);
+    }
+    if r is NarrowRegister {
+        Register narrowed = vc.code.registers[r.underlying];
+        if !t:isSubtype(vc.typeContext(), r.semType, narrowed.semType) && narrowed !is NarrowRegister {
+            return vc.invalidErr("narrow register is not a subtype of narrowed register", <Position>r.pos);
         }
     }
 }
