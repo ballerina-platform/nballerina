@@ -347,8 +347,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
     
-        // The key point here that because ListConjunction is sorted in decreasing order, the negs handle every index > negLen in the same way
-        // i.e. for every N in neg, for every i, j > negLen, N[i] = N[j].
+        // The key point here that because ListConjunction is sorted in decreasing order, the negs handle every index >= negLen in the same way
+        // i.e. for every N in neg, for every i, j >= negLen, N[i] = N[j].
         // Define two indices i, j to be equivalent iff for type T that is the positive and any of the negatives, T[i] = T[j].
         // The value of maxLen here sufficient that the set { i | 0 <= i < maxLen } will contain at least one index from each equivalence
         // class.
