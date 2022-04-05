@@ -1,5 +1,4 @@
 import wso2/nballerina.comm.err;
-import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
@@ -45,7 +44,6 @@ function compileBaltFile(string filename, string basename, string outDir, nback:
         CompileError? err = compileAndOutputModule(cx, DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename, initFilename);
         if t.header.Test\-Case is "parser-error"|"error" {
             if err is () {
-                // pr-todo: throw a proper error
                 panic error("expected error in " + filename + " test: " + (i + 1).toString());
             }
         }
@@ -63,20 +61,6 @@ function compileAndOutputModule(CompileContext cx, bir:ModuleId modId, front:Sou
     front:ResolvedModule mod = check processModule(cx, modId, sources, <string>cx.outputFilename());
     check mod.validMain();
     check generateInitModule(cx, mod);
-}
-
-function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns [LlvmModule, LlvmModule]|CompileError {
-    t:Env env = new;
-    front:ScannedModule scanned = check front:scanModule(sources, modId);
-    bir:Module birMod = check front:resolveModule(scanned, env, []);
-
-    var [llMod, typeUsage] = check nback:buildModule(birMod, nbackOptions);
-    LlvmModule initModule = check baltInitModule(env, {id: modId, typeUsage }, birMod);
-    return [llMod, initModule];
-}
-
-function baltInitModule(t:Env env, nback:ProgramModule programMod, bir:Module birMod) returns LlvmModule|CompileError {
-    return nback:buildInitModule(env, [programMod], {});
 }
 
 function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Diagnostic {
@@ -111,32 +95,25 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
             labels = parseLabels(fBody);
             s = LABEL;
         }
+        else if l.trim() == "" && s is HEADER|LABEL {
+            s = CONTENT;
+        }
         else if s == LABEL {
-            if l.trim() == "" {
-                s = CONTENT;
-            }
-            else {
-                labels.push(...parseLabels(l));
-            }
+            labels.push(...parseLabels(l));
         }
         else if s == HEADER {
-            if l.trim() == "" {
-                s = CONTENT;
-            }
-            else {
-                BaltTestHeader header = <BaltTestHeader>maybeHeader;
-                // possible improvement: support other white spaces
-                if l.startsWith(" ") {
-                    if prevFiledName == () ||  prevFiledBody == () {
-                        panic err:impossible("folded field body without field");
-                    }
-                    header[<string>prevFiledName] = <string>prevFiledBody + l;
-                } else {
-                    var [fName, fBody] = parseField(l);
-                    header[fName] = fBody;
-                    prevFiledName = fName;
-                    prevFiledBody = fBody;
+            BaltTestHeader header = <BaltTestHeader>maybeHeader;
+            // possible improvement: support other white spaces
+            if l.startsWith(" ") {
+                if prevFiledName == () ||  prevFiledBody == () {
+                    panic err:impossible("folded field body without field");
                 }
+                header[<string>prevFiledName] = <string>prevFiledBody + l;
+            } else {
+                var [fName, fBody] = parseField(l);
+                header[fName] = fBody;
+                prevFiledName = fName;
+                prevFiledBody = fBody;
             }
         }
         else if s == CONTENT {
@@ -225,7 +202,7 @@ function expect(string[] src) returns string[] {
 
 function chooseBaltCaseOutputFilename(string filename, BaltTestCase t, int i) returns string|file:Error {
    string basename = check file:basename(filename);
-   basename = basename.substring(0, basename.length()-5);
+   basename = basename.substring(0, basename.length() - 5);
    return basename + pad4(i.toString()) + "L" + pad4(t.offset.toString()) + "-" + testKindToLetter(t.header.Test\-Case);
 }
 

@@ -1,4 +1,8 @@
 import wso2/nballerina.comm.err;
+import wso2/nballerina.bir;
+import wso2/nballerina.front;
+import wso2/nballerina.nback;
+import wso2/nballerina.types as t;
 
 import ballerina/test;
 import ballerina/file;
@@ -49,3 +53,18 @@ function parseBalts() returns TestCaseMap|error {
     }
     return testMap;
 }
+
+function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns [LlvmModule, LlvmModule]|CompileError {
+    t:Env env = new;
+    front:ScannedModule scanned = check front:scanModule(sources, modId);
+    bir:Module birMod = check front:resolveModule(scanned, env, []);
+
+    var [llMod, typeUsage] = check nback:buildModule(birMod, nbackOptions);
+    LlvmModule initModule = check baltInitModule(env, {id: modId, typeUsage }, birMod);
+    return [llMod, initModule];
+}
+
+function baltInitModule(t:Env env, nback:ProgramModule programMod, bir:Module birMod) returns LlvmModule|CompileError {
+    return nback:buildInitModule(env, [programMod], {});
+}
+

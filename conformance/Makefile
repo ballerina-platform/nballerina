@@ -9,7 +9,9 @@ update: $(TESTS)
 	mkdir -p tests
 	bal run transform.bal -- $^ --skipList skiplist.txt
 
-report: report.bal
+report: report/changed.html report/skipped.html report/unchanged.html
+
+report/%.html: report.bal
 	bal run report.bal -- --baseDir ./ballerina-spec/conformance/lang/expressions/ --transformedDir ./tests/
 
 clean:

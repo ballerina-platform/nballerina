@@ -1,11 +1,11 @@
 TARGETS=test all compile testll
 
-TDIR= $(sort $(basename $(notdir ../conformance/tests)))
+TDIRS= $(sort $(basename $(notdir $(wildcard ../compiler/testSuite/*.balt))))
 
-$(TARGETS): $(TDIR)
+$(TARGETS): $(TDIRS)
 
-$(TDIR):
+$(TDIRS):
 	mkdir -p out/$@
 	$(MAKE) -C out/$@ -f ../../balt-sub.mk tdir=$@ $(MAKECMDGOALS)
 
-.PHONY: $(TARGETS) $(TDIR)
+.PHONY: $(TARGETS) $(TDIRS)

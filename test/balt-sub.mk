@@ -7,13 +7,9 @@ LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 CFLAGS ?= -O2
 RT=../../../runtime/balrt.a
 RT_INLINE=../../../runtime/balrt_inline.bc
-balt_files = $(wildcard ../../../conformanc/$(tdir)/*.balt)
 
 ll_files = $(wildcard ll/*.ll)
-llmod_files = $(wildcard ll/*-[vpo].ll)
-diff_files = $(addsuffix .diff, $(addprefix result/, $(basename $(notdir $(llmod_files)))))
-exe_files = $(addsuffix .exe, $(addprefix result/, $(basename $(notdir $(llmod_files)))))
-expect_files = $(wildcard ./expect/*.txt)
+diff_files = $(addsuffix .diff, $(addprefix result/, $(basename $(notdir $(ll_files)))))
 
 test: all
 	$(MAKE) -f ../../balt-sub.mk tdir=$(tdir) testll
@@ -24,20 +20,26 @@ all:
 
 compile: compile.stamp
 
-compile.stamp: $(balt_files)
-	$(JAVA) -jar $(COMPILER_JAR) --outDir ll --expectOutDir expect $^
+compile.stamp: ../../../compiler/testSuite/$(tdir).balt
+	-rm -fr llnew
+	-rm -fr expectnew
+	$(JAVA) -jar $(COMPILER_JAR) --outDir llnew --expectOutDir expectnew $^
 	mkdir -p ll
 	mkdir -p expect
+	-../../update.sh expectnew expect txt
+	-../../update.sh llnew ll ll
+	-rm -fr llnew
+	-rm -fr expectnew
 	@touch $@
 
-# This compiles, runs and checks the output of ll/*.ll
-testll: fail.txt $(expect_files) $(exe_files)
+testll: fail.txt
+	@echo testll
 
 fail.txt: $(diff_files)
 	@>$@
 	@for f in $^; do \
 		if test -s $$f; then \
-			echo $(tdir)$$f failed | sed -e 's;result/*[0-9]*L0*;.balt:;'  -e 's;-[vpe]\.diff;;' >>$@; \
+			echo $(tdir)$$f failed | sed -e 's;result/[0-9]*L0*;.balt:;'  -e 's;-[vpe]\.diff;;' >>$@; \
 		fi \
 	done
 	@cat $@
@@ -46,14 +48,11 @@ fail.txt: $(diff_files)
 result/%.diff: result/%.exe expect/%.txt
 	-../../runcheck.sh $^ >$@
 
+result/%.exe: result/%.bc $(RT)
+	$(CLANG) $(CFLAGS) $< -o $@ $(RT)
+
 result/%.bc: ll/%.ll $(RT_INLINE)
 	@mkdir -p result
 	$(LLVM_LINK) -o $@ $^
-
-result/%.exe: result/%.bc result/%._init.bc $(RT)
-	$(CLANG) $(CFLAGS) -o $@ $^
-
-clean:
-	-rm -rf actual compile.stamp expect fail.txt ll result
 
 .PHONY: $(TARGETS)

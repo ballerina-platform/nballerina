@@ -17,4 +17,4 @@ BacktickString
 xml
 main-error
 mod-var-decl
-member-access-expr, string
+member-access-expr string

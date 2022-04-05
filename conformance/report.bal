@@ -75,7 +75,7 @@ function compareTest(string baseTestDir, string transformedTestDir, string test)
 function parseTests(string path) returns TestCase[]|io:Error|file:Error {
     string[] lines = check io:fileReadLines(path);
     string[] content = [];
-    string description = ""; // we use description as a key
+    string description = "";
     TestCase[] tests = [];
     State s = CONTENT;
     foreach string line in lines {
@@ -155,7 +155,6 @@ function generateNonDiffReport(TestDiffResult[] diffs, string title, string outp
     foreach TestDiffResult diff in diffs {
         string path = diff.base.path;
         if path != currentPath {
-            // pr-todo: add path here
             body.push(string `<h3>${check file:basename(path)}</h3>`);
             currentPath = path;
         }
