@@ -862,6 +862,7 @@ public function main() {
 
 Test-Case: output
 Description: Test less than expression for different optional user defined sub types of int.
+Fail-Issue: ballerina-platform/ballerina-lang#35657
 Labels: DecimalNumber, int:Signed8, int:Unsigned32, module-const-decl, module-type-defn, optional-type, relational-expr, union-type
 
 import ballerina/io;
@@ -1107,7 +1108,7 @@ public function main() {
 
 Test-Case: output
 Description: Test field and member access as less than or equal expression operands.
-Labels: array-type, DecimalNumber, field-access-expr, int, list-constructor, mapping-constructor, member-access-expr, module-type-defn, record-type, relational-expr
+Labels: array-type, DecimalNumber, field-access-expr, int, list-constructor-expr, mapping-constructor-expr, member-access-expr, module-type-defn, record-type, relational-expr
 
 import ballerina/io;
 type Record record {

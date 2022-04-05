@@ -206,6 +206,17 @@ function printString(string s) {
 }
 
 Test-Case: output
+Description: Test string concatenation with type cast expressions as operands.
+Labels: additive-expr, string, type-cast-expr, optional-type, string:Char
+
+import ballerina/io;
+public function main() {
+    string s = "!";
+    string? t = "hi";
+    io:println(<string> t + <string:Char> s); // @output hi!
+}
+
+Test-Case: output
 Description: Test string concatenation with additive expressions as operands.
 Labels: additive-expr, string, module-type-defn, union-type, singleton-type, string:Char
 

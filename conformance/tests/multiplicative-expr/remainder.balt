@@ -133,7 +133,7 @@ Description: Test 7 for integer remainder panic on remainder by zero.
 Labels: multiplicative-expr, int, DecimalNumber
 
 public function main() {
-    int _ = 9223372036854775807 % 0; // @error pr-todo
+    int _ = 9223372036854775807 % 0; // @error evaluation of int constant '%' expression failed
 }
 
 Test-Case: output

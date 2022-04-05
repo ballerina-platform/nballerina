@@ -73,7 +73,7 @@ Description: Test 2 for integer multiplication overflow.
 Labels: multiplicative-expr, int, DecimalNumber
 
 public function main() {
-    int _ = 2 * 4611686018427387904; // @error pr-todo
+    int _ = 2 * 4611686018427387904; // @error evaluation of int constant '*' expression failed
 }
 
 Test-Case: error
@@ -81,7 +81,7 @@ Description: Test 3 for integer multiplication overflow.
 Labels: multiplicative-expr, int, DecimalNumber, unary-minus
 
 public function main() {
-    int _ = -3074457345618258603 * 3; // @error pr-todo
+    int _ = -3074457345618258603 * 3; // @error evaluation of int constant '*' expression failed
 }
 
 Test-Case: output

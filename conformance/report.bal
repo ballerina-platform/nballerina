@@ -172,7 +172,6 @@ function generateDiffReport(TestDiffResult[] diffs, string title, string outputP
     string currentPath = "";
     body.push(string `<h1>${title}</h1>`);
     foreach TestDiffResult diff in diffs {
-        io:println(diff);
         string path = diff.base.path;
         if path != currentPath {
             currentPath = path;
