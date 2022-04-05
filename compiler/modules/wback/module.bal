@@ -47,6 +47,9 @@ function addRttFunctions(wasm:Module module) {
     addFuncGetArrayLength(module);
     addFuncGetValueOfIndex(module);
     addFuncArrayPush(module);
+    addFuncCreateArray(module);
+    addFuncArraySet(module);
+    module.addType("List", module.array("eqref"));
     module.addType("AnyList", module.array("eqref"));
 }
 

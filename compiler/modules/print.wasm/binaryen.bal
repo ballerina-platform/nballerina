@@ -1,8 +1,11 @@
-public type IntType "i64"|"i32";
-public type RefType "anyref"|"eqref";
-public type Type "None"|IntType|RefType;
+public type NumType "i64"|"i32"|"f32"|"f64";
+public type ComplexRefType record {
+    string base;
+};
+public type RefType "anyref"|"eqref"|"i31ref";
+public type Type "None"|NumType|RefType;
 
-public type Op "i32.add"|"i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.or"|"i32.xor"|"i32.and"|"i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|"i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.or"|"i64.xor"|"i64.and"|"i64.extend_i32_u"|"i64.shl"|"i64.eqz"|"i32.wrap_i64"|"ref.is_null"|"ref.is_i31"|"ref.as_data"|"ref.as_i31";
+public type Op "i32.add"|"i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.or"|"i32.xor"|"i32.and"|"i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|"i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.or"|"i64.xor"|"i64.and"|"i64.extend_i32_u"|"i64.shl"|"i64.eqz"|"i32.wrap_i64"|"ref.is_null"|"ref.is_i31"|"ref.as_data"|"ref.as_i31"|"ref.as_non_null"|"i32.shr_u";
 
 public type Token string;
 
@@ -216,15 +219,24 @@ public class Module {
         self.types.push({ tokens: appendBraces(inst) });
     }
 
-    public function structNew(string kind, Expression value, Expression rtt) returns Expression {
+    public function structNew(string kind, Expression[] values) returns Expression {
         Token[] inst = ["struct.new_with_rtt", "$" + kind];
-        inst.push(...value.tokens);
-        inst.push(...rtt.tokens);
+        foreach Expression value in values {
+            inst.push(...value.tokens);
+        }
+        inst.push(...appendBraces(["rtt.canon", "$" + kind]));
         return { tokens: appendBraces(inst) };
     }
 
     public function structGet(string kind, string key, Expression value) returns Expression {
         Token[] inst = ["struct.get", "$" + kind, "$" + key];
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function structSet(string kind, string key, Expression struct, Expression value) returns Expression {
+        Token[] inst = ["struct.set", "$" + kind, "$" + key];
+        inst.push(...struct.tokens);
         inst.push(...value.tokens);
         return { tokens: appendBraces(inst) };
     }
@@ -235,10 +247,10 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function arrayNew(string kind, Expression size, Expression rtt) returns Expression {
+    public function arrayNew(string kind, Expression size) returns Expression {
         Token[] inst = ["array.new_default_with_rtt", "$" + kind];
         inst.push(...size.tokens);
-        inst.push(...rtt.tokens);
+        inst.push(...appendBraces(["rtt.canon", "$" + kind]));
         return { tokens: appendBraces(inst) };
     }
 
