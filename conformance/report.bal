@@ -89,7 +89,6 @@ function parseTests(string path) returns TestCase[]|io:Error|file:Error {
         }
         else if line.startsWith("Description:") {
             description = line;
-            content.push(line);
             s = DESCRIPTION;
         }
         else if s is DESCRIPTION {
@@ -114,24 +113,28 @@ function diffTest(TestCase[] baseTests, TestCase[] transformedTests) returns Tes
     TestDiffResult[] skipped = [];
     TestDiffResult[] unchanged = [];
     TestDiffResult[] changed = [];
-    while baseIndex < baseTests.length() {
+    while baseIndex < baseTests.length() && transformedIndex < transformedTests.length() {
         var { description: baseDescription, content: baseContent } = baseTests[baseIndex];
         var { description: transformedDescription, content: transformedContent } = transformedTests[transformedIndex];
         if baseDescription != transformedDescription {
             skipped.push({ state: SKIPPED, base: baseTests[baseIndex], transformed: () });
         }
         else {
-            transformedIndex = int:min(transformedIndex + 1, transformedTests.length() - 1);
             if baseContent != transformedContent {
                 changed.push({ state: CHANGED, base: baseTests[baseIndex], transformed: transformedTests[transformedIndex] });
             }
             else {
                 unchanged.push({ state: UNCHANGED, base: baseTests[baseIndex], transformed: () });
             }
+            transformedIndex = transformedIndex + 1;
         }
         baseIndex += 1;
     }
-    if transformedIndex != transformedTests.length() - 1 {
+    while baseIndex < baseTests.length() {
+        skipped.push({ state: SKIPPED, base: baseTests[baseIndex], transformed: () });
+        baseIndex += 1;
+    }
+    if transformedIndex < transformedTests.length() {
         panic error("extra transformed tests");
     }
     return [skipped, unchanged, changed];
@@ -164,14 +167,16 @@ function generateNonDiffReport(TestDiffResult[] diffs, string title, string outp
 
 function generateDiffReport(TestDiffResult[] diffs, string title, string outputPath) returns error? {
     string[] body = [];
-    body.push("<html>", "<head>");
+    body.push("<html>", "<head>", "<link rel=\"stylesheet\" href=\"report.css\">");
     body.push(string `<title> ${title} </title>`, "</head>", "<body>");
     string currentPath = "";
     body.push(string `<h1>${title}</h1>`);
     foreach TestDiffResult diff in diffs {
+        io:println(diff);
         string path = diff.base.path;
         if path != currentPath {
-            // pr-todo: add path here
+            currentPath = path;
+            body.push("</table>");
             body.push(string `<h3>${check file:basename(path)}</h3>`);
             body.push(
                 "<table>",
@@ -180,7 +185,6 @@ function generateDiffReport(TestDiffResult[] diffs, string title, string outputP
                 "<th>Transformed</th>",
                 "</tr>"
             );
-            currentPath = path;
         }
         body.push("<tr>");
         body.push(string `<td><pre>${"<br>".'join(...diff.base.content)}</pre></td>`);

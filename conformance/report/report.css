@@ -1,0 +1,26 @@
+table {
+    width: 98vw;
+    table-layout:fixed;
+}
+td {
+    vertical-align: top;
+}
+td,th {
+    width: 45vw;
+    border: 1px solid #969393;
+    padding: 4px;
+}
+tr:nth-child(even){
+    background-color: #f2f2f2;
+}
+pre {
+    width: 45vw;
+    white-space:pre-wrap;
+}
+th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+    background-color: #874c4c;
+    color: white;
+}
