@@ -280,6 +280,7 @@ function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicTyp
 // for each tuple t in `neg`, v is not in t.
 // `neg` represents a set of negated list types.
 // Precondition is that each of `members` is not empty.
+// ListConjunction is sorted in decreasing order of fixedLength
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
 function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListConjunction? neg) returns boolean {
@@ -303,8 +304,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         if len < negLen {
             // Note in this case we know positive rest is not never.
 
-            // Explore the possibility of shapes with a length less than the
-            // minimum required by negLen.
+            // Explore the possibility of shapes that are not matched
+            // by the negative because their lengths are less than negLen.
 
             // First a shape with exactly len members
             // No need to copy members here
@@ -312,8 +313,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
                 return true;
             }
             // Check list types with fixedLength >= `len` and  < `negLen`
-            // XXX this is wrong
-            // if nt.rest is never, then the 
+            // XXX Handle large fixedLengths efficiently
             if negLen - len > 200 {
                 panic error("fixed length too big " + negLen.toString());
             }
@@ -324,6 +324,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
                     return true;
                 }
             }
+            // this falls through to the code below
         }
         // Now we need to explore the possibility of shapes with length >= neglen
         // This is the heart of the algorithm.
@@ -345,12 +346,14 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-        // XXX not sure computation of maxInitialLen is right
-        // XXX when there's a rest, I suspect we need to use fixedLength not initial.length()
-       
-        // The +1 is to explore the possibility of a shape that has length > maxInitialLen and
-        // avoids being cancelled out by this negative because of its rest type.
-        final int maxLen = int:max(len + 1, negLen);
+    
+        // The key point here that because ListConjunction is sorted in decreasing order, the negs handle every index > negLen in the same way
+        // i.e. for every N in neg, for every i, j > negLen, N[i] = N[j].
+        // Define two indices i, j to be equivalent iff for type T that is the positive and any of the negatives, T[i] = T[j].
+        // The value of maxLen here sufficient that the set { i | 0 <= i < maxLen } will contain at least one index from each equivalence
+        // class.
+        final int maxLen = int:max(len + 1, negLen + 1);
+        // XXX Handle large fixedLengths efficiently
         if maxLen > 200 {
             panic error("fixed length too big " + maxLen.toString());
         }
