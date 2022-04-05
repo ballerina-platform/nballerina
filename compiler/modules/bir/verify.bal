@@ -82,14 +82,34 @@ type Error err:Semantic|err:Internal;
 function verifyRegion(VerifyContext vc, Region region, BasicBlock[] blocks) returns Error? {
     BasicBlock entry = blocks[region.entry];
     Insn insn = entry.insns[entry.insns.length() - 1];
-    if region.kind == REGION_COND && insn !is CondBranchInsn {
-        return vc.invalidErr("condional region is not a conditional insn", pos=insn.pos);
+    if region.kind == REGION_COND {
+        if  insn !is CondBranchInsn {
+            return vc.invalidErr("condional region is not a conditional branch", pos=insn.pos);
+        }
+        while insn is CondBranchInsn {
+            if insn.ifFalse != region.exit {
+                BasicBlock cont = blocks[insn.ifFalse];
+                Insn binsn = cont.insns[cont.insns.length() - 1];
+                if (binsn is BranchInsn && binsn.dest != region.exit) || (binsn !is BranchInsn && region.exit != ()) {
+                    cont = blocks[insn.ifTrue];
+                    Insn binsn2 = cont.insns[cont.insns.length() - 1];
+                    if (binsn2 is BranchInsn && binsn2.dest != region.exit) || (binsn2 !is BranchInsn && region.exit != ()) {
+                        if binsn is BranchInsn {
+                            cont = blocks[binsn.dest];
+                            insn = cont.insns[cont.insns.length() - 1];
+                            continue;
+                        }
+                        return vc.invalidErr("condional region exit is invalid", pos=insn.pos);
+                    }
+                }
+            }
+            break;
+        }
+        
     }
-    //if region.kind == REGION_LOOP {
-    //    if insn.ifFalse != region.exit {
-    //        return vc.invalidErr("error in loop region", pos=insn.pos);
-    //    }
-    //}
+    if region.kind == REGION_LOOP && insn !is CondBranchInsn && insn !is BranchInsn{
+        return vc.invalidErr("loop region is not a conditional insn", pos=insn.pos);
+    }
 }
 
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
