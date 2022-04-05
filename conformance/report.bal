@@ -6,7 +6,6 @@ public type Options record {|
     string transformedDir;
 |};
 
-// pr-todo: we need to have the path for output
 type TestCase record {|
     string description; // we can use the description to check if the test cases are the same since we don't change them
     string[] content;
@@ -141,6 +140,7 @@ function diffTest(TestCase[] baseTests, TestCase[] transformedTests) returns Tes
 function generateReport(TestDiffResult[] skipped, TestDiffResult[] unchanged, TestDiffResult[] changed) returns error? {
     check generateNonDiffReport(skipped, "Skipped", "./report/skipped.html");
     check generateNonDiffReport(unchanged, "Unchanged", "./report/unchanged.html");
+    check generateDiffReport(changed, "Changed", "./report/changed.html");
 }
 
 function generateNonDiffReport(TestDiffResult[] diffs, string title, string outputPath) returns error? {
@@ -158,11 +158,38 @@ function generateNonDiffReport(TestDiffResult[] diffs, string title, string outp
         }
         body.push(string `<pre>${"<br>".'join(...diff.base.content)}</pre>`);
     }
-    // body.push(... from var each in diffs select string `<pre>${"<br>".'join(...each.base.content)}</pre>`);
     body.push("</body>", "</html>");
     check io:fileWriteLines(outputPath, body);
 }
 
+function generateDiffReport(TestDiffResult[] diffs, string title, string outputPath) returns error? {
+    string[] body = [];
+    body.push("<html>", "<head>");
+    body.push(string `<title> ${title} </title>`, "</head>", "<body>");
+    string currentPath = "";
+    body.push(string `<h1>${title}</h1>`);
+    foreach TestDiffResult diff in diffs {
+        string path = diff.base.path;
+        if path != currentPath {
+            // pr-todo: add path here
+            body.push(string `<h3>${check file:basename(path)}</h3>`);
+            body.push(
+                "<table>",
+                "<tr>",
+                "<th>Base</th>",
+                "<th>Transformed</th>",
+                "</tr>"
+            );
+            currentPath = path;
+        }
+        body.push("<tr>");
+        body.push(string `<td><pre>${"<br>".'join(...diff.base.content)}</pre></td>`);
+        body.push(string `<td><pre>${"<br>".'join(...(<TestCase>diff.transformed).content)}</pre></td>`);
+        body.push("</tr>");
+    }
+    body.push("</body>", "</html>");
+    check io:fileWriteLines(outputPath, body);
+}
 
 function pathEnd(string absPath) returns string|file:Error {
     string[] parts = check file:splitPath(absPath);
