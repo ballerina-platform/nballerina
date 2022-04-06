@@ -1,8 +1,9 @@
 public type NumType "i64"|"i32"|"f32"|"f64";
 public type ComplexRefType record {
     string base;
+    string? initial = ();
 };
-public type RefType "anyref"|"eqref"|"i31ref";
+public type RefType "anyref"|"eqref"|"i31ref"|ComplexRefType;
 public type Type "None"|NumType|RefType;
 
 public type Op "i32.add"|"i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.or"|"i32.xor"|"i32.and"|"i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|"i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.or"|"i64.xor"|"i64.and"|"i64.extend_i32_u"|"i64.shl"|"i64.eqz"|"i32.wrap_i64"|"ref.is_null"|"ref.is_i31"|"ref.as_data"|"ref.as_i31"|"ref.as_non_null"|"i32.shr_u";
@@ -74,13 +75,13 @@ public class Module {
         Token[] signature = ["(", "func", "$" + name];
         Token[] funcBody = [];
         foreach int i in 0..<params.length() {
-            signature.push(...appendBraces(["param", "$" + i.toString(), params[i]]));
+            signature.push(...appendBraces(["param", "$" + i.toString(), getTypeString(params[i])]));
         }
         if results != "None" {
-            signature.push(...appendBraces(["result", results.toString()]));
+            signature.push(...appendBraces(["result", getTypeString(results)]));
         }
         foreach int i in 0..<varTypes.length() {
-            funcBody.push(...appendBraces(["local", "$" + (i + params.length()).toString(), varTypes[i]]));
+            funcBody.push(...appendBraces(["local", "$" + (i + params.length()).toString(), getTypeString(varTypes[i])]));
         }
         funcBody.push(...body.tokens);
         funcBody.push(")");
@@ -91,10 +92,10 @@ public class Module {
         Token[] importDef = ["import", "\"" + externalModuleName + "\"", "\"" + externalBaseName + "\""];
         Token[] funcDef = ["func", "$" + internalName];
         foreach Type ty in params {
-            funcDef.push(...appendBraces(["param", ty]));
+            funcDef.push(...appendBraces(["param", getTypeString(ty)]));
         }
         if result != "None" {
-            funcDef.push(...appendBraces(["result", result]));
+            funcDef.push(...appendBraces(["result", getTypeString(result)]));
         }
         importDef.push(...appendBraces(funcDef));
         self.imports.push({ tokens: appendBraces(importDef) });
@@ -205,10 +206,17 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function struct(string[] fields, Type[] fieldTypes) returns Expression {
+    public function struct(string[] fields, Type[] fieldTypes, boolean[] mutability) returns Expression {
         Token[] inst = ["struct"];
         foreach int i in 0..<fields.length() {
-            inst.push(...appendBraces(["field", "$" + fields[i], fieldTypes[i]]));
+            Token[] 'field = ["field", "$" + fields[i]];
+            if mutability[i] {
+                'field.push(...appendBraces(["mut", getTypeString(fieldTypes[i])]));
+            }
+            else {
+                'field.push(getTypeString(fieldTypes[i]));
+            }
+            inst.push(...appendBraces('field));
         }
         return { tokens: appendBraces(inst) };
     }
@@ -243,7 +251,7 @@ public class Module {
 
     public function array(Type fieldType) returns Expression {
         Token[] inst = ["array"];
-        inst.push(...appendBraces(["mut", fieldType]));
+        inst.push(...appendBraces(["mut", getTypeString(fieldType)]));
         return { tokens: appendBraces(inst) };
     }
 
@@ -359,6 +367,18 @@ public class Module {
         return module;
     }
 
+}
+
+function getTypeString(Type ty) returns string {
+    if ty is ComplexRefType {
+        Token[] inst = ["ref"];
+        if ty.initial != () {
+            inst.push(<string>ty.initial);
+        }
+        inst.push("$" + ty.base);
+        return joinTokens(appendBraces(inst));
+    }
+    return ty;
 }
 
 function appendBraces(Token[] tokens) returns  Token[] {

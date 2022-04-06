@@ -93,6 +93,8 @@ final Repr REPR_INT = { base: BASE_REPR_INT, wasm: WASM_INT };
 final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, wasm: WASM_BOOLEAN };
 final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, wasm: "eqref", subtype: t:NIL };
 final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, wasm: "eqref" , subtype: t:ANY };
+final TaggedRepr REPR_LIST_RW = { base: BASE_REPR_TAGGED, subtype: t:LIST_RW, wasm: { base: "List", initial: "null" } };
+final TaggedRepr REPR_LIST = { base: BASE_REPR_TAGGED, subtype: t:LIST, wasm: { base: "List", initial: "null" } };
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, wasm: WASM_VOID };
 
 final readonly & record {|
@@ -103,7 +105,9 @@ final readonly & record {|
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },
     { domain: t:ANY, repr: REPR_ANY },
-    { domain: t:TOP, repr: REPR_ANY }
+    { domain: t:TOP, repr: REPR_ANY },
+    { domain: t:LIST_RW, repr: REPR_LIST_RW },
+    { domain: t:LIST, repr: REPR_LIST }
 ];
 
 function semTypeRetRepr(t:SemType ty) returns RetRepr {

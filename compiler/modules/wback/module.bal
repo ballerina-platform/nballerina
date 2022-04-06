@@ -49,7 +49,8 @@ function addRttFunctions(wasm:Module module) {
     addFuncArrayPush(module);
     addFuncCreateArray(module);
     addFuncArraySet(module);
-    module.addType("List", module.array("eqref"));
+    addFuncArrayGrow(module);
+    module.addType("List", module.struct(["arr", "len"], [{ base: "AnyList" }, "i64"], [true, true]));
     module.addType("AnyList", module.array("eqref"));
 }
 

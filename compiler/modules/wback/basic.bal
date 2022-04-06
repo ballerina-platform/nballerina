@@ -35,6 +35,9 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:ListGetInsn {
             body.push(buildListGet(module, scaffold, insn));
         }
+        else if insn is bir:ListSetInsn {
+            body.push(buildListSet(module, scaffold, insn));
+        }
         else if insn is bir:TypeCastInsn {
             body.push(buildTypeCast(module, scaffold, insn));
         }
