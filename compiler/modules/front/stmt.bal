@@ -429,7 +429,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
         bir:TmpRegister nextLoopVal = cx.createTmpRegister(t:INT);
         bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: nextLoopVal };
         bir:AssignInsn incrementAssign = { result: loopVar, operand: nextLoopVal, pos: stmt.kwPos };
-        bir:BranchInsn backwardBranchToLoopHead = {dest: loopHead.label, pos: stmt.body.startPos, backward: true};
+        bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
         loopStep.insns.push(increment, incrementAssign, backwardBranchToLoopHead);
     }
     cx.popLoopContext();
