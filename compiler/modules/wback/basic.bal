@@ -98,9 +98,6 @@ function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) ret
     if retRepr !is VoidRepr {
         return module.localSet(insn.result.number, call);
     }
-    else if ref.symbol.identifier == "push" {
-        return module.localSet((<bir:VarRegister>insn.args[0]).number, call);
-    }
     return call;
 }
 

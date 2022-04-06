@@ -5,6 +5,7 @@ let untagInt = null;
 let untagBoolean = null;
 let len = null;
 let arrayGet = null;
+let getTypeChildren = null;
 if (process.argv.length > 2) {
   let fileName = process.argv[2];
   const wasmBuffer = fs.readFileSync(fileName);
@@ -27,6 +28,7 @@ if (process.argv.length > 2) {
         }
       });
       getType = obj.instance.exports.get_type;
+      getTypeChildren = obj.instance.exports.get_type_children;
       untagInt = obj.instance.exports.tagged_to_int;
       untagBoolean = obj.instance.exports.tagged_to_boolean;
       len = obj.instance.exports.arr_len;
@@ -49,8 +51,11 @@ if (process.argv.length > 2) {
   }
 }
 
-const getValue = (ref) => {
+const getValue = (ref, parent = null) => {
   let type = getType(ref);
+  if (parent !== null) {
+    type = getTypeChildren(parent, ref);
+  }
   if (type == 0) {
     return untagInt(ref).toString();
   }
@@ -68,7 +73,7 @@ const getValue = (ref) => {
     let output = "[";
     for (let index = 0; index < length; index++) {
       let element = arrayGet(ref, index);
-      let val = getValue(element);
+      let val = getValue(element, ref);
       if (val === "") {
         val = "null"
       }
@@ -76,10 +81,12 @@ const getValue = (ref) => {
     }
     if (output.indexOf(",") != -1) {
       output = output.substring(0, output.length - 1)
-
     }
     output += "]"
     return output;
+  }
+  else if (type == 4) {
+    return "...";
   }
 }
 
@@ -99,6 +106,9 @@ const errorHandler = err => {
   }
   else if (err.message == "index-outof-bound") {
     msg += "index out of bounds"
+  }
+  else if (err.message == "index-too-large") {
+    msg += "list too long"
   }
   else if (err.message == "Maximum call stack size exceeded") {
     msg += "stack overflow";

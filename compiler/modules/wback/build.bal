@@ -7,6 +7,7 @@ const int TYPE_BOOLEAN = 1;
 const int TYPE_NIL     = 2;
 const int TYPE_LIST    = 3;
 const int INITIAL_CAPACITY = 4;
+const int MAX_CAPACITY = 4294967295;
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     return module.i31New(value);
@@ -121,6 +122,13 @@ function addFuncGetType(wasm:Module module) {
     module.addFunctionExport("get_type", "get_type");
 }
 
+function addFuncGetTypeChildren(wasm:Module module) {
+    wasm:Expression cond = module.refEq(module.localGet(0), module.localGet(1));
+    wasm:Expression body = module.addIf(cond, module.addReturn(module.addConst({ i32: 4 })), module.addReturn(module.call("get_type", [module.localGet(1)], "i32")));
+    module.addFunction("get_type_children", ["eqref", "eqref"], "i32", [], body);
+    module.addFunctionExport("get_type_children", "get_type_children");
+}
+
 function addFuncCreateArray(wasm:Module module) {
     wasm:Expression checkLength = module.binary("i64.ge_s", module.localGet(0), module.addConst({ i64: INITIAL_CAPACITY }));
     wasm:Expression length = module.addIf(checkLength, module.localSet(1, module.localGet(0)), module.localSet(1, module.addConst({ i64 : INITIAL_CAPACITY })));
@@ -155,28 +163,32 @@ function addFuncGetValueOfIndex(wasm:Module module) {
 }
 
 function addFuncArrayGrow(wasm:Module module) {
-    wasm:Expression arr = module.localSet(3, module.structGet("List", "arr", module.localGet(0)));
-    wasm:Expression setArrLength = module.localSet(4, module.unary("i32.wrap_i64", module.call("length", [module.localGet(0)], "i64")));
-    wasm:Expression setArrCapacity = module.localSet(5, module.arrayLen("AnyList", module.localGet(3)));
     wasm:Expression capacity = module.localGet(5);
     wasm:Expression length = module.localGet(4);
     wasm:Expression nextIndex = module.localGet(2);
-    wasm:Expression cond = module.binary("i32.le_s", capacity, nextIndex);
-    wasm:Expression updatedCapacity = module.localSet(6, module.binary("i32.add", nextIndex, module.binary("i32.shr_u", nextIndex, module.addConst({ i32: 1 }))));
-    wasm:Expression setNewArr = module.localSet(7, module.arrayNew("AnyList", module.localGet(6)));
+    wasm:Expression arr = module.localSet(3, module.structGet("List", "arr", module.localGet(0)));
+    wasm:Expression lenMaxCheck = module.binary("i64.gt_s", nextIndex, module.addConst({ i64: MAX_CAPACITY }));
+    wasm:Expression lenCheck = module.addIf(lenMaxCheck, module.throw("index-too-large"));
+    wasm:Expression setArrLength = module.localSet(4, module.call("length", [module.localGet(0)], "i64"));
+    wasm:Expression setArrCapacity = module.localSet(5, module.unary("i64.extend_i32_u", module.arrayLen("AnyList", module.localGet(3))));
+    wasm:Expression cond = module.binary("i64.le_s", capacity, nextIndex);
+    wasm:Expression updatedCapacity = module.localSet(6, module.binary("i64.add", nextIndex, module.binary("i64.shr_u", nextIndex, module.addConst({ i64: 1 }))));
+    wasm:Expression capacityCheck = module.addIf(module.binary("i64.gt_s", module.localGet(6), module.addConst({ i64: MAX_CAPACITY })), module.localSet(6, module.addConst({ i64: MAX_CAPACITY})));
+    wasm:Expression setNewArr = module.localSet(7, module.arrayNew("AnyList", module.unary("i32.wrap_i64", module.localGet(6))));
     wasm:Expression setI = module.localSet(8, module.addConst({ i32 : 0 }));
+    wasm:Expression convertLen = module.localSet(9, module.unary("i32.wrap_i64", length));
     wasm:Expression newArr = module.localGet(7);
     wasm:Expression i = module.localGet(8);
-    wasm:Expression loopCond = module.binary("i32.lt_s", i, length);
+    wasm:Expression loopCond = module.binary("i32.lt_s", i, module.localGet(9));
     wasm:Expression newArrSet = module.arraySet("AnyList", newArr, i, module.call("arr_get_cast", [module.localGet(0), i], "eqref"));
     wasm:Expression incrementI = module.localSet(8, module.binary("i32.add", i, module.addConst({ i32: 1 })));
     wasm:Expression structArrSet = module.structSet("List", "arr", module.localGet(0), module.refAs("ref.as_non_null", newArr));
-    wasm:Expression newElementPush = module.arraySet("AnyList", module.structGet("List", "arr", module.localGet(0)), nextIndex, module.localGet(1));
-    wasm:Expression lenCond = module.binary("i32.le_s", length, nextIndex);
-    wasm:Expression structSetLen = module.addIf(lenCond, module.structSet("List", "len", module.localGet(0), module.unary("i64.extend_i32_u", module.binary("i32.add", nextIndex, module.addConst({ i32: 1 })))));
+    wasm:Expression newElementPush = module.arraySet("AnyList", module.structGet("List", "arr", module.localGet(0)), module.unary("i32.wrap_i64", nextIndex), module.localGet(1));
+    wasm:Expression lenCond = module.binary("i64.le_s", length, nextIndex);
+    wasm:Expression structSetLen = module.addIf(lenCond, module.structSet("List", "len", module.localGet(0), module.binary("i64.add", nextIndex, module.addConst({ i64: 1 }))));
     wasm:Expression loop = module.loop("$block1$continue", module.addIf(loopCond, module.block([newArrSet, incrementI, module.br("$block1$continue")])));
-    wasm:Expression body = module.block([arr, setArrLength, setArrCapacity, module.addIf(cond, module.block([updatedCapacity, setNewArr, setI, loop, structArrSet])), module.block([newElementPush, structSetLen])]);
-    module.addFunction("arr_grow", [{ base: "List" }, "eqref", "i32"], "None", [{ base: "AnyList", initial: "null" }, "i32", "i32", "i32", { base: "AnyList", initial: "null" }, "i32"], body);
+    wasm:Expression body = module.try(module.block([lenCheck, arr, setArrLength, setArrCapacity, module.addIf(cond, module.block([updatedCapacity, capacityCheck, convertLen, setNewArr, setI, loop, structArrSet])), module.block([newElementPush, structSetLen])]));
+    module.addFunction("arr_grow", [{ base: "List" }, "eqref", "i64"], "None", [{ base: "AnyList", initial: "null" }, "i64", "i64", "i64", { base: "AnyList", initial: "null" }, "i32", "i32"], body);
 }
 
 function addFuncArraySet(wasm:Module module) {
@@ -184,13 +196,13 @@ function addFuncArraySet(wasm:Module module) {
     wasm:Expression value = module.localGet(1);
     wasm:Expression index = module.localGet(2);
     wasm:Expression indexGEZ = module.binary("i64.ge_s", index, module.addConst({ i64: 0 }));
-    wasm:Expression body = module.addIf(indexGEZ, module.call("arr_grow", [struct, value, module.unary("i32.wrap_i64", index)], "None"), module.throw("index-outof-bound"));
+    wasm:Expression body = module.addIf(indexGEZ, module.call("arr_grow", [struct, value, index], "None"), module.throw("index-outof-bound"));
     module.addFunction("arr_set", [{ base: "List" }, "eqref", "i64"], "None", [], module.try(body));
 }
 
 function addFuncArrayPush(wasm:Module module) {
     wasm:Expression struct = module.localGet(0);
     wasm:Expression value = module.localGet(1);
-    wasm:Expression call = module.call("arr_grow", [struct, value, module.unary("i32.wrap_i64", module.call("length", [struct], "i64"))], "None");
-    module.addFunction("push", [{ base: "List" }, "eqref"], { base: "List" }, [], module.block([call, module.addReturn(struct)]));
+    wasm:Expression call = module.call("arr_grow", [struct, value, module.call("length", [struct], "i64")], "None");
+    module.addFunction("push", [{ base: "List" }, "eqref"], "None", [], call);
 }
