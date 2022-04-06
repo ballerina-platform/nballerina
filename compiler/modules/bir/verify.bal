@@ -83,9 +83,6 @@ function verifyRegion(VerifyContext vc, Region region, BasicBlock[] blocks) retu
     BasicBlock entry = blocks[region.entry];
     Insn insn = entry.insns[entry.insns.length() - 1];
     if region.kind == REGION_COND {
-        if  insn !is CondBranchInsn {
-            return vc.invalidErr("condional region is not a conditional branch", pos=insn.pos);
-        }
         while insn is CondBranchInsn {
             if insn.ifFalse != region.exit {
                 BasicBlock cont = blocks[insn.ifFalse];
@@ -110,7 +107,6 @@ function verifyRegion(VerifyContext vc, Region region, BasicBlock[] blocks) retu
             }
             break;
         }
-        
     }
     if region.kind == REGION_LOOP && insn !is CondBranchInsn && insn !is BranchInsn{
         return vc.invalidErr("loop region is not a conditional insn", pos=insn.pos);
