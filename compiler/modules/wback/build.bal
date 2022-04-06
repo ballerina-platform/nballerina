@@ -139,14 +139,17 @@ function addFuncGetArrayLength(wasm:Module module) {
 }
 
 function addFuncGetValueOfIndex(wasm:Module module) {
-    // wasm:Expression try = module.try();
-    wasm:Expression asData = module.refAs("ref.as_data", module.localGet(0));
+    wasm:Expression struct = module.localGet(0);
+    wasm:Expression index = module.localGet(1);
+    wasm:Expression ltz = module.binary("i32.lt_s", index, module.addConst({ i32: 0 }));
+    wasm:Expression geL = module.binary("i32.ge_s", index, module.unary("i32.wrap_i64", module.call("length", [struct], "i64")));
+    wasm:Expression cond = module.binary("i32.eq", module.binary("i32.or", ltz, geL), module.addConst({ i32: 0 }));
+    wasm:Expression asData = module.refAs("ref.as_data", struct);
     wasm:Expression cast = module.refCast(asData, module.rtt("List"));
-    wasm:Expression body = module.call("arr_get_cast", [cast, module.localGet(1)], "eqref");
-    // wasm:Expression checkIndex = module.
-    module.addFunction("arr_get", ["eqref", "i32"], "eqref", [], body);
+    wasm:Expression trueBody = module.addReturn(module.call("arr_get_cast", [cast, index], "eqref"));
+    wasm:Expression falseBody = module.throw("index-outof-bound");
+    module.addFunction("arr_get", ["eqref", "i32"], "eqref", [], module.try(module.addIf(cond, trueBody, falseBody)));
     module.addFunctionExport("arr_get", "arr_get");
-
     wasm:Expression get = module.arrayGet("AnyList", module.structGet("List", "arr", module.localGet(0)), module.localGet(1));
     module.addFunction("arr_get_cast", [{ base: "List" }, "i32"], "eqref", [], get);
 }
@@ -180,8 +183,9 @@ function addFuncArraySet(wasm:Module module) {
     wasm:Expression struct = module.localGet(0);
     wasm:Expression value = module.localGet(1);
     wasm:Expression index = module.localGet(2);
-    wasm:Expression body = module.call("arr_grow", [struct, value, module.unary("i32.wrap_i64", index)], "None");
-    module.addFunction("arr_set", [{ base: "List" }, "eqref", "i64"], "None", [], body);
+    wasm:Expression indexGEZ = module.binary("i64.ge_s", index, module.addConst({ i64: 0 }));
+    wasm:Expression body = module.addIf(indexGEZ, module.call("arr_grow", [struct, value, module.unary("i32.wrap_i64", index)], "None"), module.throw("index-outof-bound"));
+    module.addFunction("arr_set", [{ base: "List" }, "eqref", "i64"], "None", [], module.try(body));
 }
 
 function addFuncArrayPush(wasm:Module module) {

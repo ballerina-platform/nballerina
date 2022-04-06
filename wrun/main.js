@@ -97,6 +97,9 @@ const errorHandler = err => {
   else if (err.message == "bad-conversion") {
     msg += "bad type cast"
   }
+  else if (err.message == "index-outof-bound") {
+    msg += "index out of bounds"
+  }
   else if (err.message == "Maximum call stack size exceeded") {
     msg += "stack overflow";
   }
