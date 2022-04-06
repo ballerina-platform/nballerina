@@ -108,7 +108,29 @@ function verifyRegion(VerifyContext vc, Region region, BasicBlock[] blocks) retu
             break;
         }
     }
-    if region.kind == REGION_LOOP && insn !is CondBranchInsn && insn !is BranchInsn{
+    if region.kind == REGION_LOOP && region.exit != () {
+        while insn is BranchInsn {
+            if insn.dest == region.exit {
+                return;
+            }
+            BasicBlock cont = blocks[insn.dest];
+            insn = cont.insns[cont.insns.length() - 1];
+        }
+        if insn is CondBranchInsn {
+            if insn.ifFalse == region.exit {
+                return;
+            }
+            BasicBlock cont = blocks[insn.ifTrue];
+            Insn insn2 = cont.insns[cont.insns.length() - 1];
+            if insn2 is BranchInsn && insn2.dest == region.exit {
+                return;
+            }
+            cont = blocks[insn.ifFalse];
+            insn2 = cont.insns[cont.insns.length() - 1];
+            if insn2 is BranchInsn && insn2.dest == region.exit {
+                return;
+            }
+        }
         return vc.invalidErr("loop region is not a conditional insn", pos=insn.pos);
     }
 }
