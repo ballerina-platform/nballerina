@@ -307,37 +307,6 @@ public function main() {
 }
 
 Test-Case: output
-Description: Test unary negative expression for positive floats with no overflow scenarios.
-Labels: DecimalFloatingPointNumber, float, unary-minus
-
-import ballerina/io;
-public function main() {
-   float a = 1.0;
-   float b = 101.5;
-   float c = 0;
-   float d = 922439289.0;
-
-   io:println(-a); // @output -1.0
-   io:println(-b); // @output -101.5
-   io:println(-c); // @output -0.0
-   io:println(-d); // @output -922439289.0
-}
-
-Test-Case: output
-Description: Test unary negative expression for negative floats with no overflow scenarios.
-Labels: DecimalFloatingPointNumber, float, unary-minus
-
-import ballerina/io;
-public function main() {
-   float a = -1.0;
-   float b = -101.5;
-   float c = -922439289.0;
-   io:println(-a); // @output 1.0
-   io:println(-b); // @output 101.5
-   io:println(-c); // @output 922439289.0
-}
-
-Test-Case: output
 Description: Test unary negative expression for very large floating point number.
 Labels: DecimalFloatingPointNumber, float, FloatingPointTypeSuffix, unary-minus
 

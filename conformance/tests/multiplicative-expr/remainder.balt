@@ -128,14 +128,6 @@ public function main() {
     int _ = a % b; // @panic remainder by zero
 }
 
-Test-Case: error
-Description: Test 7 for integer remainder panic on remainder by zero.
-Labels: multiplicative-expr, int, DecimalNumber
-
-public function main() {
-    int _ = 9223372036854775807 % 0; // @error evaluation of int constant '%' expression failed
-}
-
 Test-Case: output
 Description: Test integer remainder non-overflow scenarios, for positive non-zero integers, for int:Unsigned8.
 Labels: multiplicative-expr, DecimalNumber, int:Unsigned8

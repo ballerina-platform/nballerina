@@ -213,9 +213,9 @@ Description: Test contextually-expected type for multiplicative expression with 
 Labels: multiplicative-expr, int, DecimalNumber
 
 function errorFunction() {
-    int _ = 1 * 9223372036854775807; // @error operands for * with int expected type should be int
+    int _ = 1 * 9223372036854775808; // @error operands for * with int expected type should be int
     int _ = -9223372036854775809 / 2; // @error operands for / with int expected type should be int
-    int _ = 9223372036854775807 % // @error operands for % with int expected type should be int
+    int _ = 9223372036854775808 % // @error operands for % with int expected type should be int
                 -92233720368547758070; // @error operands for % with int expected type should be int
 }
 
@@ -224,9 +224,9 @@ Description: Test contextually-expected type for multiplicative expression with 
 Labels: multiplicative-expr, int, DecimalNumber, optional-type, numeric-nil-lifting
 
 function errorFunction() {
-    int? _ = 1 * 9223372036854775807; // @error operands for * with int? expected type should be int
+    int? _ = 1 * 9223372036854775808; // @error operands for * with int? expected type should be int
     int? _ = -9223372036854775809 / 2; // @error operands for / with int? expected type should be int
-    int? _ = 9223372036854775807 % // @error operands for % with int? expected type should be int
+    int? _ = 9223372036854775808 % // @error operands for % with int? expected type should be int
                 -92233720368547758070; // @error operands for % with int? expected type should be int
 }
 

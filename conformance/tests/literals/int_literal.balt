@@ -184,34 +184,6 @@ public function main() {
 }
 
 Test-Case: output
-Description: Test equality for DecimalNumbers and HexIntLiteral.
-Labels: DecimalNumber, equality, HexIntLiteral
-
-import ballerina/io;
-public function main() {
-    io:println(0x1234abdef1 == 78193090289); // @output true
-
-    io:println(9223372036854775807 != 0x7FFFFFFFFFFFFFFF); // @output false
-}
-
-Test-Case: output
-Description: Test int literals with valid type casts.
-Labels: DecimalNumber, decimal, float, HexIntLiteral, int, type-cast-expr
-
-import ballerina/io;
-public function main() {
-    io:println(<int> 13245); // @output 13245
-
-    io:println(<int> 0xabde12a); // @output 180216106
-
-    io:println(<decimal> 13245); // @output 13245
-
-    io:println(<float> 13245); // @output 13245.0
-
-    io:println(<float> 0xabde12a); // @output 180216106.0
-}
-
-Test-Case: output
 Description: Test hex int literals with valid type cast to decimal.
 Fail-Issue: ballerina-platform/ballerina-lang#34976
 Labels: decimal, HexIntLiteral, int, type-cast-expr

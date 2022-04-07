@@ -1227,28 +1227,6 @@ function getTwo() returns int{
 }
 
 Test-Case: output
-Description: Test greater than or equal expression with list as operands.
-Labels: array-type, decimal, DecimalFloatingPointNumber, DecimalNumber, int, float, list-constructor-expr, nil-literal, optional-type, relational-expr, string
-
-import ballerina/io;
-public function main() {
-   int[] a = [12, 100, 2000000];
-   int[] b = [13, 3];
-   int[] c = [];
-   int[] d = [];
-   float?[] g = [12.5, 43, ()];
-   float?[] h = [12.5, 43, 4];
-   decimal?[] i = [45, 23.54232, 44];
-   decimal?[] j = [45, 23.54232, 44, ()];
-
-   io:println(a >= b); // @output false
-   io:println(c >= d); // @output true
-   io:println(c >= b); // @output false
-   io:println(h >= g); // @output false
-   io:println(i >= j); // @output false
-}
-
-Test-Case: output
 Description: Test greater than or equal with tuple as operands.
 Labels: decimal, DecimalFloatingPointNumber, DecimalNumber, int, float, list-constructor-expr, nil-literal, relational-expr, string, tuple-type
 
