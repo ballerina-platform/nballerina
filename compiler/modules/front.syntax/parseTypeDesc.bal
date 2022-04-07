@@ -12,12 +12,19 @@ function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     TypeDesc td = check parseIntersection(tok);
-    while tok.current() == "|" {
-        Position opPos = tok.currentStartPos();
-        check tok.advance();
-        TypeDesc right = check parseIntersection(tok);
+    if tok.current() == "|" {
+        TypeDesc[] operands = [td];
+        Position[] opPositions = [];
+        while tok.current() == "|" {
+            opPositions.push(tok.currentStartPos());
+            check tok.advance();
+            TypeDesc right = check parseIntersection(tok);
+            // pr-todo: accumilate type desc and op pos
+            // pr-todo: refactor this common code out
+            operands.push(right);
+        }
         Position endPos = tok.previousEndPos();
-        BinaryTypeDesc bin = { startPos, endPos, opPos, op: "|", left: td, right };
+        BinaryTypeDesc bin = { startPos, endPos, opPositions, op: "|", operands };
         td = bin;
     }
     return td;
@@ -26,12 +33,19 @@ function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
 function parseIntersection(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     TypeDesc td = check parseUnaryTypeDesc(tok);
-    while tok.current() == "&" {
-        Position opPos = tok.currentStartPos();
-        check tok.advance();
-        TypeDesc right = check parseUnaryTypeDesc(tok);
+    if tok.current() == "&" {
+        TypeDesc[] operands = [td];
+        Position[] opPositions = [];
+        while tok.current() == "&" {
+            opPositions.push(tok.currentStartPos());
+            check tok.advance();
+            TypeDesc right = check parseIntersection(tok);
+            // pr-todo: accumilate type desc and op pos
+            // pr-todo: refactor this common code out
+            operands.push(right);
+        }
         Position endPos = tok.previousEndPos();
-        BinaryTypeDesc bin = { startPos, endPos, opPos, op: "&", left: td, right };
+        BinaryTypeDesc bin = { startPos, endPos, opPositions, op: "&", operands };
         td = bin;
     }
     return td;

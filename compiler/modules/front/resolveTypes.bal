@@ -131,22 +131,35 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     final t:Env env = mod.tc.env;
     if td is s:BinaryTypeDesc {
         // NB depth does not increase here
-        t:SemType l = check resolveTypeDesc(mod, modDefn, depth, td.left);
-        t:SemType r = check resolveTypeDesc(mod, modDefn, depth, td.right);
+        t:SemType accumilatorTy = check resolveTypeDesc(mod, modDefn, depth, td.operands[0]);
+        int nextIndex = 1;
+        // pr-todo: do a proper check
+        if td.operands.length() < 2 {
+            panic error("expect at least two types");
+        }
         if td.op == "|" {
-            return t:union(l, r);
+            while nextIndex < td.operands.length() {
+                t:SemType next = check resolveTypeDesc(mod, modDefn, depth, td.operands[nextIndex]);
+                nextIndex += 1;
+                accumilatorTy = t:union(accumilatorTy, next);
+            }
+            return accumilatorTy;
         }
         else {
-            t:SemType result = t:intersect(l, r);
-            // This can fail to detect that the intersection is empty when the env is not ready
-            // (i.e. there's a recursive type still under construction).
-            // To solve this, we would need to build a list of intersections to be checked later.
-            // But this is very unlikely to be a problem in practice.
-            if t:isNever(result)
-               || (result !is t:UniformTypeBitSet && env.isReady() && t:isEmpty(mod.tc, result)) {
-                return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPos)); 
+            while nextIndex < td.operands.length() {
+                t:SemType next = check resolveTypeDesc(mod, modDefn, depth, td.operands[nextIndex]);
+                nextIndex += 1;
+                accumilatorTy = t:intersect(accumilatorTy, next);
+                // This can fail to detect that the intersection is empty when the env is not ready
+                // (i.e. there's a recursive type still under construction).
+                // To solve this, we would need to build a list of intersections to be checked later.
+                // But this is very unlikely to be a problem in practice.
+                if t:isNever(accumilatorTy)
+                   || (accumilatorTy !is t:UniformTypeBitSet && env.isReady() && t:isEmpty(mod.tc, accumilatorTy)) {
+                    return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPositions[nextIndex - 2]));
+                }
             }
-            return result;
+            return accumilatorTy;
         }
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
