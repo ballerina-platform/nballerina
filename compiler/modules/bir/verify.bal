@@ -80,22 +80,19 @@ type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 type Error err:Semantic|err:Internal;
 
 function verifyRegion(VerifyContext vc, Region region, BasicBlock[] blocks) returns Error? {
-    BasicBlock entry = blocks[region.entry];
-    Insn insn = entry.insns[entry.insns.length() - 1];
-    if region.kind == REGION_COND {
+    Insn insn = getCondInsn(blocks, region.entry);
+    if region.kind == REGION_COND && region.exit != () {
         while insn is CondBranchInsn {
             if insn.ifFalse != region.exit {
-                BasicBlock cont = blocks[insn.ifFalse];
-                Insn binsn = cont.insns[cont.insns.length() - 1];
-                if (binsn is BranchInsn && binsn.dest != region.exit) || (binsn !is BranchInsn && region.exit != ()) {
+                Insn binsn = getCondInsn(blocks, insn.ifFalse);
+                if binsn is BranchInsn && binsn.dest != region.exit {
                     Insn? ib = getCont(binsn, blocks);
                     if ib is Insn {
                         insn = ib;
                         continue;
                     }
-                    cont = blocks[insn.ifTrue];
-                    Insn binsn2 = cont.insns[cont.insns.length() - 1];
-                    if (binsn2 is BranchInsn && binsn2.dest != region.exit) || (binsn2 !is BranchInsn && region.exit != ()) {
+                    Insn binsn2 = getCondInsn(blocks, insn.ifTrue);
+                    if binsn2 is BranchInsn && binsn2.dest != region.exit {
                         ib = getCont(binsn2, blocks);
                         if ib is Insn {
                             insn = ib;
@@ -113,37 +110,38 @@ function verifyRegion(VerifyContext vc, Region region, BasicBlock[] blocks) retu
             if insn.dest == region.exit {
                 return;
             }
-            BasicBlock cont = blocks[insn.dest];
-            insn = cont.insns[cont.insns.length() - 1];
+            insn = getCondInsn(blocks, insn.dest);
         }
         if insn is CondBranchInsn {
             if insn.ifFalse == region.exit {
                 return;
             }
-            BasicBlock cont = blocks[insn.ifTrue];
-            Insn insn2 = cont.insns[cont.insns.length() - 1];
+            Insn insn2 = getCondInsn(blocks, insn.ifTrue);
             if insn2 is BranchInsn && insn2.dest == region.exit {
                 return;
             }
-            cont = blocks[insn.ifFalse];
-            insn2 = cont.insns[cont.insns.length() - 1];
+            insn2 = getCondInsn(blocks, insn.ifFalse);
             if insn2 is BranchInsn && insn2.dest == region.exit {
                 return;
             }
         }
-        return vc.invalidErr("loop region is not a conditional insn", pos=insn.pos);
+        return vc.invalidErr("loop region exit is invalid", pos=insn.pos);
     }
 }
 
 function getCont(Insn insn, BasicBlock[] blocks) returns Insn? {
     if insn is BranchInsn {
-        BasicBlock cont = blocks[insn.dest];
-        return cont.insns[cont.insns.length() - 1];
+        return getCondInsn(blocks, insn.dest);
     }
     else if insn is CondBranchInsn {
         return insn;
     }
     return;
+}
+
+function getCondInsn(BasicBlock[] blocks, Label label) returns Insn {
+    BasicBlock cont = blocks[label];
+    return cont.insns[cont.insns.length() - 1];
 }
 
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
