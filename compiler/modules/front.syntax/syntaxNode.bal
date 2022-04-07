@@ -541,8 +541,7 @@ function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSig
 }
 
 function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSyntaxNode {
-    SubSyntaxNode[] operands = joinSyntaxNodesWithSeperator(from TypeDesc operand in td.operands select syntaxNodeFromTypeDesc(operand), { token: td.op});
-    return nonTerminalSyntaxNode(td, operands);
+    return nonTerminalSyntaxNode(td, joinSyntaxNodesWithSeperator(from TypeDesc operand in td.operands select syntaxNodeFromTypeDesc(operand), { token: td.op}));
 }
 
 function syntaxNodeFromErrorTypeDesc(ErrorTypeDesc td) returns NonTerminalSyntaxNode {

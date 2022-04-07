@@ -133,20 +133,16 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         // NB depth does not increase here
         t:SemType accumilatorTy = check resolveTypeDesc(mod, modDefn, depth, td.operands[0]);
         int nextIndex = 1;
-        // pr-todo: do a proper check
-        if td.operands.length() < 2 {
-            panic error("expect at least two types");
-        }
+        int operandCount = td.operands.length();
         if td.op == "|" {
-            while nextIndex < td.operands.length() {
+            while nextIndex < operandCount {
                 t:SemType next = check resolveTypeDesc(mod, modDefn, depth, td.operands[nextIndex]);
                 nextIndex += 1;
                 accumilatorTy = t:union(accumilatorTy, next);
             }
-            return accumilatorTy;
         }
         else {
-            while nextIndex < td.operands.length() {
+            while nextIndex < operandCount {
                 t:SemType next = check resolveTypeDesc(mod, modDefn, depth, td.operands[nextIndex]);
                 nextIndex += 1;
                 accumilatorTy = t:intersect(accumilatorTy, next);
@@ -159,8 +155,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                     return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPositions[nextIndex - 2]));
                 }
             }
-            return accumilatorTy;
         }
+        return accumilatorTy;
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
     if td is s:TupleTypeDesc {

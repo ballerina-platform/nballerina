@@ -13,19 +13,7 @@ function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     TypeDesc td = check parseIntersection(tok);
     if tok.current() == "|" {
-        TypeDesc[] operands = [td];
-        Position[] opPositions = [];
-        while tok.current() == "|" {
-            opPositions.push(tok.currentStartPos());
-            check tok.advance();
-            TypeDesc right = check parseIntersection(tok);
-            // pr-todo: accumilate type desc and op pos
-            // pr-todo: refactor this common code out
-            operands.push(right);
-        }
-        Position endPos = tok.previousEndPos();
-        BinaryTypeDesc bin = { startPos, endPos, opPositions, op: "|", operands };
-        td = bin;
+        td = check finishBinaryTypeDesc(tok, "|", td, startPos);
     }
     return td;
 }
@@ -34,21 +22,22 @@ function parseIntersection(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     TypeDesc td = check parseUnaryTypeDesc(tok);
     if tok.current() == "&" {
-        TypeDesc[] operands = [td];
-        Position[] opPositions = [];
-        while tok.current() == "&" {
-            opPositions.push(tok.currentStartPos());
-            check tok.advance();
-            TypeDesc right = check parseIntersection(tok);
-            // pr-todo: accumilate type desc and op pos
-            // pr-todo: refactor this common code out
-            operands.push(right);
-        }
-        Position endPos = tok.previousEndPos();
-        BinaryTypeDesc bin = { startPos, endPos, opPositions, op: "&", operands };
-        td = bin;
+        td = check finishBinaryTypeDesc(tok, "&", td, startPos);
     }
     return td;
+}
+
+function finishBinaryTypeDesc(Tokenizer tok, BinaryTypeOp op, TypeDesc lhs, Position startPos) returns BinaryTypeDesc|err:Syntax {
+    TypeDesc[] operands = [lhs];
+    Position[] opPositions = [];
+    while tok.current() == op {
+        opPositions.push(tok.currentStartPos());
+        check tok.advance();
+        TypeDesc right = op == "|" ? check parseIntersection(tok) : check parseUnaryTypeDesc(tok);
+        operands.push(right);
+    }
+    Position endPos = tok.previousEndPos();
+    return { startPos, endPos, opPositions, op, operands };
 }
 
 function parseUnaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
