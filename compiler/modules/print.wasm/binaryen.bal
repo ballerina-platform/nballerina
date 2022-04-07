@@ -3,10 +3,20 @@ public type ComplexRefType record {
     string base;
     string? initial = ();
 };
-public type RefType "anyref"|"eqref"|"i31ref"|ComplexRefType;
+public type RefType "anyref"|"eqref"|"i31ref"|"any"|ComplexRefType;
 public type Type "None"|NumType|RefType;
 
-public type Op "i32.add"|"i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.or"|"i32.xor"|"i32.and"|"i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|"i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.or"|"i64.xor"|"i64.and"|"i64.extend_i32_u"|"i64.shl"|"i64.eqz"|"i32.wrap_i64"|"ref.is_null"|"ref.is_i31"|"ref.as_data"|"ref.as_i31"|"ref.as_non_null"|"i32.shr_u"|"i64.shr_u";
+public type Op  "i32.add"|
+                "i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.eqz"|
+                "i32.or"|"i32.xor"|"i32.and"|
+                "i32.shr_u"|
+                "i32.wrap_i64"|
+                "i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|
+                "i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|
+                "i64.or"|"i64.xor"|"i64.and"|
+                "i64.shl"|"i64.shr_u"|
+                "i64.extend_i32_u"|
+                "ref.is_null"|"ref.is_i31"|"ref.as_data"|"ref.as_i31"|"ref.as_non_null";
 
 public type Token string;
 
@@ -138,14 +148,13 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function block(Expression[] children, string? name = (), Expression? ty = ()) returns Expression {
+    public function block(Expression[] children, string? name = (), Type? ty = ()) returns Expression {
         Token[] inst = ["block"];
         if name != () {
             inst.push(name);
         }
         if ty != () {
-            Token[] result = ["result"];
-            result.push(...ty.tokens);
+            Token[] result = ["result", getTypeString(ty)];
             inst.push(...appendBraces(result));
         }
         foreach Expression child in children {
@@ -375,8 +384,8 @@ function getTypeString(Type ty) returns string {
         if ty.initial != () {
             inst.push(<string>ty.initial);
         }
-        inst.push("$" + ty.base);
-        return joinTokens(appendBraces(inst));
+        inst.push(ty.base is Type ? ty.base : "$" + ty.base);
+        return (joinTokens(appendBraces(inst), 0)).trim();
     }
     return ty;
 }

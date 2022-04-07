@@ -36,14 +36,18 @@ function buildEquality(wasm:Module module, Scaffold scaffold, bir:EqualityInsn i
 
 function buildEqualTaggedBoolean(wasm:Module module, Scaffold scaffold, CmpEqOp op, wasm:Expression tagged, wasm:Expression untagged, bir:Register result) returns wasm:Expression {
     wasm:Op operation =  op == "eq" ? "i32.eq" : "i32.ne";
-    return module.addIf(buildIsType(module, tagged, TYPE_BOOLEAN), module.localSet(result.number, module.binary(operation, untagged, buildUntagBoolean(module, tagged))), module.localSet(result.number, module.addConst({ i32: op == "eq" ? 0: 1})));
+    wasm:Expression isTypeBoolean = buildIsType(module, tagged, TYPE_BOOLEAN);
+    wasm:Expression trueBody = module.localSet(result.number, module.binary(operation, untagged, buildUntagBoolean(module, tagged)));
+    wasm:Expression falseBody = module.localSet(result.number, module.addConst({ i32: op == "eq" ? 0 : 1}));
+    return module.addIf(isTypeBoolean, trueBody, falseBody);
 }
 
 function buildEqualTaggedInt(wasm:Module module, Scaffold scaffold, CmpEqOp op, wasm:Expression tagged, wasm:Expression untagged, bir:Register result) returns wasm:Expression {
     wasm:Op operation =  op == "eq" ? "i64.eq" : "i64.ne";
-    wasm:Expression falseBody = module.localSet(result.number, module.addConst({ i32: op =="ne" ? 1: 0 }));
+    wasm:Expression isTypeInt = buildIsType(module, tagged, TYPE_INT);
     wasm:Expression trueBody = module.localSet(result.number, module.binary(operation, buildUntagInt(module, scaffold, tagged), untagged));
-    return module.addIf(buildIsType(module, tagged, TYPE_INT), trueBody, falseBody);
+    wasm:Expression falseBody = module.localSet(result.number, module.addConst({ i32: op == "ne" ? 1: 0 }));
+    return module.addIf(isTypeInt, trueBody, falseBody);
 }
 
 function buildEqualTaggedTagged(wasm:Module module, Scaffold scaffold, boolean exact, CmpEqOp op, wasm:Expression rhs, wasm:Expression lhs, bir:Register result) returns wasm:Expression {
@@ -57,11 +61,13 @@ function buildEqualTaggedTagged(wasm:Module module, Scaffold scaffold, boolean e
     else {
         wasm:Op operation32 =  op == "eq" ? "i32.eq" : "i32.ne";
         wasm:Op operation64 =  op == "eq" ? "i64.eq" : "i64.ne";
+        wasm:Expression isTypeBoolean = buildIsType(module, lhs, TYPE_BOOLEAN);
+        wasm:Expression isTypeInt = buildIsType(module, lhs, TYPE_INT);
         wasm:Expression typeCheck = module.binary("i32.eq", module.call("get_type", [rhs], "i32"), module.call("get_type", [lhs], "i32"));
         wasm:Expression intBody = module.localSet(result.number, module.binary(operation64, buildUntagInt(module, scaffold, rhs), buildUntagInt(module, scaffold, lhs)));
         wasm:Expression booleanBody = module.localSet(result.number, module.binary(operation32, buildUntagBoolean(module, rhs), buildUntagBoolean(module, lhs)));
-        wasm:Expression nullBody = module.localSet(result.number, module.addConst({ i32: op =="eq" ? 1: 0 }));
-        wasm:Expression falseBody = module.localSet(result.number, module.addConst({ i32: op =="ne" ? 1: 0 }));
-        return module.addIf(typeCheck, module.addIf(buildIsType(module, lhs, TYPE_INT), intBody, module.addIf(buildIsType(module, lhs, TYPE_BOOLEAN), booleanBody, nullBody)), falseBody);
+        wasm:Expression nullBody = module.localSet(result.number, module.addConst({ i32: op == "eq" ? 1 : 0 }));
+        wasm:Expression falseBody = module.localSet(result.number, module.addConst({ i32: op == "ne" ? 1 : 0 }));
+        return module.addIf(typeCheck, module.addIf(isTypeInt, intBody, module.addIf(isTypeBoolean, booleanBody, nullBody)), falseBody);
     }
 }

@@ -53,10 +53,11 @@ function addRttFunctions(wasm:Module module) {
     addFuncGetTypeChildren(module);
     module.addType("List", module.struct(["arr", "len"], [{ base: "AnyList" }, "i64"], [true, true]));
     module.addType("AnyList", module.array("eqref"));
-    module.addTag("index-outof-bound");
-    module.addTagExport("index-outof-bound","index-outof-bound");
-    module.addTag("index-too-large");
-    module.addTagExport("index-too-large","index-too-large");
+    module.addType(BOXED_INT_TYPE, module.struct(["val"], ["i64"], [true]));
+    module.addTag(INDEX_OUT_0F_BOUND_TAG);
+    module.addTagExport(INDEX_OUT_0F_BOUND_TAG,INDEX_OUT_0F_BOUND_TAG);
+    module.addTag(INDEX_TOO_LARGE_TAG);
+    module.addTagExport(INDEX_TOO_LARGE_TAG,INDEX_TOO_LARGE_TAG);
 }
 
 function checkForEntry(bir:Region[] regions, bir:Label label, bir:BasicBlock[] blocks, bir:Label? exit = ()) returns int? {
