@@ -213,7 +213,6 @@ function outputTest(BaltTestCase[] tests, string dir, string filename, string[][
         body.push(...test.header);
         body.push("Labels: " + ", ".'join(...test.labels));
         body.push("");
-        // body.push(string `// index: ${index}`);
         body.push(...test.content);
     }
     if body.length() == 0 {

@@ -16,9 +16,8 @@ mkdir -p "$parent/actual"
 if test $kind == p; then
     balFile=`echo "$b" | sed -e 's/.exe/.bal/'`
     $("./$1" >/dev/null 2>"$out")
-    -s "$out"
+    test -s "$out"
 else
     "./$1" >"$out"
     diff -u "$2" "$out"
 fi
-

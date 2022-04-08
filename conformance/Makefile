@@ -1,9 +1,7 @@
 TARGETS=test
-
-TDIR= $(sort $(shell find ./ballerina-spec/conformance/lang/expressions/ -name "*.balt" | xargs dirname | rev |cut -d '/' -f 1 | rev))
-
-TESTS = $(shell find ./ballerina-spec/ -name "*.balt")
-TRANSFORMED_TESTS = $(shell find ./ballerina-spec/ -name "*.balt" | sed -e "s/.\/ballerina-spec\/conformance\/lang/.\/tests/g")
+TDIR=$(sort $(shell find ./ballerina-spec/conformance/lang/expressions/ -name "*.balt" | xargs dirname | rev |cut -d '/' -f 1 | rev))
+TESTS=$(shell find ./ballerina-spec/ -name "*.balt")
+TRANSFORMED_TESTS=$(shell find ./ballerina-spec/ -name "*.balt" | sed -e "s/.\/ballerina-spec\/conformance\/lang/.\/tests/g")
 
 $(TRANSFORMED_TESTS): update
 
@@ -21,11 +19,10 @@ clean:
 	rm -rf out
 	rm -rf tests
 
-$(TARGETS): update $(TDIR)
+$(TARGETS): $(TDIR)
 
 $(TDIR): $(TRANSFORMED_TESTS)
 	mkdir -p out/$@
 	$(MAKE) -C out/$@ -f ../../balt-sub.mk tdir=$@ $(MAKECMDGOALS)
 
 .PHONY: $(TARGETS) $(TDIR)
-

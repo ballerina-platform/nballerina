@@ -15,7 +15,7 @@ type TestCaseMap map<[string, int, BaltTestHeader, string[]]>;
 //     dataProvider: parseBalts
 // }
 function testBalt(string baltName, int offset, BaltTestHeader header, string[] lines) returns error? {
-    [LlvmModule, LlvmModule]|CompileError compileResult = compileModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], {});
+    LlvmModule|CompileError compileResult = compileModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], {});
     CompileError? err = compileResult is error ? compileResult : ();
 
     if header["Fail-Issue"] != () {
@@ -54,17 +54,10 @@ function parseBalts() returns TestCaseMap|error {
     return testMap;
 }
 
-function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns [LlvmModule, LlvmModule]|CompileError {
+function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns LlvmModule|CompileError {
     t:Env env = new;
     front:ScannedModule scanned = check front:scanModule(sources, modId);
     bir:Module birMod = check front:resolveModule(scanned, env, []);
-
-    var [llMod, typeUsage] = check nback:buildModule(birMod, nbackOptions);
-    LlvmModule initModule = check baltInitModule(env, {id: modId, typeUsage }, birMod);
-    return [llMod, initModule];
+    var [llMod, _] = check nback:buildModule(birMod, nbackOptions);
+    return llMod;
 }
-
-function baltInitModule(t:Env env, nback:ProgramModule programMod, bir:Module birMod) returns LlvmModule|CompileError {
-    return nback:buildInitModule(env, [programMod], {});
-}
-

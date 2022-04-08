@@ -15,14 +15,12 @@ type BaltTestHeader record {|
 type BaltTestCase record {|
     int offset;
     BaltTestHeader header;
-    string[] labels;
     string[] content;
 |};
 
 enum State {
     BOF,
     HEADER,
-    LABEL,
     CONTENT
 }
 
@@ -71,49 +69,42 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
     string? prevFiledBody  = ();
     string? prevFiledName  = ();
     string[] content = [];
-    string[] labels = [];
     int offset = 0;
+
     State s = BOF;
     foreach var [i, l] in lines.enumerate() {
         if l.startsWith("Test-Case:") {
             if s != BOF {
                 BaltTestHeader header = <BaltTestHeader>maybeHeader;
-                tests.push({ offset, header, content, labels });
+                tests.push({ offset, header, content });
             }
             s = HEADER;
 
             offset = i + 1;
             content = [];
-            labels = [];
             var [fName, fBody] = parseField(l);
             maybeHeader = {Test\-Case: <TestKind>fBody};
             prevFiledBody = fBody;
             prevFiledName = fName;
         }
-        else if l.startsWith("Labels:") {
-            var [_, fBody] = parseField(l);
-            labels = parseLabels(fBody);
-            s = LABEL;
-        }
-        else if l.trim() == "" && s is HEADER|LABEL {
-            s = CONTENT;
-        }
-        else if s == LABEL {
-            labels.push(...parseLabels(l));
-        }
         else if s == HEADER {
-            BaltTestHeader header = <BaltTestHeader>maybeHeader;
-            // possible improvement: support other white spaces
-            if l.startsWith(" ") {
-                if prevFiledName == () ||  prevFiledBody == () {
-                    panic err:impossible("folded field body without field");
+            if l == "" {
+                s = CONTENT;
+            }
+            else {
+                BaltTestHeader header = <BaltTestHeader>maybeHeader;
+                // possible improvement: support other white spaces
+                if l.startsWith(" ") {
+                    if prevFiledName == () ||  prevFiledBody == () {
+                        panic err:impossible("folded field body without field");
+                    }
+                    header[<string>prevFiledName] = <string>prevFiledBody + l;
+                } else {
+                    var [fName, fBody] = parseField(l);
+                    header[fName] = fBody;
+                    prevFiledName = fName;
+                    prevFiledBody = fBody;
                 }
-                header[<string>prevFiledName] = <string>prevFiledBody + l;
-            } else {
-                var [fName, fBody] = parseField(l);
-                header[fName] = fBody;
-                prevFiledName = fName;
-                prevFiledBody = fBody;
             }
         }
         else if s == CONTENT {
@@ -133,30 +124,9 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
     }
     else {
         BaltTestHeader header = <BaltTestHeader>maybeHeader;
-        tests.push({offset, header, content, labels });
+        tests.push({offset, header, content});
     }
     return tests;
-}
-
-function parseLabels(string s) returns string[] {
-    string[] labels = [];
-    string[] content = [];
-    foreach string:Char c in s {
-        if c == "," {
-            labels.push("".'join(...content));
-            content = [];
-        }
-        else if c == " " {
-            continue;
-        }
-        else {
-            content.push(c);
-        }
-    }
-    if content.length() != 0 {
-        labels.push("".'join(...content));
-    }
-    return labels;
 }
 
 function parseField(string s) returns [string, string] {

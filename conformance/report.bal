@@ -7,7 +7,7 @@ public type Options record {|
 |};
 
 type TestCase record {|
-    string description; // we can use the description to check if the test cases are the same since we don't change them
+    string description; // we can use the description to check if the test cases are the same since we don't change it
     string[] content;
     string path;
 |};
