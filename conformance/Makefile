@@ -1,8 +1,11 @@
-TARGETS=test all compile testll
+TARGETS=test
 
-TDIR= $(sort $(basename $(notdir $(wildcard ../conformance/tests/*))))
+TDIR= $(sort $(shell find ./ballerina-spec/conformance/lang/expressions/ -name "*.balt" | xargs dirname | rev |cut -d '/' -f 1 | rev))
 
 TESTS = $(shell find ./ballerina-spec/ -name "*.balt")
+TRANSFORMED_TESTS = $(shell find ./ballerina-spec/ -name "*.balt" | sed -e "s/.\/ballerina-spec\/conformance\/lang/.\/tests/g")
+
+$(TRANSFORMED_TESTS): update
 
 update: $(TESTS)
 	rm -rf tests
@@ -16,10 +19,11 @@ report/%.html: report.bal
 
 clean:
 	rm -rf out
+	rm -rf tests
 
-$(TARGETS): $(TDIR)
+$(TARGETS): update $(TDIR)
 
-$(TDIR):
+$(TDIR): $(TRANSFORMED_TESTS)
 	mkdir -p out/$@
 	$(MAKE) -C out/$@ -f ../../balt-sub.mk tdir=$@ $(MAKECMDGOALS)
 
