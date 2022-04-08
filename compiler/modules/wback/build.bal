@@ -271,7 +271,7 @@ function addFuncGetArrayLength(wasm:Module module) {
 function addFuncGetValueOfIndex(wasm:Module module) {
     var { name: getTy, paramTypes: getTyParams, returnType: getTyReturn, localTypes: getTyLocals } = arrGetFunction;
     var { name: getTyCast, paramTypes: getTyCastParams, returnType: getTyCastRetTy, localTypes: getTyCastLocals } = arrGetCastFunction;
-    var { name: len, returnType: lenRetTy } = arrGetCastFunction;
+    var { name: len, returnType: lenRetTy } = arrLengthFunction;
     wasm:Expression struct = module.localGet(0);
     wasm:Expression index = module.localGet(1);
     wasm:Expression ltz = module.binary("i32.lt_s", index, module.addConst({ i32: 0 }));
