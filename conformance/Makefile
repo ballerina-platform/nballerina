@@ -7,7 +7,7 @@ TRANSFORMED_TESTS=$(shell find $(TEST_SOURCE) -name "*.balt" | sed -e "s/.\/ball
 $(TRANSFORMED_TESTS): update
 
 update: $(TESTS)
-	git submodule foreach git pull
+	git submodule foreach git pull origin conformance-tests
 	rm -rf tests
 	mkdir -p tests
 	bal run transform.bal -- $^ --skipList skiplist.txt
