@@ -17,8 +17,11 @@ public type FixedLengthArray record {|
 
 type ListConjunction record {|
     ListAtomicType listType;
-    // Maximum number of members found in `initial` array of `listType` field in all the conjunctions onwards this.
-    int maxInitialLen;
+    // A listType is a fixed array type if members.fixedLength > members.initial.length() and rest is never
+    // How many members of the list starting with this are are fixed array types?
+    int nFixedArray;
+    // Maximum of members.fixedLength for members of the conjunction that do not have fixed array type.
+    int maxFixedLengthNonFixedArray;
     ListConjunction? next;
 |};
 
@@ -275,6 +278,8 @@ function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicTyp
     return [members, intersect(rest, newType.rest)];
 }
 
+
+
 // This function returns true if there is a list shape v such that
 // is in the type described by `members` and `rest`, and
 // for each tuple t in `neg`, v is not in t.
@@ -288,10 +293,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         return true;
     }
     else {
-        final int len = members.fixedLength;
         final ListAtomicType nt = neg.listType;
-        final int negLen = nt.members.fixedLength;
-        if negLen < len ? isNever(nt.rest) : (len < negLen && isNever(rest)) {
+        if listLengthsDisjoint(members, rest, nt.members, nt.rest) {
             // Either
             // - the negative has a fixed length that is shorter than the minimum
             // length of the positive, or
@@ -301,6 +304,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             // so we can just skip over this negative.
             return listInhabited(cx, members, rest, neg.next);
         }
+        final int len = members.fixedLength;
+        final int negLen = nt.members.fixedLength;
         if len < negLen {
             // Note in this case we know positive rest is not never.
 
@@ -346,18 +351,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-    
-        // The key point here that because ListConjunction is sorted in decreasing order, the negs handle every index >= negLen in the same way
-        // i.e. for every N in neg, for every i, j >= negLen, N[i] = N[j].
-        // Define two indices i, j to be equivalent iff for type T that is the positive and any of the negatives, T[i] = T[j].
-        // The value of maxLen here sufficient that the set { i | 0 <= i < maxLen } will contain at least one index from each equivalence
-        // class.
-        final int maxLen = int:max(len + 1, negLen + 1);
-        // XXX Handle large fixedLengths efficiently
-        if maxLen > 200 {
-            panic error("fixed length too big " + maxLen.toString());
-        }
-        foreach int i in 0 ..< maxLen {
+       
+        foreach int i in listRepresentativeIndices(cx, members, rest, neg) {
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
@@ -370,6 +365,58 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
         // negative is 0, and [] - [] is empty.
         return false;
     }
+}
+
+function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns boolean {
+    int len1 = members1.length();
+    int len2 = members2.length();
+    if len1 < len2 {
+        return isNever(rest1);
+    }
+    if len2 < len1 {
+        return isNever(rest2);
+    }
+    return false;
+}
+
+// Define two indices i, j to be equivalent iff for type T that is the positive and any of the negatives, T[i] = T[j].
+// This returns a list with at least one index from each equivalence class.
+// The key point here that because ListConjunction is sorted in decreasing order, the negs handle every index >= negLen in the same way
+// i.e. for every N in neg, for every i, j >= negLen, N[i] = N[j].
+function listRepresentativeIndices(Context cx, FixedLengthArray members, SemType rest, ListConjunction neg) returns int[] {
+    // Handle large fixedLengths efficiently
+    // All indices up to maxLengthNonFixedArray have to be considered as distinct
+    int fixedLen = int:max(neg.maxFixedLengthNonFixedArray, members.initial.length());
+    int maxLen = int:max(members.fixedLength, neg.listType.members.fixedLength);
+
+    if neg.nFixedArray > 0 {
+        // Each of the nFixedArray negatives affects only a single length
+        // so if we try nFixedArray + 1 lengths, we must have one that is not cancelled
+        // out by the fixed length
+        fixedLen = int:max(fixedLen, neg.maxFixedLengthNonFixedArray + neg.nFixedArray + 1);
+        // but never go over maxLen
+        fixedLen = int:min(fixedLen, maxLen);
+    }
+    int[] indices = from int i in 0 ..< fixedLen select i;
+    // Deal with possibility that positive is a fixed length array.
+    if members.fixedLength > members.initial.length() && members.fixedLength > fixedLen {
+        indices.push(members.fixedLength - 1);
+    }
+    if maxLen >= fixedLen {
+        indices.push(maxLen);
+    }
+    return indices;
+}
+
+function listRepresentativeIndicesOk(Context cx, FixedLengthArray members, SemType rest, ListConjunction neg) returns int[] {
+    final int len = members.fixedLength;
+    final ListAtomicType nt = neg.listType;
+    final int negLen = nt.members.fixedLength;
+    final int maxLen = int:max(len, negLen) + 1;
+    if maxLen > 200 {
+        panic error("fixed length too big " + maxLen.toString());
+    }
+    return from int i in 0 ..< maxLen select i;
 }
 
 function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
@@ -460,13 +507,23 @@ function listConjunction(Context cx, Conjunction? con) returns ListConjunction? 
     // It gets reversed as we cons it up.
     atoms = from var a in atoms let int len = a.members.fixedLength order by len select a;
     ListConjunction? next = ();
-    int maxInitialLen = 0;
+    int nFixedArray = 0;
+    int maxFixedLengthNonFixedArray = 0;
     foreach var listType in atoms {
-        maxInitialLen = int:max(maxInitialLen, listType.members.initial.length());
-        ListConjunction lc = { listType, maxInitialLen, next };
+        if listAtomicIsFixedArray(listType) {
+            nFixedArray += 1;
+        }
+        else {
+            maxFixedLengthNonFixedArray = int:max(maxFixedLengthNonFixedArray, listType.members.fixedLength);
+        }
+        ListConjunction lc = { listType, nFixedArray, maxFixedLengthNonFixedArray, next };
         next = lc;
     }
     return next;
+}
+
+function listAtomicIsFixedArray(ListAtomicType listType) returns boolean {
+    return isNever(listType.rest) && listType.members.fixedLength > listType.members.initial.length();
 }
 
 function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {

@@ -81,31 +81,25 @@ function listProjExclude(Context cx, IntSubtype|true k, FixedLengthArray members
         return listAtomicMemberTypeAt(members, rest, k);
     }
     else {
-        int len = members.fixedLength;
         ListAtomicType nt = neg.listType;
-        int negLen = nt.members.fixedLength;
-        if len < negLen {
-            if isNever(rest) {
-                return listProjExclude(cx, k, members, rest, neg.next);
-            }
-            fixedArrayFill(members, negLen, rest);
-            len = negLen;
-        }
-        else if negLen < len && isNever(nt.rest) {
+        if listLengthsDisjoint(members, rest, nt.members, nt.rest) {
             return listProjExclude(cx, k, members, rest, neg.next);
         }
+        final int negLen = nt.members.fixedLength;
+        if members.fixedLength < negLen {
+            // XXX is this right?
+            // what about if all of k is less than negLen?
+            fixedArrayFill(members, negLen, rest);
+        }
+      
         // now we have nt.members.length() <= len
         SemType p = NEVER;
-        foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
+        foreach int i in listRepresentativeIndices(cx, members, rest, neg) {
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
                 p = union(p, listProjExclude(cx, k, s, rest, neg.next));
             }     
-        }
-        SemType rd = diff(rest, nt.rest);
-        if !isEmpty(cx, rd) {
-            p = union(p, listProjExclude(cx, k, members, rd, neg.next));
         }
         return p;
     }
