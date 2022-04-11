@@ -7,11 +7,12 @@ TRANSFORMED_TESTS=$(shell find $(TEST_SOURCE) -name "*.balt" | sed -e "s/.\/ball
 $(TRANSFORMED_TESTS): update
 
 update: $(TESTS)
+	git submodule foreach git pull
 	rm -rf tests
 	mkdir -p tests
 	bal run transform.bal -- $^ --skipList skiplist.txt
 
-report: report/changed.html report/skipped.html report/unchanged.html
+report: report/report.html
 
 report/%.html: report.bal
 	bal run report.bal -- --baseDir $(TEST_SOURCE) --transformedDir ./tests/

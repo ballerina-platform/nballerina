@@ -24,3 +24,36 @@ th {
     background-color: #874c4c;
     color: white;
 }
+.tab {
+  overflow: hidden;
+  border: 1px solid #969393;
+  background-color: #874c4c;
+}
+
+/* Style the buttons that are used to open the tab content */
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+  background-color: #f2f2f2;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+  background-color: #f2f2f2;
+}
+
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}

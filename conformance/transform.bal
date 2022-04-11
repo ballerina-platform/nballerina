@@ -178,6 +178,7 @@ function parseCharSeperatedList(string s, string:Char sep) returns string[] {
     return labels;
 }
 
+// these are the test ids for tests we currently can't automatically fix by this script, tests are numbered starting with 1
 map<int[]> skipTest = {
     "boolean_literal.balt" : [8, 10], // equality
     "int_literal.balt": [14, 17, 18], // decimal upper bound, equality, output

@@ -141,35 +141,47 @@ function diffTest(TestCase[] baseTests, TestCase[] transformedTests) returns Tes
 }
 
 function generateReport(TestDiffResult[] skipped, TestDiffResult[] unchanged, TestDiffResult[] changed) returns error? {
-    check generateNonDiffReport(skipped, "Skipped", "./report/skipped.html");
-    check generateNonDiffReport(unchanged, "Unchanged", "./report/unchanged.html");
-    check generateDiffReport(changed, "Changed", "./report/changed.html");
+    string[] body = [];
+    body.push("<!DOCTYPE html>","<html>",
+                "<head>",
+                    "<link rel=\"stylesheet\" href=\"report.css\">",
+                    "<script src=\"report.js\"> </script>",
+                    string `<title> Report </title>`,
+                "</head>",
+                "<body>",
+                    "<div class=\"tab\">",
+                         "<button id=\"changedBtn\" class=\"tabBtn\" onclick=\"openTab(event, 'Changed')\">Changed</button>",
+                         "<button id=\"skippedBtn\" class=\"tabBtn\" onclick=\"openTab(event, 'Skipped')\">Skipped</button>",
+                         "<button id=\"unchangedBtn\" class=\"tabBtn\" onclick=\"openTab(event, 'Unchanged')\">Unchanged</button>",
+                    "</div>");
+    check generateNonDiffReport(skipped, "Skipped", body);
+    check generateNonDiffReport(unchanged, "Unchanged", body);
+    check generateDiffReport(changed, "Changed", body);
+    body.push("</body>", "</html>");
+    check io:fileWriteLines("./report/report.html", body);
 }
 
-function generateNonDiffReport(TestDiffResult[] diffs, string title, string outputPath) returns error? {
-    string[] body = [];
-    body.push("<html>", "<head>");
-    body.push(string `<title> ${title} </title>`, "</head>", "<body>");
+function generateNonDiffReport(TestDiffResult[] diffs, string title, string[] body) returns error? {
     string currentPath = "";
-    body.push(string `<h1>${title}</h1>`);
+    body.push(string `<div id="${title}" class="tabcontent">`);
     foreach TestDiffResult diff in diffs {
         string path = diff.base.path;
         if path != currentPath {
+            if currentPath != "" {
+                body.push("<hr>");
+            }
             body.push(string `<h3>${check file:basename(path)}</h3>`);
             currentPath = path;
         }
         body.push(string `<pre>${"<br>".'join(...diff.base.content)}</pre>`);
+        body.push("<hr>");
     }
-    body.push("</body>", "</html>");
-    check io:fileWriteLines(outputPath, body);
+    body.push("</div>");
 }
 
-function generateDiffReport(TestDiffResult[] diffs, string title, string outputPath) returns error? {
-    string[] body = [];
-    body.push("<html>", "<head>", "<link rel=\"stylesheet\" href=\"report.css\">");
-    body.push(string `<title> ${title} </title>`, "</head>", "<body>");
+function generateDiffReport(TestDiffResult[] diffs, string title, string[] body) returns error? {
     string currentPath = "";
-    body.push(string `<h1>${title}</h1>`);
+    body.push(string `<div id="${title}" class="tabcontent">`);
     foreach TestDiffResult diff in diffs {
         string path = diff.base.path;
         if path != currentPath {
@@ -189,8 +201,7 @@ function generateDiffReport(TestDiffResult[] diffs, string title, string outputP
         body.push(string `<td><pre>${"<br>".'join(...(<TestCase>diff.transformed).content)}</pre></td>`);
         body.push("</tr>");
     }
-    body.push("</body>", "</html>");
-    check io:fileWriteLines(outputPath, body);
+    body.push("</table>", "</div>");
 }
 
 function pathEnd(string absPath) returns string|file:Error {
