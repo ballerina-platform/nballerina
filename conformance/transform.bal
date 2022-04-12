@@ -170,15 +170,7 @@ function parseCharSeperatedList(string s, string:Char sep) returns string[] {
 
 // these are the test ids for tests we currently can't automatically fix by this script, tests are numbered starting with 1
 map<int[]> skipTest = {
-    "int_literal.balt": [14, 19], // decimal upper bound, output
-    "division.balt": [11], // panic to error
-    "multiplication.balt": [6, 7], // panic to error
-    "remainder.balt": [11], // panic to error
-    "greater_than_expression.balt": [78], // unused variable
-    "greater_than_or_equal_expression.balt": [78], // unused variable
-    "less_than_expression.balt": [78], // unused variable
-    "less_than_or_equal_expression.balt": [77], // unused variable
-    "string_addition.balt": [21] // unused variable
+    "int_literal.balt": [14] // decimal upper bound
 };
 
 function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLables) returns int|io:Error {

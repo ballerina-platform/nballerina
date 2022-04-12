@@ -40,6 +40,9 @@ function compileBaltFile(string filename, string basename, string outDir, nback:
         string[] lines = t.content;
         CompileContext cx = new(basename, check file:joinPath(outDir, outBasename), nbackOptions, options);
         CompileError? err = compileAndOutputModule(cx, DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename, initFilename);
+        if t.header.Test\-Case is "panic" && err != () {
+            continue;
+        }
         if t.header.Test\-Case is "parser-error"|"error" {
             if err is () {
                 panic error("expected error in " + filename + " test: " + (i + 1).toString());
