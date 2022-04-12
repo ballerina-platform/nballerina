@@ -109,7 +109,6 @@ function parseSkipList(string skipListPath) returns string[][]|io:Error {
 function transformContent(string line) returns [string, string[]] {
     string[] newLabels = [];
     string initFunc = "function init()";
-    string negMax = "-9223372036854775808";
     string newLine;
     if line.startsWith(initFunc) {
         newLine = "public function main()" + line.substring(initFunc.length());
@@ -119,15 +118,6 @@ function transformContent(string line) returns [string, string[]] {
     }
     else {
         newLine = line;
-        int? negMaxIndex = newLine.indexOf(negMax);
-        int? outputIndex = newLine.indexOf("@output");
-        while negMaxIndex is int {
-            if outputIndex is int && negMaxIndex > outputIndex {
-                break;
-            }
-            newLine = newLine.substring(0, negMaxIndex) + "(-9223372036854775807 - 1)" + newLine.substring(negMaxIndex + negMax.length());
-            negMaxIndex = newLine.indexOf(negMax);
-        }
     }
     if line.startsWith("int") {
         // this is sufficient to catch current cases but not all possible cases
@@ -180,8 +170,7 @@ function parseCharSeperatedList(string s, string:Char sep) returns string[] {
 
 // these are the test ids for tests we currently can't automatically fix by this script, tests are numbered starting with 1
 map<int[]> skipTest = {
-    "boolean_literal.balt" : [8, 10], // equality
-    "int_literal.balt": [14, 17, 18], // decimal upper bound, equality, output
+    "int_literal.balt": [14, 19], // decimal upper bound, output
     "division.balt": [11], // panic to error
     "multiplication.balt": [6, 7], // panic to error
     "remainder.balt": [11], // panic to error
@@ -189,8 +178,7 @@ map<int[]> skipTest = {
     "greater_than_or_equal_expression.balt": [78], // unused variable
     "less_than_expression.balt": [78], // unused variable
     "less_than_or_equal_expression.balt": [77], // unused variable
-    "string_addition.balt": [21], // unused variable
-    "unary_minus_expression.balt": [34, 35] // output
+    "string_addition.balt": [21] // unused variable
 };
 
 function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLables) returns int|io:Error {

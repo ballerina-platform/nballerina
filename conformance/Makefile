@@ -25,6 +25,6 @@ $(TARGETS): $(TDIR)
 
 $(TDIR): $(TRANSFORMED_TESTS)
 	mkdir -p out/$@
-	$(MAKE) -C out/$@ -f ../../balt-sub.mk tdir=$@ balt_files=$(abspath $(wildcard ./tests/$@/*.balt)) $(MAKECMDGOALS)
+	$(MAKE) -C out/$@ -f ../../balt-sub.mk tdir=$@ balt_files="$(abspath $(wildcard ./tests/$@/*.balt))" $(MAKECMDGOALS)
 
 .PHONY: $(TARGETS) $(TDIR)
