@@ -271,6 +271,7 @@ function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicTyp
         if isNever(newType.rest) {
             return ();
         }
+        panicIfTooBig(newTypeLen - intersectedLen);
         foreach int i in newTypeLen ..< intersectedLen {
             fixedArraySet(members, i, intersect(listMemberAt(members, rest, i), newType.rest));
         }
@@ -317,12 +318,16 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             if listInhabited(cx, members, NEVER, neg.next) {
                 return true;
             }
-            // Check list types with fixedLength >= `len` and  < `negLen`
-            // XXX Handle large fixedLengths efficiently
-            if negLen - len > 200 {
-                panic error("fixed length too big " + negLen.toString());
+            int lim;
+            if neg.nFixedArray > 0 {
+                lim = int:max(len + 1, neg.maxFixedLengthNonFixedArray);
+                lim = int:min(lim + neg.nFixedArray + 1, negLen);
             }
-            foreach int i in len + 1 ..< negLen {
+            else {
+                lim = negLen;
+            }
+            panicIfTooBig(lim - (len + 1));
+            foreach int i in len + 1 ..< lim {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
                 if listInhabited(cx, s, NEVER, neg.next) {
@@ -356,6 +361,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
+                panicIfTooBig(s.initial.length());
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
@@ -397,6 +403,7 @@ function listRepresentativeIndices(Context cx, FixedLengthArray members, SemType
         // but never go over maxLen
         fixedLen = int:min(fixedLen, maxLen);
     }
+    panicIfTooBig(fixedLen);
     int[] indices = from int i in 0 ..< fixedLen select i;
     // Deal with possibility that positive is a fixed length array.
     if members.fixedLength > members.initial.length() && members.fixedLength > fixedLen {
@@ -413,9 +420,7 @@ function listRepresentativeIndicesOk(Context cx, FixedLengthArray members, SemTy
     final ListAtomicType nt = neg.listType;
     final int negLen = nt.members.fixedLength;
     final int maxLen = int:max(len, negLen) + 1;
-    if maxLen > 200 {
-        panic error("fixed length too big " + maxLen.toString());
-    }
+    panicIfTooBig(maxLen);
     return from int i in 0 ..< maxLen select i;
 }
 
@@ -448,6 +453,7 @@ function fixedArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
     }
     else if initial[initLen - 1] != filler {
         SemType last = initial[initLen - 1];
+        panicIfTooBig(fixedLen - initLen);
         foreach int i in 0 ..< fixedLen - initLen {
             initial.push(last);
         }
@@ -475,6 +481,7 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
         int lastIndex = initCount - 1;
         SemType lastMember = members.initial[lastIndex];
         int pushBack = lastIndex == setIndex ? 1 : 0;
+        panicIfTooBig(setIndex + pushBack - initCount);
         foreach int i in initCount ... setIndex + pushBack {
             members.initial.push(lastMember);
         }
@@ -491,6 +498,12 @@ function fixedArrayReplace(FixedLengthArray array, int index, SemType t, SemType
     fixedArrayFill(copy, index + 1, rest);
     fixedArraySet(copy, index, t);
     return copy;
+}
+
+function panicIfTooBig(int n) {
+    if n > 1000 {
+        panic error("fixed length not properly implemented " + n.toString());
+    }
 }
 
 function listConjunction(Context cx, Conjunction? con) returns ListConjunction? {
