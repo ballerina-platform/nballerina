@@ -226,7 +226,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                var intersected = listIntersectWith(members, rest, lt);
+                var intersected = listIntersectWith(members, rest, lt.members, lt.rest);
                 if intersected is () {
                     return true;
                 }
@@ -244,42 +244,19 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, members, rest, listConjunction(cx, neg));
 }
 
-function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType newType) returns [FixedLengthArray, SemType]? {
-    int newTypeLen = newType.members.fixedLength;
-    int intersectedLen = int:max(members.fixedLength, newTypeLen);
-    // We can specifically handle the case where length of `initial` and `fixedLength` are the same 
-    if members.fixedLength < intersectedLen {
-        if isNever(rest) {
-            return ();
-        }
-        fixedArrayFill(members, intersectedLen, rest);
+function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
+    if listLengthsDisjoint(members1, rest1, members2, rest2) {
+        return ();
     }
-    int maxInitialLen = int:max(members.initial.length(), newType.members.initial.length());
-    foreach int i in 0 ..< maxInitialLen {
-        fixedArraySet(members, i, intersect(listMemberAt(members, rest, i),
-                                            listMemberAt(newType.members, newType.rest, i)));
-    }
-    // If the last member is repeating we need to intersect the repeating member as it will have pushed backed in `initial` array
-    if maxInitialLen < members.fixedLength {
-        SemType repeatingMember = intersect(listMemberAt(members, rest, maxInitialLen), 
-                                            listMemberAt(newType.members, newType.rest, maxInitialLen));
-        if repeatingMember != members.initial[maxInitialLen] {
-            members.initial[maxInitialLen] = repeatingMember;
-        }
-    }
-    if newTypeLen < intersectedLen {
-        if isNever(newType.rest) {
-            return ();
-        }
-        panicIfTooBig(newTypeLen - intersectedLen);
-        foreach int i in newTypeLen ..< intersectedLen {
-            fixedArraySet(members, i, intersect(listMemberAt(members, rest, i), newType.rest));
-        }
-    }
-    return [members, intersect(rest, newType.rest)];
+    return [
+        {
+            initial: (from int i in 0 ..< int:max(members1.initial.length(), members2.initial.length())
+                      select intersect(listMemberAt(members1, rest1, i), listMemberAt(members2, rest2, i))),
+            fixedLength: int:max(members1.fixedLength, members2.fixedLength)
+        },
+        intersect(rest1, rest2)
+    ];
 }
-
-
 
 // This function returns true if there is a list shape v such that
 // is in the type described by `members` and `rest`, and
@@ -374,8 +351,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListC
 }
 
 function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns boolean {
-    int len1 = members1.length();
-    int len2 = members2.length();
+    int len1 = members1.fixedLength;
+    int len2 = members2.fixedLength;
     if len1 < len2 {
         return isNever(rest1);
     }
