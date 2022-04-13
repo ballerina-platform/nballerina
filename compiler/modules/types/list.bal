@@ -1,5 +1,7 @@
 // Implementation specific to basic type list.
 
+//import ballerina/io;
+
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
     SemType rest;
@@ -241,7 +243,14 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             rest = NEVER;
         }
     }
-    return !listInhabited(cx, members, rest, listConjunction(cx, neg));
+    var [indices, memberTypes, nRequired] = listSamples(cx, members, rest, neg);
+    boolean inhabited1 = listInhabited1(cx, indices, memberTypes, nRequired, neg);
+    // boolean inhabited = listInhabited(cx, members, rest, listConjunction(cx, neg));
+    // if  inhabited != inhabited1 {
+    //     io:println("got the wrong result; got inhabited = " + (!inhabited).toString());
+    //     io:println("sampleIndices: " + indices.toString());
+    // }
+    return !inhabited1;
 }
 
 function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
@@ -256,6 +265,114 @@ function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLength
         },
         intersect(rest1, rest2)
     ];
+}
+
+function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunction? neg) returns [int[], SemType[], int] {
+    int maxInitialLength = members.initial.length();
+    int[] fixedLengths = [members.fixedLength];
+    // if !isNever(rest) {
+    //     fixedLengths.push(members.fixedLength + 1);
+    // }
+    Conjunction? tem = neg;
+    int nNeg = 0;
+    while true {
+        if tem != () {
+            ListAtomicType lt = cx.listAtomType(tem.atom);
+            FixedLengthArray m = lt.members;
+            maxInitialLength = int:max(maxInitialLength, m.initial.length());
+            if m.fixedLength > maxInitialLength {
+                fixedLengths.push(m.fixedLength);
+            }
+            // if !isNever(lt.rest) {
+            //     fixedLengths.push(m.fixedLength + 1);
+            // }
+            nNeg += 1;
+            tem = tem.next;
+        }
+        else {
+            break;
+        }
+    }
+    fixedLengths = fixedLengths.sort();
+    // An index b is a boundary point if indices < b are different from indices >= b
+    int[] boundaries = from int i in 1 ... maxInitialLength select i;
+    foreach int n in fixedLengths {
+        // this also removes duplicates
+        if boundaries.length() == 0 || n > boundaries[boundaries.length() - 1] {
+            boundaries.push(n);
+        }
+    }
+    int[] indices = [];
+    int lastBoundary = 0;
+    foreach int b in boundaries {
+        int segmentLength = b - lastBoundary;
+        int nSamples = int:min(segmentLength, nNeg);
+        foreach int i in b - nSamples ..< b {
+            indices.push(i);
+        }
+        lastBoundary = b;
+    }
+    foreach int i in lastBoundary ..< lastBoundary + nNeg {
+        indices.push(i);
+    }
+    SemType[] memberTypes = [];
+    int nRequired = 0;
+    foreach int i in 0 ..< indices.length() {
+        int index = indices[i];
+        SemType t = listMemberAt(members, rest, index);
+        if isEmpty(cx, t) {
+            break;
+        }
+        memberTypes.push(t);
+        if index < members.fixedLength {
+            nRequired = i + 1;
+        }
+    }
+    // indices may be longer
+    return [indices, memberTypes, nRequired];
+}
+
+
+function listInhabited1(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
+    if neg == () {
+        return true;
+    }
+    else {
+        final ListAtomicType nt = cx.listAtomType(neg.atom);
+        if nRequired > 0 && isNever(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
+            // Skip this negative if it is always shorter than the minimum required by the positive
+            return listInhabited1(cx, indices, memberTypes, nRequired, neg.next);
+        }
+        // Consider cases we can avoid this negative by having a sufficiently short list
+        int negMinLength = nt.members.fixedLength;
+        if negMinLength > 0 {
+            int len = memberTypes.length();
+            if len < indices.length() && indices[len] < nt.members.fixedLength {
+                return listInhabited1(cx, indices, memberTypes, nRequired, neg.next);
+            }
+            foreach int i in nRequired ..< memberTypes.length() {
+                if indices[i] >= nt.members.fixedLength {
+                    break;
+                }
+                // index + 1 < nt.members.fixedLength
+                SemType[] t = memberTypes.slice(0, i);
+                if listInhabited1(cx, indices, t, nRequired, neg.next) {
+                    return true;
+                }
+            }
+        }
+        foreach int i in 0 ..< memberTypes.length() {
+            SemType d = diff(memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
+            if !isEmpty(cx, d) {
+                SemType[] t = memberTypes.clone();
+                t[i] = d;
+                if listInhabited1(cx, indices, t, int:max(nRequired, i + 1), neg.next) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
 
 // This function returns true if there is a list shape v such that
