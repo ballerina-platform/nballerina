@@ -1,6 +1,6 @@
 // Implementation specific to basic type list.
 
-//import ballerina/io;
+// import ballerina/io;
 
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
@@ -247,7 +247,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     boolean inhabited1 = listInhabited1(cx, indices, memberTypes, nRequired, neg);
     // boolean inhabited = listInhabited(cx, members, rest, listConjunction(cx, neg));
     // if  inhabited != inhabited1 {
-    //     io:println("got the wrong result; got inhabited = " + (!inhabited).toString());
+    //     io:println("***got the wrong result; got inhabited = " + (!inhabited).toString());
     //     io:println("sampleIndices: " + indices.toString());
     // }
     return !inhabited1;
@@ -270,9 +270,6 @@ function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLength
 function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunction? neg) returns [int[], SemType[], int] {
     int maxInitialLength = members.initial.length();
     int[] fixedLengths = [members.fixedLength];
-    // if !isNever(rest) {
-    //     fixedLengths.push(members.fixedLength + 1);
-    // }
     Conjunction? tem = neg;
     int nNeg = 0;
     while true {
@@ -283,9 +280,6 @@ function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunc
             if m.fixedLength > maxInitialLength {
                 fixedLengths.push(m.fixedLength);
             }
-            // if !isNever(lt.rest) {
-            //     fixedLengths.push(m.fixedLength + 1);
-            // }
             nNeg += 1;
             tem = tem.next;
         }
@@ -312,8 +306,11 @@ function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunc
         }
         lastBoundary = b;
     }
-    foreach int i in lastBoundary ..< lastBoundary + nNeg {
-        indices.push(i);
+    foreach int i in 0 ..< nNeg {
+        if lastBoundary > int:MAX_VALUE - i {
+            break;
+        }
+        indices.push(lastBoundary + i);
     }
     SemType[] memberTypes = [];
     int nRequired = 0;
@@ -328,7 +325,7 @@ function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunc
             nRequired = i + 1;
         }
     }
-    // indices may be longer
+    // Note that indices may be longer
     return [indices, memberTypes, nRequired];
 }
 
@@ -361,16 +358,40 @@ function listInhabited1(Context cx, int[] indices, SemType[] memberTypes, int nR
                 }
             }
         }
+        // Now we need to explore the possibility of shapes with length >= neglen
+        // This is the heart of the algorithm.
+        // For [v0, v1] not to be in [t0,t1], there are two possibilities
+        // (1) v0 is not in t0, or
+        // (2) v1 is not in t1
+        // Case (1)
+        // For v0 to be in s0 but not t0, d0 must not be empty.
+        // We must then find a [v0,v1] satisfying the remaining negated tuples,
+        // such that v0 is in d0.
+        // SemType d0 = diff(s[0], t[0]);
+        // if !isEmpty(cx, d0) && tupleInhabited(cx, [d0, s[1]], neg.rest) {
+        //     return true;
+        // }
+        // Case (2)
+        // For v1 to be in s1 but not t1, d1 must not be empty.
+        // We must then find a [v0,v1] satisfying the remaining negated tuples,
+        // such that v1 is in d1.
+        // SemType d1 = diff(s[1], t[1]);
+        // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
+        // We can generalize this to tuples of arbitrary length.
+       
         foreach int i in 0 ..< memberTypes.length() {
             SemType d = diff(memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
             if !isEmpty(cx, d) {
                 SemType[] t = memberTypes.clone();
                 t[i] = d;
+                // We need to make index i be required
                 if listInhabited1(cx, indices, t, int:max(nRequired, i + 1), neg.next) {
                     return true;
                 }
             }
         }
+        // This is correct for length 0, because we know that the length of the
+        // negative is 0, and [] - [] is empty.
         return false;
     }
 }
