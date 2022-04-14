@@ -76,30 +76,6 @@ function listProjPath(Context cx, IntSubtype|true k, Conjunction? pos, Conjuncti
     return listProjExclude(cx, indices, keyIndices, memberTypes, nRequired, neg);
 }
 
-function listProjSamples(int[] indices, IntSubtype|true k) returns [int[], int[]] {
-    [int, boolean][] v = from int i in indices select [i, intSubtypeContains(k, i)];
-    if k is IntSubtype {
-        foreach var range in k {
-            int max = range.max;
-            if range.max >= 0 {
-                v.push([max, true]);
-            }
-        }
-    }
-    v = v.sort();
-    int[] indices1 = [];
-    int[] keyIndices = [];
-    foreach var [i, inKey] in v {
-        if indices1.length() == 0 || i != indices1[indices1.length() - 1] {
-            if inKey {
-                keyIndices.push(indices1.length());
-            }
-            indices1.push(i);
-        }
-    }
-    return [indices1, keyIndices];
-}
-
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
 function listProjExclude(Context cx, int[] indices, int[] keyIndices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
@@ -142,4 +118,28 @@ function listProjExclude(Context cx, int[] indices, int[] keyIndices, SemType[] 
         }   
     }
     return p;
+}
+
+function listProjSamples(int[] indices, IntSubtype|true k) returns [int[], int[]] {
+    [int, boolean][] v = from int i in indices select [i, intSubtypeContains(k, i)];
+    if k is IntSubtype {
+        foreach var range in k {
+            int max = range.max;
+            if range.max >= 0 {
+                v.push([max, true]);
+            }
+        }
+    }
+    v = v.sort();
+    int[] indices1 = [];
+    int[] keyIndices = [];
+    foreach var [i, inKey] in v {
+        if indices1.length() == 0 || i != indices1[indices1.length() - 1] {
+            if inKey {
+                keyIndices.push(indices1.length());
+            }
+            indices1.push(i);
+        }
+    }
+    return [indices1, keyIndices];
 }

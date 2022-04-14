@@ -252,6 +252,82 @@ function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLength
     ];
 }
 
+// This function determines whether a list type P & N is inhabited.
+// where P is a positive list type and N is a list of negative list types.
+// With just straightforward fixed-length tuples we can consider every index of the tuple.
+// But we cannot do this in general because of rest types and fixed length array types e.g. `byte[10000000]`.
+// So we consider instead a collection of indices that is sufficient for us to determine inhabitation,
+// given the types of P and N.
+// `indices` is this list of sample indices: these are indicies into members of the list type.
+// We don't represent P directly. Instead P is represented by `memberTypes` and `nRequired`:
+// `memberTypes[i]` is the type that P gives to `indices[i]`;
+// `nRequired` is the number of members of `memberTypes` that are required by P.
+// `neg` represents N.
+function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
+    if neg == () {
+        return true;
+    }
+    else {
+        final ListAtomicType nt = cx.listAtomType(neg.atom);
+        if nRequired > 0 && isNever(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
+            // Skip this negative if it is always shorter than the minimum required by the positive
+            return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
+        }
+        // Consider cases we can avoid this negative by having a sufficiently short list
+        int negLen = nt.members.fixedLength;
+        if negLen > 0 {
+            int len = memberTypes.length();
+            if len < indices.length() && indices[len] < negLen {
+                return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
+            }
+            foreach int i in nRequired ..< memberTypes.length() {
+                if indices[i] >= negLen {
+                    break;
+                }
+                SemType[] t = memberTypes.slice(0, i);
+                if listInhabited(cx, indices, t, nRequired, neg.next) {
+                    return true;
+                }
+            }
+        }
+        // Now we need to explore the possibility of shapes with length >= neglen
+        // This is the heart of the algorithm.
+        // For [v0, v1] not to be in [t0,t1], there are two possibilities
+        // (1) v0 is not in t0, or
+        // (2) v1 is not in t1
+        // Case (1)
+        // For v0 to be in s0 but not t0, d0 must not be empty.
+        // We must then find a [v0,v1] satisfying the remaining negated tuples,
+        // such that v0 is in d0.
+        // SemType d0 = diff(s[0], t[0]);
+        // if !isEmpty(cx, d0) && tupleInhabited(cx, [d0, s[1]], neg.rest) {
+        //     return true;
+        // }
+        // Case (2)
+        // For v1 to be in s1 but not t1, d1 must not be empty.
+        // We must then find a [v0,v1] satisfying the remaining negated tuples,
+        // such that v1 is in d1.
+        // SemType d1 = diff(s[1], t[1]);
+        // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
+        // We can generalize this to tuples of arbitrary length.
+       
+        foreach int i in 0 ..< memberTypes.length() {
+            SemType d = diff(memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
+            if !isEmpty(cx, d) {
+                SemType[] t = memberTypes.clone();
+                t[i] = d;
+                // We need to make index i be required
+                if listInhabited(cx, indices, t, int:max(nRequired, i + 1), neg.next) {
+                    return true;
+                }
+            }
+        }
+        // This is correct for length 0, because we know that the length of the
+        // negative is 0, and [] - [] is empty.
+        return false;
+    }
+}
+
 // Return a list of sample indices for use as second argument of `listInhabited`.
 // The positive list type P is represented by `members` and `rest`.
 // The negative list types N are represented by `neg`
@@ -335,82 +411,6 @@ function listSampleTypes(Context cx, FixedLengthArray members, SemType rest, int
     }
     // Note that indices may be longer
     return [memberTypes, nRequired];
-}
-
-// This function determines whether a list type P & N is inhabited.
-// where P is a positive list type and N is a list of negative list types.
-// With just straightforward fixed-length tuples we can consider every index of the tuple.
-// But we cannot do this in general because of rest types and fixed length array types e.g. `byte[10000000]`.
-// So we consider instead a collection of indices that is sufficient for us to determine inhabitation,
-// given the types of P and N.
-// `indices` is this list of sample indices: these are indicies into members of the list type.
-// We don't represent P directly. Instead P is represented by `memberTypes` and `nRequired`:
-// `memberTypes[i]` is the type that P gives to `indices[i]`;
-// `nRequired` is the number of members of `memberTypes` that are required by P.
-// `neg` represents N.
-function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
-    if neg == () {
-        return true;
-    }
-    else {
-        final ListAtomicType nt = cx.listAtomType(neg.atom);
-        if nRequired > 0 && isNever(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
-            // Skip this negative if it is always shorter than the minimum required by the positive
-            return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
-        }
-        // Consider cases we can avoid this negative by having a sufficiently short list
-        int negLen = nt.members.fixedLength;
-        if negLen > 0 {
-            int len = memberTypes.length();
-            if len < indices.length() && indices[len] < negLen {
-                return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
-            }
-            foreach int i in nRequired ..< memberTypes.length() {
-                if indices[i] >= negLen {
-                    break;
-                }
-                SemType[] t = memberTypes.slice(0, i);
-                if listInhabited(cx, indices, t, nRequired, neg.next) {
-                    return true;
-                }
-            }
-        }
-        // Now we need to explore the possibility of shapes with length >= neglen
-        // This is the heart of the algorithm.
-        // For [v0, v1] not to be in [t0,t1], there are two possibilities
-        // (1) v0 is not in t0, or
-        // (2) v1 is not in t1
-        // Case (1)
-        // For v0 to be in s0 but not t0, d0 must not be empty.
-        // We must then find a [v0,v1] satisfying the remaining negated tuples,
-        // such that v0 is in d0.
-        // SemType d0 = diff(s[0], t[0]);
-        // if !isEmpty(cx, d0) && tupleInhabited(cx, [d0, s[1]], neg.rest) {
-        //     return true;
-        // }
-        // Case (2)
-        // For v1 to be in s1 but not t1, d1 must not be empty.
-        // We must then find a [v0,v1] satisfying the remaining negated tuples,
-        // such that v1 is in d1.
-        // SemType d1 = diff(s[1], t[1]);
-        // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
-        // We can generalize this to tuples of arbitrary length.
-       
-        foreach int i in 0 ..< memberTypes.length() {
-            SemType d = diff(memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
-            if !isEmpty(cx, d) {
-                SemType[] t = memberTypes.clone();
-                t[i] = d;
-                // We need to make index i be required
-                if listInhabited(cx, indices, t, int:max(nRequired, i + 1), neg.next) {
-                    return true;
-                }
-            }
-        }
-        // This is correct for length 0, because we know that the length of the
-        // negative is 0, and [] - [] is empty.
-        return false;
-    }
 }
 
 function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns boolean {
