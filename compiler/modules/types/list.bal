@@ -341,17 +341,16 @@ function listInhabited1(Context cx, int[] indices, SemType[] memberTypes, int nR
             return listInhabited1(cx, indices, memberTypes, nRequired, neg.next);
         }
         // Consider cases we can avoid this negative by having a sufficiently short list
-        int negMinLength = nt.members.fixedLength;
-        if negMinLength > 0 {
+        int negLen = nt.members.fixedLength;
+        if negLen > 0 {
             int len = memberTypes.length();
-            if len < indices.length() && indices[len] < nt.members.fixedLength {
+            if len < indices.length() && indices[len] < negLen {
                 return listInhabited1(cx, indices, memberTypes, nRequired, neg.next);
             }
             foreach int i in nRequired ..< memberTypes.length() {
-                if indices[i] >= nt.members.fixedLength {
+                if indices[i] >= negLen {
                     break;
                 }
-                // index + 1 < nt.members.fixedLength
                 SemType[] t = memberTypes.slice(0, i);
                 if listInhabited1(cx, indices, t, nRequired, neg.next) {
                     return true;
