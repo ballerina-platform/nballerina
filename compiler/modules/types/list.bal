@@ -1,7 +1,5 @@
 // Implementation specific to basic type list.
 
-// import ballerina/io;
-
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
     SemType rest;
