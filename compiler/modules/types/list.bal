@@ -243,7 +243,8 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             rest = NEVER;
         }
     }
-    var [indices, memberTypes, nRequired] = listSamples(cx, members, rest, neg);
+    int[] indices = listSamples(cx, members, rest, neg);
+    var [memberTypes, nRequired] = listSampleTypes(cx, members, rest, indices);
     boolean inhabited1 = listInhabited1(cx, indices, memberTypes, nRequired, neg);
     // boolean inhabited = listInhabited(cx, members, rest, listConjunction(cx, neg));
     // if  inhabited != inhabited1 {
@@ -267,7 +268,17 @@ function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLength
     ];
 }
 
-function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunction? neg) returns [int[], SemType[], int] {
+// Return a list of sample indices for use as second argument of `listInhabited`.
+// The positive list type P is represented by `members` and `rest`.
+// The negative list types N are represented by `neg`
+// The `indices` list (first member of return value) is constructed in two stages.
+// First, the set of all non-negative integers is partitioned so that two integers are
+// in different partitions if they get different types as an index in P or N.
+// Second, we choose a number of samples from each partition. It doesn't matter
+// which sample we choose, but (this is the key point) we need at least as many samples
+// as there are negatives in N, so that for each negative we can freely choose a type for the sample
+// to avoid being matched by that negative.
+function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunction? neg) returns int[] {
     int maxInitialLength = members.initial.length();
     int[] fixedLengths = [members.fixedLength];
     Conjunction? tem = neg;
@@ -288,6 +299,8 @@ function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunc
         }
     }
     fixedLengths = fixedLengths.sort();
+    // `boundaries` partitions the non-negative integers
+    // Construct `boundaries` from `fixedLengths` and `maxInitialLength`
     // An index b is a boundary point if indices < b are different from indices >= b
     int[] boundaries = from int i in 1 ... maxInitialLength select i;
     foreach int n in fixedLengths {
@@ -296,10 +309,16 @@ function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunc
             boundaries.push(n);
         }
     }
+    // Now construct the list of indicies by taking nNeg samples from each partition.
     int[] indices = [];
     int lastBoundary = 0;
+    if nNeg == 0 {
+        // this is needed for when this is used in listProj
+        nNeg = 1;
+    }
     foreach int b in boundaries {
         int segmentLength = b - lastBoundary;
+        // Cannot have more samples than are in the parition.
         int nSamples = int:min(segmentLength, nNeg);
         foreach int i in b - nSamples ..< b {
             indices.push(i);
@@ -307,11 +326,16 @@ function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunc
         lastBoundary = b;
     }
     foreach int i in 0 ..< nNeg {
+        // Be careful to avoid integer overflow.
         if lastBoundary > int:MAX_VALUE - i {
             break;
         }
         indices.push(lastBoundary + i);
     }
+    return indices;
+}
+
+function listSampleTypes(Context cx, FixedLengthArray members, SemType rest, int[] indices) returns [SemType[], int] {
     SemType[] memberTypes = [];
     int nRequired = 0;
     foreach int i in 0 ..< indices.length() {
@@ -326,9 +350,20 @@ function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunc
         }
     }
     // Note that indices may be longer
-    return [indices, memberTypes, nRequired];
+    return [memberTypes, nRequired];
 }
 
+// This function determines whether a list type P & N is inhabited.
+// where P is a positive list type and N is a list of negative list types.
+// With just straightforward fixed-length tuples we can consider every index of the tuple.
+// But we cannot do this in general because of rest types and fixed length array types e.g. `byte[10000000]`.
+// So we consider instead a collection of indices that is sufficient for us to determine inhabitation,
+// given the types of P and N.
+// `indices` is this list of sample indices: these are indicies into members of the list type.
+// We don't represent P directly. Instead P is represented by `memberTypes` and `nRequired`:
+// `memberTypes[i]` is the type that P gives to `indices[i]`;
+// `nRequired` is the number of members of `memberTypes` that are required by P.
+// `neg` represents N.
 
 function listInhabited1(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
     if neg == () {

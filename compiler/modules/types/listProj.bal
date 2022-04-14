@@ -68,7 +68,12 @@ function listProjPath(Context cx, IntSubtype|true k, Conjunction? pos, Conjuncti
             rest = NEVER;
         }
     }
-    return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
+    // return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
+    int[] indices = listSamples(cx, members, rest, neg);
+    int[] keyIndices;
+    [indices, keyIndices] = listProjSamples(indices, k);
+    var [memberTypes, nRequired] = listSampleTypes(cx, members, rest, indices);
+    return listProjExclude1(cx, indices, keyIndices, memberTypes, nRequired, neg);
 }
 
 // Precondition k >= 0 and members[i] not empty for all i
@@ -103,4 +108,71 @@ function listProjExclude(Context cx, IntSubtype|true k, FixedLengthArray members
         }
         return p;
     }
+}
+
+function listProjSamples(int[] indices, IntSubtype|true k) returns [int[], int[]] {
+    [int, boolean][] v = from int i in indices select [i, intSubtypeContains(k, i)];
+    if k is IntSubtype {
+        foreach var range in k {
+            int max = range.max;
+            if range.max >= 0 {
+                v.push([max, true]);
+            }
+        }
+    }
+    v = v.sort();
+    int[] indices1 = [];
+    int[] keyIndices = [];
+    foreach var [i, inKey] in v {
+        if indices1.length() == 0 || i != indices1[indices1.length() - 1] {
+            if inKey {
+                keyIndices.push(indices1.length());
+            }
+            indices1.push(i);
+        }
+    }
+    return [indices1, keyIndices];
+}
+
+// Very similar to listInhabited.
+function listProjExclude1(Context cx, int[] indices, int[] keyIndices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
+    SemType p = NEVER;
+    if neg == () {
+        int len = memberTypes.length();
+        foreach int k in keyIndices {
+            if k < len {
+                p = union(p, memberTypes[k]);
+            }
+        }
+    }
+    else {
+        final ListAtomicType nt = cx.listAtomType(neg.atom);
+        if nRequired > 0 && isNever(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
+            return listProjExclude1(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
+        }
+        int negLen = nt.members.fixedLength;
+        if negLen > 0 {
+            int len = memberTypes.length();
+            if len < indices.length() && indices[len] < negLen {
+                return listProjExclude1(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
+            }
+            foreach int i in nRequired ..< memberTypes.length() {
+                if indices[i] >= negLen {
+                    break;
+                }
+                SemType[] t = memberTypes.slice(0, i);
+                p = union(p, listProjExclude1(cx, indices, keyIndices, t, nRequired, neg.next));
+            }
+        } 
+        foreach int i in 0 ..< memberTypes.length() {
+            SemType d = diff(memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
+            if !isEmpty(cx, d) {
+                SemType[] t = memberTypes.clone();
+                t[i] = d;
+                // We need to make index i be required
+                p = union(p, listProjExclude1(cx, indices, keyIndices, t, int:max(nRequired, i + 1), neg.next));
+            }
+        }   
+    }
+    return p;
 }
