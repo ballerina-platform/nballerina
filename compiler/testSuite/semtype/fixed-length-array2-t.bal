@@ -11,11 +11,6 @@ type NegInt14 (!Int14 & IntArray);
 // @type I4A < ISArray
 type I4A Int4|(!Int4 & IntArray);
 
-type Int10000 int[100000];
-
-// @type ISTArray < I10000A
-type I10000A Int10000|(!Int10000 & IntArray);
-
 // @type IA = IntArray
 // @type IA < ISArray
 type IA Int14|NegInt14;

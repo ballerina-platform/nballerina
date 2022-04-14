@@ -8,7 +8,7 @@ type FFFloat FirstFive|float;
 type T1 [int...];
 type T2 [int, int, int...];
 
-// @type T3[0] = NEVER
+// @type T3[0] = INT
 // @type T3[1] = NEVER
 // @type T3[1] = NEVER
 type T3 T1 & !T2;

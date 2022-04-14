@@ -53,7 +53,7 @@ function listProjPath(Context cx, IntSubtype|true k, Conjunction? pos, Conjuncti
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                var intersected = listIntersectWith(members, rest, lt);
+                var intersected = listIntersectWith(members, rest, lt.members, lt.rest);
                 if intersected is () {
                     return NEVER;
                 }
@@ -68,45 +68,90 @@ function listProjPath(Context cx, IntSubtype|true k, Conjunction? pos, Conjuncti
             rest = NEVER;
         }
     }
-    return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
+    // return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
+    int[] indices = listSamples(cx, members, rest, neg);
+    int[] keyIndices;
+    [indices, keyIndices] = listProjSamples(indices, k);
+    var [memberTypes, nRequired] = listSampleTypes(cx, members, rest, indices);
+    return listProjExclude(cx, indices, keyIndices, memberTypes, nRequired, neg);
 }
 
-// Precondition k >= 0 and members[i] not empty for all i
-// This finds the projection of e[k], excluding the list of atoms in neg
-// when the type of e is given by members and rest.
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
-function listProjExclude(Context cx, IntSubtype|true k, FixedLengthArray members, SemType rest, ListConjunction? neg) returns SemType {
+// `keyIndices` are the indices in `memberTypes` of those samples that belong to the key type.
+function listProjExclude(Context cx, int[] indices, int[] keyIndices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
+    SemType p = NEVER;
     if neg == () {
-        return listAtomicMemberTypeAt(members, rest, k);
+        int len = memberTypes.length();
+        foreach int k in keyIndices {
+            if k < len {
+                p = union(p, memberTypes[k]);
+            }
+        }
     }
     else {
-        int len = members.fixedLength;
-        ListAtomicType nt = neg.listType;
+        final ListAtomicType nt = cx.listAtomType(neg.atom);
+        if nRequired > 0 && isNever(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
+            return listProjExclude(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
+        }
         int negLen = nt.members.fixedLength;
-        if len < negLen {
-            if isNever(rest) {
-                return listProjExclude(cx, k, members, rest, neg.next);
+        if negLen > 0 {
+            int len = memberTypes.length();
+            if len < indices.length() && indices[len] < negLen {
+                return listProjExclude(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
             }
-            fixedArrayFill(members, negLen, rest);
-            len = negLen;
-        }
-        else if negLen < len && isNever(nt.rest) {
-            return listProjExclude(cx, k, members, rest, neg.next);
-        }
-        // now we have nt.members.length() <= len
-        SemType p = NEVER;
-        foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
-            SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
+            foreach int i in nRequired ..< memberTypes.length() {
+                if indices[i] >= negLen {
+                    break;
+                }
+                SemType[] t = memberTypes.slice(0, i);
+                p = union(p, listProjExclude(cx, indices, keyIndices, t, nRequired, neg.next));
+            }
+        } 
+        foreach int i in 0 ..< memberTypes.length() {
+            SemType d = diff(memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
             if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
-                p = union(p, listProjExclude(cx, k, s, rest, neg.next));
-            }     
-        }
-        SemType rd = diff(rest, nt.rest);
-        if !isEmpty(cx, rd) {
-            p = union(p, listProjExclude(cx, k, members, rd, neg.next));
-        }
-        return p;
+                SemType[] t = memberTypes.clone();
+                t[i] = d;
+                // We need to make index i be required
+                p = union(p, listProjExclude(cx, indices, keyIndices, t, int:max(nRequired, i + 1), neg.next));
+            }
+        }   
     }
+    return p;
+}
+
+// In order to adapt listInhabited to do projection, we need
+// to know which samples correspond to keys and to ensure that
+// every equivalence class that overlaps with a key has a sample in the
+// intersection.
+// Here we add samples for both ends of each range. This doesn't handle the
+// case where the key is properly within a partition: but that is handled
+// because we already have a sample of the end of the partition.
+function listProjSamples(int[] indices, IntSubtype|true k) returns [int[], int[]] {
+    [int, boolean][] v = from int i in indices select [i, intSubtypeContains(k, i)];
+    if k is IntSubtype {
+        foreach var range in k {
+            int max = range.max;
+            if range.max >= 0 {
+                v.push([max, true]);
+                int min = int:max(0, range.min);
+                if min < max {
+                    v.push([min, true]);
+                }
+            }   
+        }
+    }
+    v = v.sort();
+    int[] indices1 = [];
+    int[] keyIndices = [];
+    foreach var [i, inKey] in v {
+        if indices1.length() == 0 || i != indices1[indices1.length() - 1] {
+            if inKey {
+                keyIndices.push(indices1.length());
+            }
+            indices1.push(i);
+        }
+    }
+    return [indices1, keyIndices];
 }
