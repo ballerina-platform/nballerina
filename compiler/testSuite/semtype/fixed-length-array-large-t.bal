@@ -3,8 +3,7 @@ type IntArray int[];
 type Int5 int[5];
 type ISTArray (1|2|3)[];
 
-// public const int MAX_VALUE = 9223372036854775807;
-public const int MAX_VALUE = 100;
+public const int MAX_VALUE = 9223372036854775807;
 
 public const int MAX_VALUE_M_1 = MAX_VALUE - 1;
 
@@ -18,8 +17,7 @@ type LargeArray2 int[MAX_VALUE_M_1];
 // @type Int5Intersection = Int5
 type Int5Intersection int[5] & !LargeArray;
 
-// type Int10000 int[100000];
-type Int10000 int[100];
+type Int10000 int[100000];
 
 // @type ISTArray < I10000A
 type I10000A Int10000|(!Int10000 & IntArray);

@@ -73,41 +73,7 @@ function listProjPath(Context cx, IntSubtype|true k, Conjunction? pos, Conjuncti
     int[] keyIndices;
     [indices, keyIndices] = listProjSamples(indices, k);
     var [memberTypes, nRequired] = listSampleTypes(cx, members, rest, indices);
-    return listProjExclude1(cx, indices, keyIndices, memberTypes, nRequired, neg);
-}
-
-// Precondition k >= 0 and members[i] not empty for all i
-// This finds the projection of e[k], excluding the list of atoms in neg
-// when the type of e is given by members and rest.
-// Based on listInhabited
-// Corresponds to phi^x in AMK tutorial generalized for list types.
-function listProjExclude(Context cx, IntSubtype|true k, FixedLengthArray members, SemType rest, ListConjunction? neg) returns SemType {
-    if neg == () {
-        return listAtomicMemberTypeAt(members, rest, k);
-    }
-    else {
-        ListAtomicType nt = neg.listType;
-        if listLengthsDisjoint(members, rest, nt.members, nt.rest) {
-            return listProjExclude(cx, k, members, rest, neg.next);
-        }
-        final int negLen = nt.members.fixedLength;
-        if members.fixedLength < negLen {
-            // XXX is this right?
-            // what about if all of k is less than negLen?
-            fixedArrayFill(members, negLen, rest);
-        }
-      
-        // now we have nt.members.length() <= len
-        SemType p = NEVER;
-        foreach int i in listRepresentativeIndices(cx, members, rest, neg) {
-            SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
-            if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
-                p = union(p, listProjExclude(cx, k, s, rest, neg.next));
-            }     
-        }
-        return p;
-    }
+    return listProjExclude(cx, indices, keyIndices, memberTypes, nRequired, neg);
 }
 
 function listProjSamples(int[] indices, IntSubtype|true k) returns [int[], int[]] {
@@ -134,8 +100,9 @@ function listProjSamples(int[] indices, IntSubtype|true k) returns [int[], int[]
     return [indices1, keyIndices];
 }
 
-// Very similar to listInhabited.
-function listProjExclude1(Context cx, int[] indices, int[] keyIndices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
+// Based on listInhabited
+// Corresponds to phi^x in AMK tutorial generalized for list types.
+function listProjExclude(Context cx, int[] indices, int[] keyIndices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
     SemType p = NEVER;
     if neg == () {
         int len = memberTypes.length();
@@ -148,20 +115,20 @@ function listProjExclude1(Context cx, int[] indices, int[] keyIndices, SemType[]
     else {
         final ListAtomicType nt = cx.listAtomType(neg.atom);
         if nRequired > 0 && isNever(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
-            return listProjExclude1(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
+            return listProjExclude(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
         }
         int negLen = nt.members.fixedLength;
         if negLen > 0 {
             int len = memberTypes.length();
             if len < indices.length() && indices[len] < negLen {
-                return listProjExclude1(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
+                return listProjExclude(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
             }
             foreach int i in nRequired ..< memberTypes.length() {
                 if indices[i] >= negLen {
                     break;
                 }
                 SemType[] t = memberTypes.slice(0, i);
-                p = union(p, listProjExclude1(cx, indices, keyIndices, t, nRequired, neg.next));
+                p = union(p, listProjExclude(cx, indices, keyIndices, t, nRequired, neg.next));
             }
         } 
         foreach int i in 0 ..< memberTypes.length() {
@@ -170,7 +137,7 @@ function listProjExclude1(Context cx, int[] indices, int[] keyIndices, SemType[]
                 SemType[] t = memberTypes.clone();
                 t[i] = d;
                 // We need to make index i be required
-                p = union(p, listProjExclude1(cx, indices, keyIndices, t, int:max(nRequired, i + 1), neg.next));
+                p = union(p, listProjExclude(cx, indices, keyIndices, t, int:max(nRequired, i + 1), neg.next));
             }
         }   
     }

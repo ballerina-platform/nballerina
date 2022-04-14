@@ -245,13 +245,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     }
     int[] indices = listSamples(cx, members, rest, neg);
     var [memberTypes, nRequired] = listSampleTypes(cx, members, rest, indices);
-    boolean inhabited1 = listInhabited1(cx, indices, memberTypes, nRequired, neg);
-    // boolean inhabited = listInhabited(cx, members, rest, listConjunction(cx, neg));
-    // if  inhabited != inhabited1 {
-    //     io:println("***got the wrong result; got inhabited = " + (!inhabited).toString());
-    //     io:println("sampleIndices: " + indices.toString());
-    // }
-    return !inhabited1;
+    return !listInhabited(cx, indices, memberTypes, nRequired, neg);
 }
 
 function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
@@ -364,8 +358,7 @@ function listSampleTypes(Context cx, FixedLengthArray members, SemType rest, int
 // `memberTypes[i]` is the type that P gives to `indices[i]`;
 // `nRequired` is the number of members of `memberTypes` that are required by P.
 // `neg` represents N.
-
-function listInhabited1(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
+function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
     if neg == () {
         return true;
     }
@@ -373,21 +366,21 @@ function listInhabited1(Context cx, int[] indices, SemType[] memberTypes, int nR
         final ListAtomicType nt = cx.listAtomType(neg.atom);
         if nRequired > 0 && isNever(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
             // Skip this negative if it is always shorter than the minimum required by the positive
-            return listInhabited1(cx, indices, memberTypes, nRequired, neg.next);
+            return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
         }
         // Consider cases we can avoid this negative by having a sufficiently short list
         int negLen = nt.members.fixedLength;
         if negLen > 0 {
             int len = memberTypes.length();
             if len < indices.length() && indices[len] < negLen {
-                return listInhabited1(cx, indices, memberTypes, nRequired, neg.next);
+                return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
             }
             foreach int i in nRequired ..< memberTypes.length() {
                 if indices[i] >= negLen {
                     break;
                 }
                 SemType[] t = memberTypes.slice(0, i);
-                if listInhabited1(cx, indices, t, nRequired, neg.next) {
+                if listInhabited(cx, indices, t, nRequired, neg.next) {
                     return true;
                 }
             }
@@ -419,99 +412,7 @@ function listInhabited1(Context cx, int[] indices, SemType[] memberTypes, int nR
                 SemType[] t = memberTypes.clone();
                 t[i] = d;
                 // We need to make index i be required
-                if listInhabited1(cx, indices, t, int:max(nRequired, i + 1), neg.next) {
-                    return true;
-                }
-            }
-        }
-        // This is correct for length 0, because we know that the length of the
-        // negative is 0, and [] - [] is empty.
-        return false;
-    }
-}
-
-// This function returns true if there is a list shape v such that
-// is in the type described by `members` and `rest`, and
-// for each tuple t in `neg`, v is not in t.
-// `neg` represents a set of negated list types.
-// Precondition is that each of `members` is not empty.
-// ListConjunction is sorted in decreasing order of fixedLength
-// This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
-// generalized to tuples of arbitrary length.
-function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListConjunction? neg) returns boolean {
-    if neg == () {
-        return true;
-    }
-    else {
-        final ListAtomicType nt = neg.listType;
-        if listLengthsDisjoint(members, rest, nt.members, nt.rest) {
-            // Either
-            // - the negative has a fixed length that is shorter than the minimum
-            // length of the positive, or
-            // - the positive has a fixed length that is shorter than the minimum
-            // length of the negative.
-            // In either case this negative cannot cancel out the positive,
-            // so we can just skip over this negative.
-            return listInhabited(cx, members, rest, neg.next);
-        }
-        final int len = members.fixedLength;
-        final int negLen = nt.members.fixedLength;
-        if len < negLen {
-            // Note in this case we know positive rest is not never.
-
-            // Explore the possibility of shapes that are not matched
-            // by the negative because their lengths are less than negLen.
-
-            // First a shape with exactly len members
-            // No need to copy members here
-            if listInhabited(cx, members, NEVER, neg.next) {
-                return true;
-            }
-            int lim;
-            if neg.nFixedArray > 0 {
-                lim = int:max(len + 1, neg.maxFixedLengthNonFixedArray);
-                lim = int:min(lim + neg.nFixedArray + 1, negLen);
-            }
-            else {
-                lim = negLen;
-            }
-            panicIfTooBig(lim - (len + 1));
-            foreach int i in len + 1 ..< lim {
-                FixedLengthArray s = fixedArrayShallowCopy(members);
-                fixedArrayFill(s, i, rest);
-                if listInhabited(cx, s, NEVER, neg.next) {
-                    return true;
-                }
-            }
-            // this falls through to the code below
-        }
-        // Now we need to explore the possibility of shapes with length >= neglen
-        // This is the heart of the algorithm.
-        // For [v0, v1] not to be in [t0,t1], there are two possibilities
-        // (1) v0 is not in t0, or
-        // (2) v1 is not in t1
-        // Case (1)
-        // For v0 to be in s0 but not t0, d0 must not be empty.
-        // We must then find a [v0,v1] satisfying the remaining negated tuples,
-        // such that v0 is in d0.
-        // SemType d0 = diff(s[0], t[0]);
-        // if !isEmpty(cx, d0) && tupleInhabited(cx, [d0, s[1]], neg.rest) {
-        //     return true;
-        // }
-        // Case (2)
-        // For v1 to be in s1 but not t1, d1 must not be empty.
-        // We must then find a [v0,v1] satisfying the remaining negated tuples,
-        // such that v1 is in d1.
-        // SemType d1 = diff(s[1], t[1]);
-        // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
-        // We can generalize this to tuples of arbitrary length.
-       
-        foreach int i in listRepresentativeIndices(cx, members, rest, neg) {
-            SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
-            if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArrayReplace(members, i, d, rest);
-                panicIfTooBig(s.initial.length());
-                if listInhabited(cx, s, rest, neg.next) {
+                if listInhabited(cx, indices, t, int:max(nRequired, i + 1), neg.next) {
                     return true;
                 }
             }
@@ -534,45 +435,6 @@ function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLeng
     return false;
 }
 
-// Define two indices i, j to be equivalent iff for type T that is the positive and any of the negatives, T[i] = T[j].
-// This returns a list with at least one index from each equivalence class.
-// The key point here that because ListConjunction is sorted in decreasing order, the negs handle every index >= negLen in the same way
-// i.e. for every N in neg, for every i, j >= negLen, N[i] = N[j].
-function listRepresentativeIndices(Context cx, FixedLengthArray members, SemType rest, ListConjunction neg) returns int[] {
-    // Handle large fixedLengths efficiently
-    // All indices up to maxLengthNonFixedArray have to be considered as distinct
-    int fixedLen = int:max(neg.maxFixedLengthNonFixedArray, members.initial.length());
-    int maxLen = int:max(members.fixedLength, neg.listType.members.fixedLength);
-
-    if neg.nFixedArray > 0 {
-        // Each of the nFixedArray negatives affects only a single length
-        // so if we try nFixedArray + 1 lengths, we must have one that is not cancelled
-        // out by the fixed length
-        fixedLen = int:max(fixedLen, neg.maxFixedLengthNonFixedArray + neg.nFixedArray + 1);
-        // but never go over maxLen
-        fixedLen = int:min(fixedLen, maxLen);
-    }
-    panicIfTooBig(fixedLen);
-    int[] indices = from int i in 0 ..< fixedLen select i;
-    // Deal with possibility that positive is a fixed length array.
-    if members.fixedLength > members.initial.length() && members.fixedLength > fixedLen {
-        indices.push(members.fixedLength - 1);
-    }
-    if maxLen >= fixedLen {
-        indices.push(maxLen);
-    }
-    return indices;
-}
-
-function listRepresentativeIndicesOk(Context cx, FixedLengthArray members, SemType rest, ListConjunction neg) returns int[] {
-    final int len = members.fixedLength;
-    final ListAtomicType nt = neg.listType;
-    final int negLen = nt.members.fixedLength;
-    final int maxLen = int:max(len, negLen) + 1;
-    panicIfTooBig(maxLen);
-    return from int i in 0 ..< maxLen select i;
-}
-
 function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
     if index < fixedArray.fixedLength {
         return fixedArrayGet(fixedArray, index);
@@ -589,70 +451,14 @@ function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean 
     return false;
 }
 
-// fill out to length of newLen with filler
-function fixedArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
-    SemType[] initial = arr.initial;
-    if newLen <= initial.length() {
-        return;
-    }
-    int initLen = initial.length();
-    int fixedLen = arr.fixedLength;
-    if fixedLen == 0 {
-        initial.push(filler);
-    }
-    else if initial[initLen - 1] != filler {
-        SemType last = initial[initLen - 1];
-        panicIfTooBig(fixedLen - initLen);
-        foreach int i in 0 ..< fixedLen - initLen {
-            initial.push(last);
-        }
-        initial.push(filler);
-    }
-    arr.fixedLength = newLen;
-}
-
 function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
     int memberLen = members.initial.length();
     int i = int:min(index, memberLen - 1);
     return members.initial[i];
 }
 
-function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
-    int initCount = members.initial.length();
-    boolean lastMemberRepeats = members.fixedLength > initCount;
-
-    // No need to expand
-    if setIndex < initCount - (lastMemberRepeats ? 1 : 0) {
-        members.initial[setIndex] = m;
-        return;
-    }
-    if lastMemberRepeats {
-        int lastIndex = initCount - 1;
-        SemType lastMember = members.initial[lastIndex];
-        int pushBack = lastIndex == setIndex ? 1 : 0;
-        panicIfTooBig(setIndex + pushBack - initCount);
-        foreach int i in initCount ... setIndex + pushBack {
-            members.initial.push(lastMember);
-        }
-    }
-    members.initial[setIndex] = m;
-}
-
 function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {
     return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
-}
-
-function fixedArrayReplace(FixedLengthArray array, int index, SemType t, SemType rest) returns FixedLengthArray {
-    FixedLengthArray copy = fixedArrayShallowCopy(array);
-    fixedArrayFill(copy, index + 1, rest);
-    fixedArraySet(copy, index, t);
-    return copy;
-}
-
-function panicIfTooBig(int n) {
-    if n > 1000 {
-        panic error("fixed length not properly implemented " + n.toString());
-    }
 }
 
 function listConjunction(Context cx, Conjunction? con) returns ListConjunction? {
