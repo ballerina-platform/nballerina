@@ -451,10 +451,6 @@ function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray 
     return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
 }
 
-function listAtomicIsFixedArray(ListAtomicType listType) returns boolean {
-    return isNever(listType.rest) && listType.members.fixedLength > listType.members.initial.length();
-}
-
 function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
