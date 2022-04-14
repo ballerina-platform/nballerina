@@ -78,6 +78,7 @@ function listProjPath(Context cx, IntSubtype|true k, Conjunction? pos, Conjuncti
 
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
+// `keyIndices` are the indices in `memberTypes` of those samples that belong to the key type.
 function listProjExclude(Context cx, int[] indices, int[] keyIndices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
     SemType p = NEVER;
     if neg == () {
@@ -120,6 +121,13 @@ function listProjExclude(Context cx, int[] indices, int[] keyIndices, SemType[] 
     return p;
 }
 
+// In order to adapt listInhabited to do projection, we need
+// to know which samples correspond to keys and to ensure that
+// every equivalence class that overlaps with a key has a sample in the
+// intersection.
+// Here we add samples for both ends of each range. This doesn't handle the
+// case where the key is properly within a partition: but that is handled
+// because we already have a sample of the end of the partition.
 function listProjSamples(int[] indices, IntSubtype|true k) returns [int[], int[]] {
     [int, boolean][] v = from int i in indices select [i, intSubtypeContains(k, i)];
     if k is IntSubtype {
@@ -127,7 +135,11 @@ function listProjSamples(int[] indices, IntSubtype|true k) returns [int[], int[]
             int max = range.max;
             if range.max >= 0 {
                 v.push([max, true]);
-            }
+                int min = int:max(0, range.min);
+                if min < max {
+                    v.push([min, true]);
+                }
+            }   
         }
     }
     v = v.sort();
