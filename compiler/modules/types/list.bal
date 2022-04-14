@@ -17,16 +17,6 @@ public type FixedLengthArray record {|
     int fixedLength;
 |};
 
-type ListConjunction record {|
-    ListAtomicType listType;
-    // A listType is a fixed array type if members.fixedLength > members.initial.length() and rest is never
-    // How many members of the list starting with this are are fixed array types?
-    int nFixedArray;
-    // Maximum of members.fixedLength for members of the conjunction that do not have fixed array type.
-    int maxFixedLengthNonFixedArray;
-    ListConjunction? next;
-|};
-
 // Member types at the indices that are not contained in `Range` array represent `never.
 // The SemTypes in this list are not `never`.
 public type ListMemberTypes [Range[], SemType[]];
@@ -459,35 +449,6 @@ function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
 
 function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {
     return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
-}
-
-function listConjunction(Context cx, Conjunction? con) returns ListConjunction? {
-    Conjunction? c = con;
-    ListAtomicType[] atoms = [];
-    while true {
-        if c is () {
-            break;
-        }
-        atoms.push(cx.listAtomType(c.atom));
-        c = c.next;
-    }
-    // This is in ascending order.
-    // It gets reversed as we cons it up.
-    atoms = from var a in atoms let int len = a.members.fixedLength order by len select a;
-    ListConjunction? next = ();
-    int nFixedArray = 0;
-    int maxFixedLengthNonFixedArray = 0;
-    foreach var listType in atoms {
-        if listAtomicIsFixedArray(listType) {
-            nFixedArray += 1;
-        }
-        else {
-            maxFixedLengthNonFixedArray = int:max(maxFixedLengthNonFixedArray, listType.members.fixedLength);
-        }
-        ListConjunction lc = { listType, nFixedArray, maxFixedLengthNonFixedArray, next };
-        next = lc;
-    }
-    return next;
 }
 
 function listAtomicIsFixedArray(ListAtomicType listType) returns boolean {
