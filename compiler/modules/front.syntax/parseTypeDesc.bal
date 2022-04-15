@@ -28,16 +28,16 @@ function parseIntersection(Tokenizer tok) returns TypeDesc|err:Syntax {
 }
 
 function finishBinaryTypeDesc(Tokenizer tok, BinaryTypeOp op, TypeDesc lhs, Position startPos) returns BinaryTypeDesc|err:Syntax {
-    TypeDesc[] operands = [lhs];
-    Position[] opPositions = [];
+    TypeDesc[] tds = [lhs];
+    Position[] opPos = [];
     while tok.current() == op {
-        opPositions.push(tok.currentStartPos());
+        opPos.push(tok.currentStartPos());
         check tok.advance();
         TypeDesc right = op == "|" ? check parseIntersection(tok) : check parseUnaryTypeDesc(tok);
-        operands.push(right);
+        tds.push(right);
     }
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, opPositions, op, operands };
+    return { startPos, endPos, opPos, op, tds };
 }
 
 function parseUnaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {

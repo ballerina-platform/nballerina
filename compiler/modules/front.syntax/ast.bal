@@ -476,8 +476,8 @@ public type BinaryTypeOp "|" | "&";
 public type BinaryTypeDesc record {|
     *PositionFields;
     BinaryTypeOp op;
-    Position[] opPositions;
-    TypeDesc[] operands;
+    Position[] opPos;
+    TypeDesc[] tds;
 |};
 
 public type UnaryTypeOp "!"|"("|"?";
