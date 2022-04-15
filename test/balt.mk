@@ -6,6 +6,6 @@ $(TARGETS): $(TDIRS)
 
 $(TDIRS):
 	mkdir -p out/$@
-	$(MAKE) -C out/$@ -f ../../balt-sub.mk balt_files="$(addprefix "../../" $(wildcard ../compiler/testSuite/*.balt))" tdir=$@ $(MAKECMDGOALS)
+	$(MAKE) -C out/$@ -f ../../balt-sub.mk balt_dir=../../../compiler/testSuite/ tdir=$@ $(MAKECMDGOALS)
 
 .PHONY: $(TARGETS) $(TDIRS)

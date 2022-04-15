@@ -12,6 +12,7 @@ ll_files = $(wildcard ll/*-[vpo].ll)
 diff_files = $(addsuffix .diff, $(addprefix result/, $(basename $(notdir $(ll_files)))))
 exe_files = $(addsuffix .exe, $(addprefix result/, $(basename $(notdir $(ll_files)))))
 expect_files = $(wildcard ./expect/*.txt)
+balt_files = $(wildcard $(balt_dir)/*.balt)
 
 test: all
 	$(MAKE) -f ../../balt-sub.mk tdir=$(tdir) testll
