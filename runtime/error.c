@@ -241,11 +241,7 @@ static void printBacktraceLine(const char *filename, int64_t lineNumber, const c
 }
 
 static bool isPrefix(const char *prefix, const char *str) {
-    while (*++prefix == *++str) {
-        if (*prefix == '\0') {
-            break;
-        }
-    }
+    for (; *prefix == *str && *prefix != '\0'; prefix++, str++) { }
     return *prefix == '\0';
 }
 
