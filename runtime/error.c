@@ -61,6 +61,7 @@ static void processInitialPC(PC pc, BacktraceStartLine *backtraceStartLine);
 static enum DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp);
 static bool demangleModules(const char **mangledModules, FILE *fp);
 static bool demangleCountedName(const char **pp, const char **name);
+static bool isPrefix(const char *prefix, const char *str);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace;
@@ -176,7 +177,6 @@ static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNu
     // Handle the starting pc seperately
     BacktraceStartLine backtraceStartLine = { { error->code, error->message, error->fp }, lineNumber };
     processInitialPC(pcs[start], &backtraceStartLine);
-    backtraceStartLine.lineNumber = 0;
     if (backtraceStartLine.error.code == NO_DEBUG_INFO) {
         for (uint32_t i = start + 1; i < nPCs; i++) {
             // We do not need to pass error_callback because, already we have an error.
@@ -203,8 +203,13 @@ static void processInitialPC(PC pc, BacktraceStartLine *backtraceStartLine) {
 // Implementation of backtrace_full_callback
 static int printBacktraceLineCB(void *data, UNUSED PC pc, const char *filename, int lineno, const char *function) {
     BacktraceStartLine *backtraceStartLine = data;
-    int64_t lineNumber = backtraceStartLine->lineNumber != 0 ? backtraceStartLine->lineNumber : lineno;
-    printBacktraceLine(filename, lineNumber, function, backtraceStartLine->error.fp);
+    if (function != NULL && isPrefix("_B\0", function)) {
+        int64_t lineNumber = backtraceStartLine->lineNumber != 0 ? backtraceStartLine->lineNumber : lineno;
+        if (backtraceStartLine->lineNumber != 0) {
+            backtraceStartLine->lineNumber = 0;
+        }
+        printBacktraceLine(filename, lineNumber, function, backtraceStartLine->error.fp);
+    }
     return SUCCESS;
 }
 
@@ -233,6 +238,11 @@ static void printBacktraceLine(const char *filename, int64_t lineNumber, const c
         putc('\n', fp);
     }
     fflush(fp);
+}
+
+static bool isPrefix(const char *prefix, const char *str) {
+    for (; *prefix == *str && *prefix != '\0'; prefix++, str++) { }
+    return *prefix == '\0';
 }
 
 // Implementation of backtrace_error_callback

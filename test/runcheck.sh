@@ -16,7 +16,7 @@ mkdir -p "$parent/actual"
 if test $kind == p; then
     balFile=`echo "$b" | sed -e 's/.exe/.bal/'`
     $("./$1" >/dev/null 2>"$out")
-    head -n 2 $out | sed -e 's/.*bal:/'"$balFile"':/' | diff -u "$2" -
+    grep -v ballerina/lang $out | head -n 2 | sed -e 's/.*bal:/'"$balFile"':/' | diff -u "$2" -
 else
     "./$1" >"$out"
     diff -u "$2" "$out"
