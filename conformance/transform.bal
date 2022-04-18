@@ -126,6 +126,10 @@ function transformContent(string line) returns [string, string[]] {
     if line.indexOf("toBalString()") is int {
         newLabels.push("value:toBalString");
     }
+    if line.indexOf("decimal") is int && line.indexOf("10092233720368547758081009223372036854775") is int {
+        // maximum value for decimal is implementation specific and this is the max for jBallerina
+        newLabels.push("decimal-max");
+    }
     if line.indexOf("= +") is int {
         // this is sufficient to catch current cases but not all possible cases
         newLabels.push("unary-plus");
@@ -168,26 +172,13 @@ function parseCharSeperatedList(string s, string:Char sep) returns string[] {
     return labels;
 }
 
-// these are the test ids for tests we currently can't automatically fix by this script, tests are numbered starting with 1
-map<int[]> skipTest = {
-    "int_literal.balt": [14] // decimal upper bound
-};
-
 function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLables) returns int|io:Error {
     string[] body = [];
     int skipped = 0;
     int index = 0;
-    int[] skipIndices = skipTest.hasKey(filename) ? skipTest.get(filename) : [];
     foreach BaltTestCase test in tests {
         index += 1;
-        boolean skipTest = false;
-        foreach int skipIndex in skipIndices {
-            if skipIndex == index {
-                skipTest = true;
-                break;
-            }
-        }
-        if skipTest || !testValid(test, skipLables) {
+        if !testValid(test, skipLables) {
             skipped += 1;
             continue;
         }

@@ -17,4 +17,5 @@ BacktickString
 xml
 main-error
 mod-var-decl
+decimal-max
 member-access-expr string
