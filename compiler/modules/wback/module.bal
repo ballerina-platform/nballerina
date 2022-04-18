@@ -35,6 +35,7 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         }
     }
     module.addFunctionImport("println", "console", "log", ["eqref"], "None");
+    module.addFunctionImport("str_create", "string", "create", ["eqref"], "externref");
     addRttFunctions(module);
     return module.finish();
 }
@@ -51,9 +52,14 @@ function addRttFunctions(wasm:Module module) {
     addFuncArraySet(module);
     addFuncArrayGrow(module);
     addFuncGetTypeChildren(module);
+    addFuncStrGetCharAt(module);
+    addFuncGetStrLength(module);
+    addFuncGetString(module);
     module.addType("List", module.struct(["arr", "len"], [{ base: "AnyList" }, "i64"], [true, true]));
     module.addType("AnyList", module.array("eqref"));
+    module.addType("chars", module.array("i32"));
     module.addType(BOXED_INT_TYPE, module.struct(["val"], ["i64"], [true]));
+    module.addType("String", module.struct(["val"], ["externref"], [true]));
     module.addTag(INDEX_OUT_0F_BOUND_TAG);
     module.addTagExport(INDEX_OUT_0F_BOUND_TAG,INDEX_OUT_0F_BOUND_TAG);
     module.addTag(INDEX_TOO_LARGE_TAG);

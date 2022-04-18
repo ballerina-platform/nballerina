@@ -4,8 +4,11 @@ let getType = null;
 let untagInt = null;
 let untagBoolean = null;
 let len = null;
+let strLen = null;
 let arrayGet = null;
+let getCharAt = null;
 let getTypeChildren = null;
+let getObject = null;
 if (process.argv.length > 2) {
   let fileName = process.argv[2];
   const wasmBuffer = fs.readFileSync(fileName);
@@ -15,6 +18,11 @@ if (process.argv.length > 2) {
         log: function(arg) {
           console.log(getValue(arrayGet(arg, 0)));
         },
+      },
+      string: {
+        create: function(arg) {
+          return create_string(arg);
+        }
       }
     };
     WebAssembly.instantiate(wasmBuffer, importObject).then(obj => {
@@ -33,6 +41,9 @@ if (process.argv.length > 2) {
       untagBoolean = obj.instance.exports.tagged_to_boolean;
       len = obj.instance.exports.arr_len;
       arrayGet = obj.instance.exports.arr_get;
+      strLen = obj.instance.exports.str_length;
+      getObject = obj.instance.exports.get_string;
+      getCharAt = obj.instance.exports.get_char_at;
       obj.instance.exports.main()
     }).catch((err) => {
         if(typeof err == "object" &&  err instanceof WebAssembly.Exception) {
@@ -88,6 +99,9 @@ const getValue = (ref, parent = null) => {
   else if (type == 4) {
     return "...";
   }
+  else if (type == 5) {
+    return getObject(ref).value;
+  }
 }
 
 const errorHandler = err => {
@@ -117,4 +131,21 @@ const errorHandler = err => {
     msg += err.message
   }
   console.log(msg)
+}
+
+const create_string = (ref) => {
+  var chars = [];
+  let length = strLen(ref);
+  let surrogate = []
+  for (let index = 0; index < length; index++) {
+    let char = getCharAt(ref, index);
+    chars.push(char);
+    // check for surrogate
+  }
+  var bytes = new Uint8Array(chars);
+  var string = new TextDecoder('utf8').decode(bytes);
+  return {
+    value: string,
+    surrogate: surrogate
+  };
 }

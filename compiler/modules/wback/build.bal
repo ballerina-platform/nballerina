@@ -6,6 +6,7 @@ const int TYPE_INT     = 0;
 const int TYPE_BOOLEAN = 1;
 const int TYPE_NIL     = 2;
 const int TYPE_LIST    = 3;
+const int TYPE_STRING  = 5;
 const int SELF_REFERENCE = 4;
 const int INITIAL_CAPACITY = 4;
 const int MAX_CAPACITY = 4294967295;
@@ -14,6 +15,7 @@ public type RuntimeType string;
 const RuntimeType BOXED_INT_TYPE = "BoxedInt";
 const RuntimeType LIST_TYPE = "List";
 const RuntimeType ANY_ARR_TYPE = "AnyList";
+const RuntimeType STRING_TYPE = "String";
 
 public type ExceptionTag string;
 const ExceptionTag OVERFLOW_TAG = "overflow";
@@ -103,6 +105,24 @@ final RuntimeFunction arrPushFunction = {
     returnType: "None"
 };
 
+final RuntimeFunction strLengthFunction = {
+    name: "str_length",
+    paramTypes: ["eqref"],
+    returnType: "i32"
+};
+
+final RuntimeFunction strGetCharAtFunction = {
+    name: "get_char_at",
+    paramTypes: ["eqref", "i32"],
+    returnType: "i32"
+};
+
+final RuntimeFunction getStringFunction = {
+    name: "get_string",
+    paramTypes: ["eqref"],
+    returnType: "externref"
+};
+
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     return module.i31New(value);
 }
@@ -116,6 +136,17 @@ function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression ta
     var { name, returnType } = taggedToIntFunction;
     return module.call(name, [tagged], returnType);
 }
+
+function buildConstString(wasm:Module module, Scaffold scaffold, wasm:Expression arr, string str) returns wasm:Expression {
+    wasm:Expression[] children = [];
+    byte[] bytes = str.toBytes();
+    foreach int i in 0..<bytes.length() {
+        wasm:Expression setByte = module.call(arrSetFunction.name, [arr, module.addConst({ i32: bytes[i] }), module.addConst({ i64: i })], "None");
+        children.push(setByte);
+    }
+    return module.block(children);
+}
+
 
 function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
     var { name, returnType } = getTypeFunction;
@@ -135,7 +166,17 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
     }
     else {
         t:SingleValue value = operand.value;
-        if value == () {
+        if value is string {
+            byte[] bytes = value.toBytes();
+            TaggedRepr repr = { base: BASE_REPR_TAGGED, subtype: t:STRING, wasm: { base: "String" } };
+            wasm:Expression[] chars = [];
+            foreach byte char in bytes {
+                chars.push(module.addConst({ i32: char }));
+            }
+            wasm:Expression arr = module.arrayInit("chars", chars);
+            return [repr, module.structNew("String", [module.call("str_create", [arr], "externref")])];
+        }
+        else if value == () {
             return [REPR_NIL, module.refNull()];
         }
         else if value is boolean {
@@ -157,7 +198,7 @@ function buildInt(wasm:Module module, bir:IntOperand operand) returns wasm:Expre
     }
 }
 
-function buildWideRepr(wasm:Module module, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType) returns wasm:Expression {
+function buildWideRepr(wasm:Module module, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType, int? result = ()) returns wasm:Expression {
     wasm:Expression value = buildRepr(module, scaffold, operand, targetRepr);
     return value;
 }
@@ -220,13 +261,17 @@ function addFuncGetType(wasm:Module module) {
     wasm:Expression typeNil = module.localSet(1, module.addConst({ i32: TYPE_NIL }));
     wasm:Expression typeBoolean = module.localSet(1, module.addConst({ i32: TYPE_BOOLEAN }));
     wasm:Expression typeList = module.localSet(1, module.addConst({ i32: TYPE_LIST }));
+    wasm:Expression typeStr = module.localSet(1, module.addConst({ i32: TYPE_STRING }));
     wasm:Expression isI31 = module.refIs("ref.is_i31", module.localGet(0));
     wasm:Expression isNull = module.refIs("ref.is_null", module.localGet(0));
-    wasm:Expression typeToCast = module.rtt(BOXED_INT_TYPE);
+    wasm:Expression intToCast = module.rtt(BOXED_INT_TYPE);
+    wasm:Expression strToCast = module.rtt(STRING_TYPE);
     wasm:Expression convertedToData = module.refAs("ref.as_data", module.localGet(0));
-    wasm:Expression trycastToStruct = module.drop(module.brOnCastFail("$blockInt", convertedToData, typeToCast));
-    wasm:Expression blockInt = module.block([trycastToStruct, typeInt, module.br("$blockList"), module.refNull("any")], "$blockInt", { base: "any", initial: "null" });
-    wasm:Expression blockList = module.block([module.drop(blockInt), typeList], "$blockList");
+    wasm:Expression tryCastToInt = module.drop(module.brOnCastFail("$blockInt", convertedToData, intToCast));
+    wasm:Expression tryCastToStr = module.drop(module.brOnCastFail("$blockStr", convertedToData, strToCast));
+    wasm:Expression blockInt = module.block([tryCastToInt, typeInt, module.br("$blockList"), module.refNull("any")], "$blockInt", { base: "any", initial: "null" });
+    wasm:Expression blockStr = module.block([tryCastToStr, typeStr, module.br("$blockList"), module.refNull("any")], "$blockStr", { base: "any", initial: "null" });
+    wasm:Expression blockList = module.block([module.drop(blockInt), module.drop(blockStr), typeList], "$blockList");
     wasm:Expression notBoolean = module.addIf(isNull, typeNil, blockList);
     wasm:Expression ifExpr = module.addIf(isI31, typeBoolean, notBoolean);
     module.addFunction(name, paramTypes, returnType, localTypes, module.block([ifExpr, module.addReturn(module.localGet(1))]));
@@ -340,4 +385,34 @@ function addFuncArrayPush(wasm:Module module) {
     wasm:Expression value = module.localGet(1);
     wasm:Expression call = module.call(grow, [struct, value, module.call(len, [struct], lenRetTy)], growRetTy);
     module.addFunction(name, paramTypes, returnType, localTypes, call);
+}
+
+function addFuncGetStrLength(wasm:Module module) {
+    var { name, paramTypes, returnType, localTypes } = strLengthFunction;
+    wasm:Expression asData = module.refAs("ref.as_data", module.localGet(0));
+    wasm:Expression cast = module.refCast(asData, module.rtt("chars"));
+    wasm:Expression len = module.arrayLen("chars", cast);
+    module.addFunction(name, paramTypes, returnType, localTypes, len);
+    module.addFunctionExport(name, name);
+}
+
+function addFuncStrGetCharAt(wasm:Module module) {
+    var { name, paramTypes, returnType, localTypes } = strGetCharAtFunction;
+    wasm:Expression arr = module.localGet(0);
+    wasm:Expression index = module.localGet(1);
+    wasm:Expression asData = module.refAs("ref.as_data", arr);
+    wasm:Expression cast = module.refCast(asData, module.rtt("chars"));
+    wasm:Expression body = module.arrayGet("chars", cast, index);
+    module.addFunction(name, paramTypes, returnType, localTypes, body);
+    module.addFunctionExport(name, name);
+}
+
+function addFuncGetString(wasm:Module module) {
+    var { name, paramTypes, returnType, localTypes } = getStringFunction;
+    wasm:Expression arr = module.localGet(0);
+    wasm:Expression asData = module.refAs("ref.as_data", arr);
+    wasm:Expression cast = module.refCast(asData, module.rtt("String"));
+    wasm:Expression body = module.structGet("String", "val", cast);
+    module.addFunction(name, paramTypes, returnType, localTypes, body);
+    module.addFunctionExport(name, name);
 }

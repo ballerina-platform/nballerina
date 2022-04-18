@@ -3,7 +3,7 @@ public type ComplexRefType record {
     string base;
     string? initial = ();
 };
-public type RefType "anyref"|"eqref"|"i31ref"|"any"|ComplexRefType;
+public type RefType "anyref"|"eqref"|"i31ref"|"any"|"externref"|ComplexRefType;
 public type Type "None"|NumType|RefType;
 
 public type Op  "i32.add"|
@@ -289,6 +289,15 @@ public class Module {
     public function arrayLen(string kind, Expression arr) returns Expression {
         Token[] inst = ["array.len", "$" + kind];
         inst.push(...arr.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
+    public function arrayInit(string kind, Expression[] values) returns Expression {
+        Token[] inst = ["array.init", "$" + kind];
+        foreach Expression val in values {
+            inst.push(...val.tokens);
+        }
+        inst.push(...appendBraces(["rtt.canon", "$" + kind]));
         return { tokens: appendBraces(inst) };
     }
 
