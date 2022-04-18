@@ -131,23 +131,25 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     final t:Env env = mod.tc.env;
     if td is s:BinaryTypeDesc {
         // NB depth does not increase here
-        t:SemType l = check resolveTypeDesc(mod, modDefn, depth, td.left);
-        t:SemType r = check resolveTypeDesc(mod, modDefn, depth, td.right);
-        if td.op == "|" {
-            return t:union(l, r);
-        }
-        else {
-            t:SemType result = t:intersect(l, r);
-            // This can fail to detect that the intersection is empty when the env is not ready
-            // (i.e. there's a recursive type still under construction).
-            // To solve this, we would need to build a list of intersections to be checked later.
-            // But this is very unlikely to be a problem in practice.
-            if t:isNever(result)
-               || (result !is t:UniformTypeBitSet && env.isReady() && t:isEmpty(mod.tc, result)) {
-                return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPos)); 
+        t:SemType accumType = check resolveTypeDesc(mod, modDefn, depth, td.tds[0]);
+        foreach int i in 1 ..< td.tds.length() {
+            t:SemType next = check resolveTypeDesc(mod, modDefn, depth, td.tds[i]);
+            if td.op == "|" {
+                accumType = t:union(accumType, next);
             }
-            return result;
+            else {
+                accumType = t:intersect(accumType, next);
+                // This can fail to detect that the intersection is empty when the env is not ready
+                // (i.e. there's a recursive type still under construction).
+                // To solve this, we would need to build a list of intersections to be checked later.
+                // But this is very unlikely to be a problem in practice.
+                if t:isNever(accumType)
+                   || (accumType !is t:UniformTypeBitSet && env.isReady() && t:isEmpty(mod.tc, accumType)) {
+                    return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPos[i - 1]));
+                }
+            }
         }
+        return accumType;
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
     if td is s:TupleTypeDesc {
