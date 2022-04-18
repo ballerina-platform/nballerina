@@ -71,7 +71,8 @@ final RuntimeFunction arrCreateFunction = {
 final RuntimeFunction arrLengthFunction = {
     name: "length",
     paramTypes: ["eqref"],
-    returnType: "i64"
+    returnType: "i64",
+    localTypes: ["i64"]
 };
 
 final RuntimeFunction arrGetCastFunction = {
@@ -106,7 +107,7 @@ final RuntimeFunction arrPushFunction = {
 };
 
 final RuntimeFunction strLengthFunction = {
-    name: "str_length",
+    name: "str_arr_length",
     paramTypes: ["eqref"],
     returnType: "i32"
 };
@@ -137,16 +138,31 @@ function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression ta
     return module.call(name, [tagged], returnType);
 }
 
-function buildConstString(wasm:Module module, Scaffold scaffold, wasm:Expression arr, string str) returns wasm:Expression {
-    wasm:Expression[] children = [];
-    byte[] bytes = str.toBytes();
-    foreach int i in 0..<bytes.length() {
-        wasm:Expression setByte = module.call(arrSetFunction.name, [arr, module.addConst({ i32: bytes[i] }), module.addConst({ i64: i })], "None");
-        children.push(setByte);
+
+function buildString(wasm:Module module, bir:StringOperand operand) returns wasm:Expression {
+    if operand is bir:StringConstOperand {
+        return buildConstString(module, operand.value);
     }
-    return module.block(children);
+    else {
+        return module.localGet((<bir:Register>operand).number);
+    }
 }
 
+function buildStringRef(wasm:Module module, wasm:Expression operand) returns wasm:Expression {
+    wasm:Expression asData = module.refAs("ref.as_data", operand);
+    wasm:Expression cast = module.refCast(asData, module.rtt(STRING_TYPE));
+    return module.structGet(STRING_TYPE, "val", cast);
+}
+
+function buildConstString(wasm:Module module, string value) returns wasm:Expression {
+    byte[] bytes = value.toBytes();
+    wasm:Expression[] chars = [];
+    foreach byte char in bytes {
+        chars.push(module.addConst({ i32: char }));
+    }
+    wasm:Expression arr = module.arrayInit("chars", chars);
+    return module.structNew(STRING_TYPE, [module.call("str_create", [arr], "externref")]);
+}
 
 function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
     var { name, returnType } = getTypeFunction;
@@ -167,14 +183,8 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
     else {
         t:SingleValue value = operand.value;
         if value is string {
-            byte[] bytes = value.toBytes();
             TaggedRepr repr = { base: BASE_REPR_TAGGED, subtype: t:STRING, wasm: { base: "String" } };
-            wasm:Expression[] chars = [];
-            foreach byte char in bytes {
-                chars.push(module.addConst({ i32: char }));
-            }
-            wasm:Expression arr = module.arrayInit("chars", chars);
-            return [repr, module.structNew("String", [module.call("str_create", [arr], "externref")])];
+            return [repr, buildConstString(module, value)];
         }
         else if value == () {
             return [REPR_NIL, module.refNull()];
@@ -307,9 +317,14 @@ function addFuncCreateArray(wasm:Module module) {
 function addFuncGetArrayLength(wasm:Module module) {
     var { name, paramTypes, returnType, localTypes } = arrLengthFunction;
     wasm:Expression asData = module.refAs("ref.as_data", module.localGet(0));
-    wasm:Expression cast = module.refCast(asData, module.rtt(LIST_TYPE));
-    wasm:Expression len = module.structGet(LIST_TYPE, "len", cast);
-    module.addFunction(name, paramTypes, returnType, localTypes, len);
+    wasm:Expression castToStr = module.refCast(asData, module.rtt(STRING_TYPE));
+    wasm:Expression tryCastToStr = module.drop(module.brOnCastFail("$blockStr", asData, module.rtt(STRING_TYPE)));
+    wasm:Expression lenStr = module.localSet(1, module.call("str_length", [module.structGet(STRING_TYPE, "val", castToStr)], "i64"));
+    wasm:Expression blockStr = module.block([tryCastToStr, lenStr, module.br("$blockList"), module.refNull("any")], "$blockStr", { base: "any", initial: "null" });
+    wasm:Expression castToList = module.refCast(asData, module.rtt(LIST_TYPE));
+    wasm:Expression lenList = module.localSet(1, module.structGet(LIST_TYPE, "len", castToList));
+    wasm:Expression blockList = module.block([module.drop(blockStr), lenList], "$blockList");
+    module.addFunction(name, paramTypes, returnType, localTypes, module.block([blockList, module.addReturn(module.localGet(1))]));
     module.addFunctionExport(name, "arr_len");
 }
 

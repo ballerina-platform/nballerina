@@ -47,6 +47,9 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:CallInsn {
             body.push(buildCall(module, scaffold, insn));
         }
+        else if insn is bir:StringConcatInsn {
+            body.push(buildStringConcat(module, insn));
+        }
         else if insn is bir:CondBranchInsn {
             body.push(buildCondBranch(module, insn));
         }
@@ -82,6 +85,12 @@ function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) retur
     RetRepr repr = scaffold.getRetRepr();
     wasm:Expression? retValue = repr is Repr ? buildWideRepr(module, scaffold, insn.operand, repr, scaffold.returnType) : ();
     return module.addReturn(retValue);
+}
+
+function buildStringConcat(wasm:Module module, bir:StringConcatInsn insn) returns wasm:Expression {
+    wasm:Expression operand1 = buildStringRef(module, buildString(module, insn.operands[0]));
+    wasm:Expression operand2 = buildStringRef(module, buildString(module, insn.operands[1]));
+    return module.localSet(insn.result.number, module.structNew(STRING_TYPE, [module.call("str_concat", [operand1, operand2], "externref")]));
 }
 
 function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) returns wasm:Expression {
