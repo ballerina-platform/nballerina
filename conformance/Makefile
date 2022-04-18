@@ -4,6 +4,8 @@ TDIR=$(sort $(shell find $(TEST_SOURCE) -name "*.balt" | xargs dirname | rev |cu
 TESTS=$(shell find $(TEST_SOURCE) -name "*.balt")
 TRANSFORMED_TESTS=$(shell find $(TEST_SOURCE) -name "*.balt" | sed -e "s/.\/ballerina-spec\/conformance\/lang/.\/tests/g")
 
+.DEFAULT_GOAL := test
+
 $(TRANSFORMED_TESTS): update
 
 update: $(TESTS)
