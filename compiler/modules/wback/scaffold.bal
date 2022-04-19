@@ -91,6 +91,7 @@ class Scaffold {
 
 final Repr REPR_INT = { base: BASE_REPR_INT, wasm: WASM_INT };
 final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, wasm: WASM_BOOLEAN };
+final TaggedRepr REPR_STRING = { base: BASE_REPR_TAGGED, wasm: "eqref", subtype: t:STRING };
 final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, wasm: "eqref", subtype: t:NIL };
 final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, wasm: "eqref" , subtype: t:ANY };
 final TaggedRepr REPR_LIST_RW = { base: BASE_REPR_TAGGED, subtype: t:LIST_RW, wasm: { base: "List", initial: "null" } };
@@ -107,7 +108,8 @@ final readonly & record {|
     { domain: t:ANY, repr: REPR_ANY },
     { domain: t:TOP, repr: REPR_ANY },
     { domain: t:LIST_RW, repr: REPR_LIST_RW },
-    { domain: t:LIST, repr: REPR_LIST }
+    { domain: t:LIST, repr: REPR_LIST },
+    { domain: t:STRING, repr: REPR_STRING }
 ];
 
 function semTypeRetRepr(t:SemType ty) returns RetRepr {

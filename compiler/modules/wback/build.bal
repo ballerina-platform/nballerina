@@ -183,8 +183,7 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
     else {
         t:SingleValue value = operand.value;
         if value is string {
-            TaggedRepr repr = { base: BASE_REPR_TAGGED, subtype: t:STRING, wasm: { base: "String" } };
-            return [repr, buildConstString(module, value)];
+            return [REPR_STRING, buildConstString(module, value)];
         }
         else if value == () {
             return [REPR_NIL, module.refNull()];

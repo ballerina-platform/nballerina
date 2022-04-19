@@ -38,6 +38,8 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     module.addFunctionImport("str_create", "string", "create", ["eqref"], "externref");
     module.addFunctionImport("str_length", "string", "length", ["externref"], "i64");
     module.addFunctionImport("str_concat", "string", "concat", ["externref", "externref"], "externref");
+    module.addFunctionImport("str_eq", "string", "eq", ["externref", "externref"], "i32");
+    module.addFunctionImport("str_comp", "string", "comp", ["i32", "externref", "externref"], "i32");
     addRttFunctions(module);
     return module.finish();
 }

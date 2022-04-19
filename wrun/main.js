@@ -9,6 +9,10 @@ let arrayGet = null;
 let getCharAt = null;
 let getTypeChildren = null;
 let getObject = null;
+const COMPARE_LT = 0;
+const COMPARE_LE = 1;
+const COMPARE_GT = 2;
+const COMPARE_GE = 3;
 if (process.argv.length > 2) {
   let fileName = process.argv[2];
   const wasmBuffer = fs.readFileSync(fileName);
@@ -22,6 +26,38 @@ if (process.argv.length > 2) {
       string: {
         create: function(arg) {
           return create_string(arg);
+        },
+        length: function(arg) {
+           return BigInt(arg.value.length - arg.surrogate.length);
+        },
+        concat: function(arg1, arg2) {
+          return {
+            value: arg1.value + arg2.value,
+            surrogate: [...arg1.surrogate, ...arg2.surrogate]
+          }
+        },
+        eq: function(arg1, arg2) {
+          return arg1.value == arg2.value;
+        },
+        comp: function(op, arg1, arg2) {
+          let result = false;
+          switch (op) {
+            case COMPARE_GE:
+              result = arg1.value >= arg2.value
+              break;
+            case COMPARE_GT:
+              result = arg1.value > arg2.value
+              break;
+            case COMPARE_LE:
+              result = arg1.value <= arg2.value
+              break;
+            case COMPARE_LT:
+              result = arg1.value < arg2.value
+              break;
+            default:
+              break;
+          }
+          return result;
         }
       }
     };
@@ -41,7 +77,7 @@ if (process.argv.length > 2) {
       untagBoolean = obj.instance.exports.tagged_to_boolean;
       len = obj.instance.exports.arr_len;
       arrayGet = obj.instance.exports.arr_get;
-      strLen = obj.instance.exports.str_length;
+      strLen = obj.instance.exports.str_arr_length;
       getObject = obj.instance.exports.get_string;
       getCharAt = obj.instance.exports.get_char_at;
       obj.instance.exports.main()
@@ -87,6 +123,9 @@ const getValue = (ref, parent = null) => {
       let val = getValue(element, ref);
       if (val === "") {
         val = "null"
+      }
+      if (getType(element) == 5) {
+        val = "\"" + val + "\"";
       }
       output += val + ",";
     }
@@ -140,10 +179,10 @@ const create_string = (ref) => {
   for (let index = 0; index < length; index++) {
     let char = getCharAt(ref, index);
     chars.push(char);
-    // check for surrogate
   }
   var bytes = new Uint8Array(chars);
   var string = new TextDecoder('utf8').decode(bytes);
+  surrogate = string.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g) || [];
   return {
     value: string,
     surrogate: surrogate
