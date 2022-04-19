@@ -11,7 +11,7 @@ class VerifyContext {
     private final t:Context tc;
     private final FunctionDefn defn;
     final FunctionCode code;
-    int[] definedTmpRegisters = [];
+    boolean[] tmpRegisterUsed = [];
     
     function init(Module mod, FunctionDefn defn, FunctionCode code) {
         self.mod = mod;
@@ -90,16 +90,20 @@ type MultipleOpeandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithm
     |DecimalArithmeticBinaryInsn|CompareInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn
     |MappingGetInsn|StringConcatInsn|EqualityInsn;
 
-type NonResultInsn MappingSetInsn|ListSetInsn|BranchInsn|CondBranchInsn|CondNarrowInsn|PanicInsn
-    |RetInsn|AbnormalRetInsn|AssignInsn;
+
+type ResultInsn IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
+    |FloatArithmeticBinaryInsn|FloatNegateInsn|DecimalArithmeticBinaryInsn|DecimalNegateInsn
+    |ConvertToIntInsn|ConvertToFloatInsn|ConvertToDecimalInsn|BooleanNotInsn|CompareInsn|EqualityInsn
+    |ListConstructInsn|ListGetInsn|MappingConstructInsn|MappingGetInsn|StringConcatInsn|CallInsn
+    |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn|CatchInsn|ErrorConstructInsn;
 
 function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
-    if insn !is NonResultInsn {
-        if vc.definedTmpRegisters.indexOf(insn.result.number) != () {
+    if insn is ResultInsn {
+        if vc.tmpRegisterUsed[insn.result.number] {
             return vc.invalidErr("tmp register defined in multiple places", <Position>insn.result.pos);
         }
         else {
-            vc.definedTmpRegisters.push(insn.result.number);
+            vc.tmpRegisterUsed[insn.result.number] = true;
         }
     }
 
@@ -139,12 +143,15 @@ function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
     if r !is Register {
         return;
     }
-    if r is TmpRegister && vc.definedTmpRegisters.indexOf(r.number) == () {
+    if r is TmpRegister && !vc.tmpRegisterUsed[r.number] {
         return vc.invalidErr("tmp register not initialized", <Position>r.pos);
     }
     if r is NarrowRegister {
         Register narrowed = vc.code.registers[r.underlying];
-        if !t:isSubtype(vc.typeContext(), r.semType, narrowed.semType) && narrowed !is NarrowRegister {
+        while narrowed is NarrowRegister {
+            narrowed = vc.code.registers[narrowed.underlying];
+        }
+        if !t:isSubtype(vc.typeContext(), r.semType, narrowed.semType) {
             return vc.invalidErr("narrow register is not a subtype of narrowed register", <Position>r.pos);
         }
     }
