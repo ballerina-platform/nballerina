@@ -93,13 +93,13 @@ type MultipleOpeandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithm
 
 type ResultInsn IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |FloatArithmeticBinaryInsn|FloatNegateInsn|DecimalArithmeticBinaryInsn|DecimalNegateInsn
-    |ConvertToIntInsn|ConvertToFloatInsn|ConvertToDecimalInsn|BooleanNotInsn|CompareInsn|EqualityInsn
-    |ListConstructInsn|ListGetInsn|MappingConstructInsn|MappingGetInsn|StringConcatInsn|CallInsn
-    |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn|CatchInsn|ErrorConstructInsn;
+    |ConvertToIntInsn|ConvertToFloatInsn|ConvertToDecimalInsn|BooleanNotInsn|CompareInsn
+    |EqualityInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn|MappingGetInsn
+    |StringConcatInsn|CallInsn|TypeCastInsn|TypeTestInsn|CatchInsn|ErrorConstructInsn;
 
 function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
     if insn is ResultInsn {
-        if vc.tmpRegisterUsed[insn.result.number] {
+        if (vc.tmpRegisterUsed.length() > insn.result.number) && vc.tmpRegisterUsed[insn.result.number] {
             return vc.invalidErr("tmp register defined in multiple places", <Position>insn.result.pos);
         }
         else {
@@ -143,7 +143,7 @@ function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
     if r !is Register {
         return;
     }
-    if r is TmpRegister && !vc.tmpRegisterUsed[r.number] {
+    if r is TmpRegister && (vc.tmpRegisterUsed.length() <= r.number || !vc.tmpRegisterUsed[r.number]) {
         return vc.invalidErr("tmp register not initialized", <Position>r.pos);
     }
     if r is NarrowRegister {
