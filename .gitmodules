@@ -1,4 +1,4 @@
 [submodule "conformance/ballerina-spec"]
 	path = conformance/ballerina-spec
 	url = https://github.com/ballerina-platform/ballerina-spec.git
-	branch = conformance-tests
+    branch = master
