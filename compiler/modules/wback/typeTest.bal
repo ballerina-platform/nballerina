@@ -3,10 +3,7 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.print.wasm;
 
 function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn insn) returns wasm:Expression {
-    var [repr, val] = buildReprValue(module, scaffold, insn.operand);
-    if repr.base != BASE_REPR_TAGGED {
-        panic error("cast from untagged value");
-    }
+    var [_, val] = buildReprValue(module, scaffold, insn.operand);
     if insn.semType === t:BOOLEAN {
         return buildTypeTestedValue(module, scaffold, val, module.localSet(insn.result.number, buildUntagBoolean(module, val)), TYPE_BOOLEAN);
     }
@@ -14,7 +11,7 @@ function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn i
         return buildTypeTestedValue(module, scaffold, val, module.localSet(insn.result.number, buildUntagInt(module, scaffold, val)), TYPE_INT);
     }
     else {
-        panic error("type cast other than to int or boolean");
+        return module.localSet(insn.result.number, val);
     }
 }
 
