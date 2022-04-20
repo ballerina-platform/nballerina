@@ -159,7 +159,8 @@ function buildConstString(wasm:Module module, Scaffold scaffold, string value) r
     byte[] bytes = value.toBytes();
     string[] strBytes = [];
     foreach byte item in bytes {
-        strBytes.push(item.toHexString());
+        string hex = item.toHexString();
+        strBytes.push(hex.length() == 2 ? hex: "0" + hex);
     }
     string byteArr = "\\".'join(...strBytes);
     byteArr = byteArr.length() > 0 ? "\\" + byteArr : byteArr;
