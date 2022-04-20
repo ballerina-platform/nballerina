@@ -51,7 +51,9 @@ class Scaffold {
     private string[] addedExceptionTags = [];
     bir:Label[] brBlockLabels = [];
     bir:Label[] regionsWithBr = [];
-    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, string[] exceptionTags) {
+    string[] sections = [];
+    int[] offsets = [];
+    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, string[] exceptionTags, string[] sections, int[] offsets) {
         self.module = module;
         self.blocks = code.blocks;
         self.regions = code.regions.reverse();
@@ -60,6 +62,8 @@ class Scaffold {
         self.retRepr = semTypeRetRepr(self.returnType);
         self.initializeReprs(code.registers);
         self.addedExceptionTags = exceptionTags;
+        self.sections = sections;
+        self.offsets = offsets;
     }
 
     public function initializeReprs(bir:Register[] registers) {
@@ -81,6 +85,11 @@ class Scaffold {
 
     public function getExceptionTags() returns string[] {
         return self.exceptionTags;
+    }
+
+    public function setSection(string val) {
+        self.sections.push(val);
+        self.offsets.push(self.offsets[self.offsets.length() - 1] + val.length());
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];

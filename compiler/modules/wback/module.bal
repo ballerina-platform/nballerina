@@ -10,15 +10,19 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     wasm:Module module = new;
     string[] tagsAdded = [];
+    string[] sections = [];
+    int[] offsets = [0];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
-        Scaffold scaffold = new(module, code, functionDefns[i], tagsAdded);
+        Scaffold scaffold = new(module, code, functionDefns[i], tagsAdded, sections, offsets);
         wasm:Expression body = buildFunctionBody(scaffold, module);
         if scaffold.getExceptionTags().length() > 0 {
             body = module.try(body);
             tagsAdded.push(...scaffold.getExceptionTags());
         }
+        sections = scaffold.sections;
+        offsets = scaffold.offsets;
         string funcName = functionDefns[i].symbol.identifier;
         wasm:Type[] params = [];
         wasm:Type[] locals = [];
@@ -34,8 +38,13 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
             module.addFunctionExport(funcName, funcName);
         }
     }
+    wasm:Expression[] offsetExpr = [];
+    foreach int offset in offsets {
+        offsetExpr.push(module.addConst({ i32: offset }));
+    }
+    module.setMemory(1, 256, "memory", sections, offsetExpr, false);
     module.addFunctionImport("println", "console", "log", ["eqref"], "None");
-    module.addFunctionImport("str_create", "string", "create", ["eqref"], "externref");
+    module.addFunctionImport("str_create", "string", "create", ["i32", "i32"], "externref");
     module.addFunctionImport("str_length", "string", "length", ["externref"], "i64");
     module.addFunctionImport("str_concat", "string", "concat", ["externref", "externref"], "externref");
     module.addFunctionImport("str_eq", "string", "eq", ["externref", "externref"], "i32");

@@ -139,9 +139,9 @@ function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression ta
 }
 
 
-function buildString(wasm:Module module, bir:StringOperand operand) returns wasm:Expression {
+function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand operand) returns wasm:Expression {
     if operand is bir:StringConstOperand {
-        return buildConstString(module, operand.value);
+        return buildConstString(module, scaffold, operand.value);
     }
     else {
         return module.localGet((<bir:Register>operand).number);
@@ -154,14 +154,10 @@ function buildStringRef(wasm:Module module, wasm:Expression operand) returns was
     return module.structGet(STRING_TYPE, "val", cast);
 }
 
-function buildConstString(wasm:Module module, string value) returns wasm:Expression {
-    byte[] bytes = value.toBytes();
-    wasm:Expression[] chars = [];
-    foreach byte char in bytes {
-        chars.push(module.addConst({ i32: char }));
-    }
-    wasm:Expression arr = module.arrayInit("chars", chars);
-    return module.structNew(STRING_TYPE, [module.call("str_create", [arr], "externref")]);
+function buildConstString(wasm:Module module, Scaffold scaffold, string value) returns wasm:Expression {
+    int offset = scaffold.offsets[scaffold.offsets.length() - 1];
+    scaffold.setSection(value);
+    return module.structNew(STRING_TYPE, [module.call("str_create", [module.addConst({ i32: offset }), module.addConst({ i32: value.length() })], "externref")]);
 }
 
 function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
@@ -183,7 +179,7 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
     else {
         t:SingleValue value = operand.value;
         if value is string {
-            return [REPR_STRING, buildConstString(module, value)];
+            return [REPR_STRING, buildConstString(module, scaffold, value)];
         }
         else if value == () {
             return [REPR_NIL, module.refNull()];

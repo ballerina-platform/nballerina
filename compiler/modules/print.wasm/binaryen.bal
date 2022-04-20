@@ -46,6 +46,8 @@ public class Module {
     private Expression[] exports = [];
     private Expression[] types = [];
     private Expression[] tags = [];
+    private Expression[] data = [];
+    private Expression[] memory = [];
 
     public function call(string target, Expression[] operands, Type returnType) returns Expression {
         Token[] inst = ["call", "$" + target];
@@ -347,9 +349,24 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
+    public function setMemory(int initial, int maximum, string exportName, string[] segments, Expression[] segmentOffsets, boolean shared) {
+        foreach int i in 0..<segments.length() {
+            Token[] section = ["data"];
+            section.push(...segmentOffsets[i].tokens);
+            section.push("\"" + segments[i] + "\"");
+            self.data.push({ tokens: appendBraces(section) });
+        }
+        string index = self.memory.length().toString();
+        Token[] memory = ["memory", "$" + index, initial.toString(), maximum.toString()];
+        Token[] export = ["export", exportName];
+        export.push(...appendBraces(["memory", "$" + index]));
+        self.memory.push({ tokens: appendBraces(memory) });
+        self.exports.push({ tokens: appendBraces(export)});
+    }
+
     public function finish() returns string[] {
         Token[] module = [joinTokens(["(", "module"], 0)];
-        Expression[][] orderedSections = [self.types, self.imports, self.tags, self.tagExports, self.exports];
+        Expression[][] orderedSections = [self.types, self.memory, self.data, self.imports, self.tags, self.tagExports, self.exports];
         foreach Expression[] section in orderedSections {
             foreach Expression expr in section {
                 module.push(joinTokens(expr.tokens));
