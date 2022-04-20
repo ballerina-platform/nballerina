@@ -86,7 +86,7 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
     }
 }
 
-type MultipleOpeandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithmeticBinaryInsn
+type MultipleOperandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithmeticBinaryInsn
     |DecimalArithmeticBinaryInsn|CompareInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn
     |MappingGetInsn|StringConcatInsn|EqualityInsn;
 
@@ -120,7 +120,7 @@ function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
         check verifyRegisterKind(vc, insn.operands[1]);
         check verifyRegisterKind(vc, insn.operands[2]);
     }
-    else if insn is MultipleOpeandInsn {
+    else if insn is MultipleOperandInsn {
         // JBUG #35557 can't iterate insn.operands
         Operand[] operands = insn.operands;
         foreach Operand op in operands {
