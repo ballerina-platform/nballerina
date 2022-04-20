@@ -148,6 +148,11 @@ public const int DEBUG_USAGE_CALL = 1;
 
 public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL;
 
+isolated function registerPos(bir:Register register) returns int {
+    bir:Position? pos = register.pos;
+    return pos ?: 0;
+}
+
 class Scaffold {
     private final Module mod;
     private final bir:File file;
@@ -166,15 +171,21 @@ class Scaffold {
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
+    private final DIBuilder? diBuilder;
+    private final DIFile? diFile;
     private bir:Position? currentPosition = ();
     private DILocation? currentDebugLocation = ();
+    private map<llvm:Metadata> typeMetadata = {};
+    private [bir:Position, llvm:Metadata][] scopeStack = [];
     final t:SemType returnType;
 
-    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
+    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, DIFile? diFile, llvm:DIBuilder? diBuilder, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
         self.mod = mod;
         self.file = mod.partFiles[defn.partIndex];
         self.llFunc = llFunc;
         self.diFunc = diFunc;
+        self.diFile = diFile;
+        self.diBuilder = diBuilder;
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select semTypeRepr(reg.semType);
         self.reprs = reprs;
@@ -186,6 +197,10 @@ class Scaffold {
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock(b.name);
 
         builder.positionAtEnd(entry);
+        if diFunc !is () {
+            self.scopeStack.push([defn.position, diFunc]);
+        }
+
         self.addresses = [];
         self.setCurrentPosition(builder, defn.position);
         foreach int i in 0 ..< reprs.length() {
@@ -199,6 +214,7 @@ class Scaffold {
             }
             self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
         }
+        self.registerDebugDeclare(code.registers, entry, builder);
     }
 
     function saveParams(llvm:Builder builder) {
@@ -307,6 +323,75 @@ class Scaffold {
         }
     }
 
+    function registerDebugDeclare(bir:Register[] registers, llvm:BasicBlock bb, llvm:Builder builder) {
+        ModuleDI di = <ModuleDI>self.mod.di;
+        if !di.debugFull {
+            return;
+        }
+        DIBuilder diBuilder = <DIBuilder>self.diBuilder;
+        DISubprogram diFunc = <DISubprogram>self.diFunc;
+        DIFile diFile = <DIFile>self.diFile;
+        llvm:Metadata emptyExpr = diBuilder.createExpression([]);
+        bir:Register[] sortedReg = registers.sort("ascending", registerPos);
+        int currentPos = -1;
+        llvm:Metadata scope = diFunc;
+        foreach var register in sortedReg {
+            if register is bir:DeclRegister {
+                var [line, column] = self.file.lineColumn(register.pos);
+                llvm:Metadata tyMeta = self.registerTypeMetadata(register);
+                if register.pos > currentPos {
+                    scope = diBuilder.createLexicalBlock(scope, diFile, line, column);
+                    self.scopeStack.push([register.pos, scope]);
+                    currentPos = register.pos;
+                }
+                llvm:Metadata varMeta = diBuilder.createAutoVariable(ty=tyMeta, scope=scope, name=register.name, lineNo=line, file=diFile);
+                llvm:Metadata declLoc = diBuilder.createDebugLocation(self.mod.llContext, line, column, scope);
+                diBuilder.insertDeclareAtEnd(self.address(register), varMeta, emptyExpr, declLoc, bb);
+            }
+        }
+    }
+
+    function registerTypeMetadata(bir:DeclRegister register) returns llvm:Metadata {
+        t:SemType semType = register.semType;
+        "int"|"float"|"boolean"|"any" ty;
+        if t:isSubtypeSimple(semType, t:INT) {
+            ty = "int";
+        }
+        else if t:isSubtypeSimple(semType, t:FLOAT) {
+            ty = "float";
+        }
+        else if t:isSubtypeSimple(semType, t:BOOLEAN) {
+            ty = "boolean";
+        }
+        else {
+            ty = "any";
+        }
+        llvm:Metadata? stored = self.typeMetadata[ty];
+        if stored !is () {
+            return stored;
+        }
+        DIBuilder diBuilder = <DIBuilder>self.diBuilder;
+        DIFile diFile = <DIFile>self.diFile;
+        llvm:Metadata tyMeta;
+        match ty {
+            "int" => {
+                tyMeta = diBuilder.createBasicType(name="int", encoding="signed", sizeInBits=64);
+            }
+            "float" => {
+                tyMeta = diBuilder.createBasicType(name="float", encoding="float", sizeInBits=64);
+            }
+            "boolean" => {
+                tyMeta = diBuilder.createBasicType(name="boolean", encoding="boolean", sizeInBits=1);
+            }
+            _ => {
+                llvm:Metadata charMeta = diBuilder.createBasicType(name="char", encoding="signed_char", sizeInBits=8);
+                tyMeta = diBuilder.createTypedef(diBuilder.createPointerType(charMeta, sizeInBits=64, addressSpace=1), "TaggedPtr", diFile, 0, scope=diFile);
+            }
+        }
+        self.typeMetadata[ty] = tyMeta;
+        return tyMeta;
+    }
+
     function clearDebugLocation(llvm:Builder builder) {
         // in debugFull case every instruction must have a debug location
         ModuleDI? di = self.mod.di;
@@ -350,7 +435,13 @@ class Scaffold {
     private function debugLocation(bir:Position pos) returns DILocation {
         ModuleDI di = <ModuleDI>self.mod.di;
         var [line, column] = self.file.lineColumn(pos);
-        return di.builder.createDebugLocation(self.mod.llContext, line, column, <DISubprogram>self.diFunc);
+        // pr-todo: this is to allow arbitery ording of positions but do we really need this?
+        int nextIndex = 1;
+        while nextIndex < self.scopeStack.length() && self.scopeStack[nextIndex][0] <= pos {
+            nextIndex += 1;
+        }
+        llvm:Metadata scope = self.scopeStack[nextIndex - 1][1];
+        return di.builder.createDebugLocation(self.mod.llContext, line, column, scope);
     }
 
     function unimplementedErr(d:Message message) returns err:Unimplemented {

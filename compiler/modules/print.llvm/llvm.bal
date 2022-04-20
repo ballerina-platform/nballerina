@@ -275,7 +275,7 @@ public class Module {
 
     // Corresponds to LLVMCreateDIBuilder
     public function createDIBuilder() returns DIBuilder {
-        DIBuilder dIBuilder = new(self);
+        DIBuilder dIBuilder = new(self, self.context);
         return dIBuilder;
     }
 
@@ -337,7 +337,15 @@ public class Module {
         }
     }
 
-    private function addIntrinsic(IntrinsicFunctionName name, FunctionType fnType, EnumAttribute[] attrs) returns FunctionDecl {
+    function addDebugIntrinsic(DebugIntrinsicName name) {
+        boolean fnExisting = self.globals[name] != ();
+        if !fnExisting {
+            _ = self.addIntrinsic(name, { returnType: "void", paramTypes: ["metadata", "metadata", "metadata"]},
+                                  ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
+        }
+    }
+
+    private function addIntrinsic(IntrinsicFunctionName|DebugIntrinsicName name, FunctionType fnType, EnumAttribute[] attrs) returns FunctionDecl {
         FunctionDecl fn = new(self.context, "llvm." + name, fnType);
         foreach var attr in attrs {
             fn.addEnumAttribute(attr);
@@ -820,12 +828,23 @@ final readonly & map<string> moduleFlagBehaviorToString = {
     "max": "7"
 };
 
+final readonly & map<string> typeEncodingToString = {
+    "address": "DW_ATE_address",
+    "boolean": "DW_ATE_boolean",
+    "float": "DW_ATE_float",
+    "signed": "DW_ATE_signed",
+    "unsigned": "DW_ATE_unsigned",
+    "decimal_float": "DW_ATE_decimal_float"
+};
+
 # Corresponds to LLVMDIBuilderRef
 public class DIBuilder {
     Module m;
+    Context context;
     Metadata? compileUnit = ();
-    function init(Module m) {
+    function init(Module m, Context context) {
         self.m = m;
+        self.context = context;
     }
 
     // Corresponds to LLVMDIBuilderCreateCompileUnit
@@ -857,6 +876,91 @@ public class DIBuilder {
                          "\"", ",", "directory", ":", "\"", directory, "\"", ")");
         return metadata;
     }
+
+    // Corresponds to LLVMDIBuilderCreatePointerType
+    // pr-todo: unit test port to jni
+    public function createPointerType(Metadata pointeeTy, int sizeInBits, Alignment? alignInBits = (), int addressSpace = 0, string? name = ()) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] body = [metadata.ref(), "=", "!", "DIDerivedType", "(", "tag", ":", "DW_TAG_pointer_type"];
+        if name is string {
+            body.push(",", "name", ":", "\"", name, "\"");
+        }
+        body.push(",", "baseType", ":", pointeeTy.ref(), ",", "size", ":", sizeInBits.toString());
+        if alignInBits is Alignment {
+            body.push(",", "align", ":", alignInBits.toString());
+        }
+        if addressSpace != 0 {
+            body.push(",", "dwarfAddressSpace", ":", addressSpace.toString());
+        }
+        body.push(")");
+        metadata.addLine(...body);
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateTypedef
+    // pr-todo: unit test port to jni
+    public function createTypedef(Metadata ty, string name, Metadata file, int lineNo, Metadata scope, Alignment? alignInBits = ()) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] body = [metadata.ref(), "=", "!", "DIDerivedType", "(", "tag", ":", "DW_TAG_typedef", ",", "name", ":", "\"", name, "\"",
+                         ",", "scope", ":", scope.ref(), ",", "file", ":", file.ref()];
+        if lineNo != 0 {
+            body.push(",", "line", ":", lineNo.toString());
+        }
+        body.push(",", "baseType", ":", ty.ref());
+        if alignInBits is Alignment {
+            body.push(",", "align", ":", alignInBits.toString());
+        }
+        body.push(")");
+        metadata.addLine(...body);
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateBasicType
+    // pr-todo: port to jni
+    public function createBasicType(*BasicTypeMetadataProperties props) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string encodingToString = "DW_ATE_" + props.encoding;
+        metadata.addLine(metadata.ref(), "=", "!", "DIBasicType", "(", "name", ":", "\"", props.name, "\"",
+                         ",", "size", ":", props.sizeInBits.toString(), ",", "encoding", ":", encodingToString, ")");
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateAutoVariable
+    // pr-todo: port to jni
+    public function createAutoVariable(*VariableMetadataProperties props) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] words = [];
+        words.push(metadata.ref(), "=", "!", "DILocalVariable", "(", "name", ":", "\"", props.name, "\"", ",",
+                   "scope", ":", props.scope.ref(), ",", "file", ":", props.file.ref(), ",", "line", ":", props.lineNo.toString(), ",",
+                   "type", ":", props.ty.ref());
+        int? align = props.alignInBits;
+        if align != () {
+            words.push(",", "align", ":", align.toString());
+        }
+        words.push(")");
+        metadata.addLine(...words);
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderInsertDbgValueAtEnd
+    // pr-todo port to jni
+    public function insertDbgValueAtEnd(Value val, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
+        // we are calling this just to add the decleartion to module
+        self.m.addDebugIntrinsic("dbg.value");
+        (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.value", "(", "metadata", typeToString(val.ty, self.context),
+                                    val.operand, ",", "metadata", varInfo.ref(), ",", "metadata", expr.ref(), ")"];
+        addInsnWithDbLocation(block, words, debugLoc);
+    }
+
+    // Corresponds to LLVMDIBuilderInsertDeclareAtEnd
+    // pr-todo: port to jni
+    public function insertDeclareAtEnd(Value storage, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
+        self.m.addDebugIntrinsic("dbg.declare");
+        (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.declare", "(", "metadata", typeToString(storage.ty, self.context),
+                                    storage.operand, ",", "metadata", varInfo.ref(), ",", "metadata", expr.ref(), ")"];
+        addInsnWithDbLocation(block, words, debugLoc);
+    }
+
 
     // Corresponds to LLVMDIBuilderCreateFunction
     public function createFunction(*FunctionMetadataProperties props) returns Metadata {
@@ -908,6 +1012,33 @@ public class DIBuilder {
         }
         Metadata retainedNodes = self.m.addMetadata();
         words.push(",", "retainedNodes", ":", retainedNodes.ref(), ")");
+        metadata.addLine(...words);
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateExpression
+    // pr-todo: port to jni
+    public function createExpression(int[] addr) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        if addr.length() != 0 {
+            panic error("Addr not implemented");
+        }
+        metadata.addLine(metadata.ref(), "=", "!", "DIExpression", "(", ")");
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateLexicalBlock
+    // pr-todo: port to jni unittest
+    public function createLexicalBlock(Metadata scope, Metadata file, int line, int column) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] words = [metadata.ref(), "=", "distinct", "!", "DILexicalBlock", "(", "scope", ":", scope.ref(), ",", "file", ":", file.ref()];
+        if line != 0 {
+            words.push(",", "line", ":", line.toString());
+        }
+        if column != 0 {
+            words.push(",", "column", ":", column.toString());
+        }
+        words.push(")");
         metadata.addLine(...words);
         return metadata;
     }
@@ -1297,7 +1428,7 @@ public class Builder {
         return new PointerValue(destTy, reg);
     }
 
-    private function bb() returns BasicBlock {
+    public function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
         if tem == () {
             panic err:impossible("no current basic block");
