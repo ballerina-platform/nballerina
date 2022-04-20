@@ -82,6 +82,7 @@ class StmtContext {
     final t:SemType returnType;
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
+    bir:RegisterScope[] scopeStack = [];
 
     function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
@@ -89,14 +90,15 @@ class StmtContext {
         self.file = functionDefn.part.file;
         self.code = {};
         self.returnType = returnType;
+        self.scopeStack.push(bir:createFunctionScope(functionDefn.startPos));
     }
 
     function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
-        return bir:createVarRegister(self.code, t, pos, name);
+        return bir:createVarRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
     function createFinalRegister(bir:SemType t, Position pos, string name) returns bir:FinalRegister {
-        return bir:createFinalRegister(self.code, t, pos, name);
+        return bir:createFinalRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
     function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos) returns bir:NarrowRegister {
@@ -104,7 +106,21 @@ class StmtContext {
     }
 
     function createParamRegister(bir:SemType t, Position pos, string name) returns bir:ParamRegister {
-        return bir:createParamRegister(self.code, t, pos, name);
+        return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
+    }
+
+    function getCurrentScope() returns bir:RegisterScope {
+        return self.scopeStack[self.scopeStack.length() - 1];
+    }
+
+    function popScopeStack() {
+        _ = self.scopeStack.pop();
+    }
+
+    function pushLexicalScope(Position pos) {
+        bir:RegisterScope parentScope = self.getCurrentScope();
+        bir:RegisterScope scope = bir:createLexicalBlockScope(parentScope, pos);
+        self.scopeStack.push(scope);
     }
 
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TmpRegister {
@@ -306,15 +322,24 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
     bir:BasicBlock? curBlock = bb;
     // Similar to env.bindings, but only contains the bindings of variables defined outside of current scope
     if scope is s:IfElseStmt {
+        cx.pushLexicalScope(scope.startPos);
         StmtEffect effect = check codeGenIfElseStmt(cx, bb, env, scope);
         curBlock = effect.block;
         applyStmtEffect(env, effect);
+        cx.popScopeStack();
     }
     else {
         foreach var stmt in scope.stmts {
+            boolean isScopedStmt = stmt is s:ScopedStmt;
+            if isScopedStmt {
+                cx.pushLexicalScope(stmt.startPos);
+            }
             StmtEffect effect = check codeGenStmt(cx, curBlock, env, stmt);
             curBlock = effect.block;
             applyStmtEffect(env, effect);
+            if isScopedStmt {
+                cx.popScopeStack();
+            }
         }
     }
     check unusedLocalVariables(cx, env, initialEnv.bindings);

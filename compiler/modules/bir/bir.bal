@@ -176,8 +176,33 @@ public type RegisterBase record {|
 public type DeclRegister ParamRegister|VarRegister|FinalRegister;
 public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
 
+public const LEXICAL_BLOCK_SCOPE_KIND = "lexical_block";
+public const FUNCTION_SCOPE_KIND = "function";
+public type RegisterScopeKind LEXICAL_BLOCK_SCOPE_KIND|FUNCTION_SCOPE_KIND;
+
+public type LexicalBlockScope readonly & record {|
+    LEXICAL_BLOCK_SCOPE_KIND kind = LEXICAL_BLOCK_SCOPE_KIND;
+    RegisterScope parentScope;
+    Position pos;
+|};
+
+public type FunctionScope readonly & record {|
+    FUNCTION_SCOPE_KIND kind = FUNCTION_SCOPE_KIND;
+    Position pos;
+|};
+
+public type RegisterScope LexicalBlockScope|FunctionScope;
+
+public function createLexicalBlockScope(RegisterScope parentScope, Position pos) returns LexicalBlockScope {
+    return { parentScope, pos };
+}
+
+public function createFunctionScope(Position pos) returns FunctionScope {
+    return { pos };
+}
 public type DeclRegisterBase record {|
     *RegisterBase;
+    RegisterScope scope;
     Position pos;
     string name;
     DeclRegisterKind kind;
@@ -217,14 +242,14 @@ public type FinalRegister readonly & record {|
     FINAL_REGISTER_KIND kind = FINAL_REGISTER_KIND;
 |};
 
-public function createVarRegister(FunctionCode code, SemType semType, Position pos, string name) returns VarRegister {
-    VarRegister r = { number: code.registers.length(), semType, pos, name };
+public function createVarRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope) returns VarRegister {
+    VarRegister r = { number: code.registers.length(), semType, pos, name, scope };
     code.registers.push(r);
     return r;
 }
 
-public function createFinalRegister(FunctionCode code, SemType semType, Position pos, string name) returns FinalRegister {
-    FinalRegister r = { number: code.registers.length(), semType, pos, name };
+public function createFinalRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope) returns FinalRegister {
+    FinalRegister r = { number: code.registers.length(), semType, pos, name, scope };
     code.registers.push(r);
     return r;
 }
@@ -235,8 +260,8 @@ public function createNarrowRegister(FunctionCode code, SemType semType, Registe
     return r;
 }
 
-public function createParamRegister(FunctionCode code, SemType semType, Position pos, string name) returns ParamRegister {
-    ParamRegister r = { number: code.registers.length(), semType, pos, name  };
+public function createParamRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope) returns ParamRegister {
+    ParamRegister r = { number: code.registers.length(), semType, pos, name, scope };
     code.registers.push(r);
     return r;
 }
