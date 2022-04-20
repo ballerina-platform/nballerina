@@ -156,8 +156,14 @@ function buildStringRef(wasm:Module module, wasm:Expression operand) returns was
 
 function buildConstString(wasm:Module module, Scaffold scaffold, string value) returns wasm:Expression {
     int offset = scaffold.offsets[scaffold.offsets.length() - 1];
-    scaffold.setSection(value);
-    return module.structNew(STRING_TYPE, [module.call("str_create", [module.addConst({ i32: offset }), module.addConst({ i32: value.length() })], "externref")]);
+    byte[] bytes = value.toBytes();
+    string[] strBytes = [];
+    foreach byte item in bytes {
+        strBytes.push(item.toString());
+    }
+    string byteArr = " ".'join(...strBytes);
+    scaffold.setSection(byteArr, bytes.length());
+    return module.structNew(STRING_TYPE, [module.call("str_create", [module.addConst({ i32: offset }), module.addConst({ i32: bytes.length() })], "externref")]);
 }
 
 function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {

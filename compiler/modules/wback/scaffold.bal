@@ -87,9 +87,9 @@ class Scaffold {
         return self.exceptionTags;
     }
 
-    public function setSection(string val) {
+    public function setSection(string val, int len) {
         self.sections.push(val);
-        self.offsets.push(self.offsets[self.offsets.length() - 1] + val.length());
+        self.offsets.push(self.offsets[self.offsets.length() - 1] + len);
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];

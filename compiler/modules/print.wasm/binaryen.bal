@@ -358,7 +358,7 @@ public class Module {
         }
         string index = self.memory.length().toString();
         Token[] memory = ["memory", "$" + index, initial.toString(), maximum.toString()];
-        Token[] export = ["export", exportName];
+        Token[] export = ["export", "\"" + exportName + "\""];
         export.push(...appendBraces(["memory", "$" + index]));
         self.memory.push({ tokens: appendBraces(memory) });
         self.exports.push({ tokens: appendBraces(export)});

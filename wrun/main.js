@@ -9,6 +9,7 @@ let arrayGet = null;
 let getCharAt = null;
 let getTypeChildren = null;
 let getObject = null;
+let mem = null;
 const COMPARE_LT = 0;
 const COMPARE_LE = 1;
 const COMPARE_GT = 2;
@@ -24,8 +25,8 @@ if (process.argv.length > 2) {
         },
       },
       string: {
-        create: function(arg) {
-          return create_string(arg);
+        create: function(offset, length) {
+          return create_string(offset, length);
         },
         length: function(arg) {
            return BigInt(arg.value.length - arg.surrogate.length);
@@ -80,7 +81,8 @@ if (process.argv.length > 2) {
       strLen = obj.instance.exports.str_arr_length;
       getObject = obj.instance.exports.get_string;
       getCharAt = obj.instance.exports.get_char_at;
-      obj.instance.exports.main()
+      mem = obj.instance.exports.memory;
+      obj.instance.exports.main();
     }).catch((err) => {
         if(typeof err == "object" &&  err instanceof WebAssembly.Exception) {
             let tag = tags.filter(tag => err.is(tag.tag));
@@ -123,9 +125,6 @@ const getValue = (ref, parent = null) => {
       let val = getValue(element, ref);
       if (val === "") {
         val = "null"
-      }
-      if (getType(element) == 5) {
-        val = "\"" + val + "\"";
       }
       output += val + ",";
     }
@@ -172,19 +171,13 @@ const errorHandler = err => {
   console.log(msg)
 }
 
-const create_string = (ref) => {
-  var chars = [];
-  let length = strLen(ref);
+const create_string = (offset, length) => {
   let surrogate = []
-  for (let index = 0; index < length; index++) {
-    let char = getCharAt(ref, index);
-    chars.push(char);
-  }
-  var bytes = new Uint8Array(chars);
+  var bytes = new Uint8Array(mem.buffer, offset, length);
   var string = new TextDecoder('utf8').decode(bytes);
   surrogate = string.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g) || [];
   return {
     value: string,
     surrogate: surrogate
   };
-}
+} 
