@@ -349,7 +349,7 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function setMemory(int initial, int maximum, string exportName, string[] segments, Expression[] segmentOffsets, boolean shared) {
+    public function setMemory(int initial, string exportName, string[] segments, Expression[] segmentOffsets, boolean shared) {
         foreach int i in 0..<segments.length() {
             Token[] section = ["data"];
             section.push(...segmentOffsets[i].tokens);
@@ -357,7 +357,7 @@ public class Module {
             self.data.push({ tokens: appendBraces(section) });
         }
         string index = self.memory.length().toString();
-        Token[] memory = ["memory", "$" + index, initial.toString(), maximum.toString()];
+        Token[] memory = ["memory", "$" + index, initial.toString()];
         Token[] export = ["export", "\"" + exportName + "\""];
         export.push(...appendBraces(["memory", "$" + index]));
         self.memory.push({ tokens: appendBraces(memory) });

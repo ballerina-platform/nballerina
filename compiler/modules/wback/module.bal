@@ -42,7 +42,9 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     foreach int offset in offsets {
         offsetExpr.push(module.addConst({ i32: offset }));
     }
-    module.setMemory(1, 256, "memory", sections, offsetExpr, false);
+    int lastOffset = offsets[offsets.length() - 1];
+    int pages = (lastOffset/65536) + 1;
+    module.setMemory(pages, "memory", sections, offsetExpr, false);
     module.addFunctionImport("println", "console", "log", ["eqref"], "None");
     module.addFunctionImport("str_create", "string", "create", ["i32", "i32"], "externref");
     module.addFunctionImport("str_length", "string", "length", ["externref"], "i64");
