@@ -159,9 +159,10 @@ function buildConstString(wasm:Module module, Scaffold scaffold, string value) r
     byte[] bytes = value.toBytes();
     string[] strBytes = [];
     foreach byte item in bytes {
-        strBytes.push(item.toString());
+        strBytes.push(item.toHexString());
     }
-    string byteArr = " ".'join(...strBytes);
+    string byteArr = "\\".'join(...strBytes);
+    byteArr = byteArr.length() > 0 ? "\\" + byteArr : byteArr;
     scaffold.setSection(byteArr, bytes.length());
     return module.structNew(STRING_TYPE, [module.call("str_create", [module.addConst({ i32: offset }), module.addConst({ i32: bytes.length() })], "externref")]);
 }
