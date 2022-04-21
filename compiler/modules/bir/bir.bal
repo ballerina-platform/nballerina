@@ -176,34 +176,16 @@ public type RegisterBase record {|
 public type DeclRegister ParamRegister|VarRegister|FinalRegister;
 public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
 
-public const LEXICAL_BLOCK_SCOPE_KIND = "lexical_scope";
-public const FUNCTION_SCOPE_KIND = "function_scope";
-public type RegisterScopeKind LEXICAL_BLOCK_SCOPE_KIND|FUNCTION_SCOPE_KIND;
-
-# Represent scope inside the function body such as a while loop
-public type LexicalBlockScope readonly & record {|
-    LEXICAL_BLOCK_SCOPE_KIND kind = LEXICAL_BLOCK_SCOPE_KIND;
-    RegisterScope parentScope;
+public type RegisterScope readonly & record {|
+    RegisterScope? parentScope;
     Position startPos;
     Position endPos;
 |};
 
-# We don't need a reference to the actual function here since the scaffold will have it.
-public type FunctionScope readonly & record {|
-    FUNCTION_SCOPE_KIND kind = FUNCTION_SCOPE_KIND;
-    Position startPos;
-    Position endPos;
-|};
-
-public type RegisterScope LexicalBlockScope|FunctionScope;
-
-public function createLexicalBlockScope(RegisterScope parentScope, Position startPos, Position endPos) returns LexicalBlockScope {
+public function createRegisterScope(RegisterScope? parentScope, Position startPos, Position endPos) returns RegisterScope {
     return { parentScope, startPos, endPos };
 }
 
-public function createFunctionScope(Position startPos, Position endPos) returns FunctionScope {
-    return { startPos, endPos };
-}
 public type DeclRegisterBase record {|
     *RegisterBase;
     RegisterScope scope;

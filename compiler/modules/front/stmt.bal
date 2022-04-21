@@ -90,7 +90,7 @@ class StmtContext {
         self.file = functionDefn.part.file;
         self.code = {};
         self.returnType = returnType;
-        self.scopeStack.push(bir:createFunctionScope(functionDefn.startPos, functionDefn.endPos));
+        self.scopeStack.push(bir:createRegisterScope((), functionDefn.startPos, functionDefn.endPos));
     }
 
     function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
@@ -113,13 +113,13 @@ class StmtContext {
         return self.scopeStack[self.scopeStack.length() - 1];
     }
 
-    function popScopeStack() {
+    function popScope() {
         _ = self.scopeStack.pop();
     }
 
-    function pushLexicalScope(Position startPos, Position endPos) {
+    function pushScope(Position startPos, Position endPos) {
         bir:RegisterScope parentScope = self.getCurrentScope();
-        bir:RegisterScope scope = bir:createLexicalBlockScope(parentScope, startPos, endPos);
+        bir:RegisterScope scope = bir:createRegisterScope(parentScope, startPos, endPos);
         self.scopeStack.push(scope);
     }
 
@@ -323,23 +323,23 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
     bir:BasicBlock? curBlock = bb;
     // Similar to env.bindings, but only contains the bindings of variables defined outside of current scope
     if scope is s:IfElseStmt {
-        cx.pushLexicalScope(scope.startPos, scope.endPos);
+        cx.pushScope(scope.startPos, scope.endPos);
         StmtEffect effect = check codeGenIfElseStmt(cx, bb, env, scope);
         curBlock = effect.block;
         applyStmtEffect(env, effect);
-        cx.popScopeStack();
+        cx.popScope();
     }
     else {
         foreach var stmt in scope.stmts {
             boolean isScopedStmt = stmt is ScopedStmt;
             if isScopedStmt {
-                cx.pushLexicalScope(stmt.startPos, stmt.endPos);
+                cx.pushScope(stmt.startPos, stmt.endPos);
             }
             StmtEffect effect = check codeGenStmt(cx, curBlock, env, stmt);
             curBlock = effect.block;
             applyStmtEffect(env, effect);
             if isScopedStmt {
-                cx.popScopeStack();
+                cx.popScope();
             }
         }
     }
