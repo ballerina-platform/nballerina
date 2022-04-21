@@ -183,22 +183,24 @@ public type RegisterScopeKind LEXICAL_BLOCK_SCOPE_KIND|FUNCTION_SCOPE_KIND;
 public type LexicalBlockScope readonly & record {|
     LEXICAL_BLOCK_SCOPE_KIND kind = LEXICAL_BLOCK_SCOPE_KIND;
     RegisterScope parentScope;
-    Position pos;
+    Position startPos;
+    Position endPos;
 |};
 
 public type FunctionScope readonly & record {|
     FUNCTION_SCOPE_KIND kind = FUNCTION_SCOPE_KIND;
-    Position pos;
+    Position startPos;
+    Position endPos;
 |};
 
 public type RegisterScope LexicalBlockScope|FunctionScope;
 
-public function createLexicalBlockScope(RegisterScope parentScope, Position pos) returns LexicalBlockScope {
-    return { parentScope, pos };
+public function createLexicalBlockScope(RegisterScope parentScope, Position startPos, Position endPos) returns LexicalBlockScope {
+    return { parentScope, startPos, endPos };
 }
 
-public function createFunctionScope(Position pos) returns FunctionScope {
-    return { pos };
+public function createFunctionScope(Position startPos, Position endPos) returns FunctionScope {
+    return { startPos, endPos };
 }
 public type DeclRegisterBase record {|
     *RegisterBase;

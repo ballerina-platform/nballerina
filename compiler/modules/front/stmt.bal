@@ -90,7 +90,7 @@ class StmtContext {
         self.file = functionDefn.part.file;
         self.code = {};
         self.returnType = returnType;
-        self.scopeStack.push(bir:createFunctionScope(functionDefn.startPos));
+        self.scopeStack.push(bir:createFunctionScope(functionDefn.startPos, functionDefn.endPos));
     }
 
     function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
@@ -117,9 +117,9 @@ class StmtContext {
         _ = self.scopeStack.pop();
     }
 
-    function pushLexicalScope(Position pos) {
+    function pushLexicalScope(Position startPos, Position endPos) {
         bir:RegisterScope parentScope = self.getCurrentScope();
-        bir:RegisterScope scope = bir:createLexicalBlockScope(parentScope, pos);
+        bir:RegisterScope scope = bir:createLexicalBlockScope(parentScope, startPos, endPos);
         self.scopeStack.push(scope);
     }
 
@@ -322,7 +322,7 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
     bir:BasicBlock? curBlock = bb;
     // Similar to env.bindings, but only contains the bindings of variables defined outside of current scope
     if scope is s:IfElseStmt {
-        cx.pushLexicalScope(scope.startPos);
+        cx.pushLexicalScope(scope.startPos, scope.endPos);
         StmtEffect effect = check codeGenIfElseStmt(cx, bb, env, scope);
         curBlock = effect.block;
         applyStmtEffect(env, effect);
@@ -332,7 +332,7 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
         foreach var stmt in scope.stmts {
             boolean isScopedStmt = stmt is s:ScopedStmt;
             if isScopedStmt {
-                cx.pushLexicalScope(stmt.startPos);
+                cx.pushLexicalScope(stmt.startPos, stmt.endPos);
             }
             StmtEffect effect = check codeGenStmt(cx, curBlock, env, stmt);
             curBlock = effect.block;
