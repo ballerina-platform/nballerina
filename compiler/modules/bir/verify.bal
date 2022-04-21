@@ -99,6 +99,9 @@ function verifyRegions(VerifyContext vc, Position pos) returns Error? {
 }
 
 function createRegions(VerifyContext vc, boolean[] visited, int entry, Label label, int? parent) returns int {
+    if visited[label] {
+        return label;
+    }
     visited[label] = true;
     Insn[] insns = vc.code.blocks[label].insns;
     var insnsLen = insns.length();
