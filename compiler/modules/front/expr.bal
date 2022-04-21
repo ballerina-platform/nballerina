@@ -105,7 +105,8 @@ class ExprContext {
     }
 
     function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos = ()) returns bir:NarrowRegister {
-        return bir:createNarrowRegister(self.code, t, underlying, pos);
+        // narrowing always happens inside a stmt
+        return bir:createNarrowRegister(self.code, t, underlying,  (checkpanic self.stmtContext()).getCurrentScope(), pos);
     }
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {

@@ -176,8 +176,8 @@ public type RegisterBase record {|
 public type DeclRegister ParamRegister|VarRegister|FinalRegister;
 public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
 
-public const LEXICAL_BLOCK_SCOPE_KIND = "lexical_block";
-public const FUNCTION_SCOPE_KIND = "function";
+public const LEXICAL_BLOCK_SCOPE_KIND = "lexical_scope";
+public const FUNCTION_SCOPE_KIND = "function_scope";
 public type RegisterScopeKind LEXICAL_BLOCK_SCOPE_KIND|FUNCTION_SCOPE_KIND;
 
 public type LexicalBlockScope readonly & record {|
@@ -227,6 +227,7 @@ public type NarrowRegister readonly & record {|
     // It's name comes from the underlying register.
     () name = ();
     NARROW_REGISTER_KIND kind = NARROW_REGISTER_KIND;
+    RegisterScope scope;
 |};
 
 public type ParamRegister readonly & record {|
@@ -256,8 +257,8 @@ public function createFinalRegister(FunctionCode code, SemType semType, Position
     return r;
 }
 
-public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, Position? pos = ()) returns NarrowRegister {
-    NarrowRegister r = { number: code.registers.length(), underlying, semType, pos };
+public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, RegisterScope scope, Position? pos = ()) returns NarrowRegister {
+    NarrowRegister r = { number: code.registers.length(), underlying: underlying, semType, pos, scope };
     code.registers.push(r);
     return r;
 }

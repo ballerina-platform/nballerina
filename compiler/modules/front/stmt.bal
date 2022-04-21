@@ -102,14 +102,14 @@ class StmtContext {
     }
 
     function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos) returns bir:NarrowRegister {
-        return bir:createNarrowRegister(self.code, t, underlying, pos);
+        return bir:createNarrowRegister(self.code, t, underlying, self.getCurrentScope(), pos);
     }
 
     function createParamRegister(bir:SemType t, Position pos, string name) returns bir:ParamRegister {
         return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
-    function getCurrentScope() returns bir:RegisterScope {
+    public function getCurrentScope() returns bir:RegisterScope {
         return self.scopeStack[self.scopeStack.length() - 1];
     }
 
@@ -312,6 +312,7 @@ function codeGenOnPanic(StmtContext cx, Position pos) {
 
 type Scope s:StmtBlock|s:IfElseStmt;
 
+type ScopedStmt s:MatchStmt|s:WhileStmt|s:ForeachStmt;
 // If the scope doesn't complete normally, will return empty assignments and bindings.
 function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv, Scope scope, BindingChain? initialBindings = ()) returns CodeGenError|StmtEffect {
     BindingChain? bodyBindings = initialBindings ?: initialEnv.bindings;
@@ -330,7 +331,7 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
     }
     else {
         foreach var stmt in scope.stmts {
-            boolean isScopedStmt = stmt is s:ScopedStmt;
+            boolean isScopedStmt = stmt is ScopedStmt;
             if isScopedStmt {
                 cx.pushLexicalScope(stmt.startPos, stmt.endPos);
             }
