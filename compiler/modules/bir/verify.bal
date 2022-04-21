@@ -6,12 +6,20 @@ import wso2/nballerina.comm.diagnostic as d;
 
 type Range d:Range;
 
+type TmpRegion record {|
+    int entry;
+    int? exit;
+    int? parent;
+    boolean hasBackward = false;
+|};
+
 class VerifyContext {
     private final Module mod;
     private final t:Context tc;
     private final FunctionDefn defn;
     final FunctionCode code;
     boolean[] tmpRegisterUsed = [];
+    TmpRegion[] regions = [];
     
     function init(Module mod, FunctionDefn defn, FunctionCode code) {
         self.mod = mod;
@@ -73,6 +81,47 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
     }
+    check verifyRegions(cx, defn.position);
+}
+
+function verifyRegions(VerifyContext vc, Position pos) returns Error? {
+    BasicBlock[] blocks = vc.code.blocks;
+    int blockLen = blocks.length();
+    boolean[] visited = from int b in 0 ..< blockLen select false;
+
+    int label = 0;
+    while label < blockLen {
+        label = createRegions(vc, visited, label, label, ()) + 1;
+    }
+    if visited.indexOf(false) != () {
+        return vc.invalidErr("invalid blocks in regions", pos);
+    }
+}
+
+function createRegions(VerifyContext vc, boolean[] visited, int entry, Label label, int? parent) returns int {
+    visited[label] = true;
+    Insn[] insns = vc.code.blocks[label].insns;
+    var insnsLen = insns.length();
+    if insnsLen > 0 {
+        Insn insn = insns[insnsLen - 1];
+        if insn is BranchInsn {
+            if insn.backward {
+                vc.regions.push({ entry, exit : label, parent, hasBackward: true });
+                return label;
+            }
+            else {
+                return createRegions(vc, visited, entry, insn.dest, parent);
+            }
+        }
+        else if insn is CondBranchInsn {
+            return int:max(createRegions(vc, visited, entry, insn.ifFalse, parent),
+             createRegions(vc, visited, insn.ifTrue, insn.ifTrue, label));
+        }
+    }
+    if entry != label {
+        vc.regions.push({entry, exit : label, parent});
+    }
+    return label;
 }
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
