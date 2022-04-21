@@ -102,7 +102,7 @@ class StmtContext {
     }
 
     function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos) returns bir:NarrowRegister {
-        return bir:createNarrowRegister(self.code, t, underlying, self.getCurrentScope(), pos);
+        return bir:createNarrowRegister(self.code, t, underlying, pos);
     }
 
     function createParamRegister(bir:SemType t, Position pos, string name) returns bir:ParamRegister {

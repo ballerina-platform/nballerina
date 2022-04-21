@@ -180,6 +180,7 @@ public const LEXICAL_BLOCK_SCOPE_KIND = "lexical_scope";
 public const FUNCTION_SCOPE_KIND = "function_scope";
 public type RegisterScopeKind LEXICAL_BLOCK_SCOPE_KIND|FUNCTION_SCOPE_KIND;
 
+# Represent scope inside the function body such as a while loop
 public type LexicalBlockScope readonly & record {|
     LEXICAL_BLOCK_SCOPE_KIND kind = LEXICAL_BLOCK_SCOPE_KIND;
     RegisterScope parentScope;
@@ -187,6 +188,7 @@ public type LexicalBlockScope readonly & record {|
     Position endPos;
 |};
 
+# We don't need a reference to the actual function here since the scaffold will have it.
 public type FunctionScope readonly & record {|
     FUNCTION_SCOPE_KIND kind = FUNCTION_SCOPE_KIND;
     Position startPos;
@@ -227,7 +229,6 @@ public type NarrowRegister readonly & record {|
     // It's name comes from the underlying register.
     () name = ();
     NARROW_REGISTER_KIND kind = NARROW_REGISTER_KIND;
-    RegisterScope scope;
 |};
 
 public type ParamRegister readonly & record {|
@@ -257,8 +258,8 @@ public function createFinalRegister(FunctionCode code, SemType semType, Position
     return r;
 }
 
-public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, RegisterScope scope, Position? pos = ()) returns NarrowRegister {
-    NarrowRegister r = { number: code.registers.length(), underlying: underlying, semType, pos, scope };
+public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, Position? pos = ()) returns NarrowRegister {
+    NarrowRegister r = { number: code.registers.length(), underlying: underlying, semType, pos };
     code.registers.push(r);
     return r;
 }
