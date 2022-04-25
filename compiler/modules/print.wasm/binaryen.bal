@@ -48,6 +48,7 @@ public class Module {
     private Expression[] tags = [];
     private Expression[] data = [];
     private Expression[] memory = [];
+    private Expression[] globals = [];
 
     public function call(string target, Expression[] operands, Type returnType) returns Expression {
         Token[] inst = ["call", "$" + target];
@@ -364,9 +365,26 @@ public class Module {
         self.exports.push({ tokens: appendBraces(export)});
     }
 
+    public function addGlobal(string name, Type ty,Expression init) {
+        Token[] inst = ["global", "$" + name];
+        inst.push(...appendBraces(["mut", getTypeString(ty)]));
+        inst.push(...init.tokens);
+        self.globals.push({ tokens: appendBraces(inst) });
+    }
+
+    public function globalGet(string name) returns Expression {
+        return { tokens: appendBraces(["global.get", "$" + name]) };
+    }
+
+    public function globalSet(string name, Expression value) returns Expression {
+        Token[] inst = ["global.set", "$" + name];
+        inst.push(...value.tokens);
+        return { tokens: appendBraces(inst) };
+    }
+
     public function finish() returns string[] {
         Token[] module = [joinTokens(["(", "module"], 0)];
-        Expression[][] orderedSections = [self.types, self.memory, self.data, self.imports, self.tags, self.tagExports, self.exports];
+        Expression[][] orderedSections = [self.types, self.memory, self.data, self.imports, self.tags, self.globals, self.tagExports, self.exports];
         foreach Expression[] section in orderedSections {
             foreach Expression expr in section {
                 module.push(joinTokens(expr.tokens));

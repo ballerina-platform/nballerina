@@ -6,7 +6,6 @@ let untagBoolean = null;
 let len = null;
 let strLen = null;
 let arrayGet = null;
-let getCharAt = null;
 let getTypeChildren = null;
 let getObject = null;
 let mem = null;
@@ -80,7 +79,6 @@ if (process.argv.length > 2) {
       arrayGet = obj.instance.exports.arr_get;
       strLen = obj.instance.exports.str_arr_length;
       getObject = obj.instance.exports.get_string;
-      getCharAt = obj.instance.exports.get_char_at;
       mem = obj.instance.exports.memory;
       obj.instance.exports.main();
     }).catch((err) => {
@@ -126,7 +124,7 @@ const getValue = (ref, parent = null) => {
       if (val === "") {
         val = "null"
       }
-      output += val + ",";
+      output += JSON.stringify(val) + ",";
     }
     if (output.indexOf(",") != -1) {
       output = output.substring(0, output.length - 1)

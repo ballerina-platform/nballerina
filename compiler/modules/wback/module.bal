@@ -5,24 +5,33 @@ import wso2/nballerina.print.wasm;
 import wso2/nballerina.comm.err;
 
 type BuildError err:Semantic|err:Unimplemented|err:Internal;
+type StringRecord record {
+    int offset;
+    string global;
+    int length;
+};
+
+type Context record {
+    string[] exceptionTags = [];
+    string[] globals = [];
+    map<StringRecord> segments =  {};
+    int offset = 0;
+};
 
 function buildModule(bir:Module mod) returns string[]|BuildError {
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     wasm:Module module = new;
-    string[] tagsAdded = [];
-    string[] sections = [];
-    int[] offsets = [0];
+    Context context = {};
+    wasm:Expression? mainBody = ();
+    wasm:Type[] mainLocals = [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
-        Scaffold scaffold = new(module, code, functionDefns[i], tagsAdded, sections, offsets);
+        Scaffold scaffold = new(module, code, functionDefns[i], context);
         wasm:Expression body = buildFunctionBody(scaffold, module);
-        if scaffold.getExceptionTags().length() > 0 {
+        if scaffold.getExceptionTags() > 0 {
             body = module.try(body);
-            tagsAdded.push(...scaffold.getExceptionTags());
         }
-        sections = scaffold.sections;
-        offsets = scaffold.offsets;
         string funcName = functionDefns[i].symbol.identifier;
         wasm:Type[] params = [];
         wasm:Type[] locals = [];
@@ -33,27 +42,56 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
             locals.push(semTypeReprWasm(code.registers[j].semType));
         }
         Repr retType = semTypeRepr(scaffold.returnType);
-        module.addFunction(funcName, params, retType is TaggedRepr && retType.subtype == t:NIL ? "None": retType.wasm, locals, body);
+        if funcName == "main" {
+            mainBody = body;
+            mainLocals = locals;
+        }
+        else {
+            module.addFunction(funcName, params, retType is TaggedRepr && retType.subtype == t:NIL ? "None": retType.wasm, locals, body);
+        }
         if functionDefns[i].symbol.isPublic {
             module.addFunctionExport(funcName, funcName);
         }
     }
-    wasm:Expression[] offsetExpr = [];
-    foreach int offset in offsets {
-        offsetExpr.push(module.addConst({ i32: offset }));
+    if mainBody != () {
+        wasm:Expression extendedBody = module.block([addStringInit(module, context.segments), mainBody]);
+        module.addFunction("main", [], "None", mainLocals, extendedBody);
     }
-    int lastOffset = offsets[offsets.length() - 1];
-    int pages = (lastOffset/65536) + 1;
-    module.setMemory(pages, "memory", sections, offsetExpr, false);
+    wasm:Expression[] offsetExpr = [];
+    string[] strings = [];
+    foreach string key in context.segments.keys() {
+        StringRecord rec = <StringRecord>context.segments[key];
+        byte[] bytes = key.toBytes();
+        string[] strBytes = [];
+        foreach byte item in bytes {
+            string hex = item.toHexString();
+            strBytes.push(hex.length() == 2 ? hex: "0" + hex);
+        }
+        string byteArr = "\\".'join(...strBytes);
+        byteArr = byteArr.length() > 0 ? "\\" + byteArr : byteArr;
+        strings.push(byteArr);
+        offsetExpr.push(module.addConst({ i32: rec.offset }));
+        module.addGlobal(rec.global, "eqref", module.refNull());
+    }
+    int pages = (context.offset/65536) + 1;
+    module.setMemory(pages, "memory", strings, offsetExpr, false);
     module.addFunctionImport("println", "console", "log", ["eqref"], "None");
-    module.addFunctionImport("str_create", "string", "create", ["i32", "i32"], "externref");
-    module.addFunctionImport("str_length", "string", "length", ["externref"], "i64");
-    module.addFunctionImport("str_concat", "string", "concat", ["externref", "externref"], "externref");
-    module.addFunctionImport("str_eq", "string", "eq", ["externref", "externref"], "i32");
-    module.addFunctionImport("str_comp", "string", "comp", ["i32", "externref", "externref"], "i32");
+    module.addFunctionImport("str_create", "string", "create", ["i32", "i32"], "anyref");
+    module.addFunctionImport("str_length", "string", "length", ["anyref"], "i64");
+    module.addFunctionImport("str_concat", "string", "concat", ["anyref", "anyref"], "anyref");
+    module.addFunctionImport("str_eq", "string", "eq", ["anyref", "anyref"], "i32");
+    module.addFunctionImport("str_comp", "string", "comp", ["i32", "anyref", "anyref"], "i32");
     addRttFunctions(module);
     return module.finish();
 }
+
+function addStringInit(wasm:Module module, map<StringRecord> strings) returns wasm:Expression {
+    wasm:Expression[] body = [];
+    foreach StringRecord rec in strings {
+        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.call("str_create", [module.addConst({ i32: rec.offset }), module.addConst({ i32: rec.length })], "anyref")])));
+    }
+    return module.block(body);
+} 
 
 function addRttFunctions(wasm:Module module) {
     addFuncIntToTagged(module);
@@ -67,14 +105,13 @@ function addRttFunctions(wasm:Module module) {
     addFuncArraySet(module);
     addFuncArrayGrow(module);
     addFuncGetTypeChildren(module);
-    addFuncStrGetCharAt(module);
     addFuncGetStrLength(module);
     addFuncGetString(module);
     module.addType("List", module.struct(["arr", "len"], [{ base: "AnyList" }, "i64"], [true, true]));
     module.addType("AnyList", module.array("eqref"));
     module.addType("chars", module.array("i32"));
     module.addType(BOXED_INT_TYPE, module.struct(["val"], ["i64"], [true]));
-    module.addType("String", module.struct(["val"], ["externref"], [true]));
+    module.addType("String", module.struct(["val"], ["anyref"], [true]));
     module.addTag(INDEX_OUT_0F_BOUND_TAG);
     module.addTagExport(INDEX_OUT_0F_BOUND_TAG,INDEX_OUT_0F_BOUND_TAG);
     module.addTag(INDEX_TOO_LARGE_TAG);

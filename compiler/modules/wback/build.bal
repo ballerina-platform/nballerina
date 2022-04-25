@@ -112,16 +112,10 @@ final RuntimeFunction strLengthFunction = {
     returnType: "i32"
 };
 
-final RuntimeFunction strGetCharAtFunction = {
-    name: "get_char_at",
-    paramTypes: ["eqref", "i32"],
-    returnType: "i32"
-};
-
 final RuntimeFunction getStringFunction = {
     name: "get_string",
     paramTypes: ["eqref"],
-    returnType: "externref"
+    returnType: "anyref"
 };
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
@@ -137,7 +131,6 @@ function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression ta
     var { name, returnType } = taggedToIntFunction;
     return module.call(name, [tagged], returnType);
 }
-
 
 function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand operand) returns wasm:Expression {
     if operand is bir:StringConstOperand {
@@ -155,17 +148,8 @@ function buildStringRef(wasm:Module module, wasm:Expression operand) returns was
 }
 
 function buildConstString(wasm:Module module, Scaffold scaffold, string value) returns wasm:Expression {
-    int offset = scaffold.offsets[scaffold.offsets.length() - 1];
-    byte[] bytes = value.toBytes();
-    string[] strBytes = [];
-    foreach byte item in bytes {
-        string hex = item.toHexString();
-        strBytes.push(hex.length() == 2 ? hex: "0" + hex);
-    }
-    string byteArr = "\\".'join(...strBytes);
-    byteArr = byteArr.length() > 0 ? "\\" + byteArr : byteArr;
-    scaffold.setSection(byteArr, bytes.length());
-    return module.structNew(STRING_TYPE, [module.call("str_create", [module.addConst({ i32: offset }), module.addConst({ i32: bytes.length() })], "externref")]);
+    string label = scaffold.setSection(value);
+    return module.globalGet(label);
 }
 
 function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
@@ -411,17 +395,6 @@ function addFuncGetStrLength(wasm:Module module) {
     wasm:Expression cast = module.refCast(asData, module.rtt("chars"));
     wasm:Expression len = module.arrayLen("chars", cast);
     module.addFunction(name, paramTypes, returnType, localTypes, len);
-    module.addFunctionExport(name, name);
-}
-
-function addFuncStrGetCharAt(wasm:Module module) {
-    var { name, paramTypes, returnType, localTypes } = strGetCharAtFunction;
-    wasm:Expression arr = module.localGet(0);
-    wasm:Expression index = module.localGet(1);
-    wasm:Expression asData = module.refAs("ref.as_data", arr);
-    wasm:Expression cast = module.refCast(asData, module.rtt("chars"));
-    wasm:Expression body = module.arrayGet("chars", cast, index);
-    module.addFunction(name, paramTypes, returnType, localTypes, body);
     module.addFunctionExport(name, name);
 }
 

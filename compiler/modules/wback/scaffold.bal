@@ -51,9 +51,9 @@ class Scaffold {
     private string[] addedExceptionTags = [];
     bir:Label[] brBlockLabels = [];
     bir:Label[] regionsWithBr = [];
-    string[] sections = [];
-    int[] offsets = [];
-    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, string[] exceptionTags, string[] sections, int[] offsets) {
+    private Context context = {};
+    int funcExceptionTags = 0;
+    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, Context context) {
         self.module = module;
         self.blocks = code.blocks;
         self.regions = code.regions.reverse();
@@ -61,9 +61,7 @@ class Scaffold {
         self.returnType = def.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
         self.initializeReprs(code.registers);
-        self.addedExceptionTags = exceptionTags;
-        self.sections = sections;
-        self.offsets = offsets;
+        self.context = context;
     }
 
     public function initializeReprs(bir:Register[] registers) {
@@ -76,20 +74,31 @@ class Scaffold {
     }
 
     public function addExceptionTag(string tag) {
-        if self.exceptionTags.indexOf(tag) == () && self.addedExceptionTags.indexOf(tag) == () {
+        if self.context.exceptionTags.indexOf(tag) == () {
             self.module.addTag(tag);
             self.module.addTagExport(tag, tag);
-            self.exceptionTags.push(tag);
+            self.context.exceptionTags.push(tag);
+            self.funcExceptionTags += 1;
         }
     }
 
-    public function getExceptionTags() returns string[] {
-        return self.exceptionTags;
+    public function getExceptionTags() returns int {
+        return self.funcExceptionTags;
     }
 
-    public function setSection(string val, int len) {
-        self.sections.push(val);
-        self.offsets.push(self.offsets[self.offsets.length() - 1] + len);
+    public function setSection(string val) returns string {
+        StringRecord? rec = self.context.segments[val];
+        if rec != () {
+            return rec.global;
+        }
+        rec = {
+            offset: self.context.offset,
+            global: "bal$str" + self.context.segments.keys().length().toString(),
+            length: val.toBytes().length()
+        };
+        self.context.segments[val] = <StringRecord>rec; 
+        self.context.offset = val.toBytes().length();
+        return (<StringRecord>rec).global.toString();
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
