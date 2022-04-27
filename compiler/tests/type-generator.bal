@@ -21,9 +21,17 @@ type SubtypeProposition record {|
     true isEmpty = true;
 |};
 
+type NonEmptyProposition record {|
+    *Proposition;
+    UNION op = UNION;
+    false isEmpty = false;
+|};
+
 type PropositionGenerator function (Context cx, int depth) returns Proposition;
 
 type SubtypePropositionGenerator function (Context cx, int depth) returns SubtypeProposition;
+
+type NonEmptyPropositionGenerator function (Context cx, int depth) returns NonEmptyProposition; 
 
 type Limits readonly & record {|
     readonly int maxTupleMembers = 6;
@@ -31,9 +39,12 @@ type Limits readonly & record {|
     readonly int duplicationFactor = 6;
 |};
 
+type PropositionListCtor function () returns Proposition[];
+
 class Context {
     final t:Context typeContext;
     final SubtypeProposition[][] subtypePropositions = [];
+    final NonEmptyProposition[][] nonEmptyPropositions = [];
     final Limits 'limit;
 
     function init(t:Context cx, Limits 'limit = {}) {
@@ -42,17 +53,33 @@ class Context {
     }
 
     function takeSubtypeProposition() returns SubtypeProposition {
-        int level = randomInt(self.subtypePropositions.length());
-        SubtypeProposition[] list = self.subtypePropositions[level];
-        int item = randomInt(list.length());
-        return list[item];
+        return <SubtypeProposition>self.takeFromList(self.subtypePropositions);
+    }
+
+    function takeNonEmptyProposition() returns NonEmptyProposition {
+        return <NonEmptyProposition>self.takeFromList(self.nonEmptyPropositions);
+    }
+
+    private function takeFromList(Proposition[][] list) returns Proposition {
+        int level = randomInt(list.length());
+        Proposition[] subList = list[level];
+        int item = randomInt(subList.length());
+        return subList[item];
     }
 
     function storeSubtypeProposition(int depth, SubtypeProposition proposition) {
-        if self.subtypePropositions.length() <= depth {
-            self.subtypePropositions[depth] = [];
+        self.storeInList(self.subtypePropositions, () => <SubtypeProposition[]>[], depth, proposition);
+    }
+
+    function storeNonEmptyProposition(int depth, NonEmptyProposition proposition) {
+        self.storeInList(self.nonEmptyPropositions, () => <NonEmptyProposition[]>[], depth, proposition);
+    }
+
+    private function storeInList(Proposition[][] list, PropositionListCtor ctor, int depth, Proposition proposition) {
+        if list.length() <= depth {
+            list[depth] = ctor();
         }
-        self.subtypePropositions[depth].push(proposition); 
+        list[depth].push(proposition); 
     }
 }
 
@@ -63,20 +90,27 @@ final readonly & SubtypePropositionGenerator[] AXIOMATIC_SUBTYPE_PROPOSITION_GEN
     subtypeGenSingletonString
 ];
 
+final readonly & NonEmptyPropositionGenerator[] AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS = [
+    nonEmptyFromAxiomaticSubtype
+];
+
 int AXIOMATIC_GENERATOR_COUNT = AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS.length();
 
-
 final SubtypePropositionGenerator[] SUBTYPE_PROPOSITION_GENERATORS = from var gen in AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS select gen;
+final NonEmptyPropositionGenerator[] NONEMPTY_PROPOSITION_GENERATORS = from var gen in AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS select gen;
 
 function init() {
     // JBUG #35902 this list should be initialized in the list constructor.
-    SUBTYPE_PROPOSITION_GENERATORS.push(subtypeGenFixedLengthArray);
-    SUBTYPE_PROPOSITION_GENERATORS.push(subtypeGenList);
-    SUBTYPE_PROPOSITION_GENERATORS.push(subtypeGenListUnionUnionList);
-    SUBTYPE_PROPOSITION_GENERATORS.push(subtypeGenSimpleTuple);
-    SUBTYPE_PROPOSITION_GENERATORS.push(subtypeGenTupleWithRest);
-    SUBTYPE_PROPOSITION_GENERATORS.push(subtypeGenTupleUnequalMemberCount);
-    SUBTYPE_PROPOSITION_GENERATORS.push(subtypeGenUnion);
+    SUBTYPE_PROPOSITION_GENERATORS.push(subtypeGenFixedLengthArray,
+                                        subtypeGenList, 
+                                        subtypeGenListUnionUnionList, 
+                                        subtypeGenSimpleTuple, 
+                                        subtypeGenTupleWithRest, 
+                                        subtypeGenTupleUnequalMemberCount, 
+                                        subtypeGenUnion);
+    NONEMPTY_PROPOSITION_GENERATORS.push(nonEmptyGenUnion,
+                                         nonEmptyGenTuple,
+                                         nonEmptyGenNonRestTuple);
 }
 
 final readonly ALL_PROPOSITION_GENERATORS = fromList(SUBTYPE_PROPOSITION_GENERATORS);
@@ -215,8 +249,7 @@ function subtypeGenTupleUnequalMemberCount(Context cx, int depth) returns Subtyp
 }
 
 function generateSubtypeProposition(Context cx, int depth) returns SubtypeProposition {
-    //io:println(depth);
-    if depth == 0 {
+    if depth <= 0 {
         SubtypePropositionGenerator generator = AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS[randomInt(AXIOMATIC_GENERATOR_COUNT)];
         return generator(cx, depth);
     }
@@ -224,7 +257,6 @@ function generateSubtypeProposition(Context cx, int depth) returns SubtypePropos
         return cx.takeSubtypeProposition();
     }
     int r = randomInt(SUBTYPE_PROPOSITION_GENERATORS.length());
-    //io:println(r);
     SubtypePropositionGenerator generator = SUBTYPE_PROPOSITION_GENERATORS[r];
     return generator(cx, depth);
 }
@@ -245,19 +277,95 @@ function generateNSubtypePropositions(Context cx, int n, int depth) returns [t:S
     return [subtypes, supertypes];
 }
 
+// Convert subtype proposition into non-empty preposition
+function nonEmptyFromAxiomaticSubtype(Context cx, int depth) returns NonEmptyProposition {
+    while true {
+        SubtypeProposition subtypeProp = generateSubtypeProposition(cx, 0);
+        if !t:isEmpty(cx.typeContext, subtypeProp.left) {
+            match randomInt(2) {
+                0 => {
+                    return { left: subtypeProp.left, right: subtypeProp.right };
+                }
+                1 => {
+                    return { left: subtypeProp.left, right: t:NEVER };
+                }
+            }
+        }
+        if !t:isEmpty(cx.typeContext, subtypeProp.right) {
+            match randomInt(2) {
+                0 => {
+                    return { left: subtypeProp.left, right: subtypeProp.right };
+                }
+                1 => {
+                    return { left: t:NEVER, right: subtypeProp.right };
+                }
+            }
+        }
+    }
+}
+
+// NE(T), NE(S) -> NE(T|S)
+function nonEmptyGenUnion(Context cx, int depth) returns NonEmptyProposition {
+    NonEmptyProposition left = generateNonEmptyProposition(cx, depth - 1);
+    NonEmptyProposition right = generateNonEmptyProposition(cx, depth - 1);
+    return { left: t:union(left.left, right.left), right: t:NEVER };
+}
+
+// NE(T) -> NE(T[])
+function nonEmptyGenList(Context cx, int depth) returns NonEmptyProposition {
+    NonEmptyProposition base = generateNonEmptyProposition(cx, depth - 1);
+    t:SemType elem = base.left;
+    t:SemType t = (new t:ListDefinition()).define(cx.typeContext.env, [], rest = elem);
+    return { left: t, right: t:NEVER };
+}
+
+// NE(T1), NE(T2), ...NE(Tn), Tr -> NE([T1, T2, ..Tn, Tr...])
+function nonEmptyGenTuple(Context cx, int depth) returns NonEmptyProposition {
+    NonEmptyProposition base = generateNonEmptyProposition(cx, depth - 1);
+    t:SemType rest = base.left;
+    t:SemType[] fixedMembers = from var _ in 0 ... randomInt(cx.'limit.maxTupleMembers) 
+                               let var prop = generateNonEmptyProposition(cx, depth - 1)
+                               select prop.left;
+    t:SemType t = (new t:ListDefinition()).define(cx.typeContext.env, fixedMembers, rest = rest);
+    return { left: t, right: t:NEVER };
+
+}
+// NE(T1), NE(T2), ...NE(Tn) -> NE([T1, T2, ..Tn])
+function nonEmptyGenNonRestTuple(Context cx, int depth) returns NonEmptyProposition {
+    t:SemType[] fixedMembers = from var _ in 0 ... randomInt(cx.'limit.maxTupleMembers) 
+                               let var prop = generateNonEmptyProposition(cx, depth - 1)
+                               select prop.left;
+    t:SemType t = (new t:ListDefinition()).define(cx.typeContext.env, fixedMembers);
+    return { left: t, right: t:NEVER };
+}
+
+function generateNonEmptyProposition(Context cx, int depth) returns NonEmptyProposition {
+    if depth <= 0 {
+        NonEmptyPropositionGenerator generator = AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS[randomInt(AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS.length())];
+        return generator(cx, depth);
+    }
+    if cx.subtypePropositions.length() > depth + 1 {
+        return cx.takeNonEmptyProposition();
+    }
+    int r = randomInt(NONEMPTY_PROPOSITION_GENERATORS.length());
+    NonEmptyPropositionGenerator generator = NONEMPTY_PROPOSITION_GENERATORS[r];
+    return generator(cx, depth);
+}
+
 function evalProposition(Context cx, Proposition p) returns boolean {
     match p.op {
         UNION => {
-
+            return t:isEmpty(cx.typeContext, t:union(p.left, p.right)) == p.isEmpty;
         }
         INTERSECT => {
-            
+            return t:isEmpty(cx.typeContext, t:intersect(p.left, p.right)) == p.isEmpty;
         }
         DIFF => {
-            return t:isEmpty(cx.typeContext, t:diff(p.left, p.right));
+            return t:isEmpty(cx.typeContext, t:diff(p.left, p.right)) == p.isEmpty;
         }
         DIFF2 => {
-
+            return t:isEmpty(cx.typeContext, t:diff(p.left, p.right)) == p.isEmpty 
+                && t:isEmpty(cx.typeContext, t:diff(p.right, p.left)) == p.isEmpty;
         }
     }
     panic error("Invalid state");
@@ -272,6 +380,7 @@ function testPostulateGenerators() {
         io:print(string `${"\r"}${depth}/${depthLimit}`);
         foreach int j in 0 ... widthLimit {
             SubtypeProposition prop = generateSubtypeProposition(cx, depth);
+            // Only test most top level propositions
             if depth == depthLimit && !evalProposition(cx, prop) {
                 io:println("failed");
             }
@@ -279,4 +388,21 @@ function testPostulateGenerators() {
         }
     }
     io:println("DONE");
+}
+
+@test:Config
+function testNonEmptyTypes() {
+    Context cx = new Context(t:typeContext(new));
+    int depthLimit = 10;
+    int widthLimit = 1000;
+    foreach int depth in 0 ... depthLimit {
+        io:print(string `${"\r"}${depth}/${depthLimit}`);
+        foreach int j in 0 ... widthLimit {
+            NonEmptyProposition prop = generateNonEmptyProposition(cx, depth);
+            if depth == depthLimit && !evalProposition(cx, prop) {
+                io:println("failed");
+            }
+            cx.storeNonEmptyProposition(depth, prop);
+        }
+    }
 }
