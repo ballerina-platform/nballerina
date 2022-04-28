@@ -109,7 +109,8 @@ function init() {
                                         subtypeGenSimpleTuple, 
                                         subtypeGenTupleWithRest, 
                                         subtypeGenTupleUnequalMemberCount, 
-                                        subtypeGenUnion);
+                                        subtypeGenUnion,
+                                        subtypeGenFixedTupleUnion);
     NONEMPTY_PROPOSITION_GENERATORS.push(nonEmptyGenUnion,
                                          nonEmptyGenTuple,
                                          nonEmptyGenNonRestTuple);
@@ -250,11 +251,49 @@ function subtypeGenTupleUnequalMemberCount(Context cx, int depth) returns Subtyp
     return { left: sub, right: super };
 }
 
+// T <: S, NE(T1), NE(T2)... -> T[] <: []|[S]|[(S|T1), S]|[S, S, (S|T2)...]
+function subtypeGenFixedTupleUnion(Context cx, int depth) returns SubtypeProposition {
+    int memberCount = randomInt(cx.'limit.maxTupleMembers);
+    SubtypeProposition p = generateSubtypeProposition(cx, depth - 1);
+    t:SemType left = (new t:ListDefinition()).define(cx.typeContext.env, rest = p.left);
+    t:SemType right = t:NEVER;
+    foreach var i in 0 ... memberCount {
+        right = t:union(right, generateNTuple(cx, i, memberCount, p.right, depth - 1));
+    }
+    return { left, right };
+}
+
+// Generate N-tuple, using baseType unioned with other random types.
+// When len == maxFixedLen, generated tuple has non-never rest type.
+function generateNTuple(Context cx, int len, int maxFixedLen, t:SemType baseType, int depth) returns t:SemType {
+    t:SemType[] members = [];
+    t:SemType t = t:NEVER;
+    foreach int i in 1...len {
+        match randomInt(2) {
+            0 => {
+                t = t:NEVER;
+                members.push(baseType);
+            }
+            1 => {
+                t = generateSubtypeProposition(cx, depth).left;
+                members.push(t:union(baseType, t));
+            }
+        }
+    }
+    t:SemType rest = t:NEVER;
+    if len == maxFixedLen {
+        rest = t:union(baseType, t);
+    }
+    return (new t:ListDefinition()).define(cx.typeContext.env, members, rest = rest);
+}
+
 // Max allowed value for `depth` = max(all previous depth values associated with the same Context) + 1
 function generateSubtypeProposition(Context cx, int depth) returns SubtypeProposition {
     if depth <= 0 {
         SubtypePropositionGenerator generator = AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS[randomInt(AXIOMATIC_GENERATOR_COUNT)];
-        return generator(cx, depth);
+        SubtypeProposition prop =  generator(cx, depth);
+        cx.storeSubtypeProposition(depth, prop);
+        return prop;
     }
     if cx.subtypePropositions.length() > depth + 1 {
         return cx.takeSubtypeProposition();
@@ -391,7 +430,7 @@ function assertFail(Context cx, Proposition prop) {
     test:assertFail(prop.toString());
 }
 
-function testPropositions(*PropositionTestConfig config) {
+function invokePropositionGenerator(*PropositionTestConfig config) {
     foreach int i in 0 ... config.totalTestRuns {
         Context cx = new Context(t:typeContext(new));
         foreach int depth in 0 ... config.depthLimit {
@@ -410,11 +449,11 @@ function testPropositions(*PropositionTestConfig config) {
 }
 
 @test:Config
-function testPostulateGenerators() {
-    testPropositions(generator = generateSubtypeProposition);
+function testSubtyping() {
+    invokePropositionGenerator(generator = generateSubtypeProposition);
 }
 
 @test:Config
 function testNonEmptyTypes() {
-    testPropositions(generator = generateNonEmptyProposition);
+    invokePropositionGenerator(generator = generateNonEmptyProposition);
 }
