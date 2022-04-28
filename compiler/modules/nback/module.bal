@@ -1,4 +1,5 @@
 import wso2/nballerina.bir;
+import wso2/nballerina.comm.err;
 import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
 
@@ -56,10 +57,49 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         DISubprogram? diFunc = di == () ? () : diFuncs[i];
         Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);
-        check buildFunctionBody(builder, scaffold, code);
+        check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
     }
     check birMod.finish();
     return [llMod, createTypeUsage(mod.usedSemTypes)];
+}
+
+function calculateBuildOrder(bir:BasicBlock[] blocks) returns bir:Label[] {
+    bir:Label[] ordered = [];
+    boolean[] visited = [];
+    visited[blocks.length() - 1] = false;
+    orderByFwdTargets(blocks, 0, visited, ordered);
+    int orphaned = blocks.length() - ordered.length();
+    if orphaned != 0 {
+        panic err:impossible(orphaned.toString() + " orphan basic block" + (orphaned == 1 ? "" : "s"));
+    }
+    return ordered.reverse();
+}
+
+// Finds a label ordering in which all forward branch (conditional + non backward unconditional) targets appear before their origins.
+function orderByFwdTargets(bir:BasicBlock[] blocks, bir:Label label, boolean[] visited, bir:Label[] ordered) {
+    if visited[label] {
+        return;
+    }
+    // Flag here prevents it being re-added, in below recursive calls or via a sibling. Former shouldn't happen anyway since it's a DAG.
+    visited[label] = true;
+    bir:BasicBlock block = blocks[label];
+    bir:Label? onPanic = block.onPanic;
+    if onPanic != () {
+        orderByFwdTargets(blocks, onPanic, visited, ordered);
+    }
+    var insns = block.insns;
+    var insnsLen = insns.length();
+    if insnsLen > 0 {
+        var insn = insns[insnsLen - 1];
+        if insn is bir:BranchInsn && !insn.backward{
+            orderByFwdTargets(blocks, insn.dest, visited, ordered);
+        }
+        else if insn is bir:CondBranchInsn {
+            orderByFwdTargets(blocks, insn.ifTrue, visited, ordered);
+            orderByFwdTargets(blocks, insn.ifFalse, visited, ordered);
+        }
+    }
+    ordered.push(label);
 }
 
 function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
@@ -107,8 +147,8 @@ function createFunctionDI(ModuleDI mod, bir:File[] files, bir:FunctionDefn birFu
     });
 }
 
-function buildFunctionBody(llvm:Builder builder, Scaffold scaffold, bir:FunctionCode code) returns BuildError? {
-    foreach var b in code.blocks {
-        check buildBasicBlock(builder, scaffold, b);
+function buildFunctionBody(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock[] blocks, bir:Label[] buildOrder) returns BuildError? {
+    foreach var l in buildOrder {
+        check buildBasicBlock(builder, scaffold, blocks[l]);
     }
 }

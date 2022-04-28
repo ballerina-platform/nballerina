@@ -50,6 +50,7 @@ type LoopContext record {|
     // following block is reachable
     Assignment[] onBreakAssignments = [];
     Assignment[] onContinueAssignments = [];
+    boolean continueIsBackward;
 |};
 
 class StmtContext {
@@ -135,8 +136,8 @@ class StmtContext {
         return d:location(self.file, pos);
     }
 
-    function pushLoopContext(bir:BasicBlock? onBreak, bir:BasicBlock? onContinue) {
-        LoopContext c = { onBreak, onContinue, enclosing: self.loopContext, startRegister: self.nextRegisterNumber()  };
+    function pushLoopContext(bir:BasicBlock? onBreak, bir:BasicBlock? onContinue, boolean continueIsBackward) {
+        LoopContext c = { onBreak, onContinue, enclosing: self.loopContext, startRegister: self.nextRegisterNumber(), continueIsBackward };
         self.loopContext = c;
     }
 
@@ -168,7 +169,8 @@ class StmtContext {
         }
     }
 
-    function onContinueLabel(Position pos) returns bir:Label|err:Semantic {
+    // Returns basic block to branch on continue, and whether the branch will be backwards
+    function onContinueLabel(Position pos) returns [bir:Label, boolean]|err:Semantic {
         LoopContext? c = self.loopContext;
         if c == () {
             return self.semanticErr("continue not in loop", pos);
@@ -176,7 +178,7 @@ class StmtContext {
         else {
             bir:BasicBlock b = c.onContinue ?: self.createBasicBlock();
             c.onContinue = b;
-            return b.label;
+            return [b.label, c.continueIsBackward];
         }
     }
 
@@ -409,7 +411,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     bir:BasicBlock loopBody = cx.createBasicBlock();
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: loopBody.label, pos: stmt.range.opPos };
     loopHead.insns.push(branch);
-    cx.pushLoopContext(exit, ());
+    cx.pushLoopContext(exit, (), false);
     Binding loopBindings = { name: varName, reg: loopVar, prev: env.bindings, isFinal: true };
     var { block: loopEnd, assignments } = check codeGenScope(cx, loopBody, { bindings: loopBindings }, stmt.body);
 
@@ -427,7 +429,8 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
         bir:TmpRegister nextLoopVal = cx.createTmpRegister(t:INT);
         bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: nextLoopVal };
         bir:AssignInsn incrementAssign = { result: loopVar, operand: nextLoopVal, pos: stmt.kwPos };
-        loopStep.insns.push(increment, incrementAssign, branchToLoopHead);
+        bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
+        loopStep.insns.push(increment, incrementAssign, backwardBranchToLoopHead);
     }
     cx.popLoopContext();
     // XXX shouldn't we be passing up assignments here
@@ -467,7 +470,7 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         return cx.semanticErr("unreachable code", stmt.body.stmts[0].startPos);
     }
     afterCondition.insns.push(branch);
-    cx.pushLoopContext(exit, loopHead);
+    cx.pushLoopContext(exit, loopHead, true);
     var { block: loopEnd, assignments } = check codeGenScope(cx, loopBody, env, stmt.body, ifTrue);
     if loopEnd != () {
         bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
@@ -505,15 +508,18 @@ function validLoopAssignments(StmtContext cx, Assignment[] assignments) returns 
 }
 
 function codeGenBreakContinueStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
-    bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel(stmt.startPos) : check cx.onContinueLabel(stmt.startPos);
-    boolean backward = stmt.breakContinue == "continue";
-    bir:BranchInsn branch = { dest, pos: stmt.startPos, backward };
+    bir:Label dest;
+    boolean backward;
     if stmt.breakContinue == "break" {
+        dest = check cx.onBreakLabel(stmt.startPos);
+        backward = false;
         cx.addOnBreakAssignments(env.assignments);
     }
     else {
+        [dest, backward] = check cx.onContinueLabel(stmt.startPos);
         cx.addOnContinueAssignments(env.assignments);
     }
+    bir:BranchInsn branch = {dest, pos: stmt.startPos, backward};
     startBlock.insns.push(branch);
     return { block: () };
 }
