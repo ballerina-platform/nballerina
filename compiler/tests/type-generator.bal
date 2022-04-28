@@ -41,6 +41,8 @@ type Limits readonly & record {|
 
 type PropositionListCtor function () returns Proposition[];
 
+type OnFail function(Context cx, Proposition failedProp);
+
 class Context {
     final t:Context typeContext;
     final SubtypeProposition[][] subtypePropositions = [];
@@ -248,6 +250,7 @@ function subtypeGenTupleUnequalMemberCount(Context cx, int depth) returns Subtyp
     return { left: sub, right: super };
 }
 
+// Max allowed value for `depth` = max(all previous depth values associated with the same Context) + 1
 function generateSubtypeProposition(Context cx, int depth) returns SubtypeProposition {
     if depth <= 0 {
         SubtypePropositionGenerator generator = AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS[randomInt(AXIOMATIC_GENERATOR_COUNT)];
@@ -258,7 +261,9 @@ function generateSubtypeProposition(Context cx, int depth) returns SubtypePropos
     }
     int r = randomInt(SUBTYPE_PROPOSITION_GENERATORS.length());
     SubtypePropositionGenerator generator = SUBTYPE_PROPOSITION_GENERATORS[r];
-    return generator(cx, depth);
+    SubtypeProposition prop = generator(cx, depth);
+    cx.storeSubtypeProposition(depth, prop);
+    return prop;
 }
 
 function generateNSubtypePropositions(Context cx, int n, int depth) returns [t:SemType[], t:SemType[]] {
@@ -339,6 +344,7 @@ function nonEmptyGenNonRestTuple(Context cx, int depth) returns NonEmptyProposit
     return { left: t, right: t:NEVER };
 }
 
+// Max allowed value for `depth` = max(all previous depth values associated with the same Context) + 1
 function generateNonEmptyProposition(Context cx, int depth) returns NonEmptyProposition {
     if depth <= 0 {
         NonEmptyPropositionGenerator generator = AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS[randomInt(AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS.length())];
@@ -349,7 +355,9 @@ function generateNonEmptyProposition(Context cx, int depth) returns NonEmptyProp
     }
     int r = randomInt(NONEMPTY_PROPOSITION_GENERATORS.length());
     NonEmptyPropositionGenerator generator = NONEMPTY_PROPOSITION_GENERATORS[r];
-    return generator(cx, depth);
+    NonEmptyProposition prop = generator(cx, depth);
+    cx.storeNonEmptyProposition(depth, prop);
+    return prop;
 }
 
 function evalProposition(Context cx, Proposition p) returns boolean {
@@ -371,38 +379,42 @@ function evalProposition(Context cx, Proposition p) returns boolean {
     panic error("Invalid state");
 }
 
+type PropositionTestConfig record {|
+    int totalTestRuns = 10;
+    int depthLimit = 6;
+    int widthLimit = 200;
+    PropositionGenerator generator;
+    OnFail onFail = assertFail;
+|};
+
+function assertFail(Context cx, Proposition prop) {
+    test:assertFail(prop.toString());
+}
+
+function testPropositions(*PropositionTestConfig config) {
+    foreach int i in 0 ... config.totalTestRuns {
+        Context cx = new Context(t:typeContext(new));
+        foreach int depth in 0 ... config.depthLimit {
+            io:print(string `${"\r"}Iteration: ${i}, level: ${depth}/${config.depthLimit}`);
+            foreach int j in 0 ... config.widthLimit {
+                PropositionGenerator generator = config.generator;
+                Proposition prop = generator(cx, depth);
+                if !evalProposition(cx, prop) {
+                    OnFail onFail = config.onFail;
+                    onFail(cx, prop);
+                }
+            }
+        }
+        io:println();
+    }
+}
+
 @test:Config
 function testPostulateGenerators() {
-    Context cx = new Context(t:typeContext(new));
-    int depthLimit = 10;
-    int widthLimit = 1000;
-    foreach int depth in 0 ... depthLimit {
-        io:print(string `${"\r"}${depth}/${depthLimit}`);
-        foreach int j in 0 ... widthLimit {
-            SubtypeProposition prop = generateSubtypeProposition(cx, depth);
-            // Only test most top level propositions
-            if depth == depthLimit && !evalProposition(cx, prop) {
-                io:println("failed");
-            }
-            cx.storeSubtypeProposition(depth, prop);
-        }
-    }
-    io:println("DONE");
+    testPropositions(generator = generateSubtypeProposition);
 }
 
 @test:Config
 function testNonEmptyTypes() {
-    Context cx = new Context(t:typeContext(new));
-    int depthLimit = 10;
-    int widthLimit = 1000;
-    foreach int depth in 0 ... depthLimit {
-        io:print(string `${"\r"}${depth}/${depthLimit}`);
-        foreach int j in 0 ... widthLimit {
-            NonEmptyProposition prop = generateNonEmptyProposition(cx, depth);
-            if depth == depthLimit && !evalProposition(cx, prop) {
-                io:println("failed");
-            }
-            cx.storeNonEmptyProposition(depth, prop);
-        }
-    }
+    testPropositions(generator = generateNonEmptyProposition);
 }
