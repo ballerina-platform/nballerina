@@ -9,6 +9,7 @@ type StringRecord record {
     int offset;
     string global;
     int length;
+    int[] surrogate;
 };
 
 type Context record {
@@ -77,7 +78,7 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     module.setMemory(pages, "memory", strings, offsetExpr, false);
     module.addFunctionImport("println", "console", "log", ["eqref"], "None");
     module.addFunctionImport("str_create", "string", "create", ["i32", "i32"], "anyref");
-    module.addFunctionImport("str_length", "string", "length", ["anyref"], "i64");
+    module.addFunctionImport("str_length", "string", "length", ["anyref"], "i32");
     module.addFunctionImport("str_concat", "string", "concat", ["anyref", "anyref"], "anyref");
     module.addFunctionImport("str_eq", "string", "eq", ["anyref", "anyref"], "i32");
     module.addFunctionImport("str_comp", "string", "comp", ["i32", "anyref", "anyref"], "i32");
@@ -88,7 +89,12 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
 function addStringInit(wasm:Module module, map<StringRecord> strings) returns wasm:Expression {
     wasm:Expression[] body = [];
     foreach StringRecord rec in strings {
-        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.call("str_create", [module.addConst({ i32: rec.offset }), module.addConst({ i32: rec.length })], "anyref")])));
+        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.call("str_create", [module.addConst({ i32: rec.offset }), module.addConst({ i32: rec.length })], "anyref"), module.arrayNew("Surrogate", module.addConst({ i32: rec.surrogate.length() }))])));
+        wasm:Expression asData = module.refAs("ref.as_data", module.globalGet(rec.global));
+        wasm:Expression castToStr = module.refCast(asData, module.rtt(STRING_TYPE));
+        foreach int i in 0..<rec.surrogate.length() {
+            body.push(module.arraySet("Surrogate", module.structGet(STRING_TYPE, "surrogate", castToStr), module.addConst({ i32: i }), module.addConst({ i32: rec.surrogate[i] })));            
+        }
     }
     return module.block(body);
 } 
@@ -105,13 +111,14 @@ function addRttFunctions(wasm:Module module) {
     addFuncArraySet(module);
     addFuncArrayGrow(module);
     addFuncGetTypeChildren(module);
-    addFuncGetStrLength(module);
+    addFuncStrLen(module);
+    addFuncStrConcat(module);
     addFuncGetString(module);
     module.addType("List", module.struct(["arr", "len"], [{ base: "AnyList" }, "i64"], [true, true]));
     module.addType("AnyList", module.array("eqref"));
-    module.addType("chars", module.array("i32"));
+    module.addType("Surrogate", module.array("i32"));
     module.addType(BOXED_INT_TYPE, module.struct(["val"], ["i64"], [true]));
-    module.addType("String", module.struct(["val"], ["anyref"], [true]));
+    module.addType("String", module.struct(["val", "surrogate"], ["anyref", { base: "Surrogate"}], [true, false]));
     module.addTag(INDEX_OUT_0F_BOUND_TAG);
     module.addTagExport(INDEX_OUT_0F_BOUND_TAG,INDEX_OUT_0F_BOUND_TAG);
     module.addTag(INDEX_TOO_LARGE_TAG);

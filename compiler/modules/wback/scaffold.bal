@@ -86,7 +86,7 @@ class Scaffold {
         return self.funcExceptionTags;
     }
 
-    public function setSection(string val) returns string {
+    public function setSection(string val, int[] surrogate) returns string {
         StringRecord? rec = self.context.segments[val];
         if rec != () {
             return rec.global;
@@ -94,7 +94,8 @@ class Scaffold {
         rec = {
             offset: self.context.offset,
             global: "bal$str" + self.context.segments.keys().length().toString(),
-            length: val.toBytes().length()
+            length: val.toBytes().length(),
+            surrogate: surrogate
         };
         self.context.segments[val] = <StringRecord>rec; 
         self.context.offset = val.toBytes().length();

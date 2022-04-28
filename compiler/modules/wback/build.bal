@@ -106,16 +106,23 @@ final RuntimeFunction arrPushFunction = {
     returnType: "None"
 };
 
-final RuntimeFunction strLengthFunction = {
-    name: "str_arr_length",
-    paramTypes: ["eqref"],
-    returnType: "i32"
-};
-
 final RuntimeFunction getStringFunction = {
     name: "get_string",
     paramTypes: ["eqref"],
     returnType: "anyref"
+};
+
+final RuntimeFunction stringLenFunction = {
+    name: "w_str_len",
+    paramTypes: [{ base: STRING_TYPE }],
+    returnType: "i64"
+};
+
+final RuntimeFunction stringConcatFunction = {
+    name: "w_str_concat",
+    paramTypes: [{ base: STRING_TYPE }, { base: STRING_TYPE }],
+    returnType: { base: STRING_TYPE },
+    localTypes: [{ base: "Surrogate", initial: "null"}, { base: "Surrogate", initial: "null" }, "i32", "i32", { base: "Surrogate", initial: "null" }, "i32", "i32"]
 };
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
@@ -133,12 +140,15 @@ function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression ta
 }
 
 function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand operand) returns wasm:Expression {
+    wasm:Expression op;
     if operand is bir:StringConstOperand {
-        return buildConstString(module, scaffold, operand.value);
+        op = buildConstString(module, scaffold, operand.value);
     }
     else {
-        return module.localGet((<bir:Register>operand).number);
+        op = module.localGet((<bir:Register>operand).number);
     }
+    wasm:Expression asData = module.refAs("ref.as_data", op);
+    return module.refCast(asData, module.rtt(STRING_TYPE));
 }
 
 function buildStringRef(wasm:Module module, wasm:Expression operand) returns wasm:Expression {
@@ -148,8 +158,20 @@ function buildStringRef(wasm:Module module, wasm:Expression operand) returns was
 }
 
 function buildConstString(wasm:Module module, Scaffold scaffold, string value) returns wasm:Expression {
-    string label = scaffold.setSection(value);
+    int[] surrogate = buildSurrogateArray(value);
+    string label = scaffold.setSection(value, surrogate);
     return module.globalGet(label);
+}
+
+function buildSurrogateArray(string val) returns int[] {
+    int[] surrogate = [];
+    foreach int i in 0..<val.length() {
+        int codepoint = val.getCodePoint(i);
+        if codepoint > 65535 {
+            surrogate.push(i);
+        }
+    }
+    return surrogate;
 }
 
 function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
@@ -306,7 +328,7 @@ function addFuncGetArrayLength(wasm:Module module) {
     wasm:Expression asData = module.refAs("ref.as_data", module.localGet(0));
     wasm:Expression castToStr = module.refCast(asData, module.rtt(STRING_TYPE));
     wasm:Expression tryCastToStr = module.drop(module.brOnCastFail("$blockStr", asData, module.rtt(STRING_TYPE)));
-    wasm:Expression lenStr = module.localSet(1, module.call("str_length", [module.structGet(STRING_TYPE, "val", castToStr)], "i64"));
+    wasm:Expression lenStr = module.localSet(1, module.call("w_str_len", [castToStr], "i64"));
     wasm:Expression blockStr = module.block([tryCastToStr, lenStr, module.br("$blockList"), module.refNull("any")], "$blockStr", { base: "any", initial: "null" });
     wasm:Expression castToList = module.refCast(asData, module.rtt(LIST_TYPE));
     wasm:Expression lenList = module.localSet(1, module.structGet(LIST_TYPE, "len", castToList));
@@ -389,15 +411,6 @@ function addFuncArrayPush(wasm:Module module) {
     module.addFunction(name, paramTypes, returnType, localTypes, call);
 }
 
-function addFuncGetStrLength(wasm:Module module) {
-    var { name, paramTypes, returnType, localTypes } = strLengthFunction;
-    wasm:Expression asData = module.refAs("ref.as_data", module.localGet(0));
-    wasm:Expression cast = module.refCast(asData, module.rtt("chars"));
-    wasm:Expression len = module.arrayLen("chars", cast);
-    module.addFunction(name, paramTypes, returnType, localTypes, len);
-    module.addFunctionExport(name, name);
-}
-
 function addFuncGetString(wasm:Module module) {
     var { name, paramTypes, returnType, localTypes } = getStringFunction;
     wasm:Expression arr = module.localGet(0);
@@ -406,4 +419,37 @@ function addFuncGetString(wasm:Module module) {
     wasm:Expression body = module.structGet("String", "val", cast);
     module.addFunction(name, paramTypes, returnType, localTypes, body);
     module.addFunctionExport(name, name);
+}
+
+function addFuncStrLen(wasm:Module module) {
+    var { name, paramTypes, returnType, localTypes } = stringLenFunction;
+    wasm:Expression surrogateLen = module.arrayLen("Surrogate", module.structGet(STRING_TYPE, "surrogate", module.localGet(0)));
+    wasm:Expression jsLen = module.call("str_length", [module.structGet(STRING_TYPE, "val", module.localGet(0))], "i32");
+    wasm:Expression len = module.unary("i64.extend_i32_u", module.binary("i32.sub", jsLen, surrogateLen));
+    module.addFunction(name, paramTypes, returnType, localTypes, len);
+}
+
+function addFuncStrConcat(wasm:Module module) {
+    var { name, paramTypes, returnType, localTypes } = stringConcatFunction;
+    wasm:Expression surrogate1 = module.localSet(2, module.structGet(STRING_TYPE, "surrogate", module.localGet(0)));
+    wasm:Expression surrogate2 = module.localSet(3, module.structGet(STRING_TYPE, "surrogate", module.localGet(1)));
+    wasm:Expression surrogate1Len = module.localSet(4, module.arrayLen("Surrogate", module.localGet(2)));
+    wasm:Expression surrogate2Len = module.localSet(5, module.arrayLen("Surrogate", module.localGet(3)));
+    wasm:Expression newLen = module.binary("i32.add", module.localGet(4), module.localGet(5));
+    wasm:Expression newArrInit = module.localSet(6, module.arrayNew("Surrogate", newLen));
+    wasm:Expression newArr = module.localGet(6);
+    wasm:Expression i = module.localGet(7);
+    wasm:Expression setI = module.localSet(7, module.addConst({ i32: 0 }));
+    wasm:Expression loopCond1 = module.binary("i32.lt_s", i, module.localGet(4));
+    wasm:Expression newArrSet = module.arraySet("Surrogate", newArr, i, module.arrayGet("Surrogate", module.localGet(2), i));
+    wasm:Expression incrementI = module.localSet(7, module.binary("i32.add", i, module.addConst({ i32: 1 })));
+    wasm:Expression loop = module.loop("$block1$continue", module.addIf(loopCond1, module.block([newArrSet, incrementI, module.br("$block1$continue")])));
+    wasm:Expression j = module.localGet(8);
+    wasm:Expression setJ = module.localSet(8, module.addConst({ i32: 0 }));
+    wasm:Expression loopCond2 = module.binary("i32.lt_s", j, module.localGet(5));
+    wasm:Expression newArrSet2 = module.arraySet("Surrogate", newArr, i, module.arrayGet("Surrogate", module.localGet(3), j));
+    wasm:Expression incrementJ = module.localSet(8, module.binary("i32.add", j, module.addConst({ i32: 1 })));
+    wasm:Expression loop2 = module.loop("$block2$continue", module.addIf(loopCond2, module.block([newArrSet2, incrementI, incrementJ, module.br("$block2$continue")])));
+    wasm:Expression newStr  = module.structNew(STRING_TYPE, [module.call("str_concat", [module.structGet(STRING_TYPE, "val", module.localGet(0)), module.structGet(STRING_TYPE, "val", module.localGet(1))], "anyref"), module.refAs("ref.as_non_null", newArr)]);
+    module.addFunction(name, paramTypes, returnType, localTypes, module.block([surrogate1, surrogate2, surrogate1Len, surrogate2Len, newArrInit, setI, loop, setJ, loop2, module.addReturn(newStr)]));
 }

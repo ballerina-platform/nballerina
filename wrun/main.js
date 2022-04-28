@@ -4,7 +4,6 @@ let getType = null;
 let untagInt = null;
 let untagBoolean = null;
 let len = null;
-let strLen = null;
 let arrayGet = null;
 let getTypeChildren = null;
 let getObject = null;
@@ -28,31 +27,28 @@ if (process.argv.length > 2) {
           return create_string(offset, length);
         },
         length: function(arg) {
-           return BigInt(arg.value.length - arg.surrogate.length);
+           return arg.length;
         },
         concat: function(arg1, arg2) {
-          return {
-            value: arg1.value + arg2.value,
-            surrogate: [...arg1.surrogate, ...arg2.surrogate]
-          }
+          return arg1 + arg2;
         },
         eq: function(arg1, arg2) {
-          return arg1.value == arg2.value;
+          return arg1 == arg2;
         },
         comp: function(op, arg1, arg2) {
           let result = false;
           switch (op) {
             case COMPARE_GE:
-              result = arg1.value >= arg2.value
+              result = arg1 >= arg2
               break;
             case COMPARE_GT:
-              result = arg1.value > arg2.value
+              result = arg1 > arg2
               break;
             case COMPARE_LE:
-              result = arg1.value <= arg2.value
+              result = arg1 <= arg2
               break;
             case COMPARE_LT:
-              result = arg1.value < arg2.value
+              result = arg1 < arg2
               break;
             default:
               break;
@@ -77,7 +73,6 @@ if (process.argv.length > 2) {
       untagBoolean = obj.instance.exports.tagged_to_boolean;
       len = obj.instance.exports.arr_len;
       arrayGet = obj.instance.exports.arr_get;
-      strLen = obj.instance.exports.str_arr_length;
       getObject = obj.instance.exports.get_string;
       mem = obj.instance.exports.memory;
       obj.instance.exports.main();
@@ -136,7 +131,7 @@ const getValue = (ref, parent = null) => {
     return "...";
   }
   else if (type == 5) {
-    return getObject(ref).value;
+    return getObject(ref);
   }
 }
 
@@ -170,12 +165,7 @@ const errorHandler = err => {
 }
 
 const create_string = (offset, length) => {
-  let surrogate = []
   var bytes = new Uint8Array(mem.buffer, offset, length);
   var string = new TextDecoder('utf8').decode(bytes);
-  surrogate = string.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g) || [];
-  return {
-    value: string,
-    surrogate: surrogate
-  };
+  return string;
 } 

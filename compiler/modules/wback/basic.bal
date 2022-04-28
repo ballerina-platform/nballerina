@@ -88,9 +88,9 @@ function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) retur
 }
 
 function buildStringConcat(wasm:Module module, Scaffold scaffold, bir:StringConcatInsn insn) returns wasm:Expression {
-    wasm:Expression operand1 = buildStringRef(module, buildString(module, scaffold, insn.operands[0]));
-    wasm:Expression operand2 = buildStringRef(module, buildString(module, scaffold, insn.operands[1]));
-    return module.localSet(insn.result.number, module.structNew(STRING_TYPE, [module.call("str_concat", [operand1, operand2], "anyref")]));
+    wasm:Expression operand1 = buildString(module, scaffold, insn.operands[0]);
+    wasm:Expression operand2 = buildString(module, scaffold, insn.operands[1]);
+    return module.localSet(insn.result.number, module.call("w_str_concat", [operand1, operand2], "anyref"));
 }
 
 function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) returns wasm:Expression {

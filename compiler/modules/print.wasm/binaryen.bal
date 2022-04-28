@@ -6,7 +6,7 @@ public type ComplexRefType record {
 public type RefType "anyref"|"eqref"|"i31ref"|"any"|"externref"|ComplexRefType;
 public type Type "None"|NumType|RefType;
 
-public type Op  "i32.add"|
+public type Op  "i32.add"|"i32.sub"|
                 "i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.eqz"|
                 "i32.or"|"i32.xor"|"i32.and"|
                 "i32.shr_u"|
