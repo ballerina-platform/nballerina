@@ -14,8 +14,27 @@ int:MIN_VALUE
 let-expr
 ternary-conditional-expr
 BacktickString
+string-template-expr
 xml
 main-error
 mod-var-decl
 decimal-max
+table-type
+json
+readonly-type
+error-constructor-args
+module-init-var-decl
+object-constructor-expr
+annotation-decl
+explicit-anonymous-function-expr
+infer-anonymous-function-expr
+typeof-expr
+range-expr
+trap-expr
+query-expr
+record-type-readonly-field
+xmlns-decl
+handle
 member-access-expr string
+readonly-type
+is-expr list-constructor-expr

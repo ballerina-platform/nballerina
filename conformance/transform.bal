@@ -123,6 +123,9 @@ function transformContent(string line) returns [string, string[]] {
         // this is sufficient to catch current cases but not all possible cases
         newLabels.push("mod-var-decl");
     }
+    if line.indexOf("xml") is int {
+        newLabels.push("xml");
+    }
     if line.indexOf("toBalString()") is int {
         newLabels.push("value:toBalString");
     }
@@ -133,6 +136,14 @@ function transformContent(string line) returns [string, string[]] {
     if line.indexOf("= +") is int {
         // this is sufficient to catch current cases but not all possible cases
         newLabels.push("unary-plus");
+    }
+    if line.indexOf("error(") is int {
+        int startIndex = <int>line.indexOf("error(");
+        int? endIndex = line.indexOf(")", startIndex);
+        int? commaIndex = line.indexOf(",", startIndex);
+        if commaIndex is int && (endIndex is () || commaIndex < endIndex) {
+            newLabels.push("error-constructor-args");
+        }
     }
     if line.indexOf("?:") is int {
         newLabels.push("ternary-conditional-expr");
