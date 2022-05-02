@@ -8,8 +8,13 @@ type Position d:Position;
 
 type Range d:Range;
 
+type BindingChain record {|
+    Binding head;
+    BindingChain? prev;
+|};
+
 type Environment record {|
-    Binding? bindings;
+    BindingChain? bindings;
     // A list of registers that were narrowed but have been assigned to
     // Holds the number of the original, unnarrowed register
     Assignment[] assignments = [];
@@ -23,7 +28,7 @@ type Assignment readonly & record {|
 
 type StmtEffect record {|
     bir:BasicBlock? block;
-    Binding? bindings = ();
+    BindingChain? bindings = ();
     Narrowing[] narrowings = [];
     Assignment[] assignments = [];
 |};
@@ -50,6 +55,7 @@ type LoopContext record {|
     // following block is reachable
     Assignment[] onBreakAssignments = [];
     Assignment[] onContinueAssignments = [];
+    boolean continueIsBackward;
 |};
 
 class StmtContext {
@@ -135,8 +141,8 @@ class StmtContext {
         return d:location(self.file, pos);
     }
 
-    function pushLoopContext(bir:BasicBlock? onBreak, bir:BasicBlock? onContinue) {
-        LoopContext c = { onBreak, onContinue, enclosing: self.loopContext, startRegister: self.nextRegisterNumber()  };
+    function pushLoopContext(bir:BasicBlock? onBreak, bir:BasicBlock? onContinue, boolean continueIsBackward) {
+        LoopContext c = { onBreak, onContinue, enclosing: self.loopContext, startRegister: self.nextRegisterNumber(), continueIsBackward };
         self.loopContext = c;
     }
 
@@ -168,7 +174,8 @@ class StmtContext {
         }
     }
 
-    function onContinueLabel(Position pos) returns bir:Label|err:Semantic {
+    // Returns basic block to branch on continue, and whether the branch will be backwards
+    function onContinueLabel(Position pos) returns [bir:Label, boolean]|err:Semantic {
         LoopContext? c = self.loopContext;
         if c == () {
             return self.semanticErr("continue not in loop", pos);
@@ -176,7 +183,7 @@ class StmtContext {
         else {
             bir:BasicBlock b = c.onContinue ?: self.createBasicBlock();
             c.onContinue = b;
-            return b.label;
+            return [b.label, c.continueIsBackward];
         }
     }
 
@@ -233,11 +240,11 @@ class StmtContext {
 function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
     StmtContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
-    Binding? bindings = ();
+    BindingChain? bindings = ();
     foreach int i in 0 ..< defn.params.length() {
         var param = defn.params[i];
         bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], param.namePos, param.name);
-        bindings = { name: <string>param.name, reg, prev: bindings, isFinal: true };
+        bindings = { head: { name: <string>param.name, reg, isFinal: true }, prev: bindings };
     }
     var { block: endBlock } = check codeGenScope(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
@@ -302,7 +309,7 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
             narrowings = combineNarrowings(narrowings, effect.narrowings, intersectNarrowing);
         }
     }
-    check unusedLocalVariables(cx, env, initialEnv.bindings);
+    check unusedLocalVariables(cx, env, initialEnv.bindings?.head);
     Assignment[] assignments = [];
     addAssignments(assignments, env.assignments, startRegister);
     return { block: curBlock, assignments, narrowings };
@@ -348,7 +355,7 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, 
 }
 
 function applyEffect(Environment env, StmtEffect effect) {
-    Binding? bindings = effect.bindings;
+    BindingChain? bindings = effect.bindings;
     if bindings != () {
         env.bindings = bindings;
     }
@@ -373,14 +380,13 @@ function invalidateAssignments(Assignment[] assignments, Narrowing[] narrowings)
 }
 
 function unusedLocalVariables(StmtContext cx, Environment env, Binding? bindingLimit) returns CodeGenError? {
-    Binding? binding = env.bindings;
-    while binding !== bindingLimit {
-        // binding is non-nil
-        Binding tem = <Binding>binding;
+    BindingChain? bindings = env.bindings;
+    while bindings != () && bindings.head !== bindingLimit {
+        Binding tem = bindings.head;
         if tem.unnarrowed == () && !tem.used {
             return cx.semanticErr(`unused local variable ${tem.name}`, <Position>tem.reg.pos);
         }
-        binding = tem.prev;
+        bindings = bindings.prev;
     }
 }
 
@@ -409,8 +415,8 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     bir:BasicBlock loopBody = cx.createBasicBlock();
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: loopBody.label, pos: stmt.range.opPos };
     loopHead.insns.push(branch);
-    cx.pushLoopContext(exit, ());
-    Binding loopBindings = { name: varName, reg: loopVar, prev: env.bindings, isFinal: true };
+    cx.pushLoopContext(exit, (), false);
+    BindingChain loopBindings = { head: { name: varName, reg: loopVar, isFinal: true }, prev: env.bindings };
     var { block: loopEnd, assignments } = check codeGenScope(cx, loopBody, { bindings: loopBindings }, stmt.body);
 
     bir:BasicBlock? loopStep = cx.loopContinueBlock();
@@ -427,7 +433,8 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
         bir:TmpRegister nextLoopVal = cx.createTmpRegister(t:INT);
         bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: nextLoopVal };
         bir:AssignInsn incrementAssign = { result: loopVar, operand: nextLoopVal, pos: stmt.kwPos };
-        loopStep.insns.push(increment, incrementAssign, branchToLoopHead);
+        bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
+        loopStep.insns.push(increment, incrementAssign, backwardBranchToLoopHead);
     }
     cx.popLoopContext();
     // XXX shouldn't we be passing up assignments here
@@ -467,7 +474,7 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         return cx.semanticErr("unreachable code", stmt.body.stmts[0].startPos);
     }
     afterCondition.insns.push(branch);
-    cx.pushLoopContext(exit, loopHead);
+    cx.pushLoopContext(exit, loopHead, true);
     var { block: loopEnd, assignments } = check codeGenScope(cx, loopBody, env, stmt.body, ifTrue);
     if loopEnd != () {
         bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
@@ -505,15 +512,18 @@ function validLoopAssignments(StmtContext cx, Assignment[] assignments) returns 
 }
 
 function codeGenBreakContinueStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
-    bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel(stmt.startPos) : check cx.onContinueLabel(stmt.startPos);
-    boolean backward = stmt.breakContinue == "continue";
-    bir:BranchInsn branch = { dest, pos: stmt.startPos, backward };
+    bir:Label dest;
+    boolean backward;
     if stmt.breakContinue == "break" {
+        dest = check cx.onBreakLabel(stmt.startPos);
+        backward = false;
         cx.addOnBreakAssignments(env.assignments);
     }
     else {
+        [dest, backward] = check cx.onContinueLabel(stmt.startPos);
         cx.addOnContinueAssignments(env.assignments);
     }
+    bir:BranchInsn branch = {dest, pos: stmt.startPos, backward};
     startBlock.insns.push(branch);
     return { block: () };
 }
@@ -820,11 +830,13 @@ function addNarrowings(StmtContext cx, bir:BasicBlock bb, Environment env, Narro
         };
         bb.insns.push(insn);
         env.bindings = {
-            name: binding.name,
-            reg: narrowed,
-            isFinal: binding.isFinal,
-            prev: env.bindings,
-            unnarrowed: unnarrowBinding(binding)
+            head: {
+                name: binding.name,
+                reg: narrowed,
+                isFinal: binding.isFinal,
+                unnarrowed: unnarrowBinding(binding)
+            },
+            prev: env.bindings
         };
     }
 }
@@ -875,7 +887,7 @@ function codeGenVarDeclStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
         t:SemType semType = check cx.resolveTypeDesc(td);
         bir:VarRegister|bir:FinalRegister result = isFinal ? cx.createFinalRegister(semType, namePos, name) : cx.createVarRegister(semType, namePos, name);
         bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType, stmt.opPos);
-        return { block: nextBlock, bindings: { name, reg: result, prev: env.bindings, isFinal } };  
+        return { block: nextBlock, bindings: { head: { name, reg: result, isFinal }, prev: env.bindings } };
     }
 }
 
@@ -1306,13 +1318,13 @@ function findAssignmentByUnnarrowedReg(Assignment[] assignments, int unnarrowedR
 }
 
 function bindingsLookup(string name, Environment env) returns Binding? {
-    Binding? tem = env.bindings;
+    BindingChain? tem = env.bindings;
     while true {
         if tem == () {
             break;
         }
-        else if tem.name == name {
-            return tem;
+        else if tem.head.name == name {
+            return tem.head;
         }
         else {
             tem = tem.prev;
