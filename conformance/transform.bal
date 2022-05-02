@@ -123,6 +123,9 @@ function transformContent(string line) returns [string, string[]] {
         // this is sufficient to catch current cases but not all possible cases
         newLabels.push("mod-var-decl");
     }
+    if line.indexOf("xml") is int {
+        newLabels.push("xml");
+    }
     if line.indexOf("toBalString()") is int {
         newLabels.push("value:toBalString");
     }
@@ -136,6 +139,9 @@ function transformContent(string line) returns [string, string[]] {
     }
     if line.indexOf("?:") is int {
         newLabels.push("ternary-conditional-expr");
+    }
+    if line.indexOf("[*]") is int {
+        newLabels.push("inferred-array-length");
     }
     return [newLine, newLabels];
 }
@@ -172,13 +178,28 @@ function parseCharSeperatedList(string s, string:Char sep) returns string[] {
     return labels;
 }
 
+// these are the test ids for tests we currently can't automatically fix by this script, tests are numbered starting with 1
+map<int[]> skipTest = {
+    "list_constructor.balt": [6, 13, 15, 37, 49, 50], // #1003, JBUG, JBUG, BUG, #576, #576
+    "negation_is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
+    "is_expr.balt": [38, 39, 54, 84, 87, 88] // JBUG
+};
+
 function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLables) returns int|io:Error {
     string[] body = [];
     int skipped = 0;
     int index = 0;
+    int[] skipIndices = skipTest.hasKey(filename) ? skipTest.get(filename) : [];
     foreach BaltTestCase test in tests {
         index += 1;
-        if !testValid(test, skipLables) {
+        boolean skipTest = false;
+        foreach int skipIndex in skipIndices {
+            if skipIndex == index {
+                skipTest = true;
+                break;
+            }
+        }
+        if skipTest || !testValid(test, skipLables) {
             skipped += 1;
             continue;
         }
