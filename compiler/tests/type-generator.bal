@@ -1,7 +1,8 @@
 import ballerina/test;
 import ballerina/io;
-import ballerina/random;
 import wso2/nballerina.types as t;
+import ballerina/time;
+import ballerina/jballerina.java;
 
 // diff-2 stand for isEmpty(diff(a, b)) and isEmpty(diff(b, a))
 enum PropositionOp {
@@ -27,11 +28,11 @@ type NonEmptyProposition record {|
     false isEmpty = false;
 |};
 
-type PropositionGenerator function (Context cx, int depth) returns Proposition;
+type PropositionGenerator function (Context cx, PropositionPath path) returns Proposition;
 
-type SubtypePropositionGenerator function (Context cx, int depth) returns SubtypeProposition;
+type SubtypePropositionGenerator function (Context cx, PropositionPath path) returns SubtypeProposition;
 
-type NonEmptyPropositionGenerator function (Context cx, int depth) returns NonEmptyProposition; 
+type NonEmptyPropositionGenerator function (Context cx, PropositionPath path) returns NonEmptyProposition; 
 
 type Limits readonly & record {|
     readonly int maxTupleMembers = 6;
@@ -48,10 +49,14 @@ class Context {
     final SubtypeProposition[][] subtypePropositions = [];
     final NonEmptyProposition[][] nonEmptyPropositions = [];
     final Limits 'limit;
+    final int seed;
+    final Random random;
 
-    function init(t:Context cx, Limits 'limit = {}) {
+    function init(t:Context cx, int seed, Limits 'limit = {}) {
         self.typeContext = cx;
         self.'limit = 'limit;
+        self.seed = seed;
+        self.random = new(seed);
     }
 
     function takeSubtypeProposition() returns SubtypeProposition {
@@ -63,9 +68,9 @@ class Context {
     }
 
     private function takeFromList(Proposition[][] list) returns Proposition {
-        int level = randomInt(list.length());
+        int level = self.random.nextRange(list.length());
         Proposition[] subList = list[level];
-        int item = randomInt(subList.length());
+        int item = self.random.nextRange(subList.length());
         return subList[item];
     }
 
@@ -85,8 +90,52 @@ class Context {
     }
 }
 
+class Random {
+    private handle jrandom;
+
+    function init(int seed) {
+        self.jrandom = createJavaRandomObj(seed);
+    }
+
+    function next() returns int {
+        return self._next(self.jrandom).abs();
+    }
+
+    // 0 to range [exclusive]
+    function nextRange(int range) returns int {
+        if range > 2147483647 {
+            panic error("Range too large");
+        }
+        if range == 0 || range == 1 {
+            return 0;
+        }
+        return self._next(self.jrandom).abs() % range;  
+    }
+
+    function _next(handle receiver) returns int = @java:Method {
+        'class: "java.util.Random",
+        name: "nextLong"
+    } external;   
+}
+
+function createJavaRandomObj(int seed) returns handle = @java:Constructor {
+    'class: "java.util.Random",
+    paramTypes: ["long"]
+} external;
+
+type PropositionPath record {|
+    int depth;
+    (PropositionPath|int)[] rands;
+|};
+
+function propositionBranch(PropositionPath current) returns PropositionPath {
+    PropositionPath next = { depth: current.depth - 1, rands: [] };
+    current.rands.push(next);
+    return next;
+}
+
 final readonly & SubtypePropositionGenerator[] AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS = [
-    subtypeSameBasicType,
+    subtypeSameSimpleType,
     subtypeGenSingletonInt,
     subtypeGenSingletonInt8,
     subtypeGenSingletonString
@@ -126,70 +175,47 @@ function fromList(PropositionGenerator[]... generators) returns readonly & Propo
     return all.cloneReadOnly();
 }
 
-// todo: should replace with re-producible random sequence generator 
-function randomInt(int ceil) returns int {
-    if ceil == 0 {
-        return ceil;
-    }
-    // `endRange` is always greater than `startRange`
-    return checkpanic random:createIntInRange(0, ceil);
+final readonly & t:SemType[] TYPES_LIST = [t:INT, t:FLOAT, t:DECIMAL, t:BYTE, t:STRING, t:NEVER];
+
+function subtypeSameSimpleType(Context cx, PropositionPath path) returns SubtypeProposition {
+    int r = cx.random.nextRange(TYPES_LIST.length());
+    t:SemType t = TYPES_LIST[r];
+    return { left: t, right: t };
 }
 
-function subtypeSameBasicType(Context cx, int depth) returns SubtypeProposition {
-    int r = randomInt(6);
-    match r {
-        0 => {
-            return { left: t:INT, right: t:INT };
-        }        
-        1 => {
-            return { left: t:FLOAT, right: t:FLOAT };
-        }        
-        2 => {
-            return { left: t:DECIMAL, right: t:DECIMAL };
-        }        
-        3 => {
-            return { left: t:BYTE, right: t:BYTE };
-        }        
-        4 => {
-            return { left: t:STRING, right: t:STRING };
-        }
-        5 => {
-            return { left: t:NEVER, right: t:NEVER };
-        }        
-    }
-    panic error("invalid state");
-}
-
-function subtypeGenSingletonInt(Context cx, int depth) returns SubtypeProposition {
-    int r = randomInt(int:MAX_VALUE);
+function subtypeGenSingletonInt(Context cx, PropositionPath path) returns SubtypeProposition {
+    int r = cx.random.next();
     return { left: t:intConst(r), right: t:INT };
 }
 
-function subtypeGenSingletonInt8(Context cx, int depth) returns SubtypeProposition {
-    int r = randomInt(128);
+function subtypeGenSingletonInt8(Context cx, PropositionPath path) returns SubtypeProposition {
+    int r = cx.random.nextRange(128);
     return { left: t:intConst(r), right: t:intWidthSigned(8) };
 }
 
 // "abc" <: string
-function subtypeGenSingletonString(Context cx, int depth) returns SubtypeProposition {
-    int l = randomInt(cx.'limit.maxStringConstLen);
-    int[] codePoints = from int _ in 0 ... l select string:toCodePointInt("a") + randomInt(52);
+function subtypeGenSingletonString(Context cx, PropositionPath path) returns SubtypeProposition {
+    int l = cx.random.nextRange(cx.'limit.maxStringConstLen);
+    return { left: t:stringConst(randomStringValue(cx, l)), right: t:STRING };
+}
+
+function randomStringValue(Context cx, int len) returns string {
+    int[] codePoints = from int _ in 0 ... len select string:toCodePointInt("a") + cx.random.nextRange(52);
     // codepoints in [a-zA-Z]
-    string r = checkpanic string:fromCodePointInts(codePoints);
-    return { left: t:stringConst(r), right: t:STRING };
+    return checkpanic string:fromCodePointInts(codePoints);
 }
 
 // T1 <: S1, T2 <: S2 -> (T1 | T2) <: (S1 | S2)
-function subtypeGenUnion(Context cx, int depth) returns SubtypeProposition {
-    SubtypeProposition p1 = generateSubtypeProposition(cx, depth - 1);
-    SubtypeProposition p2 = generateSubtypeProposition(cx, depth - 1);
+function subtypeGenUnion(Context cx, PropositionPath path) returns SubtypeProposition {
+    SubtypeProposition p1 = generateSubtypeProposition(cx, propositionBranch(path));
+    SubtypeProposition p2 = generateSubtypeProposition(cx, propositionBranch(path));
     return { left: t:union(p1.left, p2.left), right: t:union(p1.right, p2.right) };
 }
 
 // T[N] <: T[]
-function subtypeGenFixedLengthArray(Context cx, int depth) returns SubtypeProposition {
-    int r = randomInt(int:MAX_VALUE);
-    SubtypeProposition p = generateSubtypeProposition(cx, depth - 1);
+function subtypeGenFixedLengthArray(Context cx, PropositionPath path) returns SubtypeProposition {
+    int r = cx.random.next();
+    SubtypeProposition p = generateSubtypeProposition(cx, propositionBranch(path));
     t:SemType t = p.left;
     t:SemType sub = (new t:ListDefinition()).define(cx.typeContext.env, [t], r);
     t:SemType super = (new t:ListDefinition()).define(cx.typeContext.env, rest = t);
@@ -197,9 +223,9 @@ function subtypeGenFixedLengthArray(Context cx, int depth) returns SubtypePropos
 }
 
 // T[] | T1[] <: (T|T1)[]
-function subtypeGenListUnionUnionList(Context cx, int depth) returns SubtypeProposition {
-    SubtypeProposition p1 = generateSubtypeProposition(cx, depth - 1);
-    SubtypeProposition p2 = generateSubtypeProposition(cx, depth - 1);
+function subtypeGenListUnionUnionList(Context cx, PropositionPath path) returns SubtypeProposition {
+    SubtypeProposition p1 = generateSubtypeProposition(cx, propositionBranch(path));
+    SubtypeProposition p2 = generateSubtypeProposition(cx, propositionBranch(path));
     t:SemType list1 = (new t:ListDefinition()).define(cx.typeContext.env, rest = p1.left);
     t:SemType list2 = (new t:ListDefinition()).define(cx.typeContext.env, rest = p2.right);
     t:SemType super = (new t:ListDefinition()).define(cx.typeContext.env, rest = t:union(p1.right, p2.right));
@@ -207,41 +233,41 @@ function subtypeGenListUnionUnionList(Context cx, int depth) returns SubtypeProp
 }
 
 // T <: T1 -> T[] <: T1[]
-function subtypeGenList(Context cx, int depth) returns SubtypeProposition {
-    SubtypeProposition p = generateSubtypeProposition(cx, depth - 1);
+function subtypeGenList(Context cx, PropositionPath path) returns SubtypeProposition {
+    SubtypeProposition p = generateSubtypeProposition(cx, propositionBranch(path));
     t:SemType sub = (new t:ListDefinition()).define(cx.typeContext.env, rest = p.left);
     t:SemType super = (new t:ListDefinition()).define(cx.typeContext.env, rest = p.right);
     return { left: sub, right: super };
 }
 
 // T1 <: S1, T2 <: S2, ..., Tn <: Sn -> [T1, T2, ..Tn] < [S1, S2, ..Sn]
-function subtypeGenSimpleTuple(Context cx, int depth) returns SubtypeProposition {
-    int memberCount = randomInt(cx.'limit.maxTupleMembers);
-    var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, depth - 1);
+function subtypeGenSimpleTuple(Context cx, PropositionPath path) returns SubtypeProposition {
+    int memberCount = cx.random.nextRange(cx.'limit.maxTupleMembers);
+    var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, propositionBranch(path));
     t:SemType sub = (new t:ListDefinition()).define(cx.typeContext.env, subtypes);
     t:SemType super = (new t:ListDefinition()).define(cx.typeContext.env, supertypes);
     return { left: sub, right: super };
 }
 
 // T1 <: S1, T2 <: S2, ..., Tn <: Sn, Tr, <: Sr -> [T1, T2, ..Tn, Tr...] < [S1, S2, ..Sn, Sr...]
-function subtypeGenTupleWithRest(Context cx, int depth) returns SubtypeProposition {
-    int memberCount = randomInt(cx.'limit.maxTupleMembers);
-    var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, depth - 1);
-    SubtypeProposition restProposition = generateSubtypeProposition(cx, depth - 1);
+function subtypeGenTupleWithRest(Context cx, PropositionPath path) returns SubtypeProposition {
+    int memberCount = cx.random.nextRange(cx.'limit.maxTupleMembers);
+    var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, propositionBranch(path));
+    SubtypeProposition restProposition = generateSubtypeProposition(cx, propositionBranch(path));
     t:SemType sub = (new t:ListDefinition()).define(cx.typeContext.env, subtypes, rest = restProposition.left);
     t:SemType super = (new t:ListDefinition()).define(cx.typeContext.env, supertypes, rest = restProposition.right);
     return { left: sub, right: super };
 }
 
 // T1 <: S1, T2 <: S2, T3 <: S3, Tr <: Sr -> [T1, T2, T3, Tr...] < [S1, S2, (S3|Sr)...]
-function subtypeGenTupleUnequalMemberCount(Context cx, int depth) returns SubtypeProposition {
-    int memberCount = randomInt(cx.'limit.maxTupleMembers);
+function subtypeGenTupleUnequalMemberCount(Context cx, PropositionPath path) returns SubtypeProposition {
+    int memberCount = cx.random.nextRange(cx.'limit.maxTupleMembers);
     // Avoid heavy tree creations by duplicating some pre-generated members.
-    var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, depth - 1);
-    SubtypeProposition restProposition = generateSubtypeProposition(cx, depth - 1);
+    var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, propositionBranch(path));
+    SubtypeProposition restProposition = generateSubtypeProposition(cx, propositionBranch(path));
     t:SemType sub = (new t:ListDefinition()).define(cx.typeContext.env, subtypes, rest = restProposition.left);
     
-    int sliceIndex = randomInt(supertypes.length());
+    int sliceIndex = cx.random.nextRange(supertypes.length());
     t:SemType[] superMembers = supertypes.slice(0, sliceIndex);
     t:SemType superRest = restProposition.right;
     foreach var i in sliceIndex ..< supertypes.length() {
@@ -252,30 +278,30 @@ function subtypeGenTupleUnequalMemberCount(Context cx, int depth) returns Subtyp
 }
 
 // T <: S, NE(T1), NE(T2)... -> T[] <: []|[S]|[(S|T1), S]|[S, S, (S|T2)...]
-function subtypeGenFixedTupleUnion(Context cx, int depth) returns SubtypeProposition {
-    int memberCount = randomInt(cx.'limit.maxTupleMembers);
-    SubtypeProposition p = generateSubtypeProposition(cx, depth - 1);
+function subtypeGenFixedTupleUnion(Context cx, PropositionPath path) returns SubtypeProposition {
+    int memberCount = cx.random.nextRange(cx.'limit.maxTupleMembers);
+    SubtypeProposition p = generateSubtypeProposition(cx, propositionBranch(path));
     t:SemType left = (new t:ListDefinition()).define(cx.typeContext.env, rest = p.left);
     t:SemType right = t:NEVER;
     foreach var i in 0 ... memberCount {
-        right = t:union(right, generateNTuple(cx, i, memberCount, p.right, depth - 1));
+        right = t:union(right, generateNTuple(cx, i, memberCount, p.right, propositionBranch(path)));
     }
     return { left, right };
 }
 
 // Generate N-tuple, using baseType unioned with other random types.
 // When len == maxFixedLen, generated tuple has non-never rest type.
-function generateNTuple(Context cx, int len, int maxFixedLen, t:SemType baseType, int depth) returns t:SemType {
+function generateNTuple(Context cx, int len, int maxFixedLen, t:SemType baseType, PropositionPath path) returns t:SemType {
     t:SemType[] members = [];
     t:SemType t = t:NEVER;
     foreach int i in 1...len {
-        match randomInt(2) {
+        match cx.random.nextRange(2) {
             0 => {
                 t = t:NEVER;
                 members.push(baseType);
             }
             1 => {
-                t = generateSubtypeProposition(cx, depth).left;
+                t = generateSubtypeProposition(cx, propositionBranch(path)).left;
                 members.push(t:union(baseType, t));
             }
         }
@@ -288,29 +314,29 @@ function generateNTuple(Context cx, int len, int maxFixedLen, t:SemType baseType
 }
 
 // Max allowed value for `depth` = max(all previous depth values associated with the same Context) + 1
-function generateSubtypeProposition(Context cx, int depth) returns SubtypeProposition {
-    if depth <= 0 {
-        SubtypePropositionGenerator generator = AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS[randomInt(AXIOMATIC_GENERATOR_COUNT)];
-        SubtypeProposition prop =  generator(cx, depth);
-        cx.storeSubtypeProposition(depth, prop);
+function generateSubtypeProposition(Context cx, PropositionPath path) returns SubtypeProposition {
+    if path.depth <= 0 {
+        SubtypePropositionGenerator generator = AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS[cx.random.nextRange(AXIOMATIC_GENERATOR_COUNT)];
+        SubtypeProposition prop =  generator(cx, path);
+        cx.storeSubtypeProposition(0, prop);
         return prop;
     }
-    if cx.subtypePropositions.length() > depth + 1 {
+    if cx.subtypePropositions.length() > path.depth + 1 {
         return cx.takeSubtypeProposition();
     }
-    int r = randomInt(SUBTYPE_PROPOSITION_GENERATORS.length());
+    int r = cx.random.nextRange(SUBTYPE_PROPOSITION_GENERATORS.length());
     SubtypePropositionGenerator generator = SUBTYPE_PROPOSITION_GENERATORS[r];
-    SubtypeProposition prop = generator(cx, depth);
-    cx.storeSubtypeProposition(depth, prop);
+    SubtypeProposition prop = generator(cx, path);
+    cx.storeSubtypeProposition(path.depth, prop);
     return prop;
 }
 
-function generateNSubtypePropositions(Context cx, int n, int depth) returns [t:SemType[], t:SemType[]] {
+function generateNSubtypePropositions(Context cx, int n, PropositionPath path) returns [t:SemType[], t:SemType[]] {
     t:SemType[] subtypes = [];
     t:SemType[] supertypes = [];
     foreach var _ in 0 ... n {
-        SubtypeProposition p = generateSubtypeProposition(cx, depth);
-        foreach var _ in 0 ... randomInt(cx.'limit.duplicationFactor) {
+        SubtypeProposition p = generateSubtypeProposition(cx, path);
+        foreach var _ in 0 ... cx.random.nextRange(cx.'limit.duplicationFactor) {
             subtypes.push(p.left);
             supertypes.push(p.right);
             if subtypes.length() == n {
@@ -322,11 +348,11 @@ function generateNSubtypePropositions(Context cx, int n, int depth) returns [t:S
 }
 
 // Convert subtype proposition into non-empty preposition
-function nonEmptyFromAxiomaticSubtype(Context cx, int depth) returns NonEmptyProposition {
+function nonEmptyFromAxiomaticSubtype(Context cx, PropositionPath path) returns NonEmptyProposition {
     while true {
-        SubtypeProposition subtypeProp = generateSubtypeProposition(cx, 0);
+        SubtypeProposition subtypeProp = generateSubtypeProposition(cx, { depth: 0, rands: [] });
         if !t:isEmpty(cx.typeContext, subtypeProp.left) {
-            match randomInt(2) {
+            match cx.random.nextRange(2) {
                 0 => {
                     return { left: subtypeProp.left, right: subtypeProp.right };
                 }
@@ -336,7 +362,7 @@ function nonEmptyFromAxiomaticSubtype(Context cx, int depth) returns NonEmptyPro
             }
         }
         if !t:isEmpty(cx.typeContext, subtypeProp.right) {
-            match randomInt(2) {
+            match cx.random.nextRange(2) {
                 0 => {
                     return { left: subtypeProp.left, right: subtypeProp.right };
                 }
@@ -349,53 +375,53 @@ function nonEmptyFromAxiomaticSubtype(Context cx, int depth) returns NonEmptyPro
 }
 
 // NE(T), NE(S) -> NE(T|S)
-function nonEmptyGenUnion(Context cx, int depth) returns NonEmptyProposition {
-    NonEmptyProposition left = generateNonEmptyProposition(cx, depth - 1);
-    NonEmptyProposition right = generateNonEmptyProposition(cx, depth - 1);
+function nonEmptyGenUnion(Context cx, PropositionPath path) returns NonEmptyProposition {
+    NonEmptyProposition left = generateNonEmptyProposition(cx, propositionBranch(path));
+    NonEmptyProposition right = generateNonEmptyProposition(cx, propositionBranch(path));
     return { left: t:union(left.left, right.left), right: t:NEVER };
 }
 
 // NE(T) -> NE(T[])
-function nonEmptyGenList(Context cx, int depth) returns NonEmptyProposition {
-    NonEmptyProposition base = generateNonEmptyProposition(cx, depth - 1);
+function nonEmptyGenList(Context cx, PropositionPath path) returns NonEmptyProposition {
+    NonEmptyProposition base = generateNonEmptyProposition(cx, propositionBranch(path));
     t:SemType elem = base.left;
     t:SemType t = (new t:ListDefinition()).define(cx.typeContext.env, [], rest = elem);
     return { left: t, right: t:NEVER };
 }
 
 // NE(T1), NE(T2), ...NE(Tn), Tr -> NE([T1, T2, ..Tn, Tr...])
-function nonEmptyGenTuple(Context cx, int depth) returns NonEmptyProposition {
-    NonEmptyProposition base = generateNonEmptyProposition(cx, depth - 1);
+function nonEmptyGenTuple(Context cx, PropositionPath path) returns NonEmptyProposition {
+    NonEmptyProposition base = generateNonEmptyProposition(cx, propositionBranch(path));
     t:SemType rest = base.left;
-    t:SemType[] fixedMembers = from var _ in 0 ... randomInt(cx.'limit.maxTupleMembers) 
-                               let var prop = generateNonEmptyProposition(cx, depth - 1)
+    t:SemType[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.'limit.maxTupleMembers) 
+                               let var prop = generateNonEmptyProposition(cx, propositionBranch(path))
                                select prop.left;
     t:SemType t = (new t:ListDefinition()).define(cx.typeContext.env, fixedMembers, rest = rest);
     return { left: t, right: t:NEVER };
 
 }
 // NE(T1), NE(T2), ...NE(Tn) -> NE([T1, T2, ..Tn])
-function nonEmptyGenNonRestTuple(Context cx, int depth) returns NonEmptyProposition {
-    t:SemType[] fixedMembers = from var _ in 0 ... randomInt(cx.'limit.maxTupleMembers) 
-                               let var prop = generateNonEmptyProposition(cx, depth - 1)
+function nonEmptyGenNonRestTuple(Context cx, PropositionPath path) returns NonEmptyProposition {
+    t:SemType[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.'limit.maxTupleMembers) 
+                               let var prop = generateNonEmptyProposition(cx, propositionBranch(path))
                                select prop.left;
     t:SemType t = (new t:ListDefinition()).define(cx.typeContext.env, fixedMembers);
     return { left: t, right: t:NEVER };
 }
 
 // Max allowed value for `depth` = max(all previous depth values associated with the same Context) + 1
-function generateNonEmptyProposition(Context cx, int depth) returns NonEmptyProposition {
-    if depth <= 0 {
-        NonEmptyPropositionGenerator generator = AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS[randomInt(AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS.length())];
-        return generator(cx, depth);
+function generateNonEmptyProposition(Context cx, PropositionPath path) returns NonEmptyProposition {
+    if path.depth <= 0 {
+        NonEmptyPropositionGenerator generator = AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS[cx.random.nextRange(AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS.length())];
+        return generator(cx, path);
     }
-    if cx.subtypePropositions.length() > depth + 1 {
+    if cx.subtypePropositions.length() > path.depth + 1 {
         return cx.takeNonEmptyProposition();
     }
-    int r = randomInt(NONEMPTY_PROPOSITION_GENERATORS.length());
+    int r = cx.random.nextRange(NONEMPTY_PROPOSITION_GENERATORS.length());
     NonEmptyPropositionGenerator generator = NONEMPTY_PROPOSITION_GENERATORS[r];
-    NonEmptyProposition prop = generator(cx, depth);
-    cx.storeNonEmptyProposition(depth, prop);
+    NonEmptyProposition prop = generator(cx, path);
+    cx.storeNonEmptyProposition(path.depth, prop);
     return prop;
 }
 
@@ -432,12 +458,13 @@ function assertFail(Context cx, Proposition prop) {
 
 function invokePropositionGenerator(*PropositionTestConfig config) {
     foreach int i in 0 ... config.totalTestRuns {
-        Context cx = new Context(t:typeContext(new));
+        time:Utc seed = time:utcNow();
+        Context cx = new Context(t:typeContext(new), seed[0]);
         foreach int depth in 0 ... config.depthLimit {
             io:print(string `${"\r"}Iteration: ${i}, level: ${depth}/${config.depthLimit}`);
             foreach int j in 0 ... config.widthLimit {
                 PropositionGenerator generator = config.generator;
-                Proposition prop = generator(cx, depth);
+                Proposition prop = generator(cx, { depth, rands: [] });
                 if !evalProposition(cx, prop) {
                     OnFail onFail = config.onFail;
                     onFail(cx, prop);
@@ -456,4 +483,13 @@ function testSubtyping() {
 @test:Config
 function testNonEmptyTypes() {
     invokePropositionGenerator(generator = generateNonEmptyProposition);
+}
+
+@test:Config
+function testRandom() {
+    Random r1 = new(100);
+    Random r2 = new(100);
+    foreach int i in 0...10000 {
+        test:assertEquals(r1.nextRange(200), r2.nextRange(200));
+    }
 }
