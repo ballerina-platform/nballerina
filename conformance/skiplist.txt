@@ -22,7 +22,6 @@ decimal-max
 table-type
 json
 readonly-type
-error-constructor-args
 module-init-var-decl
 object-constructor-expr
 annotation-decl
@@ -38,3 +37,6 @@ handle
 member-access-expr string
 readonly-type
 is-expr list-constructor-expr
+exact-equality list-constructor-expr
+error-type-parameter
+never

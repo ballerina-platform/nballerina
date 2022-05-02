@@ -12,6 +12,7 @@ update: $(TESTS)
 	git submodule foreach git pull origin master
 	rm -rf tests
 	mkdir -p tests
+	rm -rf out
 	bal run transform.bal -- $^ --skipList skiplist.txt
 
 report: report/report.html
