@@ -90,7 +90,7 @@ class StmtContext {
         self.file = functionDefn.part.file;
         self.code = {};
         self.returnType = returnType;
-        self.scopeStack.push(bir:createRegisterScope((), functionDefn.startPos, functionDefn.endPos));
+        self.scopeStack.push({ scope: (), startPos: functionDefn.startPos, endPos: functionDefn.endPos });
     }
 
     function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
@@ -118,9 +118,8 @@ class StmtContext {
     }
 
     function pushScope(Position startPos, Position endPos) {
-        bir:RegisterScope parentScope = self.getCurrentScope();
-        bir:RegisterScope scope = bir:createRegisterScope(parentScope, startPos, endPos);
-        self.scopeStack.push(scope);
+        bir:RegisterScope scope = self.getCurrentScope();
+        self.scopeStack.push({ scope, startPos, endPos });
     }
 
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TmpRegister {

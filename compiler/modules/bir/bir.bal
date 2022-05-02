@@ -177,14 +177,10 @@ public type DeclRegister ParamRegister|VarRegister|FinalRegister;
 public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
 
 public type RegisterScope readonly & record {|
-    RegisterScope? parentScope;
+    RegisterScope? scope;
     Position startPos;
     Position endPos;
 |};
-
-public function createRegisterScope(RegisterScope? parentScope, Position startPos, Position endPos) returns RegisterScope {
-    return { parentScope, startPos, endPos };
-}
 
 public type DeclRegisterBase record {|
     *RegisterBase;
@@ -241,7 +237,7 @@ public function createFinalRegister(FunctionCode code, SemType semType, Position
 }
 
 public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, Position? pos = ()) returns NarrowRegister {
-    NarrowRegister r = { number: code.registers.length(), underlying: underlying, semType, pos };
+    NarrowRegister r = { number: code.registers.length(), underlying, semType, pos };
     code.registers.push(r);
     return r;
 }
