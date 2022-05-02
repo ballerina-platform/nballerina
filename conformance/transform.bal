@@ -137,17 +137,11 @@ function transformContent(string line) returns [string, string[]] {
         // this is sufficient to catch current cases but not all possible cases
         newLabels.push("unary-plus");
     }
-    // pr-todo: remove this
-    // if line.indexOf("error(") is int {
-    //     int startIndex = <int>line.indexOf("error(");
-    //     int? endIndex = line.indexOf(")", startIndex);
-    //     int? commaIndex = line.indexOf(",", startIndex);
-    //     if commaIndex is int && (endIndex is () || commaIndex < endIndex) {
-    //         newLabels.push("error-constructor-args");
-    //     }
-    // }
     if line.indexOf("?:") is int {
         newLabels.push("ternary-conditional-expr");
+    }
+    if line.indexOf("[*]") is int {
+        newLabels.push("inferred-array-length");
     }
     return [newLine, newLabels];
 }
@@ -186,11 +180,9 @@ function parseCharSeperatedList(string s, string:Char sep) returns string[] {
 
 // these are the test ids for tests we currently can't automatically fix by this script, tests are numbered starting with 1
 map<int[]> skipTest = {
-    "list_constructor.balt": [49, 50], // filling tuple members
-    // probable bugs:
-    // check 87, 88
-    "negation_is_expr.balt": [38, 39, 54, 84, 87, 88],
-    "is_expr.balt": [38, 39, 54, 84, 87, 88]
+    "list_constructor.balt": [6, 13, 15, 37, 49, 50], // #1003, JBUG, JBUG, BUG, #576, #576
+    "negation_is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
+    "is_expr.balt": [38, 39, 54, 84, 87, 88] // JBUG
 };
 
 function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLables) returns int|io:Error {
