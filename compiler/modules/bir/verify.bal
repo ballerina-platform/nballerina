@@ -9,7 +9,6 @@ type Range d:Range;
 type TmpRegion record {|
     int entry;
     int? exit;
-    int? parent;
     boolean hasBackward = false;
 |};
 
@@ -21,6 +20,7 @@ class VerifyContext {
     boolean[] tmpRegisterUsed = [];
     TmpRegion[] regions = [];
     Label[] currentRegion = [];
+    Label[] loopHeads = [];
     
     function init(Module mod, FunctionDefn defn, FunctionCode code) {
         self.mod = mod;
@@ -99,12 +99,12 @@ function verifyRegions(VerifyContext vc, Position pos) returns Error? {
     }
 }
 
-function createRegions(VerifyContext vc, boolean[] visited, int entry, Label label, Position pos, int? parent = ()) returns int|Error {
+function createRegions(VerifyContext vc, boolean[] visited, int entry, Label label, Position pos) returns int|Error {
     if vc.currentRegion.indexOf(label) != () {
         return vc.invalidErr("loop in non-loop region", pos);
     }
     if visited[label] {
-        buildTempRegion(vc, entry, label, parent);
+        buildTempRegion(vc, entry, label);
         return label;
     }
     vc.currentRegion.push(label);
@@ -115,11 +115,15 @@ function createRegions(VerifyContext vc, boolean[] visited, int entry, Label lab
         Insn insn = insns[insnsLen - 1];
         if insn is BranchInsn {
             if insn.backward {
-                buildTempRegion(vc, entry, label, parent, true);
+                if !vc.code.blocks[insn.dest].isLoopHead {
+                    return vc.invalidErr("backwards branch directs to non loop head", pos);
+                }
+                buildTempRegion(vc, entry, label, true);
                 return vc.currentRegion.pop();
             }
             else {
-                int r = check createRegions(vc, visited, entry, insn.dest, pos, parent);
+                insns = vc.code.blocks[insn.dest].insns;
+                int r = check createRegions(vc, visited, entry, insn.dest, pos);
                 if label != vc.currentRegion.pop() {
                     return vc.invalidErr("error in region", pos);
                 }
@@ -127,21 +131,22 @@ function createRegions(VerifyContext vc, boolean[] visited, int entry, Label lab
             }
         }
         else if insn is CondBranchInsn {
-            int r = int:max(check createRegions(vc, visited, entry, insn.ifFalse, pos, parent),
-                check createRegions(vc, visited, insn.ifTrue, insn.ifTrue, pos, parent = label));
+            Label entry2 = insn.operand is AssignTmpRegister ? entry : insn.ifTrue;
+            int r = int:max(check createRegions(vc, visited, entry, insn.ifFalse, pos),
+                check createRegions(vc, visited, entry2, insn.ifTrue, pos));
             if label != vc.currentRegion.pop() {
                 return vc.invalidErr("error in region", pos);
             }
             return r;
         }
     }
-    buildTempRegion(vc, entry, label, parent);
+    buildTempRegion(vc, entry, label);
     return vc.currentRegion.pop();
 }
 
-function buildTempRegion(VerifyContext vc, int entry, int exit, int? parent, boolean hasBackward = false) {
+function buildTempRegion(VerifyContext vc, int entry, int exit, boolean hasBackward = false) {
     if entry != exit {
-        vc.regions.push({entry, exit, parent, hasBackward});
+        vc.regions.push({entry, exit, hasBackward});
     }
 }
 

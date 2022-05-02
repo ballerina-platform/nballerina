@@ -108,8 +108,8 @@ class StmtContext {
         return bir:getRegister(self.code, registerNumber).pos;
     }
 
-    function createBasicBlock(string? name = ()) returns bir:BasicBlock {
-        return bir:createBasicBlock(self.code, name);
+    function createBasicBlock(string? name = (), boolean isLoopHead = false) returns bir:BasicBlock {
+        return bir:createBasicBlock(self.code, name, isLoopHead);
     }
 
     function openRegion(bir:Label entry, bir:RegionKind kind, bir:Label? exit = ()) {
@@ -405,7 +405,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     bir:VarRegister loopVar = cx.createVarRegister(t:INT, stmt.namePos, varName);
     bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
-    bir:BasicBlock loopHead = cx.createBasicBlock();
+    bir:BasicBlock loopHead = cx.createBasicBlock(isLoopHead = true);
     bir:BasicBlock exit = cx.createBasicBlock();
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     initLoopVar.insns.push(branchToLoopHead);
@@ -442,7 +442,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
 }
 
 function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:WhileStmt stmt) returns CodeGenError|StmtEffect {
-    bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
+    bir:BasicBlock loopHead = cx.createBasicBlock(isLoopHead = true); // where we go to on continue
     cx.openRegion(loopHead.label, bir:REGION_LOOP);
     bir:BranchInsn forwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     startBlock.insns.push(forwardBranchToLoopHead);
