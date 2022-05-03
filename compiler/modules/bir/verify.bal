@@ -131,9 +131,8 @@ function createRegions(VerifyContext vc, boolean[] visited, int entry, Label lab
             }
         }
         else if insn is CondBranchInsn {
-            Label entry2 = insn.operand is AssignTmpRegister ? entry : insn.ifTrue;
-            int r = int:max(check createRegions(vc, visited, entry, insn.ifFalse, pos),
-                check createRegions(vc, visited, entry2, insn.ifTrue, pos));
+            int r = check createRegions(vc, visited, entry, insn.ifFalse, pos);
+            _ = check createRegions(vc, visited, label, insn.ifTrue, pos);
             if label != vc.currentRegion.pop() {
                 return vc.invalidErr("error in region", pos);
             }
