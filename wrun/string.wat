@@ -1,20 +1,17 @@
 (module 
-  ;; type_section
+  ;; type
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate))) (extends $Any)) 
-  ;; type_section_end
-  ;; import_section
+  ;; import
   (import "string" "create" (func $str_create (param i32) (param i32) (result anyref))) 
   (import "string" "length" (func $str_length (param anyref) (result i32))) 
   (import "string" "concat" (func $str_concat (param anyref) (param anyref) (result anyref))) 
   (import "string" "eq" (func $str_eq (param anyref) (param anyref) (result i32))) 
   (import "string" "comp" (func $str_comp (param i32) (param anyref) (param anyref) (result i32))) 
-  ;; import_section_end
-  ;; export_section
+  ;; export
   (export "get_string" (func $get_string)) 
-  ;; export_section_end
-  ;; func_section
-  (func $w_str_len (param $0 (ref $String)) (result i64) 
+  ;; $bal_str_len
+  (func $bal_str_len (param $0 (ref $String)) (result i64) 
     (i64.extend_i32_u 
       (i32.sub 
         (call $str_length 
@@ -23,6 +20,7 @@
         (array.len $Surrogate 
           (struct.get $String $surrogate 
             (local.get $0)))))) 
+  ;; $w_str_concat
   (func $w_str_concat (param $0 (ref $String)) (param $1 (ref $String)) (result (ref $String)) 
     (local $2 (ref null $Surrogate)) 
     (local $3 (ref null $Surrogate)) 
@@ -103,7 +101,8 @@
           (ref.as_non_null 
             (local.get $6)) 
           (rtt.sub $String
-            (rtt.canon $Any)))))) 
+            (rtt.canon $Any))))))
+  ;; get_string
   (func $get_string (param $0 eqref) (result anyref) 
     (struct.get $String $val 
       (ref.cast 
@@ -111,5 +110,37 @@
           (local.get $0)) 
         (rtt.sub $String
           (rtt.canon $Any)))))
-  ;; func_section_end        
+  ;; $length
+  (func $length (param $0 eqref) (result i64) 
+    (local $1 i64) 
+    (block 
+      (block $blockList 
+        (drop 
+          (block $blockStr 
+            (result (ref null any)) 
+            (drop 
+              (br_on_cast_fail $blockStr 
+                (ref.as_data 
+                  (local.get $0)) 
+                (rtt.sub $String
+                  (rtt.canon $Any)))) 
+            (local.set $1 
+              (call $bal_str_len 
+                (ref.cast 
+                  (ref.as_data 
+                    (local.get $0)) 
+                  (rtt.sub $String
+                    (rtt.canon $Any))))) 
+            (br $blockList) 
+            (ref.null any))) 
+        (local.set $1 
+          (struct.get $List $len 
+            (ref.cast 
+              (ref.as_data 
+                (local.get $0)) 
+              (rtt.sub $List
+                (rtt.canon $Any)))))) 
+      (return 
+        (local.get $1))))
+  ;; end
   ) 

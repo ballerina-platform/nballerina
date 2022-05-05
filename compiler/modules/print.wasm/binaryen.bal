@@ -354,8 +354,11 @@ public class Module {
         return { tokens: appendBraces(["ref.null", kind]) };
     }
 
-    public function rtt(string kind) returns Expression {
-        return { tokens: appendBraces(["rtt.canon", "$" + kind]) };
+    public function rtt(string kind, string super) returns Expression {
+        Token[] inst = ["rtt.sub", "$" + kind];
+        Token[] 'type = ["rtt.canon", "$" + super];
+        inst.push(...appendBraces('type));
+        return { tokens: appendBraces(inst) };
     }
 
     public function i31New(Expression value) returns Expression {

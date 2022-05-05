@@ -94,12 +94,12 @@ function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand op
         op = module.localGet((<bir:Register>operand).number);
     }
     wasm:Expression asData = module.refAs("ref.as_data", op);
-    return module.refCast(asData, module.rtt(STRING_TYPE));
+    return module.refCast(asData, module.rtt(STRING_TYPE, ANY_TYPE));
 }
 
 function buildStringRef(wasm:Module module, wasm:Expression operand) returns wasm:Expression {
     wasm:Expression asData = module.refAs("ref.as_data", operand);
-    wasm:Expression cast = module.refCast(asData, module.rtt(STRING_TYPE));
+    wasm:Expression cast = module.refCast(asData, module.rtt(STRING_TYPE, ANY_TYPE));
     return module.structGet(STRING_TYPE, "val", cast);
 }
 

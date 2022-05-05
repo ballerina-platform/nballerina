@@ -1,15 +1,13 @@
 (module  
-  ;; type_section
+  ;; type
   (type $BoxedInt (struct (field $type i32) (field $val i64)) (extends $Any))
   (type $Any (struct (field $type i32))) 
-  ;; type_section_end
-  ;; export_section
+  ;; export
   (export "tagged_to_int" (func $tagged_to_int)) 
   (export "tagged_to_boolean" (func $tagged_to_boolean)) 
   (export "get_type" (func $get_type)) 
   (export "get_type_children" (func $get_type_children)) 
-  ;; export_section_end
-  ;; func_section
+  ;; $tagged_to_int
   (func $tagged_to_int (param $0 eqref) (result i64) 
     (return 
       (struct.get $BoxedInt $val 
@@ -18,11 +16,13 @@
             (local.get $0)) 
           (rtt.sub $BoxedInt
             (rtt.canon $Any)))))) 
+  ;; $tagged_to_boolean
   (func $tagged_to_boolean (param $0 eqref) (result i32) 
     (return 
       (i31.get_u 
         (ref.as_i31 
           (local.get $0))))) 
+  ;; $get_type
   (func $get_type (param $0 eqref) (result i32) 
     (if
       (ref.is_i31
@@ -40,6 +40,7 @@
               (ref.as_data 
                 (local.get $0)) 
               (rtt.canon $Any)))))))
+  ;; $get_type_children
   (func $get_type_children (param $0 eqref) (param $1 eqref) (result i32) 
     (if 
       (ref.eq 
@@ -50,5 +51,5 @@
       (return 
         (call $get_type 
           (local.get $1))))) 
-  ;; func_section_end
+  ;; end
 ) 

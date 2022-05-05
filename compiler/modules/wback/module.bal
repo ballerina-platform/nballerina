@@ -18,7 +18,7 @@ type Context record {
     string[] globals = [];
     map<StringRecord> segments =  {};
     int offset = 0;
-    RuntimeModule[] runtimeModules = [taggingMod, listMod, stringMod];
+    RuntimeModule[] runtimeModules = [taggingMod, listMod];
 };
 
 function buildModule(bir:Module mod) returns string[]|BuildError {
@@ -83,9 +83,9 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
 function addStringInit(wasm:Module module, map<StringRecord> strings) returns wasm:Expression {
     wasm:Expression[] body = [];
     foreach StringRecord rec in strings {
-        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.addConst({ i32: TYPE_STRING }), module.call("str_create", [module.addConst({ i32: rec.offset }), module.addConst({ i32: rec.length })], "anyref"), module.arrayNewDef("Surrogate", module.addConst({ i32: rec.surrogate.length() }))], ANY_TYPE)));
+        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.addConst({ i32: TYPE_STRING }), module.call("str_create", [module.addConst({ i32: rec.offset }), module.addConst({ i32: rec.length })], "eqref"), module.arrayNewDef("Surrogate", module.addConst({ i32: rec.surrogate.length() }))], ANY_TYPE)));
         wasm:Expression asData = module.refAs("ref.as_data", module.globalGet(rec.global));
-        wasm:Expression castToStr = module.refCast(asData, module.rtt(STRING_TYPE));
+        wasm:Expression castToStr = module.refCast(asData, module.rtt(STRING_TYPE, ANY_TYPE));
         foreach int i in 0..<rec.surrogate.length() {
             body.push(module.arraySet("Surrogate", module.structGet(STRING_TYPE, "surrogate", castToStr), module.addConst({ i32: i }), module.addConst({ i32: rec.surrogate[i] })));            
         }        
@@ -94,39 +94,79 @@ function addStringInit(wasm:Module module, map<StringRecord> strings) returns wa
 } 
 
 function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns io:Error? {
-    foreach RuntimeModule mod in rtModules {
+    map<wasm:Wat[]> sectionData = {};
+    map<wasm:Wat[]> sectionIdentifiers = {};
+    map<wasm:Wat[]> functions = {};
+    foreach RuntimeModule mod in rtModules.reverse() {
         wasm:Wat[] wat = check io:fileReadLines("../wrun/" + mod + ".wat");
-        map<string[]> sections = {};
-        string? curr_section = ();
-        string[] section_content = [];
+        string? identifier = ();
+        string[] content = [];
         foreach wasm:Wat line in wat {
             wasm:Wat trimmed = line.trim();
             int len = trimmed.length();
             if len > 2 && trimmed.substring(0, 2) == ";;" {
-                boolean isEnd = trimmed.substring(len - 3, len) == "end";
-                if isEnd {
-                    sections[<string>curr_section] = section_content;
-                    curr_section = ();
+                if identifier is wasm:Section {
+                    wasm:Wat[]? data = sectionData[identifier];
+                    if  data != () {
+                        data.push(...content);
+                    }
+                    else {
+                        sectionData[identifier] = content;
+                    }
+                }
+                else if identifier != () {
+                    functions[identifier] = content; 
+                }
+                identifier = trimmed.substring(3);
+                if identifier == "end" {
+                    break;
+                }
+                content = [];
+            }
+            else if identifier is wasm:Section {
+                wasm:Wat[]? identifiers = sectionIdentifiers[identifier];
+                string iden = getSectionIdentifier(line);
+                if identifiers != () {
+                    if identifiers.indexOf(iden) == () {
+                        identifiers.push(iden);
+                        content.push(line);
+                    }
                 }
                 else {
-                    int index = <int>trimmed.indexOf("_");
-                    curr_section = trimmed.substring(3, index);
-                    section_content = [];
+                    sectionIdentifiers[identifier] = [iden];
+                    content.push(line);
                 }
             }
-            else if curr_section != () {
-                section_content.push(line);
-            }
-        }
-        foreach string key in sections.keys() {
-            if key == "func" {
-                module.setRttFuncs(<wasm:Wat[]>sections[key]);
-            }
-            else {
-                module.addSection(<wasm:Section>key, <wasm:Wat[]>sections[key]);
+            else if identifier != () {
+                if content.length() == 0 && functions.hasKey(identifier) {
+                    identifier = ();
+                    continue;
+                }
+                content.push(line);
             }
         }
     }
+    foreach string key in sectionData.keys() {
+        module.addSection(<wasm:Section>key, <wasm:Wat[]>sectionData[key]);
+    }
+    foreach string key in functions.keys() {
+        module.setRttFuncs(<wasm:Wat[]>functions[key]);
+    }
+}
+
+function getSectionIdentifier(wasm:Wat line) returns string {
+    int? index = line.indexOf("$");
+    if index != () {
+        string sub = line.substring(index);
+        int nextCloseParenthesis = <int>sub.indexOf(")");
+        int? nextSpace = sub.indexOf(" ");
+        int end = nextCloseParenthesis;
+        if nextSpace != () {
+            end = nextCloseParenthesis > nextSpace ? nextSpace : nextCloseParenthesis;
+        }
+        return sub.substring(0, end);
+    }
+    panic error("impossible");
 }
 
 function checkForEntry(bir:Region[] regions, bir:Label label, bir:BasicBlock[] blocks, bir:Label? exit = ()) returns int? {

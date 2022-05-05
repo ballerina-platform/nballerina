@@ -1,50 +1,24 @@
 (module 
-  ;; type_section
+  ;; type
   (type $List (struct (field $type i32) (field $arr (mut (ref $AnyList))) (field $len (mut i64))) (extends $Any)) 
   (type $AnyList (array (mut eqref))) 
-  ;; type_section_end
-  ;; tag_section
+  ;; tag
   (tag $index-outof-bound) 
   (tag $index-too-large) 
-  ;; tag_section_end
-  ;; export_section
+  ;; export
   (export "index-outof-bound" (tag $index-outof-bound)) 
   (export "index-too-large" (tag $index-too-large)) 
   (export "arr_len" (func $length)) 
   (export "arr_get" (func $arr_get)) 
-  ;; export_section_end
-  ;; func_section
+  ;; $length
   (func $length (param $0 eqref) (result i64) 
-    (local $1 i64) 
-    (block 
-      (block $blockList 
-        (drop 
-          (block $blockStr 
-            (result (ref null any)) 
-            (drop 
-              (br_on_cast_fail $blockStr 
-                (ref.as_data 
-                  (local.get $0)) 
-                (rtt.sub $String
-                  (rtt.canon $Any)))) 
-            (local.set $1 
-              (call $w_str_len 
-                (ref.cast 
-                  (ref.as_data 
-                    (local.get $0)) 
-                  (rtt.sub $String
-                    (rtt.canon $Any))))) 
-            (br $blockList) 
-            (ref.null any))) 
-        (local.set $1 
-          (struct.get $List $len 
-            (ref.cast 
-              (ref.as_data 
-                (local.get $0)) 
-              (rtt.sub $List
-                (rtt.canon $Any)))))) 
-      (return 
-        (local.get $1)))) 
+    (struct.get $List $len 
+      (ref.cast 
+        (ref.as_data 
+          (local.get $0)) 
+        (rtt.sub $List
+          (rtt.canon $Any))))) 
+  ;; $arr_get
   (func $arr_get (param $0 eqref) (param $1 i32) (result eqref) 
     (try 
       (do 
@@ -68,17 +42,20 @@
                   (rtt.canon $Any))) 
               (local.get $1))) 
           (throw $index-outof-bound))))) 
+  ;; $arr_get_cast
   (func $arr_get_cast (param $0 (ref $List)) (param $1 i32) (result eqref) 
     (array.get $AnyList 
       (struct.get $List $arr 
         (local.get $0)) 
       (local.get $1))) 
+  ;; $push
   (func $push (param $0 (ref $List)) (param $1 eqref) 
     (call $arr_grow 
       (local.get $0) 
       (local.get $1) 
       (call $length 
         (local.get $0)))) 
+  ;; $arr_create
   (func $arr_create (param $0 i64) (result (ref $List)) 
     (local $1 i64) 
     (block 
@@ -100,6 +77,7 @@
           (local.get $0)
           (rtt.sub $List
             (rtt.canon $Any)))))) 
+  ;; $arr_set
   (func $arr_set (param $0 (ref $List)) (param $1 eqref) (param $2 i64) 
     (try 
       (do 
@@ -112,6 +90,7 @@
             (local.get $1) 
             (local.get $2)) 
           (throw $index-outof-bound))))) 
+  ;; $arr_grow
   (func $arr_grow (param $0 (ref $List)) (param $1 eqref) (param $2 i64) 
     (local $3 (ref null $AnyList)) 
     (local $4 i64) 
@@ -202,5 +181,5 @@
                 (i64.add 
                   (local.get $2) 
                   (i64.const 1)))))))))
-  ;; func_section_end
+  ;; end
 ) 

@@ -70,7 +70,7 @@ function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:Mappin
 function buildMappingGet(wasm:Module module, Scaffold scaffold, bir:MappingGetInsn insn) returns wasm:Expression {
     wasm:Expression mapping = module.refAs("ref.as_non_null", module.localGet(insn.operands[0].number));
     wasm:Expression key = buildString(module, scaffold, insn.operands[1]);
-    return module.call(mappingGetFunction.name, [mapping, key], mappingGetFunction.returnType);
+    return module.localSet(insn.result.number, module.call(mappingGetFunction.name, [mapping, key], mappingGetFunction.returnType));
 }
 
 function buildMappingSet(wasm:Module module, Scaffold scaffold, bir:MappingSetInsn insn) returns wasm:Expression {

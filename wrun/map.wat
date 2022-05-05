@@ -1,16 +1,14 @@
 (module 
-  ;; type_section
+  ;; type
   (type $HashTable (array (mut i32))) 
-  (type $MapField (struct (field $key (mut anyref)) (field $value (mut anyref)))) 
-  (type $MapKeys (array (mut anyref))) 
+  (type $MapField (struct (field $key (mut eqref)) (field $value (mut eqref)))) 
+  (type $MapKeys (array (mut eqref))) 
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
   (type $Map (struct (field $type i32) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))) (extends $Any))   
-  ;; type_section_end
-  ;; import_section
+  ;; import
   (import "string" "hash" (func $hash_string (param anyref) (result i64))) 
-  ;; import_section_end
-  ;; export_section
+  ;; export
   (export "_bal_map_array_len" (func $_bal_map_array_len)) 
   (export "_bal_mapping_construct" (func $_bal_mapping_construct)) 
   (export "_bal_mapping_init_member" (func $_bal_mapping_init_member)) 
@@ -26,8 +24,7 @@
   (export "_bal_map_get_keys" (func $_bal_map_get_keys)) 
   (export "_bal_mapping_get_key" (func $_bal_mapping_get_key)) 
   (export "_bal_mapping_num_keys" (func $_bal_mapping_num_keys)) 
-  ;; export_section_end
-  ;; func_section
+  ;; $_bal_map_array_len
   (func $_bal_map_array_len (param $0 i32) (result i32)
     (local $1 i32)
     (local $2 i64)
@@ -58,7 +55,7 @@
               (local.get $2))))))
     (return 
       (local.get $1)))
-
+  ;; $_bal_mapping_construct
   (func $_bal_mapping_construct (param $0 i32) (result (ref $Map))
     (local $1 i32)
     (local $2 i32)
@@ -101,8 +98,8 @@
         (rtt.canon $MapFields))
       (rtt.sub $Map
         (rtt.canon $Any))))
-  
-  (func $_bal_mapping_init_member (param $0 (ref $Map)) (param $1 anyref) (param $2 anyref) ;; map, key, val
+  ;; $_bal_mapping_init_member
+  (func $_bal_mapping_init_member (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
     (local $3 i64)
     (local $4 (ref null $MapFields))
     (local $5 i32)
@@ -145,8 +142,8 @@
       (local.get $1)
       (local.get $3)
       (local.get $5)))
-  
-  (func $_bal_map_insert (param $0 (ref $Map)) (param $1 anyref) (param $2 i64) (param $3 i32) ;;map, key, hash, index in fArray ;; tableLength
+  ;; $_bal_map_insert
+  (func $_bal_map_insert (param $0 (ref $Map)) (param $1 eqref) (param $2 i64) (param $3 i32) ;;map, key, hash, index in fArray ;; tableLength
     (local $4 i32)
     (local $5 i32)
     (local $6 i32)
@@ -194,8 +191,8 @@
               (local.get $5)
               (i32.const 1))))
         (br $loop))))
-   
-  (func $_bal_mapping_set (param $0 (ref $Map)) (param $1 anyref) (param $2 anyref) ;; map, key, val
+  ;; $_bal_mapping_set
+  (func $_bal_mapping_set (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
     (local $3 (ref null $MapFields))
     (local $4 i32)
     (local $5 i32)
@@ -240,14 +237,14 @@
               (local.get $0))))
         (call $_bal_map_table_grow
           (local.get $0)))))
-
+  ;; $_bal_map_table_grow
   (func $_bal_map_table_grow (param $0 (ref $Map)) 
     (local $1 i32)
     (local $2 (ref null $HashTable))
     (local $3 (ref null $MapFieldArr))
     (local $4 i32)
     (local $5 i32)
-    (local $6 anyref)
+    (local $6 eqref)
     (local.set $1
       (struct.get $Map $tableLengthShift
         (local.get $0)))
@@ -300,7 +297,7 @@
               (local.get $5)
               (i32.const 1)))
           (br $loop)))))
-
+  ;; $_bal_map_array_grow 
   (func $_bal_map_array_grow (param $0 (ref $Map)) (param $1 i32)
     (local $2 (ref null $MapFieldArr)) 
     (local $3 i32) 
@@ -348,7 +345,7 @@
         (local.get $4)
         (local.get $3)
         (rtt.canon $MapFields)))) 
-  
+  ;; $_bal_map_replace
   (func $_bal_map_replace (param $0 (ref $HashTable)) (param $1 i32) (param $2 i32) (result i32);; $0 - hashtable ; 1-i; 2-n
     (local $3 i32)
     (local.set $3
@@ -364,8 +361,8 @@
         (local.get $1)
         (local.get $2)))
     (local.get $3))
-  
-  (func $_bal_map_matches (param $0 (ref $MapFields)) (param $1 anyref) (param $2 i32) (result i32)
+  ;; $_bal_map_matches
+  (func $_bal_map_matches (param $0 (ref $MapFields)) (param $1 eqref) (param $2 i32) (result i32)
     (local $3 (ref null $MapField))
     (local.set $3
       (array.get $MapFieldArr 
@@ -387,7 +384,7 @@
                 (local.get $3))))
           (rtt.sub $String
             (rtt.canon $Any))))))
-
+  ;; $_bal_map_fetch
   (func $_bal_map_fetch (param $0 (ref $HashTable)) (param $1 i32) (result i32);; $0 - hashtable ; 1-i; 2-n
     (local $3 i32)
     (local.set $3
@@ -395,8 +392,8 @@
         (local.get $0)
         (local.get $1)))
     (local.get $3))
-
-  (func $_bal_map_lookup (param $0 (ref $Map)) (param $1 anyref) (param $2 i64) (result i32);;map, key, hash
+  ;; $_bal_map_lookup
+  (func $_bal_map_lookup (param $0 (ref $Map)) (param $1 eqref) (param $2 i64) (result i32);;map, key, hash
     (local $3 i32)
     (local $4 i32)
     (local $5 i32)
@@ -444,8 +441,8 @@
         (br $loop)))
     (return 
       (local.get $5)))
-  
-  (func $_bal_mapping_get (param $0 anyref) (param $1 anyref) (result anyref);;map, key
+  ;; $_bal_mapping_get
+  (func $_bal_mapping_get (param $0 eqref) (param $1 eqref) (result eqref);;map, key
     (local $2 i32)
     (local $3 (ref null $Map))
     (local.set $3
@@ -466,6 +463,12 @@
                 (local.get $1))
               (rtt.sub $String
                 (rtt.canon $Any)))))))
+    (if
+      (i32.eq
+        (local.get $2)
+        (i32.const -1))
+      (return 
+        (ref.null data)))
     (struct.get $MapField $value
       (array.get $MapFieldArr 
         (struct.get $MapFields $members
@@ -473,8 +476,8 @@
             (ref.as_non_null
               (local.get $3))))
         (local.get $2))))
-  
-  (func $_bal_map_get_keys (param $0 anyref) (result anyref)
+  ;; $_bal_map_get_keys
+  (func $_bal_map_get_keys (param $0 eqref) (result eqref)
     (local $1 (ref null $Map))
     (local $2 i32)
     (local $3 (ref null $MapKeys))
@@ -523,20 +526,73 @@
           (br $loop))))
     (ref.as_non_null
       (local.get $3)))
-  
-  (func $_bal_mapping_get_key (param $0 anyref) (param $1 i32) (result anyref)
+  ;; $_bal_mapping_get_key
+  (func $_bal_mapping_get_key (param $0 eqref) (param $1 i32) (result eqref)
     (array.get $MapKeys
       (ref.cast
         (ref.as_data
           (local.get $0))
         (rtt.canon $MapKeys))
       (local.get $1)))
-
-  (func $_bal_mapping_num_keys (param $0 anyref) (result i32)
+  ;; $_bal_mapping_num_keys
+  (func $_bal_mapping_num_keys (param $0 eqref) (result i32)
     (array.len $MapKeys
       (ref.cast
         (ref.as_data
           (local.get $0))
         (rtt.canon $MapKeys))))
-  ;; func_section_end
+  ;; $length
+  (func $length (param $0 eqref) (result i64) 
+    (local $1 i64) 
+    (block 
+      (block $blockList 
+        (drop 
+          (block $blockStr 
+            (result (ref null any)) 
+            (drop 
+              (br_on_cast_fail $blockStr 
+                (ref.as_data 
+                  (local.get $0)) 
+                (rtt.sub $String
+                  (rtt.canon $Any)))) 
+            (local.set $1 
+              (call $bal_str_len 
+                (ref.cast 
+                  (ref.as_data 
+                    (local.get $0)) 
+                  (rtt.sub $String
+                    (rtt.canon $Any))))) 
+            (br $blockList) 
+            (ref.null any)))
+        (drop 
+          (block $blockMap
+            (result (ref null any)) 
+            (drop 
+              (br_on_cast_fail $blockMap
+                (ref.as_data 
+                  (local.get $0)) 
+                (rtt.sub $Map
+                  (rtt.canon $Any)))) 
+            (local.set $1 
+              (i64.extend_i32_u
+                (call $_bal_mapping_num_keys 
+                  (call $_bal_map_get_keys
+                    (ref.cast 
+                      (ref.as_data 
+                        (local.get $0)) 
+                      (rtt.sub $Map
+                        (rtt.canon $Any))))))) 
+            (br $blockList) 
+            (ref.null any)))   
+        (local.set $1 
+          (struct.get $List $len 
+            (ref.cast 
+              (ref.as_data 
+                (local.get $0)) 
+              (rtt.sub $List
+                (rtt.canon $Any)))))) 
+      (return 
+        (local.get $1))))
+
+  ;; end
   )
