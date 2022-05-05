@@ -98,13 +98,19 @@ class Scaffold {
             surrogate: surrogate
         };
         self.context.segments[val] = <StringRecord>rec; 
-        self.context.offset = val.toBytes().length();
+        self.context.offset += val.toBytes().length();
         return (<StringRecord>rec).global.toString();
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
 
     function getRetRepr() returns RetRepr => self.retRepr;
+
+    function addRuntimeModule(RuntimeModule module) {
+        if self.context.runtimeModules.indexOf(module) == () {
+            self.context.runtimeModules.push(module);
+        } 
+    }
 
 }
 
@@ -115,6 +121,8 @@ final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, wasm: "eqref", subtype: t:
 final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, wasm: "eqref" , subtype: t:ANY };
 final TaggedRepr REPR_LIST_RW = { base: BASE_REPR_TAGGED, subtype: t:LIST_RW, wasm: { base: "List", initial: "null" } };
 final TaggedRepr REPR_LIST = { base: BASE_REPR_TAGGED, subtype: t:LIST, wasm: { base: "List", initial: "null" } };
+final TaggedRepr REPR_MAPPING_RW = { base: BASE_REPR_TAGGED, subtype: t:MAPPING_RW, wasm: { base: "Map", initial: "null" } };
+final TaggedRepr REPR_MAPPING = { base: BASE_REPR_TAGGED, subtype: t:MAPPING, wasm: { base: "Map", initial: "null" } };
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, wasm: WASM_VOID };
 
 final readonly & record {|
@@ -126,6 +134,8 @@ final readonly & record {|
     { domain: t:NIL, repr: REPR_NIL },
     { domain: t:ANY, repr: REPR_ANY },
     { domain: t:TOP, repr: REPR_ANY },
+    { domain: t:MAPPING_RW, repr: REPR_MAPPING_RW },
+    { domain: t:MAPPING, repr: REPR_MAPPING },
     { domain: t:LIST_RW, repr: REPR_LIST_RW },
     { domain: t:LIST, repr: REPR_LIST },
     { domain: t:STRING, repr: REPR_STRING }

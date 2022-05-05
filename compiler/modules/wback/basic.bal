@@ -11,14 +11,14 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:IntNoPanicArithmeticBinaryInsn {
             body.push(buildNoPanicArithmeticBinary(module, scaffold, insn));
         }
+        else if insn is bir:IntBitwiseBinaryInsn {
+            body.push(buildBitwiseBinary(module, scaffold, insn));
+        }
         else if insn is bir:CompareInsn {
             body.push(buildCompare(module, scaffold, insn));
         }
         else if insn is bir:EqualityInsn {
             body.push(buildEquality(module, scaffold, insn));
-        }
-        else if insn is bir:CondNarrowInsn {
-            body.push(buildCondNarrow(module, scaffold, insn));
         }
         else if insn is bir:BooleanNotInsn {
             body.push(buildBooleanNotInsn(module, insn));
@@ -29,6 +29,18 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:AssignInsn {
             body.push(buildAssign(module, scaffold, insn));
         }
+        else if insn is bir:TypeCastInsn {
+            body.push(buildTypeCast(module, scaffold, insn));
+        }
+        else if insn is bir:ConvertToIntInsn {
+            body.push(buildConvertToInt(module, scaffold, insn));
+        }
+        else if insn is bir:CondNarrowInsn {
+            body.push(buildCondNarrow(module, scaffold, insn));
+        }
+        else if insn is bir:CallInsn {
+            body.push(buildCall(module, scaffold, insn));
+        }
         else if insn is bir:ListConstructInsn {
             body.push(buildListConstruct(module, scaffold, insn));
         }
@@ -38,29 +50,26 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:ListSetInsn {
             body.push(buildListSet(module, scaffold, insn));
         }
-        else if insn is bir:TypeCastInsn {
-            body.push(buildTypeCast(module, scaffold, insn));
-        }
-        else if insn is bir:ConvertToIntInsn {
-            body.push(buildConvertToInt(module, scaffold, insn));
-        }
-        else if insn is bir:CallInsn {
-            body.push(buildCall(module, scaffold, insn));
-        }
-        else if insn is bir:StringConcatInsn {
-            body.push(buildStringConcat(module, scaffold, insn));
-        }
-        else if insn is bir:CondBranchInsn {
-            body.push(buildCondBranch(module, insn));
-        }
         else if insn is bir:BranchInsn {
             wasm:Expression? expr = buildBranch(module, scaffold, insn, block.label);
             if expr != () {
                 body.push(expr);
             }
         }
-        else if insn is bir:IntBitwiseBinaryInsn {
-            body.push(buildBitwiseBinary(module, scaffold, insn));
+        else if insn is bir:MappingConstructInsn {
+            body.push(buildMappingConstruct(module, scaffold, insn));
+        }
+        else if insn is bir:MappingGetInsn {
+            body.push(buildMappingGet(module, scaffold, insn));
+        }
+        else if insn is bir:MappingSetInsn {
+            body.push(buildMappingSet(module, scaffold, insn));
+        }
+        else if insn is bir:StringConcatInsn {
+            body.push(buildStringConcat(module, scaffold, insn));
+        }
+        else if insn is bir:CondBranchInsn {
+            body.push(buildCondBranch(module, insn));
         }
         else {
             continue;
@@ -90,7 +99,7 @@ function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) retur
 function buildStringConcat(wasm:Module module, Scaffold scaffold, bir:StringConcatInsn insn) returns wasm:Expression {
     wasm:Expression operand1 = buildString(module, scaffold, insn.operands[0]);
     wasm:Expression operand2 = buildString(module, scaffold, insn.operands[1]);
-    return module.localSet(insn.result.number, module.call("w_str_concat", [operand1, operand2], "anyref"));
+    return module.localSet(insn.result.number, module.call(stringConcatFunction.name, [operand1, operand2], stringConcatFunction.returnType));
 }
 
 function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) returns wasm:Expression {

@@ -7,12 +7,12 @@ public type RefType "anyref"|"eqref"|"i31ref"|"any"|"externref"|ComplexRefType;
 public type Type "None"|NumType|RefType;
 
 public type Op  "i32.add"|"i32.sub"|
-                "i32.lt_s"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.eq"|"i32.ne"|"i32.eqz"|
+                "i32.lt_s"|"i32.lt_u"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.ge_u"|"i32.eq"|"i32.ne"|"i32.eqz"|
                 "i32.or"|"i32.xor"|"i32.and"|
-                "i32.shr_u"|
+                "i32.shr_u"|"i32.shl"|
                 "i32.wrap_i64"|
                 "i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|
-                "i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|
+                "i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.ge_u"|
                 "i64.or"|"i64.xor"|"i64.and"|
                 "i64.shl"|"i64.shr_u"|
                 "i64.extend_i32_u"|
@@ -38,17 +38,21 @@ public type LiteralInt64 record {
 };
 
 public type Literal LiteralInt32|LiteralInt64;
+public type Wat string;
+public type Section "type"|"import"|"function"|"table"|"memory"|"tag"|"global"|"export"|"start"|"element"|"code"|"data";
 
 public class Module {
     private Function[] functions = [];
-    private Expression[] imports = [];
-    private Expression[] tagExports = [];
-    private Expression[] exports = [];
-    private Expression[] types = [];
-    private Expression[] tags = [];
-    private Expression[] data = [];
-    private Expression[] memory = [];
-    private Expression[] globals = [];
+    private map<Wat[]> sections = {};
+    private Wat[] rttFunctions = [];
+    
+    public function addSection(Section section, Wat[] data) {
+        addSectionDataWat(self.sections, data, section);
+    }
+    
+    public function setRttFuncs(Wat[] funcs) {
+        self.rttFunctions.push(...funcs);
+    }
 
     public function call(string target, Expression[] operands, Type returnType) returns Expression {
         Token[] inst = ["call", "$" + target];
@@ -111,19 +115,19 @@ public class Module {
             funcDef.push(...appendBraces(["result", getTypeString(result)]));
         }
         importDef.push(...appendBraces(funcDef));
-        self.imports.push({ tokens: appendBraces(importDef) });
+        addSectionData(self.sections, appendBraces(importDef), "import");
     }
 
     public function addFunctionExport(string internalName, string externalName) {
         Token[] inst = ["export", "\"" + externalName + "\""];
         inst.push(...appendBraces(["func", "$" + internalName]));
-        self.exports.push({ tokens: appendBraces(inst) });
+        addSectionData(self.sections, appendBraces(inst), "export");
     }
 
     public function addTagExport(string internalName, string externalName) {
         Token[] inst = ["export", "\"" + externalName + "\""];
         inst.push(...appendBraces(["tag", "$" + internalName]));
-        self.tagExports.push({ tokens: appendBraces(inst) });
+        addSectionData(self.sections, appendBraces(inst), "export");
     }
 
     public function binary(Op op, Expression left, Expression right) returns Expression {
@@ -204,7 +208,7 @@ public class Module {
     }
 
     public function addTag(string name) {
-        self.tags.push({ tokens: appendBraces(["tag",  "$" + name]) });
+        addSectionData(self.sections, appendBraces(["tag",  "$" + name]), "tag");
     }
 
     public function br(string name) returns Expression {
@@ -236,15 +240,23 @@ public class Module {
     public function addType(string name, Expression ty) {
         Token[] inst = ["type", "$" + name];
         inst.push(...ty.tokens);
-        self.types.push({ tokens: appendBraces(inst) });
+        addSectionData(self.sections, appendBraces(inst), "type");
+
     }
 
-    public function structNew(string kind, Expression[] values) returns Expression {
+    public function setStart(string name) {
+        Token[] inst = ["start", "$" + name];
+        self.sections["start"] = [joinTokens(appendBraces(inst))];
+    }
+
+    public function structNew(string kind, Expression[] values, string super) returns Expression {
         Token[] inst = ["struct.new_with_rtt", "$" + kind];
+        Token[] 'type = ["rtt.sub", "$" + kind];
         foreach Expression value in values {
             inst.push(...value.tokens);
         }
-        inst.push(...appendBraces(["rtt.canon", "$" + kind]));
+        'type.push(...appendBraces(["rtt.canon", "$" + super]));
+        inst.push(...appendBraces('type));
         return { tokens: appendBraces(inst) };
     }
 
@@ -267,13 +279,21 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function arrayNew(string kind, Expression size) returns Expression {
+    public function arrayNewDef(string kind, Expression size) returns Expression {
         Token[] inst = ["array.new_default_with_rtt", "$" + kind];
         inst.push(...size.tokens);
         inst.push(...appendBraces(["rtt.canon", "$" + kind]));
         return { tokens: appendBraces(inst) };
     }
 
+    public function arrayNew(string kind, Expression init, Expression size) returns Expression {
+        Token[] inst = ["array.new_with_rtt", "$" + kind];
+        inst.push(...init.tokens);
+        inst.push(...size.tokens);
+        inst.push(...appendBraces(["rtt.canon", "$" + kind]));
+        return { tokens: appendBraces(inst) };
+    }
+    
     public function arrayGet(string kind, Expression arr, Expression index) returns Expression {
         Token[] inst = ["array.get", "$" + kind];
         inst.push(...arr.tokens);
@@ -355,21 +375,20 @@ public class Module {
             Token[] section = ["data"];
             section.push(...segmentOffsets[i].tokens);
             section.push("\"" + segments[i] + "\"");
-            self.data.push({ tokens: appendBraces(section) });
+            addSectionData(self.sections, appendBraces(section), "data");
         }
-        string index = self.memory.length().toString();
-        Token[] memory = ["memory", "$" + index, initial.toString()];
+        Token[] memory = ["memory", "$0" , initial.toString()];
         Token[] export = ["export", "\"" + exportName + "\""];
-        export.push(...appendBraces(["memory", "$" + index]));
-        self.memory.push({ tokens: appendBraces(memory) });
-        self.exports.push({ tokens: appendBraces(export)});
+        export.push(...appendBraces(["memory", "$0"]));
+        addSectionData(self.sections, appendBraces(memory), "memory");
+        addSectionData(self.sections, appendBraces(export), "export");
     }
 
     public function addGlobal(string name, Type ty,Expression init) {
         Token[] inst = ["global", "$" + name];
         inst.push(...appendBraces(["mut", getTypeString(ty)]));
         inst.push(...init.tokens);
-        self.globals.push({ tokens: appendBraces(inst) });
+        addSectionData(self.sections, appendBraces(inst), "global");
     }
 
     public function globalGet(string name) returns Expression {
@@ -384,12 +403,14 @@ public class Module {
 
     public function finish() returns string[] {
         Token[] module = [joinTokens(["(", "module"], 0)];
-        Expression[][] orderedSections = [self.types, self.memory, self.data, self.imports, self.tags, self.globals, self.tagExports, self.exports];
-        foreach Expression[] section in orderedSections {
-            foreach Expression expr in section {
-                module.push(joinTokens(expr.tokens));
+        Section[] orderedSections = ["type", "import", "function", "table", "memory", "tag", "global", "export", "start", "element", "code", "data"];
+        foreach int i in 0..<orderedSections.length() {
+            Wat[]? section = self.sections[orderedSections[i]];
+            if section != () {
+                module.push(...section);
             }
         }
+        module.push(...self.rttFunctions);
         foreach int i in 0..<self.functions.length() {
             Function func = self.functions[i];
             Token[] signature = [];
@@ -442,6 +463,19 @@ function appendBraces(Token[] tokens) returns  Token[] {
         updated.push(")");
     }
     return updated;
+}
+
+function addSectionDataWat(map<Wat[]> sections, Wat[] exprs, Section key) {
+    if sections.hasKey(key) {
+        (<Wat[]>sections[key]).push(...exprs);
+    }
+    else {
+        sections[key] = exprs;
+    }
+}
+function addSectionData(map<Wat[]> sections, Token[] tokens, Section key) {
+    Wat[] expression = [joinTokens(tokens)];
+    addSectionDataWat(sections, expression, key);    
 }
 
 function joinTokens(Token[] tokens, int spaces = 1) returns string {

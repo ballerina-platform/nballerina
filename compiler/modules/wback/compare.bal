@@ -82,7 +82,7 @@ function buildCompareInt(wasm:Module module, wasm:Op op, wasm:Expression lhs, wa
 }
 
 function buildCompareString(wasm:Module module, int op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    return module.localSet(result.number, module.call("str_comp", [module.addConst({ i32: op }), buildStringRef(module, lhs), buildStringRef(module, rhs)], "i32"));
+    return module.localSet(result.number, module.call(stringCompFunction.name, [module.addConst({ i32: op }), buildStringRef(module, lhs), buildStringRef(module, rhs)], stringCompFunction.returnType));
 }
 
 function buildIntCompareOp(bir:OrderOp op) returns wasm:Op {
