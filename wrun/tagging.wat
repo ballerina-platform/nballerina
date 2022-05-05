@@ -33,7 +33,7 @@
         (ref.is_null
           (local.get $0))
         (return
-          (i32.const 0)) ;; TYPE_NIL
+          (i32.const 2)) ;; TYPE_NIL
         (return 
           (struct.get $Any $type 
             (ref.cast 

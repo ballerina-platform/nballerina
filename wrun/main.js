@@ -4,14 +4,28 @@ let getType = null;
 let untagInt = null;
 let untagBoolean = null;
 let len = null;
+let strLen = null;
 let arrayGet = null;
+let getCharAt = null;
 let getTypeChildren = null;
 let getObject = null;
+let getMap = null;
 let mem = null;
+let bal_map_get_keys = null
+let bal_mapping_get = null
+let bal_mapping_num_keys = null
+let bal_mapping_get_key = null
 const COMPARE_LT = 0;
 const COMPARE_LE = 1;
 const COMPARE_GT = 2;
 const COMPARE_GE = 3;
+const create_string = (offset, length) => {
+  var bytes = new Uint8Array(mem.buffer, offset, length);
+  var string = new TextDecoder('utf8').decode(bytes);
+  return string;
+} 
+const string = String.prototype;
+string.create = create_string;
 if (process.argv.length > 2) {
   let fileName = process.argv[2];
   const wasmBuffer = fs.readFileSync(fileName);
@@ -20,7 +34,15 @@ if (process.argv.length > 2) {
       console: {
         log: function(arg) {
           console.log(getValue(arrayGet(arg, 0)));
+          // console.log("--------------------------------------")
+          // console.log(getType(arg));
         },
+        log_32: function (arg) {
+          console.log(arg)
+        },
+        log_64: function (arg) {
+          console.log(arg)
+        }
       },
       string: {
         create: function(offset, length) {
@@ -30,7 +52,7 @@ if (process.argv.length > 2) {
            return arg.length;
         },
         concat: function(arg1, arg2) {
-          return arg1 + arg2;
+          return arg1 + arg2
         },
         eq: function(arg1, arg2) {
           return arg1 == arg2;
@@ -54,6 +76,23 @@ if (process.argv.length > 2) {
               break;
           }
           return result;
+        },
+        hash: function(arg) {
+          return hash_string(arg);
+        }
+      },
+      map : {
+        create: function() {
+          return create_map();
+        },
+        set: function(m, key, val) { 
+          set_map(m, key, val);
+        },
+        get: function(m, key) {
+          return get_map(m, key);
+        },
+        length: function(m) {
+          return BigInt(m.keys().length)
         }
       }
     };
@@ -74,9 +113,16 @@ if (process.argv.length > 2) {
       len = obj.instance.exports.arr_len;
       arrayGet = obj.instance.exports.arr_get;
       getObject = obj.instance.exports.get_string;
+      getMap = obj.instance.exports.get_map;
+      getCharAt = obj.instance.exports.get_char_at;
       mem = obj.instance.exports.memory;
+      bal_map_get_keys = obj.instance.exports._bal_map_get_keys 
+      bal_mapping_get = obj.instance.exports._bal_mapping_get 
+      bal_mapping_num_keys = obj.instance.exports._bal_mapping_num_keys 
+      bal_mapping_get_key = obj.instance.exports._bal_mapping_get_key 
       obj.instance.exports.main();
     }).catch((err) => {
+      console.log(err)
         if(typeof err == "object" &&  err instanceof WebAssembly.Exception) {
             let tag = tags.filter(tag => err.is(tag.tag));
             if (tag.length > 0) {
@@ -116,10 +162,14 @@ const getValue = (ref, parent = null) => {
     for (let index = 0; index < length; index++) {
       let element = arrayGet(ref, index);
       let val = getValue(element, ref);
+      let ty = getType(element);
       if (val === "") {
         val = "null"
       }
-      output += JSON.stringify(val) + ",";
+      if (ty == 5) {
+        val = JSON.stringify(val)
+      }
+      output += val + ",";
     }
     if (output.indexOf(",") != -1) {
       output = output.substring(0, output.length - 1)
@@ -132,6 +182,56 @@ const getValue = (ref, parent = null) => {
   }
   else if (type == 5) {
     return getObject(ref);
+  }
+  else if (type == 6) {
+    let map = "{"
+    let keys  = bal_map_get_keys(ref)
+    let len = bal_mapping_num_keys(keys)
+    for (let index = 0; index < len; index++) {
+      let key = getObject(bal_mapping_get_key(keys, index));
+      let valRef = bal_mapping_get(ref, bal_mapping_get_key(keys, index));
+      let valType = getType(valRef);
+      let val = "";
+      if (valType == 2) {
+        val = "null"
+      }
+      else {
+        val = getValue(valRef)
+      }
+      map += `${key}:${val},`
+    }
+    if (map.indexOf(",") != -1) {
+      map = map.substring(0, map.length - 1)
+    }
+    map += "}"
+    return map;
+  }
+}
+
+const hash_string = (arg) => {
+  // console.log(`String: ${arg}`)
+  let hash = 2611923443488327891n
+  for (let index = 0; index < arg.length; index++) {
+    hash = hash^(BigInt(arg.charCodeAt(index)));
+  }
+  // console.log(`hash: ${hash}`);
+  return hash;
+}
+
+const create_map = () => {
+  return new Map();
+}
+
+const set_map = (map, key, val) => {
+  map.set(key, val);
+}
+
+const get_map = (map, key) => {
+  if (map.has(key)) {
+    return map.get(key);
+  }
+  else {
+    return null;
   }
 }
 
@@ -163,9 +263,3 @@ const errorHandler = err => {
   }
   console.log(msg)
 }
-
-const create_string = (offset, length) => {
-  var bytes = new Uint8Array(mem.buffer, offset, length);
-  var string = new TextDecoder('utf8').decode(bytes);
-  return string;
-} 

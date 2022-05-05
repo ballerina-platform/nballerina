@@ -25,6 +25,8 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     wasm:Module module = new;
     Context context = {};
+    wasm:Expression? mainBody = ();
+    wasm:Type[] mainLocals = [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
@@ -40,13 +42,20 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
             locals.push(semTypeReprWasm(code.registers[j].semType));
         }
         Repr retType = semTypeRepr(scaffold.returnType);
-        module.addFunction(funcName, params, retType is TaggedRepr && retType.subtype == t:NIL ? "None": retType.wasm, locals, body);
+        if funcName == "main" {
+            mainBody = body;
+            mainLocals = locals;
+        }
+        else {
+            module.addFunction(funcName, params, retType is TaggedRepr && retType.subtype == t:NIL ? "None": retType.wasm, locals, body);
+        }
         if functionDefns[i].symbol.isPublic {
             module.addFunctionExport(funcName, funcName);
         }
     }
-    if context.segments.length() > 0 {
-        stringInit(module, context.segments);
+    if mainBody != () {
+        wasm:Expression extendedBody = module.block([addStringInit(module, context.segments), mainBody]);
+        module.addFunction("main", [], "None", mainLocals, extendedBody);
     }
     wasm:Expression[] offsetExpr = [];
     string[] strings = [];
@@ -71,7 +80,7 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     return module.finish();
 }
 
-function stringInit(wasm:Module module, map<StringRecord> strings) {
+function addStringInit(wasm:Module module, map<StringRecord> strings) returns wasm:Expression {
     wasm:Expression[] body = [];
     foreach StringRecord rec in strings {
         body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.addConst({ i32: TYPE_STRING }), module.call("str_create", [module.addConst({ i32: rec.offset }), module.addConst({ i32: rec.length })], "anyref"), module.arrayNewDef("Surrogate", module.addConst({ i32: rec.surrogate.length() }))], ANY_TYPE)));
@@ -81,8 +90,7 @@ function stringInit(wasm:Module module, map<StringRecord> strings) {
             body.push(module.arraySet("Surrogate", module.structGet(STRING_TYPE, "surrogate", castToStr), module.addConst({ i32: i }), module.addConst({ i32: rec.surrogate[i] })));            
         }        
     }
-    module.addFunction("_bal_init_string", [], "None", [], module.block(body));
-    module.setStart("bal_init_string");
+    return module.block(body);
 } 
 
 function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns io:Error? {
