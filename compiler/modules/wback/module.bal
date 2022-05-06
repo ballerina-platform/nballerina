@@ -1,10 +1,11 @@
 import ballerina/io;
+import ballerina/file;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.wasm;
 import wso2/nballerina.comm.err;
 
-type BuildError err:Semantic|err:Unimplemented|err:Internal|io:Error;
+type BuildError err:Semantic|err:Unimplemented|err:Internal|io:Error|error;
 
 type StringRecord record {
     int offset;
@@ -93,12 +94,13 @@ function addStringInit(wasm:Module module, map<StringRecord> strings) returns wa
     return module.block(body);
 } 
 
-function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns io:Error? {
+function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns error? {
     map<wasm:Wat[]> sectionData = {};
     map<wasm:Wat[]> sectionIdentifiers = {};
     map<wasm:Wat[]> functions = {};
     foreach RuntimeModule mod in rtModules.reverse() {
-        wasm:Wat[] wat = check io:fileReadLines("../wrun/" + mod + ".wat");
+        string absPath = check file:getAbsolutePath("../wrun/" + mod + ".wat");
+        wasm:Wat[] wat = check io:fileReadLines(absPath);
         string? identifier = ();
         string[] content = [];
         foreach wasm:Wat line in wat {
