@@ -39,6 +39,13 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
     }
 }
 
+function resolveType(ModuleSymbols mod, string name) returns ResolveTypeError? {
+    s:ModuleLevelDefn? defn = mod.defns[name];
+    if defn != () {
+        _ = check resolveTypeDefn(mod, <s:TypeDefn>defn, 0);
+    }
+}
+
 function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) returns bir:FunctionSignature|ResolveTypeError {
     // JBUG doing this as a from/select panics if resolveSubsetTypeDesc returns an error
     // e.g.10-intersect/never2-e.bal

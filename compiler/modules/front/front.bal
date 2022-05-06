@@ -143,10 +143,10 @@ public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|s
     return new Module(scanned.id, files, syms);
 }
 
-public function resolveModuleDefsFromPart(t:Context tc, s:ModulePart part) returns error? {
+public function resolveModuleDefFromPart(t:Context tc, s:ModulePart part, string name) returns error? {
     ModuleSymbols syms = { tc, allowAllTypes: true };
     check addModulePart(syms.defns, part);
-    check resolveTypes(syms);
+    check resolveType(syms, name);
 }
 
 public function scanModule(SourcePart[] sourceParts, bir:ModuleId id) returns ScannedModule|err:Diagnostic|io:Error {
