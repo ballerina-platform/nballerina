@@ -109,7 +109,7 @@ isolated function index(UsedSemType ty) returns int {
 function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
     byte[] uses = [];
     t:SemType[] types = [];
-    // JBUG can't directly iterate over usedSemTypes
+    // JBUG 36056 can't directly iterate over usedSemTypes
     UsedSemType[] usedSemTy = usedSemTypes.toArray();
     usedSemTy = usedSemTy.sort("ascending", index);
     foreach var used in usedSemTy {
