@@ -324,30 +324,24 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
     return { block: curBlock, assignments, bindings };
 }
 
-// Filter `Bindings` from `bodyBindings` to `bindingLimit` that narrows outside registers and accumulate it on top `bindingLimit`
+// Add `Bindings` from `bodyBindings`, up to `bindingLimit`, that narrows outside registers, on top `bindingLimit`.
 function addBindings(BindingChain? bindingLimit, BindingChain? bodyBindings, int startRegister) returns BindingChain? {
-    BindingChain? newBindings = bindingLimit;
-    foreach var bindings in diffBindingsReverse(bodyBindings, bindingLimit) {
-        Binding? unnarrowed = bindings.unnarrowed;
-        if unnarrowed != () && unnarrowed.reg.number < startRegister {
-            newBindings = { prev: newBindings, head: bindings };
-        }
-    }
-    return newBindings;
-}
-
-// Returns a list of bindings from `beginning` to `bindingLimit` in reverse order.
-// pr-todo: inline
-function diffBindingsReverse(BindingChain? beginning, BindingChain? bindingLimit) returns Binding[] {
-    Binding[] result = [];
-    BindingChain? bindings = beginning;
+    Binding[] extras = [];
+    BindingChain? bindings = bodyBindings;
     while bindings !== bindingLimit {
         // Since `bindingLimit` is a sub-chain of `bindings`, we never reach nil on `bindings`.
         var { head, prev } = <BindingChain>bindings;
-        result.push(head);
+        extras.unshift(head);
         bindings = prev;
     }
-    return result;
+    BindingChain? newBindings = bindingLimit;
+    foreach var extra in extras {
+        Binding? unnarrowed = extra.unnarrowed;
+        if unnarrowed != () && unnarrowed.reg.number < startRegister {
+            newBindings = { prev: newBindings, head: extra };
+        }
+    }
+    return newBindings;
 }
 
 function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, s:Stmt stmt) returns CodeGenError|StmtEffect {
@@ -740,8 +734,11 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     if binding != () {
         // Match expression is a variable
         // We get one type narrowing per clause (which combines all the patterns in the clause)
+        bir:Register unmatchedReg = <bir:Register>matched;
         foreach var i in 0 ..< stmt.clauses.length() {
             if i == defaultClauseIndex {
+                // Safe to case when i != 0, since previous iteration created a narrowed reg
+                clauseBindings[i] = i == 0 ? env.bindings : narrow(env.bindings, binding, <bir:NarrowRegister>unmatchedReg);
                 break;
             }
             var pos = stmt.clauses[i].opPos;
@@ -754,21 +751,12 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
                 ifFalse: nextBlock.label,
                 ifTrueRegister,
                 ifFalseRegister,
-                // Safe to cast since const case will not reach here since it's defaultClause
-                // pr-todo: this should be the register form the pervious clause
-                operand: <bir:Register>matched,
-                // pr-todo: retry
-                // Should be clauseLooksLike[i] but runtime doesn't support diffed types yet
-                // what I think it should be: int is (2|3|4 & !(1|2))
-                // what I am doing now:       int is (2|3|4)
+                operand: unmatchedReg,
                 semType: clausePatternUnions[i],
                 pos: pos
             };
+            unmatchedReg = ifFalseRegister;
             clauseBindings[i] = narrow(env.bindings, binding, ifTrueRegister);
-            // pr-todo: add comment explaining what is going on here
-            if i + 1 == defaultClauseIndex {
-                clauseBindings[i + 1] = narrow(env.bindings, binding, ifFalseRegister);
-            }
             testBlock.insns.push(typeBranch);
             testBlock = nextBlock;
         }
@@ -1495,7 +1483,7 @@ function bindingsLookup(string name, Environment env) returns Binding? {
     return ();
 }
 
-// One and only one field must be non-nil.
+// One and only one field in the pair must be non-nil.
 // Returns a tuple. First element: the side of the pair that is non-nil. Second element: non-nil Merger.
 function soloFromTypeMergerPair(TypeMergerPair pair) returns [boolean, TypeMerger] {
     var { trueMerger, falseMerger } = pair;
