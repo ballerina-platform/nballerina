@@ -34,14 +34,6 @@ if (process.argv.length > 2) {
       console: {
         log: function(arg) {
           console.log(getValue(arrayGet(arg, 0)));
-          // console.log("--------------------------------------")
-          // console.log(getType(arg));
-        },
-        log_32: function (arg) {
-          console.log(arg)
-        },
-        log_64: function (arg) {
-          console.log(arg)
         }
       },
       string: {
@@ -209,12 +201,10 @@ const getValue = (ref, parent = null) => {
 }
 
 const hash_string = (arg) => {
-  // console.log(`String: ${arg}`)
   let hash = 2611923443488327891n
   for (let index = 0; index < arg.length; index++) {
     hash = hash^(BigInt(arg.charCodeAt(index)));
   }
-  // console.log(`hash: ${hash}`);
   return hash;
 }
 

@@ -1,7 +1,7 @@
 (module 
   ;; type
   (type $Surrogate (array (mut i32))) 
-  (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate))) (extends $Any)) 
+  (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32))) (extends $Any)) 
   ;; import
   (import "string" "create" (func $str_create (param i32) (param i32) (result anyref))) 
   (import "string" "length" (func $str_length (param anyref) (result i32))) 
@@ -99,7 +99,8 @@
             (struct.get $String $val 
               (local.get $1))) 
           (ref.as_non_null 
-            (local.get $6)) 
+            (local.get $6))
+          (i32.const -1) 
           (rtt.sub $String
             (rtt.canon $Any))))))
   ;; get_string

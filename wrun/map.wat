@@ -7,7 +7,7 @@
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
   (type $Map (struct (field $type i32) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))) (extends $Any))   
   ;; import
-  (import "string" "hash" (func $hash_string (param anyref) (result i64))) 
+  (import "string" "hash" (func $hash_string (param anyref) (result i32))) 
   ;; export
   (export "_bal_map_array_len" (func $_bal_map_array_len)) 
   (export "_bal_mapping_construct" (func $_bal_mapping_construct)) 
@@ -34,7 +34,7 @@
         (i32.const 4))
       (block
         (local.set $1  
-          (i32.const 8)))
+          (i32.const 4)))
       (block
         (local.set $2
           (i64.add 
@@ -100,18 +100,13 @@
         (rtt.canon $Any))))
   ;; $_bal_mapping_init_member
   (func $_bal_mapping_init_member (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
-    (local $3 i64)
+    (local $3 i32)
     (local $4 (ref null $MapFields))
     (local $5 i32)
     (local $6 (ref null $MapFieldArr))
     (local.set $3
-      (call $hash_string
-        (struct.get $String $val
-          (ref.cast
-            (ref.as_data
-              (local.get $1))
-            (rtt.sub $String
-              (rtt.canon $Any))))))
+      (call $get_string_hash
+        (local.get $1)))
     (local.set $4
       (struct.get $Map $fArray
         (local.get $0)))
@@ -143,7 +138,7 @@
       (local.get $3)
       (local.get $5)))
   ;; $_bal_map_insert
-  (func $_bal_map_insert (param $0 (ref $Map)) (param $1 eqref) (param $2 i64) (param $3 i32) ;;map, key, hash, index in fArray ;; tableLength
+  (func $_bal_map_insert (param $0 (ref $Map)) (param $1 eqref) (param $2 i32) (param $3 i32) ;;map, key, hash, index in fArray ;; tableLength
     (local $4 i32)
     (local $5 i32)
     (local $6 i32)
@@ -156,11 +151,9 @@
             (local.get $0)))
         (i32.const 1)))
     (local.set $5
-      (i32.wrap_i64
-        (i64.and  
-          (local.get $2)
-          (i64.extend_i32_u
-            (local.get $4)))))
+      (i32.and  
+        (local.get $2)
+        (local.get $4)))
     (block $loop$br
       (loop $loop
         (local.set $6
@@ -197,46 +190,67 @@
     (local $4 i32)
     (local $5 i32)
     (local $6 i32)
-    (call $_bal_mapping_init_member
-      (local.get $0)
-      (local.get $1)
-      (local.get $2))
-    (local.set $4
-      (struct.get $MapFields $length
-        (struct.get $Map $fArray
-          (local.get $0))))
-    (local.set $5
-      (array.len $MapFieldArr
-        (struct.get $MapFields $members
-          (struct.get $Map $fArray  
-            (local.get $0)))))
-    (if 
-      (i32.eq
-        (local.get $5)
-        (local.get $4))
-      (call $_bal_map_array_grow
+    (local $7 i32)
+    (local.set $7
+      (call $_bal_map_lookup
         (local.get $0)
-        (local.get $4)))
-    (local.set $6
-      (i32.shl
-        (i32.const 1)
-        (i32.sub  
-          (struct.get $Map $tableLengthShift
-            (local.get $0))
-          (i32.const 1))))
+        (local.get $1)
+        (call $get_string_hash
+          (local.get $1))))
     (if
-      (i32.ge_u
-        (local.get $5)
-        (local.get $6))
+      (i32.eq
+        (local.get $7)
+        (i32.const -1))
       (block
-        (struct.set $Map $tableLengthShift
+        (call $_bal_mapping_init_member
           (local.get $0)
-          (i32.add
-            (i32.const 1)
-            (struct.get $Map $tableLengthShift
+          (local.get $1)
+          (local.get $2))
+        (local.set $4
+          (struct.get $MapFields $length
+            (struct.get $Map $fArray
               (local.get $0))))
-        (call $_bal_map_table_grow
-          (local.get $0)))))
+        (local.set $5
+          (array.len $MapFieldArr
+            (struct.get $MapFields $members
+              (struct.get $Map $fArray  
+                (local.get $0)))))
+        (if 
+          (i32.eq
+            (local.get $5)
+            (local.get $4))
+          (call $_bal_map_array_grow
+            (local.get $0)
+            (local.get $4)))
+        (local.set $6
+          (i32.shl
+            (i32.const 1)
+            (i32.sub  
+              (struct.get $Map $tableLengthShift
+                (local.get $0))
+              (i32.const 1))))
+        (if
+          (i32.ge_u
+            (local.get $5)
+            (local.get $6))
+          (block
+            (struct.set $Map $tableLengthShift
+              (local.get $0)
+              (i32.add
+                (i32.const 1)
+                (struct.get $Map $tableLengthShift
+                  (local.get $0))))
+            (call $_bal_map_table_grow
+              (local.get $0)))))
+      (array.set $MapFieldArr
+        (struct.get $MapFields $members
+          (struct.get $Map $fArray
+            (local.get $0)))
+        (local.get $7)
+        (struct.new_with_rtt $MapField
+          (local.get $1)
+          (local.get $2)
+          (rtt.canon $MapField)))))
   ;; $_bal_map_table_grow
   (func $_bal_map_table_grow (param $0 (ref $Map)) 
     (local $1 i32)
@@ -261,7 +275,7 @@
           (local.get $0))))
     (local.set $4
       (struct.get $MapFields $length
-        (struct.get $Map $fArray
+        (struct.get $Map $fArray  
           (local.get $0))))
     (struct.set $Map $table
       (local.get $0)
@@ -284,13 +298,8 @@
           (call $_bal_map_insert 
             (local.get $0)
             (local.get $6)
-            (call $hash_string
-              (struct.get $String $val  
-                (ref.cast 
-                  (ref.as_data  
-                    (local.get $6))
-                  (rtt.sub $String
-                    (rtt.canon $Any)))))
+            (call $get_string_hash
+              (local.get $6))
             (local.get $5))
           (local.set $5
             (i32.add
@@ -302,13 +311,7 @@
     (local $2 (ref null $MapFieldArr)) 
     (local $3 i32) 
     (local $4 (ref null $MapFieldArr)) 
-    (local $5 i32) 
-    (if 
-      (i64.ge_s 
-        (i64.extend_i32_u
-          (local.get $1)) 
-        (i64.const 4294967295)) 
-      (throw $index-too-large)) 
+    (local $5 i32)  
     (local.set $2 
       (struct.get $MapFields $members 
         (struct.get $Map $fArray
@@ -329,10 +332,12 @@
           (local.get $1)) 
         (block 
           (array.set $MapFieldArr 
-            (local.get $4) 
+            (ref.as_non_null
+              (local.get $4)) 
             (local.get $5) 
             (array.get $MapFieldArr  
-              (local.get $2) 
+              (ref.as_non_null
+                (local.get $2)) 
               (local.get $5))) 
           (local.set $5 
             (i32.add 
@@ -343,7 +348,7 @@
       (local.get $0) 
       (struct.new_with_rtt $MapFields
         (local.get $4)
-        (local.get $3)
+        (local.get $1)
         (rtt.canon $MapFields)))) 
   ;; $_bal_map_replace
   (func $_bal_map_replace (param $0 (ref $HashTable)) (param $1 i32) (param $2 i32) (result i32);; $0 - hashtable ; 1-i; 2-n
@@ -393,7 +398,7 @@
         (local.get $1)))
     (local.get $3))
   ;; $_bal_map_lookup
-  (func $_bal_map_lookup (param $0 (ref $Map)) (param $1 eqref) (param $2 i64) (result i32);;map, key, hash
+  (func $_bal_map_lookup (param $0 (ref $Map)) (param $1 eqref) (param $2 i32) (result i32);;map, key, hash
     (local $3 i32)
     (local $4 i32)
     (local $5 i32)
@@ -405,11 +410,9 @@
             (local.get $0)))
         (i32.const 1)))
     (local.set $4
-      (i32.wrap_i64
-        (i64.and  
-          (local.get $2)
-          (i64.extend_i32_u
-            (local.get $3)))))
+      (i32.and  
+        (local.get $2)
+        (local.get $3)))
     (block $loop$br
       (loop $loop
         (local.set $5
@@ -456,13 +459,8 @@
         (ref.as_non_null
           (local.get $3))
         (local.get $1)
-        (call $hash_string
-          (struct.get $String $val  
-            (ref.cast 
-              (ref.as_data  
-                (local.get $1))
-              (rtt.sub $String
-                (rtt.canon $Any)))))))
+        (call $get_string_hash
+          (local.get $1))))
     (if
       (i32.eq
         (local.get $2)
@@ -594,5 +592,29 @@
       (return 
         (local.get $1))))
 
+  (func $get_string_hash (param $0 eqref) (result i32)
+    (local $1 (ref null $String))
+    (local $2 i32)
+    (local.set $1
+      (ref.cast 
+        (ref.as_data
+          (local.get $0))
+        (rtt.sub $String
+          (rtt.canon $Any))))
+    (local.set $2
+      (struct.get $String $hash
+        (ref.as_non_null
+          (local.get $1))))
+    (if
+      (i32.eq
+        (local.get $2)
+        (i32.const -1))
+      (struct.set $String $hash
+        (local.get $1)
+        (call $hash_string
+          (local.get $1))))
+    (return 
+      (struct.get $String $hash
+        (local.get $1))))
   ;; end
   )
