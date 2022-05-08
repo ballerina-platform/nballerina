@@ -12,7 +12,8 @@ type T1 int[100000];
 type T2 [C01, C01, C01, (int|float)...];
 
 
-// @type T3[0] = NOTC01
+// T3[0] is int because e.g. [0, 17, 0, 0,...,0] (length 100000) belongs to T1 and !T2
+// @type T3[0] = INT
 // @type T3[100] = INT
 // @type T3[1000] = INT
 // @type T3[10000] = INT

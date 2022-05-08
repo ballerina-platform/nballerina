@@ -16,7 +16,10 @@ mkdir -p "$parent/actual"
 if test $kind == p; then
     balFile=`echo "$b" | sed -e 's/.exe/.bal/'`
     $("./$1" >/dev/null 2>"$out")
-    grep -v ballerina/lang $out | head -n 2 | sed -e 's/.*bal:/'"$balFile"':/' | diff -u "$2" -
+    # this verifies we got a panic
+    if [[ -z $(grep '[^[:space:]]' "$out") ]] ; then
+      echo "expected panic"
+    fi
 else
     "./$1" >"$out"
     diff -u "$2" "$out"

@@ -34,7 +34,6 @@ type Binding record {|
     bir:DeclRegister|bir:NarrowRegister reg;
     boolean isFinal;
     boolean used = false;
-    Binding? prev;
     // When this binding represents a narrowing, this refers to the
     // original binding that was not narrowed.
     // In the case of the nested narrowing, this points all the way

@@ -79,7 +79,7 @@ public function main(string[] filenames, *Options opts) returns error? {
             }
         }
         else if ext == TEST_EXTENSION {
-            check compileBaltFile(filename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
+            check compileBaltFile(filename, basename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
         }
         else if ext == () {
             return error("input filename must have a .bal or .balt extension");
