@@ -4,11 +4,19 @@ import wso2/nballerina.print.wasm;
 
 function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn insn) returns wasm:Expression {
     var [_, val] = buildReprValue(module, scaffold, insn.operand);
-    if insn.semType === t:BOOLEAN {
+    t:SemType semType = insn.semType;
+    Repr repr = semTypeRepr(semType);
+    if repr === REPR_BOOLEAN {
         return buildTypeTestedValue(module, scaffold, val, module.localSet(insn.result.number, buildUntagBoolean(module, val)), TYPE_BOOLEAN);
     }
-    else if insn.semType === t:INT {
+    else if repr === REPR_INT {
         return buildTypeTestedValue(module, scaffold, val, module.localSet(insn.result.number, buildUntagInt(module, scaffold, val)), TYPE_INT);
+    }
+    else if repr === REPR_MAPPING  {
+        return buildTypeTestedValue(module, scaffold, val, module.localSet(insn.result.number, buildCast(module, scaffold, val, MAP_TYPE)), TYPE_MAP);
+    }
+    else if repr === REPR_LIST  {
+        return buildTypeTestedValue(module, scaffold, val, module.localSet(insn.result.number, buildCast(module, scaffold, val, LIST_TYPE)), TYPE_LIST);
     }
     else {
         return module.localSet(insn.result.number, val);

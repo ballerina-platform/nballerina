@@ -15,6 +15,8 @@ final readonly & map<wasm:Op> signedInt64BitwiseOps = {
     "&": "i64.and"
 };
 
+final RuntimeModule numberMod = "number";
+
 function buildBitwiseBinary(wasm:Module module, Scaffold scaffold, bir:IntBitwiseBinaryInsn insn) returns wasm:Expression {
     wasm:Op? op = signedInt64BitwiseOps[insn.op];
     wasm:Expression operand1 = buildInt(module, insn.operands[0]);

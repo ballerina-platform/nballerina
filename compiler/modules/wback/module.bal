@@ -19,7 +19,7 @@ type Context record {
     string[] globals = [];
     map<StringRecord> segments =  {};
     int offset = 0;
-    RuntimeModule[] runtimeModules = [taggingMod, listMod];
+    RuntimeModule[] runtimeModules = [taggingMod, listMod, numberMod];
 };
 
 function buildModule(bir:Module mod) returns string[]|BuildError {

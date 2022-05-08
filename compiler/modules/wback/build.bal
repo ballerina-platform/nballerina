@@ -7,6 +7,7 @@ const int TYPE_BOOLEAN = 1;
 const int TYPE_NIL     = 2;
 const int TYPE_LIST    = 3;
 const int TYPE_STRING  = 5;
+const int TYPE_MAP     = 6;
 const int SELF_REFERENCE = 4;
 const int INITIAL_CAPACITY = 4;
 const int MAX_CAPACITY = 4294967295;
@@ -14,6 +15,7 @@ const int MAX_CAPACITY = 4294967295;
 public type RuntimeType string;
 const RuntimeType BOXED_INT_TYPE = "BoxedInt";
 const RuntimeType LIST_TYPE = "List";
+const RuntimeType MAP_TYPE = "Map";
 const RuntimeType ANY_ARR_TYPE = "AnyList";
 const RuntimeType STRING_TYPE = "String";
 const RuntimeType ANY_TYPE = "Any";
@@ -83,6 +85,10 @@ function buildTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Expression v
 function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
     var { name, returnType } = taggedToIntFunction;
     return module.call(name, [tagged], returnType);
+}
+
+function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, string 'type) returns wasm:Expression {
+    return module.refCast(tagged, module.rtt('type, ANY_TYPE));
 }
 
 function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand operand) returns wasm:Expression {

@@ -59,7 +59,7 @@ function compileBaltFile(string filename, string basename, string outDir, nback:
 }
 
 function compileAndOutputModule(CompileContext cx, bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename, string? initFilename) returns CompileError? {
-    front:ResolvedModule mod = check processModule(cx, modId, sources, <string>cx.outputFilename());
+    front:ResolvedModule mod = check processModule(cx, modId, sources, <string>cx.outputFilename(), false);
     check mod.validMain();
     check generateInitModule(cx, mod);
 }
