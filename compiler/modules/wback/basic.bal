@@ -80,7 +80,7 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
 }
 
 function buildBranch(wasm:Module module, Scaffold scaffold, bir:BranchInsn insn, bir:Label label) returns wasm:Expression? {
-    if insn.backward || scaffold.brBlockLabels.indexOf(label) != () {
+    if insn.backward || scaffold.brBlockLabels.indexOf(label) != () || scaffold.contBlockLabels.indexOf(insn.dest) != () {
         return module.br("$block$" + insn.dest.toString() + "$break");
     }
     return ();

@@ -50,6 +50,7 @@ class Scaffold {
     private string[] exceptionTags = [];
     private string[] addedExceptionTags = [];
     bir:Label[] brBlockLabels = [];
+    bir:Label[] contBlockLabels = [];
     bir:Label[] regionsWithBr = [];
     private Context context = {};
     int funcExceptionTags = 0;

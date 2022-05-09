@@ -218,6 +218,7 @@ function checkForBreakOrCont(Scaffold scaffold, bir:Label entry, bir:Label? exit
     return ();
 }
 
+
 function checkAndPush(bir:Label[] labels, bir:Label[] queue, bir:Label[] processedQ) {
     foreach bir:Label label in labels {
         if processedQ.indexOf(label) == () && queue.indexOf(label) == () {
@@ -247,6 +248,13 @@ function preProcessRegions(Scaffold scaffold) {
     foreach int i in 0..<scaffold.regions.length() {
         bir:Region region = scaffold.regions[i];
         if region.kind == bir:REGION_LOOP {
+            bir:Label loopBodyLabel = getLoopBodyBlockLabel(scaffold.blocks[region.entry]);
+            if loopBodyLabel != region.entry + 1 {
+                bir:Label? cur = checkForBreakOrCont(scaffold, region.entry, region.entry);
+                if cur != () {
+                    scaffold.contBlockLabels.push(cur);
+                }
+            }
             bir:Label? cur = checkForBreakOrCont(scaffold, region.entry, region.exit);
             if cur != () {
                 scaffold.brBlockLabels.push(cur);
