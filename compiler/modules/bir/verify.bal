@@ -82,7 +82,7 @@ type Error err:Semantic|err:Internal;
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
     foreach Insn insn in bb.insns {
         check verifyInsn(vc, insn);
-        check verifyRegistersKinds(vc, insn);
+        check verifyInsnRegisterKinds(vc, insn);
     }
 }
 
@@ -96,7 +96,7 @@ type ResultInsn IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwis
     |EqualityInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn|MappingGetInsn
     |StringConcatInsn|CallInsn|TypeCastInsn|TypeTestInsn|CatchInsn|ErrorConstructInsn;
 
-function verifyRegistersKinds(VerifyContext vc, Insn insn) returns Error? {
+function verifyInsnRegisterKinds(VerifyContext vc, Insn insn) returns Error? {
     if insn is ResultInsn {
         if (vc.tmpRegisterUsed.length() > insn.result.number) && vc.tmpRegisterUsed[insn.result.number] {
             return vc.invalidErr("tmp register defined in multiple places", <Position>insn.result.pos);
