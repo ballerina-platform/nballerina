@@ -3,7 +3,6 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
-//import ballerina/io;
 
 type Range d:Range;
 
@@ -88,7 +87,15 @@ function verifyRegions(VerifyContext vc, Position pos) returns Error? {
     foreach BasicBlock block in vc.code.blocks {
         check checkRegions(vc, block.label, pos);
     }
-    // io:println("debug");
+    // TODO create missing regions in forntend
+    // foreach TmpRegion tmpRegion in vc.regions {
+    //     foreach Region region in vc.code.regions {
+    //         if region.entry == tmpRegion.entry && region.exit == tmpRegion.exit && region.kind is REGION_LOOP {
+    //             continue;
+    //         }
+    //     }
+    //     return vc.invalidErr("region not created in front end", pos);
+    // }
 }
 
 function checkRegions(VerifyContext vc, Label label, Position pos) returns Error? {
@@ -101,31 +108,30 @@ function checkRegions(VerifyContext vc, Label label, Position pos) returns Error
 function traverseRegion(VerifyContext vc, int entry, Label label, Position pos, boolean isLoop = false) returns Error|int? {
     Insn[] insns = vc.code.blocks[label].insns;
     var insnsLen = insns.length();
+    Label entry2 = vc.code.blocks[label].isLoopHead ? label : entry;
     if insnsLen > 0 {
         Insn insn = insns[insnsLen - 1];
         if insn is BranchInsn {
             if insn.dest == entry {
                 return ();
             }
-            return traverseRegion(vc, entry, insn.dest, pos, isLoop);
+            return traverseRegion(vc, entry2, insn.dest, pos, isLoop);
         }
         else if insn is CondBranchInsn {
             if insn.ifFalse == entry || insn.ifTrue == entry {
                 return ();
             }
-            int? ifFalse = check traverseRegion(vc, entry, insn.ifFalse, pos, isLoop);
-            int? ifTrue = check traverseRegion(vc, entry, insn.ifTrue, pos, isLoop);
-            if ifFalse is int && ifTrue is int {
+            int? ifTrue = check traverseRegion(vc, entry2, insn.ifTrue, pos, isLoop);
+            if ifTrue is () {
+                return insn.ifFalse;
+            }
+            int? ifFalse = check traverseRegion(vc, entry2, insn.ifFalse, pos, isLoop);
+            
+            if ifFalse is int {
                 return ifFalse == ifTrue ? ifFalse : ();
             }
-            else if ifFalse is int {
-                return ifFalse;
-            }
-            else if ifTrue is int {
-                return ifTrue;
-            }
             else {
-                return ();
+                return ifTrue;
             }
 
         }
