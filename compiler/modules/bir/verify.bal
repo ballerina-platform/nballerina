@@ -70,7 +70,7 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
     }
-    
+    check verifyGraph(cx, code.blocks, defn.position);
 }
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
@@ -92,6 +92,10 @@ function traveseGraph(VerifyContext vc, BasicBlock[] blocks, Label label, boolea
     if visited[label] {
         return;
     }
+    Label? onPanic = blocks[label].onPanic;
+    if onPanic is Label {
+        visited[onPanic] = true;
+    }
     visited[label] = true;
     currentGraph[label] = true;
     Insn[] insns = blocks[label].insns;
@@ -109,12 +113,12 @@ function traveseGraph(VerifyContext vc, BasicBlock[] blocks, Label label, boolea
                 return vc.invalidErr("backwards branch directs to non loop head", pos);
             } 
             else {
-               check traveseGraph(vc, blocks, insn.dest, visited, visited, pos); 
+               check traveseGraph(vc, blocks, insn.dest, visited, currentGraph, pos); 
             }
         }
         else if insn is CondBranchInsn {
-            boolean[] curGraph = visited.clone();
-            check traveseGraph(vc, blocks, insn.ifFalse, visited, visited, pos);
+            boolean[] curGraph = currentGraph.clone();
+            check traveseGraph(vc, blocks, insn.ifFalse, visited, currentGraph, pos);
             check traveseGraph(vc, blocks, insn.ifTrue, visited, curGraph, pos);
         }
     }
