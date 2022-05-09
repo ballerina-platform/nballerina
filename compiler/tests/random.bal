@@ -1,26 +1,33 @@
-import ballerina/jballerina.java;
+import ballerina/time;
 import ballerina/test;
 
-class Random {
-    private handle jrandom;
+// Mask operand of multiplication to 31 bits to avoid overflow.
+isolated class Random {
+    private final int multiplier = 0x5eece66d; // 0x5DEECE66D from Java's Random class, masked to 31 bit
+    private final int addend = 0xB;
+    private final int mask = (1 << 31) - 1;
+    private int seed;
 
     function init(int seed) {
-        self.jrandom = createJavaRandomObj(seed);
+        self.seed = self.mask & ((seed & self.mask) * self.multiplier);
     }
 
     function next() returns int {
-        return self._next(self.jrandom).abs();
+        lock {
+            self.seed = (self.seed * self.multiplier + self.addend) & self.mask;
+            return int:abs(self.seed - self.addend);
+        }
     }
 
     // 0 to range [exclusive]
     function nextRange(int range) returns int {
-        if range > 2147483647 {
+        if range > self.mask {
             panic error("Range too large");
         }
         if range == 0 || range == 1 {
             return 0;
         }
-        return self._next(self.jrandom).abs() % range;  
+        return self.next() % range;  
     }
 
     function randomStringValue(int len) returns string {
@@ -28,24 +35,27 @@ class Random {
         // codepoints in [a-zA-Z]
         return checkpanic string:fromCodePointInts(codePoints);
     }
-
-    function _next(handle receiver) returns int = @java:Method {
-        'class: "java.util.Random",
-        name: "nextLong"
-    } external;   
 }
 
-function createJavaRandomObj(int seed) returns handle = @java:Constructor {
-    'class: "java.util.Random",
-    paramTypes: ["long"]
-} external;
-
-
 @test:Config
-function testRandom() {
-    Random r1 = new(100);
-    Random r2 = new(100);
-    foreach int i in 0...10000 {
+function testRandomReproducibility() {
+    time:Utc time = time:utcNow();
+    Random r1 = new(time[0]);
+    Random r2 = new(time[0]);
+    foreach int i in 0...10000000 {
         test:assertEquals(r1.nextRange(200), r2.nextRange(200));
+    }
+}
+
+// This test might take up some time to get to zero.
+@test:Config
+function testRandPropertyZeroAndNonNeg() {
+    time:Utc time = time:utcNow();
+    Random r1 = new(time[0]);
+    while true {
+        int r = r1.next();
+        if r == 0 {
+            break;
+        }
     }
 }

@@ -428,7 +428,7 @@ function assertFail(Context cx, Proposition prop) {
 function invokePropositionGenerator(*PropositionTestConfig config) {
     foreach int i in 0 ... config.totalTestRuns {
         time:Utc seed = time:utcNow();
-        Context cx = new Context(t:typeContext(new), 100);
+        Context cx = new Context(t:typeContext(new), seed[0]);
         foreach int depth in 0 ... config.depthLimit {
             io:print(string `${"\r"}Iteration: ${i}, level: ${depth}/${config.depthLimit}`);
             foreach int j in 0 ... config.widthLimit {
