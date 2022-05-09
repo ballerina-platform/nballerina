@@ -3,13 +3,14 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
+//import ballerina/io;
 
 type Range d:Range;
 
 type TmpRegion record {|
     int entry;
     int? exit;
-    boolean hasBackward = false;
+    boolean isLoop = false;
 |};
 
 class VerifyContext {
@@ -19,8 +20,6 @@ class VerifyContext {
     final FunctionCode code;
     boolean[] tmpRegisterUsed = [];
     TmpRegion[] regions = [];
-    Label[] currentRegion = [];
-    Label[] loopHeads = [];
     
     function init(Module mod, FunctionDefn defn, FunctionCode code) {
         self.mod = mod;
@@ -86,68 +85,54 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
 }
 
 function verifyRegions(VerifyContext vc, Position pos) returns Error? {
-    BasicBlock[] blocks = vc.code.blocks;
-    int blockLen = blocks.length();
-    boolean[] visited = from int b in 0 ..< blockLen select false;
-
-    int label = 0;
-    while label < blockLen {
-        label = check createRegions(vc, visited, label, label, pos) + 1;
+    foreach BasicBlock block in vc.code.blocks {
+        check checkRegions(vc, block.label, pos);
     }
-    if visited.indexOf(false) != () {
-        return vc.invalidErr("invalid blocks in regions", pos);
+    // io:println("debug");
+}
+
+function checkRegions(VerifyContext vc, Label label, Position pos) returns Error? {
+    if vc.code.blocks[label].isLoopHead {
+        int? exit = check traverseRegion(vc, label, label, pos, true);
+        vc.regions.push({ entry : label, exit, isLoop : true });
     }
 }
 
-function createRegions(VerifyContext vc, boolean[] visited, int entry, Label label, Position pos) returns int|Error {
-    if vc.currentRegion.indexOf(label) != () {
-        return vc.invalidErr("loop in non-loop region", pos);
-    }
-    if visited[label] {
-        buildTempRegion(vc, entry, label);
-        return label;
-    }
-    vc.currentRegion.push(label);
-    visited[label] = true;
+function traverseRegion(VerifyContext vc, int entry, Label label, Position pos, boolean isLoop = false) returns Error|int? {
     Insn[] insns = vc.code.blocks[label].insns;
     var insnsLen = insns.length();
     if insnsLen > 0 {
         Insn insn = insns[insnsLen - 1];
         if insn is BranchInsn {
-            if insn.backward {
-                if !vc.code.blocks[insn.dest].isLoopHead {
-                    return vc.invalidErr("backwards branch directs to non loop head", pos);
-                }
-                buildTempRegion(vc, entry, label, true);
-                return vc.currentRegion.pop();
+            if insn.dest == entry {
+                return ();
             }
-            else {
-                insns = vc.code.blocks[insn.dest].insns;
-                int r = check createRegions(vc, visited, entry, insn.dest, pos);
-                if label != vc.currentRegion.pop() {
-                    return vc.invalidErr("error in region", pos);
-                }
-                return r;
-            }
+            return traverseRegion(vc, entry, insn.dest, pos, isLoop);
         }
         else if insn is CondBranchInsn {
-            int r = check createRegions(vc, visited, entry, insn.ifFalse, pos);
-            _ = check createRegions(vc, visited, label, insn.ifTrue, pos);
-            if label != vc.currentRegion.pop() {
-                return vc.invalidErr("error in region", pos);
+            if insn.ifFalse == entry || insn.ifTrue == entry {
+                return ();
             }
-            return r;
+            int? ifFalse = check traverseRegion(vc, entry, insn.ifFalse, pos, isLoop);
+            int? ifTrue = check traverseRegion(vc, entry, insn.ifTrue, pos, isLoop);
+            if ifFalse is int && ifTrue is int {
+                return ifFalse == ifTrue ? ifFalse : vc.invalidErr("error in region merge", pos);
+            }
+            else if ifFalse is int {
+                return ifFalse;
+            }
+            else if ifTrue is int {
+                return ifTrue;
+            }
+            else {
+                return ();
+            }
+
         }
     }
-    buildTempRegion(vc, entry, label);
-    return vc.currentRegion.pop();
+    return label;
 }
 
-function buildTempRegion(VerifyContext vc, int entry, int exit, boolean hasBackward = false) {
-    if entry != exit {
-        vc.regions.push({entry, exit, hasBackward});
-    }
-}
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
