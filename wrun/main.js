@@ -73,18 +73,9 @@ if (process.argv.length > 2) {
           return hash_string(arg);
         }
       },
-      map : {
-        create: function() {
-          return create_map();
-        },
-        set: function(m, key, val) { 
-          set_map(m, key, val);
-        },
-        get: function(m, key) {
-          return get_map(m, key);
-        },
-        length: function(m) {
-          return BigInt(m.keys().length)
+      int: {
+        hex: function (arg) {
+          return arg.toString(16)
         }
       }
     };
@@ -114,7 +105,6 @@ if (process.argv.length > 2) {
       bal_mapping_get_key = obj.instance.exports._bal_mapping_get_key 
       obj.instance.exports.main();
     }).catch((err) => {
-      console.log(err)
         if(typeof err == "object" &&  err instanceof WebAssembly.Exception) {
             let tag = tags.filter(tag => err.is(tag.tag));
             if (tag.length > 0) {
@@ -190,7 +180,7 @@ const getValue = (ref, parent = null) => {
       else {
         val = getValue(valRef)
       }
-      map += `${key}:${val},`
+      map += `"${key}":${val},`
     }
     if (map.indexOf(",") != -1) {
       map = map.substring(0, map.length - 1)
@@ -200,12 +190,13 @@ const getValue = (ref, parent = null) => {
   }
 }
 
-const hash_string = (arg) => {
-  let hash = 2611923443488327891n
-  for (let index = 0; index < arg.length; index++) {
-    hash = hash^(BigInt(arg.charCodeAt(index)));
+const hash_string = (str) => {
+  let result = 0;
+  for (let i = 0; i < str.length; ++i) {
+    // Normalize to 4 byte range, 0 ... 2^32.
+    result = (31 * result + str.charCodeAt(i)) >>> 0;
   }
-  return hash;
+  return result;
 }
 
 const create_map = () => {

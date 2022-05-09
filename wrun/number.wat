@@ -3,6 +3,7 @@
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32))) (extends $Any)) 
   ;; import
+  (import "string" "eq" (func $str_eq (param anyref) (param anyref) (result i32))) 
   (import "int" "hex" (func $int_to_hex (param i64) (result anyref))) 
   ;; toHexString
   (func $toHexString (param $0 i64) (result (ref $String)) 

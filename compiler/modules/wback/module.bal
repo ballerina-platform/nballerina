@@ -99,8 +99,11 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
     map<wasm:Wat[]> sectionIdentifiers = {};
     map<wasm:Wat[]> functions = {};
     foreach RuntimeModule mod in rtModules.reverse() {
-        string absPath = check file:getAbsolutePath("../wrun/" + mod + ".wat");
-        wasm:Wat[] wat = check io:fileReadLines(absPath);
+        string absPath = check file:getAbsolutePath("");
+        string mainDir = "nballerina";
+        int index = <int>absPath.indexOf(mainDir);
+        string path = absPath.substring(0, index + mainDir.length()) + "/wrun/" + mod + ".wat";
+        wasm:Wat[] wat = check io:fileReadLines(path);
         string? identifier = ();
         string[] content = [];
         foreach wasm:Wat line in wat {
