@@ -70,11 +70,55 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
     }
+    
 }
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
 type Error err:Semantic|err:Internal;
+
+function verifyGraph(VerifyContext vc, BasicBlock[] blocks, Position pos) returns Error? {
+    boolean[] visited = from int b in 0 ..< blocks.length() select false;
+    check traveseGraph(vc, blocks, 0, visited, visited, pos);
+    if visited.indexOf(false) != () {
+        return vc.invalidErr("unreachable blocks in function code", pos);
+    }
+}
+
+function traveseGraph(VerifyContext vc, BasicBlock[] blocks, Label label, boolean[] visited, boolean[] currentGraph, Position pos) returns Error? {
+    if currentGraph[label] {
+        return vc.invalidErr("forward edge graph is not acyclic", pos);
+    }
+    if visited[label] {
+        return;
+    }
+    visited[label] = true;
+    currentGraph[label] = true;
+    Insn[] insns = blocks[label].insns;
+    var insnsLen = insns.length();
+    if insnsLen > 0 {
+        Insn insn = insns[insnsLen - 1];
+        if insn is BranchInsn {
+            if insn.backward {
+                if visited[insn.dest] {
+                    insn = blocks[insn.dest].insns[blocks[insn.dest].insns.length() - 1];
+                    if insn is BranchInsn|CondBranchInsn {
+                        return;
+                    }
+                }
+                return vc.invalidErr("backwards branch directs to non loop head", pos);
+            } 
+            else {
+               check traveseGraph(vc, blocks, insn.dest, visited, visited, pos); 
+            }
+        }
+        else if insn is CondBranchInsn {
+            boolean[] curGraph = visited.clone();
+            check traveseGraph(vc, blocks, insn.ifFalse, visited, visited, pos);
+            check traveseGraph(vc, blocks, insn.ifTrue, visited, curGraph, pos);
+        }
+    }
+}
 
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
     foreach Insn insn in bb.insns {
