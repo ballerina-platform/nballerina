@@ -116,7 +116,7 @@ function traverseRegion(VerifyContext vc, int entry, Label label, Position pos, 
             int? ifFalse = check traverseRegion(vc, entry, insn.ifFalse, pos, isLoop);
             int? ifTrue = check traverseRegion(vc, entry, insn.ifTrue, pos, isLoop);
             if ifFalse is int && ifTrue is int {
-                return ifFalse == ifTrue ? ifFalse : vc.invalidErr("error in region merge", pos);
+                return ifFalse == ifTrue ? ifFalse : ();
             }
             else if ifFalse is int {
                 return ifFalse;
