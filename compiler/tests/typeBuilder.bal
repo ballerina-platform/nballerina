@@ -114,6 +114,8 @@ class SemtypeBuilder {
     }
 }
 
+type TypeDefnToStringTable table<record {| readonly string name; string defn; |}> key(name);
+
 class AstBasedTypeDefBuilder {
     *TypeBuilder;
 
@@ -136,70 +138,40 @@ class AstBasedTypeDefBuilder {
     }
 
     function typeToString(int index) returns string {
-        string [] list = [];
-        self.tdToString(self.defns[index], list);
-        return "\n".'join(...list);
+        TypeDefnToStringTable typeDefToString = table [];
+        self.tdToString(self.defns[index], typeDefToString);
+        return "\n".'join(...from var def in typeDefToString select def.defn);
     }
 
-    function tdToString(s:TypeDefn defn, string[] list) {
-        int[] dep = [];
+    function tdToString(s:TypeDefn defn, TypeDefnToStringTable tab) {
+        int[] dependencies = [];
         s:TypeDesc typeDesc = defn.td;
 
-        var toList = function (s:TypeDesc[] tds, int[] d) returns string[] {
-            string[] typeNames = [];
-            foreach var td in tds {
-                if td is s:TypeDescRef {
-                    _ = self.findAndPush(td.typeName, d);
-                    typeNames.push(td.typeName);
-                }
-                else {
-                    panic error("xxxxxxxxf");
-                }
-            }
-            return typeNames;
-        };
-
-        var constToString = function (s:ExtendedLiteralExpr expr) returns string {
-            if expr is s:IntLiteralExpr {
-                return expr.digits;
-            }
-            else if expr is s:LiteralExpr {
-                return string `"${expr.value.toString()}"`;
-            }
-            panic error("Unsupported const expr");
-        };
-
         if typeDesc is s:TypeDescRef {
-            _ = self.findAndPush(typeDesc.typeName, dep);
-            list.push(string `type ${defn.name} ${typeDesc.typeName}`);
+            tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         }
         else if typeDesc is s:TupleTypeDesc {
-            string[] typeNames = toList(typeDesc.members, dep);
-            if typeDesc.rest != () {
-                typeNames.push(toList([<s:TypeDesc>typeDesc.rest], dep)[0] + "...");
-            }
-            list.push(string `type ${defn.name} [${", ".'join(...typeNames)}]`);
+            dependencies.push(...self.findIndices(...typeDesc.members));
+            tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         }
         else if typeDesc is s:ArrayTypeDesc {
-            string m = toList([<s:TypeDesc>typeDesc.member], dep)[0];
-            s:SimpleConstExpr? r = typeDesc.dimensions.length() == 0 ? () : typeDesc.dimensions[0];
-            string len = r == () ? "" : constToString(<s:ExtendedLiteralExpr>r);
-            list.push(string `type ${defn.name} ${m}[${len}]`);
+            dependencies.push(...self.findIndices(typeDesc.member));
+            tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         }
         else if typeDesc is s:BinaryTypeDesc {
-            string[] typeNames = toList(typeDesc.tds, dep);
-            list.push((string `type ${defn.name} ${typeDesc.op}`).'join(...typeNames));
+            dependencies.push(...self.findIndices(...typeDesc.tds));
+            tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         }
         else if typeDesc is s:SingletonTypeDesc {
-            list.push(string `type ${defn.name} ${constToString(typeDesc.valueExpr)}`);
+            tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         }
 
-        foreach var index in dep {
-            self.tdToString(self.defns[index], list);
+        foreach var index in dependencies {
+            self.tdToString(self.getDefinition(index), tab);
         }
     }
 
-    function find(string name) returns int? {
+    function findIndex(string name) returns int? {
         record {int index; }? res = self.typeNames[name];
         if res == () {
             return ();
@@ -207,12 +179,12 @@ class AstBasedTypeDefBuilder {
         return res.index;
     }
 
-    function findAndPush(string name, int[] indices) returns int? {
-        int? index = self.find(name);
-        if index is int {
-            indices.push(index);
-        }
-        return index;
+    function findIndices(s:TypeDesc ...tds) returns int[] {
+        return from var td in tds
+               where td is s:TypeDescRef
+               let int? index = self.findIndex(td.typeName) 
+               where index != () 
+               select index;
     }
 
     private function len() returns int {
@@ -234,10 +206,9 @@ class AstBasedTypeDefBuilder {
     private function createTypeDef(s:TypeDesc td) returns int {
         int index = self.len();
         var [startPos, endPos] = self.calculatePosition();
-        s:Position namePos = startPos;
         string name = "T" + index.toString();
         s:Visibility vis = "public";
-        s:TypeDefn defn = { startPos, endPos, name, td, namePos, vis, part: self.modulePart };
+        s:TypeDefn defn = { startPos, endPos, name, td, namePos: startPos, vis, part: self.modulePart };
         self.typeNames.add({ name: defn.name, index });
         self.defns.push(defn);
         return index;
@@ -260,6 +231,10 @@ class AstBasedTypeDefBuilder {
 
     private function getName(int index) returns string {
         return self.defns[index].name;
+    }
+
+    private function getDefinition(int index) returns s:TypeDefn {
+        return self.defns[index];
     }
 
     function semtype(int index) returns t:SemType {
@@ -323,20 +298,19 @@ class AstBasedTypeDefBuilder {
     }
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int {
-        s:TypeDescRef[] m = [];
-        foreach var index in members {
-            m.push(self.createTypeDescRef(index));
-        }
+        s:TypeDescRef[] m = from var index in members select self.createTypeDescRef(index);
         s:TypeDescRef? restDesc = rest == -1 ? () : self.createTypeDescRef(rest);
         var [startPos, endPos] = self.calculatePosition();
         s:TypeDesc td;
+        // [T1, Tr...] or [Tr...]
         if m.length() != 0 || m.length() == 0 && rest == -1 {
-            s:TupleTypeDesc tuple = { startPos, endPos, members: m, rest: restDesc };
-            td = tuple;
+            td = { startPos, endPos, members: m, rest: restDesc };
         }
+        // T[]
         else if m.length() == 0 && fixedLen == 0 {
             td = { startPos, endPos, member: <s:TypeDescRef>restDesc, dimensions: [()] };
         }
+        // T[N]
         else {
             s:ExtendedLiteralExpr size = { startPos, endPos, base: 10, digits: fixedLen.toString() };
             td = { startPos, endPos, member: <s:TypeDescRef>restDesc , dimensions: [size] };

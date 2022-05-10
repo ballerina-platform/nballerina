@@ -418,11 +418,13 @@ type PropositionTestConfig record {|
 |};
 
 function assertFail(Context cx, Proposition prop) {
-    test:assertFail(prop.toString() + "\n---------\n" 
+    test:assertFail("Failed for seed value: " + cx.seed.toString() + "\n" 
+                    + prop.toString()
+                    + "\n-------------left---------------------\n"
                     + cx.tBuilder.typeToString(prop.left) 
-                    + "\ndiff::\n" + cx.tBuilder.typeToString(prop.right)
-                    + "\n\n" + cx.tBuilder.semtype(prop.left).toString()
-                    + "\n" + cx.tBuilder.semtype(prop.right).toString());
+                    + "\n-------------right--------------------\n"
+                    + cx.tBuilder.typeToString(prop.right)
+                    + "\n--------------------------------------\n");
 }
 
 function invokePropositionGenerator(*PropositionTestConfig config) {

@@ -644,6 +644,10 @@ public function exprToString(Expr expr) returns string {
     return "\n".'join(...syntaxNodeToString(syntaxNodeFromExpr(expr)));
 }
 
+public function typeDefnToString(TypeDefn typeDefn) returns string {
+    return "\n".'join(...syntaxNodeToString(syntaxNodeFromTypeDefn(typeDefn)));
+}
+
 function syntaxNodeToString(SyntaxNode node) returns string[] {
     Word[] words = [];
     syntaxNodeToWords(words, node);
