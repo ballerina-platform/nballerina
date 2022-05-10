@@ -94,7 +94,7 @@ function orderByFwdTargets(bir:BasicBlock[] blocks, bir:Label label, boolean[] v
         if insn is bir:BranchInsn && !insn.backward{
             orderByFwdTargets(blocks, insn.dest, visited, ordered);
         }
-        else if insn is bir:CondBranchInsn {
+        else if insn is bir:TypeBranchInsn|bir:CondBranchInsn {
             orderByFwdTargets(blocks, insn.ifTrue, visited, ordered);
             orderByFwdTargets(blocks, insn.ifFalse, visited, ordered);
         }

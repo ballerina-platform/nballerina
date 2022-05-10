@@ -190,7 +190,14 @@ class Scaffold {
         self.setCurrentPosition(builder, defn.position);
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
-            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.name));
+            string? name;
+            if register is bir:NarrowRegister {
+                name = register.underlying.name;
+            }
+            else {
+                name = register.name;
+            }
+            self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
         }
     }
 
