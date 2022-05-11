@@ -828,15 +828,6 @@ final readonly & map<string> moduleFlagBehaviorToString = {
     "max": "7"
 };
 
-final readonly & map<string> typeEncodingToString = {
-    "address": "DW_ATE_address",
-    "boolean": "DW_ATE_boolean",
-    "float": "DW_ATE_float",
-    "signed": "DW_ATE_signed",
-    "unsigned": "DW_ATE_unsigned",
-    "decimal_float": "DW_ATE_decimal_float"
-};
-
 # Corresponds to LLVMDIBuilderRef
 public class DIBuilder {
     Module m;

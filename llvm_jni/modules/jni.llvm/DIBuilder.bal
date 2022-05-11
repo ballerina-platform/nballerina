@@ -1,4 +1,5 @@
 import ballerina/jballerina.java;
+import ballerina/jballerina.java.arrays as jarrays;
 
 public distinct class Metadata {
     handle llvmMetadata;
@@ -24,6 +25,13 @@ final readonly & map<int> emissionKindToInt = {
 
 final readonly & map<int> dIFlagToInt = {
     "zero": 0
+};
+
+final readonly & map<int> encodingToInt = {
+    "boolean": 2,
+    "float": 4,
+    "signed": 5,
+    "signed_char": 6
 };
 
 public class DIBuilder {
@@ -88,6 +96,54 @@ public class DIBuilder {
         handle jObj = jLLVMDIBuilderCreateDebugLocation(context.LLVMContext, line, column, scopeJObj, inlinedAtJObj);
         return new(jObj);
     }
+
+    public function createPointerType(Metadata pointeeTy, int sizeInBits, Alignment? alignInBits = (), int addressSpace = 0, string? name = ()) returns Metadata {
+        int align = getIntProp(alignInBits);
+        var [tyName, nameLen] = getStringProp(name);
+        handle jObj = jLLVMDIBuilderCreatePointerType(self.LLVMDIBuilder, pointeeTy.llvmMetadata, sizeInBits, align, addressSpace, tyName, nameLen);
+        return new(jObj);
+    }
+
+    public function createTypedef(Metadata ty, string name, Metadata file, int lineNo, Metadata scope, Alignment? alignInBits = ()) returns Metadata {
+        var [tyName, nameLen] = getStringProp(name);
+        int align = getIntProp(alignInBits);
+        handle jObj = jLLVMDIBuilderCreateTypedef(self.LLVMDIBuilder, ty.llvmMetadata, tyName, nameLen, file.llvmMetadata, lineNo, scope.llvmMetadata, align);
+        return new(jObj);
+    }
+
+    public function createBasicType(*BasicTypeMetadataProperties props) returns Metadata {
+        var [tyName, nameLen] = getStringProp(props.name);
+        int encoding = encodingToInt.get(props.encoding);
+        int flags = dIFlagToInt.get(props.flag);
+        handle jObj = jLLVMDIBuilderCreateBasicType(self.LLVMDIBuilder, tyName, nameLen, props.sizeInBits, encoding, flags);
+        return new(jObj);
+    }
+
+    public function createAutoVariable(*VariableMetadataProperties props) returns Metadata {
+        var [name, nameLen] = getStringProp(props.name);
+        int flags = dIFlagToInt.get(props.flag);
+        int align = getIntProp(props.alignInBits);
+        handle jObj = jLLVMDIBuilderCreateAutoVariable(self.LLVMDIBuilder, props.scope.llvmMetadata, name, nameLen, props.file.llvmMetadata, props.lineNo, props.ty.llvmMetadata, 1, flags, align);
+        return new(jObj);
+    }
+
+    public function insertDbgValueAtEnd(Value val, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
+        _ = jLLVMDIBuilderInsertDbgValueAtEnd(self.LLVMDIBuilder, val.LLVMValueRef, varInfo.llvmMetadata, expr.llvmMetadata, debugLoc.llvmMetadata, block.LLVMBasicBlockRef);
+    }
+
+    public function insertDeclareAtEnd(Value storage, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
+        _ = jLLVMDIBuilderInsertDeclareAtEnd(self.LLVMDIBuilder, storage.LLVMValueRef, varInfo.llvmMetadata, expr.llvmMetadata, debugLoc.llvmMetadata, block.LLVMBasicBlockRef);
+    }
+
+    public function createExpression(int[] addr) returns Metadata {
+        handle jObj = jLLVMDIBuilderCreateExpression(self.LLVMDIBuilder, checkpanic jarrays:toHandle(addr, "long"), addr.length());
+        return new(jObj);
+    }
+
+    public function createLexicalBlock(Metadata scope, Metadata file, int line, int column) returns Metadata {
+        handle jObj = jLLVMDIBuilderCreateLexicalBlock(self.LLVMDIBuilder, scope.llvmMetadata, file.llvmMetadata, line, column);
+        return new(jObj);
+    }
 }
 
 function jLLVMCreateDIBuilder(handle module) returns handle = @java:Method {
@@ -139,4 +195,56 @@ function jLLVMValueAsMetadata(handle val) returns handle = @java:Method {
     name: "LLVMValueAsMetadata",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef"]
+} external;
+
+function jLLVMDIBuilderCreatePointerType(handle builder, handle pointeeTy, int sizeInBits, int alignInBits, int addressSpace, handle name, int nameLen) returns handle = @java:Method {
+    name: "LLVMDIBuilderCreatePointerType",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "long", "int", "int", "java.lang.String", "long"]
+} external;
+
+function jLLVMDIBuilderCreateTypedef(handle builder, handle ty, handle name, int nameLen, handle file, int lineNo, handle scope, int alignInBits) returns handle = @java:Method {
+    name: "LLVMDIBuilderCreateTypedef",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "java.lang.String", "long", "org.bytedeco.llvm.LLVM.LLVMMetadataRef",
+                 "int", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "int"]
+} external;
+
+function jLLVMDIBuilderCreateBasicType(handle builder, handle name, int nameLen, int sizeInBits, int encoding, int flags) returns handle = @java:Method {
+    name: "LLVMDIBuilderCreateBasicType",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "java.lang.String", "long", "long", "int", "int"]
+} external;
+
+function jLLVMDIBuilderCreateAutoVariable(handle builder, handle scope, handle name, int nameLen, handle file, int lineNo, handle ty, int alwaysPreserve, int flags, int alignInBits) returns handle = @java:Method {
+    name: "LLVMDIBuilderCreateAutoVariable",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "java.lang.String", "long",
+                 "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "int", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "int", "int", "int"]
+} external;
+
+function jLLVMDIBuilderInsertDbgValueAtEnd(handle builder, handle val, handle varInfo, handle expr, handle debugLoc, handle block) returns handle = @java:Method {
+    name: "LLVMDIBuilderInsertDbgValueAtEnd",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef",
+                 "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "org.bytedeco.llvm.LLVM.LLVMBasicBlockRef"]
+} external;
+
+function jLLVMDIBuilderInsertDeclareAtEnd(handle builder, handle val, handle varInfo, handle expr, handle debugLoc, handle block) returns handle = @java:Method {
+    name: "LLVMDIBuilderInsertDeclareAtEnd",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef",
+                 "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "org.bytedeco.llvm.LLVM.LLVMBasicBlockRef"]
+} external;
+
+function jLLVMDIBuilderCreateExpression(handle builder, handle addr, int length) returns handle = @java:Method {
+    name: "LLVMDIBuilderCreateExpression",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "[J", "long"]
+} external;
+
+function jLLVMDIBuilderCreateLexicalBlock(handle builder, handle scope, handle file, int line, int column) returns handle = @java:Method {
+    name: "LLVMDIBuilderCreateLexicalBlock",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "int", "int"]
 } external;

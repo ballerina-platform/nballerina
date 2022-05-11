@@ -63,8 +63,7 @@ class FloatPrinter:
 
 
 def build_pretty_printer():
-    pp = gdb.printing.RegexpCollectionPrettyPrinter(
-        "bal_pp")
+    pp = gdb.printing.RegexpCollectionPrettyPrinter("bal_pp")
     pp.add_printer('TaggedPtr', '^TaggedPtr$', TaggedPrinter)
     pp.add_printer('float', '^float$', FloatPrinter)
     return pp
