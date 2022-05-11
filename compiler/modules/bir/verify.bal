@@ -18,6 +18,7 @@ class VerifyContext {
     private final FunctionDefn defn;
     final FunctionCode code;
     TmpRegion[] regions = [];
+    Label[] loopHeads = [];
     
     function init(Module mod, FunctionDefn defn, FunctionCode code) {
         self.mod = mod;
@@ -83,59 +84,94 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
 }
 
 function verifyRegions(VerifyContext vc, Position pos) returns Error? {
-    foreach BasicBlock block in vc.code.blocks {
-        check checkRegions(vc, block.label, pos);
+    Label? label = 0;
+    while label is Label && label <= vc.code.blocks.length() {
+        // TODO verify conditional regions
+        if vc.loopHeads.indexOf(label) != () {
+            label = check traverseRegion(vc, label, label, [label], pos, true);
+        }
+        else {
+            label += 1;
+        }
     }
-    // TODO create missing regions in forntend
-    // foreach TmpRegion tmpRegion in vc.regions {
-    //     foreach Region region in vc.code.regions {
-    //         if region.entry == tmpRegion.entry && region.exit == tmpRegion.exit && region.kind is REGION_LOOP {
-    //             continue;
-    //         }
-    //     }
-    //     return vc.invalidErr("region not created in front end", pos);
-    // }
+    // TODO create missing regions in frontend
+    foreach TmpRegion tmpRegion in vc.regions {
+        boolean created = false;
+        foreach Region region in vc.code.regions {
+            if region.entry == tmpRegion.entry && region.exit == tmpRegion.exit && region.kind is REGION_LOOP {
+                created = true;
+                break;
+            }
+        }
+        if created {
+            break;
+        } 
+        //return vc.invalidErr("region not created in front end", pos);
+    }
 }
 
-function checkRegions(VerifyContext vc, Label label, Position pos) returns Error? {
-    if vc.code.blocks[label].isLoopHead {
-        int? exit = check traverseRegion(vc, label, label, pos, true);
-        vc.regions.push({ entry : label, exit, isLoop : true });
-    }
-}
-
-function traverseRegion(VerifyContext vc, int entry, Label label, Position pos, boolean isLoop = false) returns Error|int? {
+function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loops, Position pos, boolean isLoop = false) returns Error|Label? {
     Insn[] insns = vc.code.blocks[label].insns;
     var insnsLen = insns.length();
-    Label entry2 = vc.code.blocks[label].isLoopHead ? label : entry;
+    Label entry2 = entry;
+    int? i = loops.indexOf(label);
+    if i is int && i != 0 {
+        _ = loops.remove(i);
+        return ();
+    }
+    else if vc.loopHeads.indexOf(label) != () && loops.indexOf(label) == () {
+        loops.push(label);
+        entry2 = label;
+    }
+    Label? exit = label;
+
     if insnsLen > 0 {
         Insn insn = insns[insnsLen - 1];
         if insn is BranchInsn {
-            if insn.dest == entry {
-                return ();
-            }
-            return traverseRegion(vc, entry2, insn.dest, pos, isLoop);
-        }
-        else if insn is CondBranchInsn {
-            if insn.ifFalse == entry || insn.ifTrue == entry {
-                return ();
-            }
-            int? ifTrue = check traverseRegion(vc, entry2, insn.ifTrue, pos, isLoop);
-            if ifTrue is () {
-                return insn.ifFalse;
-            }
-            int? ifFalse = check traverseRegion(vc, entry2, insn.ifFalse, pos, isLoop);
-            
-            if ifFalse is int {
-                return ifFalse == ifTrue ? ifFalse : ();
+            if loops.indexOf(insn.dest) != () {
+                exit = ();
             }
             else {
-                return ifTrue;
+                exit = check traverseRegion(vc, entry, insn.dest, loops, pos, isLoop);
             }
+        }
+        else if insn is CondBranchInsn {
+            if loops.indexOf(insn.ifFalse) != () && loops.indexOf(insn.ifTrue) != () {
+                exit = ();
+            }
+            else if loops.indexOf(insn.ifFalse) != () {
+                exit = insn.ifTrue;
+            }
+            else if loops.indexOf(insn.ifTrue) != () {
+                exit = insn.ifFalse;
+            }
+            else {
+                Label? ifTrue = check traverseRegion(vc, entry2, insn.ifTrue, loops, pos, isLoop);
+                Label? ifFalse = check traverseRegion(vc, entry2, insn.ifFalse, loops, pos, isLoop);
+                if ifFalse is () && ifTrue is () {
+                    exit = ();
+                }
+                else if ifFalse is () {
+                    exit = insn.ifTrue;
+                }
+                else if ifTrue is () {
+                    exit = insn.ifFalse;
+                }
+                else if ifTrue == ifFalse {
+                    exit = ifTrue;
+                }
+                else {
+                    return vc.invalidErr("loop region is invalid", pos);
+                }
 
+            }
+            
         }
     }
-    return label;
+    if loops[loops.length() - 1] == label {
+        vc.regions.push({ entry : entry2, exit, isLoop : true });
+    }
+    return exit;
 }
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
@@ -216,6 +252,13 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is ErrorConstructInsn {
         check validOperandString(vc, name, insn.operand, insn.pos);
+    }
+    else if insn is BranchInsn && insn.backward {
+        int insnsLen = vc.code.blocks[insn.dest].insns.length();
+        if insnsLen > 0 && vc.code.blocks[insn.dest].insns[insnsLen - 1] is BranchInsn|CondBranchInsn
+                && vc.loopHeads.indexOf(insn.dest) == () {
+            vc.loopHeads.push(insn.dest);
+        }
     }
 }
 

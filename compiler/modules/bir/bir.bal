@@ -128,8 +128,6 @@ public type BasicBlock record {|
     Label? onPanic = ();
     # Backend can use this to generate human-readable label
     string? name = ();
-    # True if the block is the entry to a loop
-    boolean isLoopHead = false;
 |};
 
 public type InsnRef readonly & record {|
@@ -139,9 +137,9 @@ public type InsnRef readonly & record {|
     int index;
 |};
 
-public function createBasicBlock(FunctionCode code, string? name = (), boolean isLoopHead = false) returns BasicBlock {
+public function createBasicBlock(FunctionCode code, string? name = ()) returns BasicBlock {
     int label = code.blocks.length();
-    BasicBlock bb = { label, name, isLoopHead };
+    BasicBlock bb = { label, name };
     code.blocks.push(bb);
     return bb;
 }
