@@ -1,6 +1,6 @@
 (module 
   ;; type
-  (type $List (struct (field $type i32) (field $arr (mut (ref $AnyList))) (field $len (mut i64))) (extends $Any)) 
+  (type $List (struct (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
   (type $AnyList (array (mut eqref))) 
   ;; tag
   (tag $index-outof-bound) 
@@ -16,8 +16,7 @@
       (ref.cast 
         (ref.as_data 
           (local.get $0)) 
-        (rtt.sub $List
-          (rtt.canon $Any))))) 
+        (rtt.canon $List)))) 
   ;; $arr_get
   (func $arr_get (param $0 eqref) (param $1 i32) (result eqref) 
     (try 
@@ -38,8 +37,7 @@
               (ref.cast 
                 (ref.as_data 
                   (local.get $0)) 
-                (rtt.sub $List
-                  (rtt.canon $Any))) 
+                (rtt.canon $List)) 
               (local.get $1))) 
           (throw $index-outof-bound))))) 
   ;; $arr_get_cast
@@ -69,14 +67,12 @@
           (i64.const 4))) 
       (return 
         (struct.new_with_rtt $List
-          (i32.const 3)
           (array.new_default_with_rtt $AnyList 
             (i32.wrap_i64 
               (local.get $1)) 
             (rtt.canon $AnyList)) 
           (local.get $0)
-          (rtt.sub $List
-            (rtt.canon $Any)))))) 
+          (rtt.canon $List))))) 
   ;; $arr_set
   (func $arr_set (param $0 (ref $List)) (param $1 eqref) (param $2 i64) 
     (try 

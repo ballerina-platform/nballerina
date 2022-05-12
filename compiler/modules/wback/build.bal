@@ -79,7 +79,7 @@ function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns w
 }
 
 function buildTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Expression value) returns wasm:Expression {
-    return module.structNew(BOXED_INT_TYPE, [module.addConst({ i32: TYPE_INT }), value], ANY_TYPE);
+    return module.structNew(BOXED_INT_TYPE, [value]);
 }
 
 function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
@@ -88,7 +88,7 @@ function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression ta
 }
 
 function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, string 'type) returns wasm:Expression {
-    return module.refCast(tagged, module.rtt('type, ANY_TYPE));
+    return module.refCast(tagged, module.rtt('type));
 }
 
 function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand operand) returns wasm:Expression {
@@ -100,12 +100,12 @@ function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand op
         op = module.localGet((<bir:Register>operand).number);
     }
     wasm:Expression asData = module.refAs("ref.as_data", op);
-    return module.refCast(asData, module.rtt(STRING_TYPE, ANY_TYPE));
+    return module.refCast(asData, module.rtt(STRING_TYPE));
 }
 
 function buildStringRef(wasm:Module module, wasm:Expression operand) returns wasm:Expression {
     wasm:Expression asData = module.refAs("ref.as_data", operand);
-    wasm:Expression cast = module.refCast(asData, module.rtt(STRING_TYPE, ANY_TYPE));
+    wasm:Expression cast = module.refCast(asData, module.rtt(STRING_TYPE));
     return module.structGet(STRING_TYPE, "val", cast);
 }
 

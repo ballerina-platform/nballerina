@@ -1,7 +1,7 @@
 (module 
   ;; type
   (type $Surrogate (array (mut i32))) 
-  (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32))) (extends $Any)) 
+  (type $String (struct (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
   ;; import
   (import "string" "create" (func $str_create (param i32) (param i32) (result anyref))) 
   (import "string" "length" (func $str_length (param anyref) (result i32))) 
@@ -92,7 +92,6 @@
             (br $block2$continue)))) 
       (return 
         (struct.new_with_rtt $String 
-          (i32.const 5)
           (call $str_concat 
             (struct.get $String $val 
               (local.get $0)) 
@@ -101,16 +100,14 @@
           (ref.as_non_null 
             (local.get $6))
           (i32.const -1) 
-          (rtt.sub $String
-            (rtt.canon $Any))))))
+          (rtt.canon $String)))))
   ;; get_string
   (func $get_string (param $0 eqref) (result anyref) 
     (struct.get $String $val 
       (ref.cast 
         (ref.as_data 
           (local.get $0)) 
-        (rtt.sub $String
-          (rtt.canon $Any)))))
+        (rtt.canon $String))))
   ;; $length
   (func $length (param $0 eqref) (result i64) 
     (local $1 i64) 
@@ -123,15 +120,13 @@
               (br_on_cast_fail $blockStr 
                 (ref.as_data 
                   (local.get $0)) 
-                (rtt.sub $String
-                  (rtt.canon $Any)))) 
+                (rtt.canon $String))) 
             (local.set $1 
               (call $bal_str_len 
                 (ref.cast 
                   (ref.as_data 
                     (local.get $0)) 
-                  (rtt.sub $String
-                    (rtt.canon $Any))))) 
+                  (rtt.canon $String)))) 
             (br $blockList) 
             (ref.null any))) 
         (local.set $1 
@@ -139,8 +134,7 @@
             (ref.cast 
               (ref.as_data 
                 (local.get $0)) 
-              (rtt.sub $List
-                (rtt.canon $Any)))))) 
+              (rtt.canon $List))))) 
       (return 
         (local.get $1))))
   ;; end

@@ -249,14 +249,12 @@ public class Module {
         self.sections["start"] = [joinTokens(appendBraces(inst))];
     }
 
-    public function structNew(string kind, Expression[] values, string super) returns Expression {
+    public function structNew(string kind, Expression[] values) returns Expression {
         Token[] inst = ["struct.new_with_rtt", "$" + kind];
-        Token[] 'type = ["rtt.sub", "$" + kind];
         foreach Expression value in values {
             inst.push(...value.tokens);
         }
-        'type.push(...appendBraces(["rtt.canon", "$" + super]));
-        inst.push(...appendBraces('type));
+        inst.push(...appendBraces(["rtt.canon", "$" + kind]));
         return { tokens: appendBraces(inst) };
     }
 
@@ -354,10 +352,8 @@ public class Module {
         return { tokens: appendBraces(["ref.null", kind]) };
     }
 
-    public function rtt(string kind, string super) returns Expression {
-        Token[] inst = ["rtt.sub", "$" + kind];
-        Token[] 'type = ["rtt.canon", "$" + super];
-        inst.push(...appendBraces('type));
+    public function rtt(string kind) returns Expression {
+        Token[] inst = ["rtt.canon", "$" + kind];
         return { tokens: appendBraces(inst) };
     }
 

@@ -5,7 +5,7 @@
   (type $MapKeys (array (mut eqref))) 
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
-  (type $Map (struct (field $type i32) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))) (extends $Any))   
+  (type $Map (struct (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   ;; import
   (import "string" "hash" (func $hash_string (param anyref) (result i32))) 
   ;; export
@@ -82,7 +82,6 @@
         (local.get $1)
         (i32.const 1)))
     (struct.new_with_rtt $Map
-      (i32.const 6)
       (local.get $1)
       (array.new_with_rtt $HashTable
         (i32.const -1)
@@ -96,8 +95,7 @@
           (rtt.canon $MapFieldArr))
         (i32.const 0)
         (rtt.canon $MapFields))
-      (rtt.sub $Map
-        (rtt.canon $Any))))
+      (rtt.canon $Map)))
   ;; $_bal_mapping_init_member
   (func $_bal_mapping_init_member (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
     (local $3 i32)
@@ -379,16 +377,14 @@
         (ref.cast
           (ref.as_data
             (local.get $1))
-          (rtt.sub $String
-            (rtt.canon $Any))))
+          (rtt.canon $String)))
       (struct.get $String $val
         (ref.cast
           (ref.as_data
             (struct.get $MapField $key
               (ref.as_non_null
                 (local.get $3))))
-          (rtt.sub $String
-            (rtt.canon $Any))))))
+          (rtt.canon $String)))))
   ;; $_bal_map_fetch
   (func $_bal_map_fetch (param $0 (ref $HashTable)) (param $1 i32) (result i32);; $0 - hashtable ; 1-i; 2-n
     (local $3 i32)
@@ -452,8 +448,7 @@
       (ref.cast
         (ref.as_data
           (local.get $0))
-        (rtt.sub $Map
-            (rtt.canon $Any))))
+        (rtt.canon $Map)))
     (local.set $2
       (call $_bal_map_lookup
         (ref.as_non_null
@@ -485,8 +480,7 @@
       (ref.cast
         (ref.as_data
           (local.get $0))
-        (rtt.sub $Map
-          (rtt.canon $Any))))
+        (rtt.canon $Map)))
     (local.set $2
       (struct.get $MapFields $length
         (struct.get $Map $fArray
@@ -551,15 +545,13 @@
               (br_on_cast_fail $blockStr 
                 (ref.as_data 
                   (local.get $0)) 
-                (rtt.sub $String
-                  (rtt.canon $Any)))) 
+                (rtt.canon $String))) 
             (local.set $1 
               (call $bal_str_len 
                 (ref.cast 
                   (ref.as_data 
                     (local.get $0)) 
-                  (rtt.sub $String
-                    (rtt.canon $Any))))) 
+                  (rtt.canon $String)))) 
             (br $blockList) 
             (ref.null any)))
         (drop 
@@ -569,8 +561,7 @@
               (br_on_cast_fail $blockMap
                 (ref.as_data 
                   (local.get $0)) 
-                (rtt.sub $Map
-                  (rtt.canon $Any)))) 
+                (rtt.canon $Map))) 
             (local.set $1 
               (i64.extend_i32_u
                 (call $_bal_mapping_num_keys 
@@ -578,8 +569,7 @@
                     (ref.cast 
                       (ref.as_data 
                         (local.get $0)) 
-                      (rtt.sub $Map
-                        (rtt.canon $Any))))))) 
+                      (rtt.canon $Map)))))) 
             (br $blockList) 
             (ref.null any)))   
         (local.set $1 
@@ -587,8 +577,7 @@
             (ref.cast 
               (ref.as_data 
                 (local.get $0)) 
-              (rtt.sub $List
-                (rtt.canon $Any)))))) 
+              (rtt.canon $List))))) 
       (return 
         (local.get $1))))
 
@@ -599,8 +588,7 @@
       (ref.cast 
         (ref.as_data
           (local.get $0))
-        (rtt.sub $String
-          (rtt.canon $Any))))
+        (rtt.canon $String)))
     (local.set $2
       (struct.get $String $hash
         (ref.as_non_null
