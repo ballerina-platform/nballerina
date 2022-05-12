@@ -200,7 +200,6 @@ class Scaffold {
         if diFunc !is () {
             self.scopeStack.push([defn.position, diFunc]);
         }
-
         self.addresses = [];
         self.setCurrentPosition(builder, defn.position);
         foreach int i in 0 ..< reprs.length() {
@@ -329,12 +328,10 @@ class Scaffold {
             return;
         }
         DIBuilder diBuilder = <DIBuilder>self.diBuilder;
-        DISubprogram diFunc = <DISubprogram>self.diFunc;
         DIFile diFile = <DIFile>self.diFile;
         llvm:Metadata emptyExpr = diBuilder.createExpression([]);
         bir:Register[] sortedReg = registers.sort("ascending", registerPos);
-        int currentPos = -1;
-        llvm:Metadata scope = diFunc;
+        var [currentPos, scope] = self.scopeStack[0];
         foreach var register in sortedReg {
             if register is bir:DeclRegister {
                 var [line, column] = self.file.lineColumn(register.pos);
@@ -435,7 +432,7 @@ class Scaffold {
     private function debugLocation(bir:Position pos) returns DILocation {
         ModuleDI di = <ModuleDI>self.mod.di;
         var [line, column] = self.file.lineColumn(pos);
-        // pr-todo: this is to allow arbitery ording of positions but do we really need this?
+        // this is to allow arbitery ording of positions
         int nextIndex = 1;
         while nextIndex < self.scopeStack.length() && self.scopeStack[nextIndex][0] <= pos {
             nextIndex += 1;

@@ -869,7 +869,6 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderCreatePointerType
-    // pr-todo: unit test port to jni
     public function createPointerType(Metadata pointeeTy, int sizeInBits, Alignment? alignInBits = (), int addressSpace = 0, string? name = ()) returns Metadata {
         Metadata metadata = self.m.addMetadata();
         string[] body = [metadata.ref(), "=", "!", "DIDerivedType", "(", "tag", ":", "DW_TAG_pointer_type"];
@@ -889,7 +888,6 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderCreateTypedef
-    // pr-todo: unit test port to jni
     public function createTypedef(Metadata ty, string name, Metadata file, int lineNo, Metadata scope, Alignment? alignInBits = ()) returns Metadata {
         Metadata metadata = self.m.addMetadata();
         string[] body = [metadata.ref(), "=", "!", "DIDerivedType", "(", "tag", ":", "DW_TAG_typedef", ",", "name", ":", "\"", name, "\"",
@@ -907,7 +905,6 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderCreateBasicType
-    // pr-todo: port to jni
     public function createBasicType(*BasicTypeMetadataProperties props) returns Metadata {
         Metadata metadata = self.m.addMetadata();
         string encodingToString = "DW_ATE_" + props.encoding;
@@ -917,7 +914,6 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderCreateAutoVariable
-    // pr-todo: port to jni
     public function createAutoVariable(*VariableMetadataProperties props) returns Metadata {
         Metadata metadata = self.m.addMetadata();
         string[] words = [];
@@ -934,9 +930,7 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderInsertDbgValueAtEnd
-    // pr-todo port to jni
     public function insertDbgValueAtEnd(Value val, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
-        // we are calling this just to add the decleartion to module
         self.m.addDebugIntrinsic("dbg.value");
         (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.value", "(", "metadata", typeToString(val.ty, self.context),
                                     val.operand, ",", "metadata", varInfo.ref(), ",", "metadata", expr.ref(), ")"];
@@ -944,7 +938,6 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderInsertDeclareAtEnd
-    // pr-todo: port to jni
     public function insertDeclareAtEnd(Value storage, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
         self.m.addDebugIntrinsic("dbg.declare");
         (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.declare", "(", "metadata", typeToString(storage.ty, self.context),
@@ -1008,7 +1001,6 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderCreateExpression
-    // pr-todo: port to jni
     public function createExpression(int[] addr) returns Metadata {
         Metadata metadata = self.m.addMetadata();
         if addr.length() != 0 {
@@ -1019,7 +1011,6 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderCreateLexicalBlock
-    // pr-todo: port to jni unittest
     public function createLexicalBlock(Metadata scope, Metadata file, int line, int column) returns Metadata {
         Metadata metadata = self.m.addMetadata();
         string[] words = [metadata.ref(), "=", "distinct", "!", "DILexicalBlock", "(", "scope", ":", scope.ref(), ",", "file", ":", file.ref()];

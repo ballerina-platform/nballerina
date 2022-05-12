@@ -70,7 +70,6 @@ public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorCons
 public type ExtendedLiteralExpr LiteralExpr|NumericLiteralExpr|SimpleConstNegateExpr;
 public type SimpleConstExpr ExtendedLiteralExpr|VarRefExpr;
 
-public type ScopedStmt MatchStmt|WhileStmt|ForeachStmt;
 // L-value expression
 public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
 
