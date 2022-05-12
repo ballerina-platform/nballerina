@@ -89,7 +89,7 @@ jobs:
       - name: Test
         run: |
           echo "useing clang=`which clang` llvm-as=`which llvm-as` bal=`which bal`"
-          make -j2 test
+          make test
       - name: Archive test ouput
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
