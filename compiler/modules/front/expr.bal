@@ -105,7 +105,7 @@ class ExprContext {
     }
 
     function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos = ()) returns bir:NarrowRegister {
-        return bir:createNarrowRegister(self.code, t, underlying, pos);
+        return bir:createNarrowRegister(self.code, t, underlying, self.stmtContext().getCurrentScope(), pos);
     }
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {
@@ -123,7 +123,7 @@ class ExprContext {
         }
     }
 
-    function stmtContext() returns StmtContext|CodeGenError {
+    function stmtContext() returns StmtContext {
         return <StmtContext>self.sc;
     }
 

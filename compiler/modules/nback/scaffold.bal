@@ -148,11 +148,6 @@ public const int DEBUG_USAGE_CALL = 1;
 
 public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL;
 
-isolated function registerPos(bir:Register register) returns int {
-    bir:Position? pos = register.pos;
-    return pos ?: 0;
-}
-
 class Scaffold {
     private final Module mod;
     private final bir:File file;
@@ -184,7 +179,7 @@ class Scaffold {
         ModuleDI? moduleDI = mod.di;
         self.diFunc = diFunc;
         if moduleDI !is () {
-            registerDebugStore = new(defn, <DISubprogram>diFunc, mod, self);
+            registerDebugStore = new(defn, <DISubprogram>diFunc, mod, self, code);
         }
         else {
             registerDebugStore = ();
@@ -215,7 +210,7 @@ class Scaffold {
             self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
         }
         if registerDebugStore !is () {
-            registerDebugStore.addRegisterDeclare(code.registers, entry);
+            registerDebugStore.initialize(entry);
         }
     }
 

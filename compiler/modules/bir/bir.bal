@@ -207,6 +207,7 @@ public type NarrowRegister readonly & record {|
     // It's name comes from the underlying register.
     () name = ();
     NARROW_REGISTER_KIND kind = NARROW_REGISTER_KIND;
+    RegisterScope scope;
 |};
 
 public type ParamRegister readonly & record {|
@@ -236,8 +237,8 @@ public function createFinalRegister(FunctionCode code, SemType semType, Position
     return r;
 }
 
-public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, Position? pos = ()) returns NarrowRegister {
-    NarrowRegister r = { number: code.registers.length(), underlying, semType, pos };
+public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, RegisterScope scope, Position? pos = ()) returns NarrowRegister {
+    NarrowRegister r = { number: code.registers.length(), underlying, semType, pos, scope };
     code.registers.push(r);
     return r;
 }
