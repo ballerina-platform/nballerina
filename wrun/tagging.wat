@@ -42,24 +42,24 @@
         (return
           (i32.const 2)) ;; TYPE_NIL
         (block
-          (local.set $1
-            (ref.as_data
-              (local.get $0))) 
           (if
             (ref.test 
-              (local.get $1)
+              (ref.as_data
+                (local.get $0))
               (rtt.canon $String))
             (return
               (i32.const 5))
             (if 
               (ref.test
-                (local.get $1)
+                (ref.as_data
+                  (local.get $0))
                 (rtt.canon $BoxedInt))
                 (return 
                   (i32.const 0))
                 (if
                   (ref.test 
-                    (local.get $1)
+                    (ref.as_data
+                      (local.get $0))
                     (rtt.canon $Map))
                   (return 
                     (i32.const 6))
