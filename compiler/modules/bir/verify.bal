@@ -84,14 +84,17 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
 }
 
 function verifyRegions(VerifyContext vc, Position pos) returns Error? {
+    boolean[] visited = from int b in 0 ..< vc.code.blocks.length() select false;
+    Label?[] paths = from int b in 0 ..< vc.code.blocks.length() select ();
     Label? label = 0;
+
     while label is Label && label <= vc.code.blocks.length() {
         // TODO verify conditional regions
-        if vc.loopHeads.indexOf(label) != () {
-            label = check traverseRegion(vc, label, label, [label], pos, true);
+        if vc.loopHeads.indexOf(label) == () || visited[label] {
+            label += 1;
         }
         else {
-            label += 1;
+            label = check traverseRegion(vc, label, label, [label], visited, pos, paths);
         }
     }
     // TODO create missing regions in frontend
@@ -110,15 +113,18 @@ function verifyRegions(VerifyContext vc, Position pos) returns Error? {
     }
 }
 
-function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loops, Position pos, boolean isLoop = false) returns Error|Label? {
+function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loops, boolean[] visited, Position pos, Label?[] paths, Label[] cond = []) returns Error|Label? {
+    visited[label] = true;
     Insn[] insns = vc.code.blocks[label].insns;
     var insnsLen = insns.length();
     Label entry2 = entry;
     int? i = loops.indexOf(label);
+    // if a entry is reached again no exit in that path
     if i is int && i != 0 {
         _ = loops.remove(i);
         return ();
     }
+    // change entry for inner loops
     else if vc.loopHeads.indexOf(label) != () && loops.indexOf(label) == () {
         loops.push(label);
         entry2 = label;
@@ -128,48 +134,67 @@ function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loop
     if insnsLen > 0 {
         Insn insn = insns[insnsLen - 1];
         if insn is BranchInsn {
-            if loops.indexOf(insn.dest) != () {
+            if insn.dest == entry2 {
                 exit = ();
             }
             else {
-                exit = check traverseRegion(vc, entry, insn.dest, loops, pos, isLoop);
+                exit = check traverseRegion(vc, entry, insn.dest, loops, visited, pos, paths, cond);
             }
         }
         else if insn is CondBranchInsn {
-            if loops.indexOf(insn.ifFalse) != () && loops.indexOf(insn.ifTrue) != () {
+            // If all paths lead back to entry, exit is nil.
+            // Otherwise, exit is the first acyclic block where all the other paths merge.  
+            if insn.ifFalse == entry2 && insn.ifTrue == entry2 {
                 exit = ();
             }
-            else if loops.indexOf(insn.ifFalse) != () {
+            else if insn.ifFalse == entry2 {
                 exit = insn.ifTrue;
             }
-            else if loops.indexOf(insn.ifTrue) != () {
+            else if insn.ifTrue == entry2 {
                 exit = insn.ifFalse;
             }
             else {
-                Label? ifTrue = check traverseRegion(vc, entry2, insn.ifTrue, loops, pos, isLoop);
-                Label? ifFalse = check traverseRegion(vc, entry2, insn.ifFalse, loops, pos, isLoop);
+                if cond.indexOf(label) != () {
+                    return ();
+                }
+                cond.push(label);
+                Label? ifTrue = check traverseRegion(vc, entry2, insn.ifTrue, loops, visited, pos, paths, cond);
+                Label? ifFalse = check traverseRegion(vc, entry2, insn.ifFalse, loops, visited, pos, paths, cond);
+                cond.removeAll();
                 if ifFalse is () && ifTrue is () {
                     exit = ();
                 }
                 else if ifFalse is () {
                     exit = insn.ifTrue;
+                    paths[insn.ifTrue] = ifFalse;
                 }
                 else if ifTrue is () {
                     exit = insn.ifFalse;
+                    paths[insn.ifFalse] = ifTrue;
                 }
                 else if ifTrue == ifFalse {
                     exit = ifTrue;
                 }
                 else {
-                    return vc.invalidErr("loop region is invalid", pos);
+                    // check if paths merge
+                    Label? pf = paths[ifFalse];
+                    Label? pt = paths[ifTrue];
+                    if ifFalse == pt {
+                        exit = pt;
+                    }
+                    else if ifTrue == pf || pt == pf {
+                        exit = pf;
+                    }
+                    else {
+                       return vc.invalidErr("loop region is invalid", pos); 
+                    } 
                 }
-
             }
-            
         }
     }
     if loops[loops.length() - 1] == label {
         vc.regions.push({ entry : entry2, exit, isLoop : true });
+        
     }
     return exit;
 }
