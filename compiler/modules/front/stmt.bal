@@ -82,6 +82,7 @@ class StmtContext {
     final t:SemType returnType;
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
+    bir:RegisterScope[] scopeStack = [];
 
     function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
@@ -89,14 +90,15 @@ class StmtContext {
         self.file = functionDefn.part.file;
         self.code = {};
         self.returnType = returnType;
+        self.scopeStack.push({ scope: (), startPos: functionDefn.startPos, endPos: functionDefn.endPos });
     }
 
     function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
-        return bir:createVarRegister(self.code, t, pos, name);
+        return bir:createVarRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
     function createFinalRegister(bir:SemType t, Position pos, string name) returns bir:FinalRegister {
-        return bir:createFinalRegister(self.code, t, pos, name);
+        return bir:createFinalRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
     function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos) returns bir:NarrowRegister {
@@ -104,7 +106,20 @@ class StmtContext {
     }
 
     function createParamRegister(bir:SemType t, Position pos, string name) returns bir:ParamRegister {
-        return bir:createParamRegister(self.code, t, pos, name);
+        return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
+    }
+
+    public function getCurrentScope() returns bir:RegisterScope {
+        return self.scopeStack[self.scopeStack.length() - 1];
+    }
+
+    function popScope() {
+        _ = self.scopeStack.pop();
+    }
+
+    function pushScope(Position startPos, Position endPos) {
+        bir:RegisterScope scope = self.getCurrentScope();
+        self.scopeStack.push({ scope, startPos, endPos });
     }
 
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TmpRegister {
@@ -296,6 +311,7 @@ function codeGenOnPanic(StmtContext cx, Position pos) {
 
 type Scope s:StmtBlock|s:IfElseStmt;
 
+type ScopedStmt s:MatchStmt|s:WhileStmt|s:ForeachStmt;
 // If the scope doesn't complete normally, will return empty assignments and bindings.
 function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv, Scope scope, BindingChain? initialBindings = ()) returns CodeGenError|StmtEffect {
     BindingChain? bodyBindings = initialBindings ?: initialEnv.bindings;
@@ -306,15 +322,24 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
     bir:BasicBlock? curBlock = bb;
     // Similar to env.bindings, but only contains the bindings of variables defined outside of current scope
     if scope is s:IfElseStmt {
+        cx.pushScope(scope.startPos, scope.endPos);
         StmtEffect effect = check codeGenIfElseStmt(cx, bb, env, scope);
         curBlock = effect.block;
         applyStmtEffect(env, effect);
+        cx.popScope();
     }
     else {
         foreach var stmt in scope.stmts {
+            boolean isScopedStmt = stmt is ScopedStmt;
+            if isScopedStmt {
+                cx.pushScope(stmt.startPos, stmt.endPos);
+            }
             StmtEffect effect = check codeGenStmt(cx, curBlock, env, stmt);
             curBlock = effect.block;
             applyStmtEffect(env, effect);
+            if isScopedStmt {
+                cx.popScope();
+            }
         }
     }
     check unusedLocalVariables(cx, env, initialEnv.bindings);
