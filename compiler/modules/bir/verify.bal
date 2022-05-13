@@ -10,8 +10,8 @@ class VerifyContext {
     private final Module mod;
     private final t:Context tc;
     private final FunctionDefn defn;
-    final FunctionCode code;
-    boolean[] tmpRegisterUsed = [];
+    private final FunctionCode code;
+    private final boolean[] tmpRegisterUsed = [];
 
     function init(Module mod, FunctionDefn defn, FunctionCode code) {
         self.mod = mod;
@@ -66,6 +66,22 @@ class VerifyContext {
     function symbolToString(Symbol sym) returns string {
         return self.mod.symbolToString(self.defn.partIndex, sym);
     }
+
+    function getRegister(int i) returns Register {
+        return self.code.registers[i];
+    }
+
+    function getUsedTmpRegisters(int i) returns boolean {
+        return self.tmpRegisterUsed[i];
+    }
+
+    function addTmpRegisters(int i) {
+        self.tmpRegisterUsed[i] = true;
+    }
+
+    function getNumTmpRegisters() returns int {
+        return self.tmpRegisterUsed.length();
+    }
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
@@ -98,11 +114,11 @@ type ResultInsn IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwis
 
 function verifyInsnRegisterKinds(VerifyContext vc, Insn insn) returns Error? {
     if insn is ResultInsn {
-        if (vc.tmpRegisterUsed.length() > insn.result.number) && vc.tmpRegisterUsed[insn.result.number] {
+        if (vc.getNumTmpRegisters() > insn.result.number) && vc.getUsedTmpRegisters(insn.result.number) {
             return vc.invalidErr("tmp register defined in multiple places", <Position>insn.result.pos);
         }
         else {
-            vc.tmpRegisterUsed[insn.result.number] = true;
+            vc.addTmpRegisters(insn.result.number);
         }
     }
 
@@ -142,13 +158,13 @@ function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
     if r !is Register {
         return;
     }
-    if r is TmpRegister && (vc.tmpRegisterUsed.length() <= r.number || !vc.tmpRegisterUsed[r.number]) {
+    if r is TmpRegister && (vc.getNumTmpRegisters() <= r.number || !vc.getUsedTmpRegisters(r.number)) {
         return vc.invalidErr("tmp register not initialized", <Position>r.pos);
     }
     if r is NarrowRegister {
-        Register narrowed = vc.code.registers[r.underlying];
+        Register narrowed = vc.getRegister(r.underlying);
         while narrowed is NarrowRegister {
-            narrowed = vc.code.registers[narrowed.underlying];
+            narrowed = vc.getRegister(narrowed.underlying);
         }
         if !t:isSubtype(vc.typeContext(), r.semType, narrowed.semType) {
             return vc.invalidErr("narrow register is not a subtype of narrowed register", <Position>r.pos);
