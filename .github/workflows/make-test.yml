@@ -54,7 +54,7 @@ jobs:
       - name: Install NodeJS macOs
         if: runner.os == 'macOs'
         run: |
-          curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/"
+          curl "https://nodejs.org/dist/latest/node-${VERSION:-$(wget -qO- https://nodejs.org/dist/latest-v17.x/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')}.pkg" > "$HOME/Downloads/node-latest.pkg" && sudo installer -store -pkg "$HOME/Downloads/node-latest.pkg" -target "/"
           node -v
       - name: Download jBallerina deb
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'Linux'
@@ -89,7 +89,7 @@ jobs:
       - name: Test
         run: |
           echo "useing clang=`which clang` llvm-as=`which llvm-as` bal=`which bal`"
-          make test
+          make -j2 test
       - name: Archive test ouput
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
