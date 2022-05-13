@@ -10,15 +10,13 @@ class VerifyContext {
     private final Module mod;
     private final t:Context tc;
     private final FunctionDefn defn;
-    private final FunctionCode code;
     private final boolean[] tmpRegisterUsed = [];
 
-    function init(Module mod, FunctionDefn defn, FunctionCode code) {
+    function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
         t:Context tc  = mod.getTypeContext();
         self.tc = tc;
         self.defn = defn;
-        self.code = code;
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
@@ -67,10 +65,6 @@ class VerifyContext {
         return self.mod.symbolToString(self.defn.partIndex, sym);
     }
 
-    function getRegister(int i) returns Register {
-        return self.code.registers[i];
-    }
-
     function getUsedTmpRegisters(int i) returns boolean {
         return self.tmpRegisterUsed[i];
     }
@@ -85,7 +79,7 @@ class VerifyContext {
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
-    VerifyContext cx = new(mod, defn, code);
+    VerifyContext cx = new(mod, defn);
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
     }
@@ -104,7 +98,7 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
 
 type MultipleOperandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithmeticBinaryInsn
     |DecimalArithmeticBinaryInsn|CompareInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn
-    |MappingGetInsn|StringConcatInsn|EqualityInsn;
+    |MappingGetInsn|StringConcatInsn|EqualityInsn|TypeMergeInsn;
 
 type ResultInsn IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |FloatArithmeticBinaryInsn|FloatNegateInsn|DecimalArithmeticBinaryInsn|DecimalNegateInsn
@@ -162,9 +156,9 @@ function verifyRegisterKind(VerifyContext vc, Operand r) returns Error? {
         return vc.invalidErr("tmp register not initialized", <Position>r.pos);
     }
     if r is NarrowRegister {
-        Register narrowed = vc.getRegister(r.underlying);
+        Register narrowed = r.underlying;
         while narrowed is NarrowRegister {
-            narrowed = vc.getRegister(narrowed.underlying);
+            narrowed = narrowed.underlying;
         }
         if !t:isSubtype(vc.typeContext(), r.semType, narrowed.semType) {
             return vc.invalidErr("narrow register is not a subtype of narrowed register", <Position>r.pos);
