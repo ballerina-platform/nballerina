@@ -176,8 +176,15 @@ public type RegisterBase record {|
 public type DeclRegister ParamRegister|VarRegister|FinalRegister;
 public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
 
+public type RegisterScope readonly & record {|
+    RegisterScope? scope;
+    Position startPos;
+    Position endPos;
+|};
+
 public type DeclRegisterBase record {|
     *RegisterBase;
+    RegisterScope scope;
     Position pos;
     string name;
     DeclRegisterKind kind;
@@ -195,9 +202,8 @@ public type AssignTmpRegister readonly & record {|
 
 public type NarrowRegister readonly & record {|
     *RegisterBase;
-    // number of the register that was narrowed
-    // Could be another NarrowRegister.
-    int underlying;
+    // Register that was narrowed. Could be another NarrowRegister.
+    Register underlying;
     // It's name comes from the underlying register.
     () name = ();
     NARROW_REGISTER_KIND kind = NARROW_REGISTER_KIND;
@@ -218,26 +224,26 @@ public type FinalRegister readonly & record {|
     FINAL_REGISTER_KIND kind = FINAL_REGISTER_KIND;
 |};
 
-public function createVarRegister(FunctionCode code, SemType semType, Position pos, string name) returns VarRegister {
-    VarRegister r = { number: code.registers.length(), semType, pos, name };
+public function createVarRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope) returns VarRegister {
+    VarRegister r = { number: code.registers.length(), semType, pos, name, scope };
     code.registers.push(r);
     return r;
 }
 
-public function createFinalRegister(FunctionCode code, SemType semType, Position pos, string name) returns FinalRegister {
-    FinalRegister r = { number: code.registers.length(), semType, pos, name };
+public function createFinalRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope) returns FinalRegister {
+    FinalRegister r = { number: code.registers.length(), semType, pos, name, scope };
     code.registers.push(r);
     return r;
 }
 
 public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, Position? pos = ()) returns NarrowRegister {
-    NarrowRegister r = { number: code.registers.length(), underlying: underlying.number, semType, pos };
+    NarrowRegister r = { number: code.registers.length(), underlying, semType, pos };
     code.registers.push(r);
     return r;
 }
 
-public function createParamRegister(FunctionCode code, SemType semType, Position pos, string name) returns ParamRegister {
-    ParamRegister r = { number: code.registers.length(), semType, pos, name  };
+public function createParamRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope) returns ParamRegister {
+    ParamRegister r = { number: code.registers.length(), semType, pos, name, scope };
     code.registers.push(r);
     return r;
 }
@@ -293,11 +299,12 @@ public enum InsnName {
     INSN_CALL,
     INSN_INVOKE,
     INSN_ASSIGN,
-    INSN_COND_NARROW,
     INSN_TYPE_CAST,
     INSN_TYPE_TEST,
     INSN_BRANCH,
     INSN_COND_BRANCH,
+    INSN_TYPE_BRANCH,
+    INSN_TYPE_MERGE,
     INSN_CATCH,
     INSN_PANIC
 }
@@ -327,8 +334,8 @@ public type Insn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
     |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn
-    |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
-    |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
+    |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
+    |BranchInsn|TypeBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
 
@@ -628,47 +635,24 @@ public type TypeTestInsn readonly & record {|
     boolean negated;
 |};
 
-
-# A type narrowing that is based on the result of one or more previous instructions.
-# The result in each case is a boolean and the instruction is a TypeTestInsn or an EqualInsn.
-# Usually this would require a TypeCastInsn, but the compiler emits this
-# to support Ballerina's type narrowing feature, when it knows the cast
-# would succeed.
-# The basis field describes the basis for the narrowing.
-# This can can be verified in two parts.
-# First, verify that the data flow through the basic blocks guarantees instructions
-# must have had the results describe in the basis field.
-# In particular, a block referenced in an InsnResult must end
-# with a CondBranchInsn whose operand comes from the result of the condition
-# (possibly via a BooleanNotInsn).
-# Second, verify that the results described in the basis field justify the
-# narrowing.
-public type CondNarrowInsn readonly & record {|
+public type TypeBranchInsn readonly & record {|
     *InsnBase;
-    INSN_COND_NARROW name = INSN_COND_NARROW;
-    NarrowRegister result;
+    INSN_TYPE_BRANCH name = INSN_TYPE_BRANCH;
     Register operand;
-    Result basis;
+    t:SemType semType;
+    Label ifTrue;
+    Label ifFalse;
+    NarrowRegister ifTrueRegister;
+    NarrowRegister ifFalseRegister;
 |};
 
-public type Result InsnResult|OrResult|AndResult;
-
-public type OrResult readonly & record {|
-    Result[] or;
-|};
-
-public type AndResult readonly & record {|
-    Result[] and;
-|};
-
-// An instruction that is the basis of a narrowing.
-// The execution of the instruction having the specified result
-// is the basis for the narrowing.
-public type InsnResult readonly & record {|
-    // Where the insn is
-    InsnRef insn;
-    // Result of the insn
-    boolean result;
+public type TypeMergeInsn readonly & record {|
+    *InsnBase;
+    INSN_TYPE_MERGE name = INSN_TYPE_MERGE;
+    NarrowRegister result;
+    // operands.length() > 1 && operands.length() == predecessors.length()
+    Register[] operands;
+    Label[] predecessors;
 |};
 
 # Return normally from a function.
