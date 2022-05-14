@@ -548,6 +548,7 @@ type UniformTypeMatchTest record {|
 function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:MatchStmt stmt) returns CodeGenError|StmtEffect {
     Assignment[] assignments = [];
     var { result: matched, block: testBlock, binding } = check codeGenExpr(cx.exprContext(env), startBlock, (), stmt.expr);
+    cx.openRegion(testBlock.label, bir:REGION_COND);
     t:Context tc = cx.mod.tc;
     t:SemType matchedType = operandSemType(tc, matched);
     // defaultCodeIndex is either () or the index of the last clause;
@@ -632,22 +633,26 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         clauseTestInsns[clauseIndex].push(bir:lastInsnRef(testBlock));
         bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
         patternIndex += 1;
+        if patternIndex != defaultClauseIndex {
+            cx.openRegion(nextBlock.label, bir:REGION_COND);
+        }
         bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[clauseIndex].label, ifFalse: nextBlock.label, pos: mt.pos } ;
         testBlock.insns.push(condBranch);
         testBlock = nextBlock;
     }
     bir:BasicBlock? contBlock = ();
     foreach int clauseIndex in 0 ..< stmt.clauses.length() {
-        s:MatchClause clause = stmt.clauses[clauseIndex];
-        bir:BasicBlock stmtBlock = clauseBlocks[clauseIndex];
+        int index = stmt.clauses.length() - clauseIndex - 1;
+        s:MatchClause clause = stmt.clauses[index];
+        bir:BasicBlock stmtBlock = clauseBlocks[index];
         Narrowing? narrowing = ();
         Environment clauseEnv = env;
         // Do type narrowing
         if binding != () {
             bir:Result? basis = ();
-            if clauseIndex == defaultClauseIndex {
+            if index == defaultClauseIndex {
                 bir:Result[] and = [];
-                foreach int i in 0 ..< clauseIndex {
+                foreach int i in 0 ..< index {
                     foreach var insn in clauseTestInsns[i] {
                         and.push({ result: false, insn });
                     }
@@ -659,14 +664,14 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
             }
             else {
                 bir:Result[] or = [];
-                foreach var insn in clauseTestInsns[clauseIndex] {
+                foreach var insn in clauseTestInsns[index] {
                     or.push({ result: true, insn });
                 }
                 basis = { or: or.cloneReadOnly() };
             }
             if basis != () {
                 // Will need readOnlyIntersect when we have proper match patterns
-                t:SemType narrowedType = t:intersect(matchedType, clauseLooksLike[clauseIndex]);
+                t:SemType narrowedType = t:intersect(matchedType, clauseLooksLike[index]);
                 narrowing = { basis, ty: narrowedType, binding };
             }
         } 
@@ -676,6 +681,12 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         }
         else {
             bir:BasicBlock b = maybeCreateBasicBlock(cx, contBlock);
+            if index == 0 {
+                cx.closeRegion(b.label);
+            }
+            else if index != defaultClauseIndex {
+                cx.closeRegion();
+            }
             contBlock = b;
             bir:BranchInsn branchToCont = { dest: b.label, pos: clause.startPos };
             stmtBlockEnd.insns.push(branchToCont);

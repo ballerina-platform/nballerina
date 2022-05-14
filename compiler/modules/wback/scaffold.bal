@@ -43,6 +43,7 @@ class Scaffold {
     int[] processedBlocks = [];
     final bir:BasicBlock[] blocks;
     final bir:Region[] regions;
+    map<bir:Label[]> regionBlocks = {};
     bir:FunctionDefn defn;
     private Repr[] reprs = [];
     final t:SemType returnType;
