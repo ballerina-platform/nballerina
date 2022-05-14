@@ -580,10 +580,11 @@
               (rtt.canon $List))))) 
       (return 
         (local.get $1))))
-
+  ;; $get_string_hash
   (func $get_string_hash (param $0 eqref) (result i32)
     (local $1 (ref null $String))
     (local $2 i32)
+    (local $3 anyref)
     (local.set $1
       (ref.cast 
         (ref.as_data
@@ -593,6 +594,10 @@
       (struct.get $String $hash
         (ref.as_non_null
           (local.get $1))))
+    (local.set $3
+      (struct.get $String $val
+        (ref.as_non_null
+          (local.get $1))))
     (if
       (i32.eq
         (local.get $2)
@@ -600,7 +605,7 @@
       (struct.set $String $hash
         (local.get $1)
         (call $hash_string
-          (local.get $1))))
+          (local.get $3))))
     (return 
       (struct.get $String $hash
         (local.get $1))))
