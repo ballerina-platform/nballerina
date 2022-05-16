@@ -1410,7 +1410,7 @@ public class Builder {
         return new PointerValue(destTy, reg);
     }
 
-    public function bb() returns BasicBlock {
+    private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
         if tem == () {
             panic err:impossible("no current basic block");

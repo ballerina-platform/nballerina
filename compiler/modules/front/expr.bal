@@ -123,7 +123,7 @@ class ExprContext {
         }
     }
 
-    function stmtContext() returns StmtContext {
+    function stmtContext() returns StmtContext|CodeGenError {
         return <StmtContext>self.sc;
     }
 

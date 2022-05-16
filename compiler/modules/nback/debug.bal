@@ -1,8 +1,7 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
-
-type TypeMetadataCache map<llvm:Metadata>;
+import wso2/nballerina.comm.err;
 
 type Scope record {|
     llvm:Metadata diScope;
@@ -17,7 +16,7 @@ class RegisterDebugStore {
     private bir:File file;
     private Module mod;
     private Scaffold scaffold;
-    private TypeMetadataCache typeMetadata = {};
+    private map<llvm:Metadata> typeMetadata = {};
     private boolean debugFull;
     private bir:FunctionCode code;
     private Scope rootScope;
@@ -82,11 +81,9 @@ class RegisterDebugStore {
                 if registerScope.endPos > child.startPos {
                     if registerScope.endPos < child.endPos {
                         // this should never happen
-                        panic error("unexpected scope");
+                        panic err:impossible("unexpected scope");
                     }
-                    var [line, column] = self.file.lineColumn(declPos);
-                    llvm:Metadata diScope = self.diBuilder.createLexicalBlock(parent.diScope, self.diFile, line, column);
-                    Scope newScope = { diScope, startPos: declPos, endPos: registerScope.endPos, childScopes: [child] };
+                    Scope newScope = self.createScope(declPos, registerScope.endPos, parent, [child]);
                     parent.childScopes[i] = newScope;
                     return newScope;
                 }
@@ -101,9 +98,7 @@ class RegisterDebugStore {
                 return self.addRegisterScope(registerScope, declPos, child);
             }
         }
-        var [line, column] = self.file.lineColumn(declPos);
-        llvm:Metadata diScope = self.diBuilder.createLexicalBlock(parent.diScope, self.diFile, line, column);
-        Scope newScope = { diScope, startPos: declPos, endPos: registerScope.endPos, childScopes: [] };
+        Scope newScope = self.createScope(declPos, registerScope.endPos, parent, []);
         if addIndex is () {
             parent.childScopes.push(newScope);
         }
@@ -113,6 +108,12 @@ class RegisterDebugStore {
             parent.childScopes = newChildScopes;
         }
         return newScope;
+    }
+
+    private function createScope(bir:Position startPos, bir:Position endPos, Scope parent, Scope[] childScopes) returns Scope {
+        var [line, column] = self.file.lineColumn(startPos);
+        llvm:Metadata diScope = self.diBuilder.createLexicalBlock(parent.diScope, self.diFile, line, column);
+        return { diScope, startPos, endPos, childScopes };
     }
 
     function initialize(llvm:BasicBlock initBlock) {
