@@ -11,7 +11,6 @@ type Scope record {|
     Scope[] childScopes;
 |};
 
-// pr-todo: better name
 class RegisterDebugStore {
     private DIBuilder diBuilder;
     private DIFile diFile;
@@ -74,29 +73,37 @@ class RegisterDebugStore {
         return tyMeta;
     }
 
-    private function addRegisterScope(bir:RegisterScope registerScope, Scope parent) returns Scope {
+    private function addRegisterScope(bir:RegisterScope registerScope, bir:Position declPos, Scope parent) returns Scope {
         int childCount = parent.childScopes.length();
         int? addIndex = ();
         foreach int i in 0 ..< childCount {
             Scope child = parent.childScopes[i];
-            if registerScope.startPos < child.startPos {
+            if declPos < child.startPos {
                 if registerScope.endPos > child.startPos {
-                    panic error("overlapping scopes");
+                    if registerScope.endPos < child.endPos {
+                        // this should never happen
+                        panic error("unexpected scope");
+                    }
+                    var [line, column] = self.file.lineColumn(declPos);
+                    llvm:Metadata diScope = self.diBuilder.createLexicalBlock(parent.diScope, self.diFile, line, column);
+                    Scope newScope = { diScope, startPos: declPos, endPos: registerScope.endPos, childScopes: [child] };
+                    parent.childScopes[i] = newScope;
+                    return newScope;
                 }
                 addIndex = i;
                 break;
             }
-            else if child.startPos == registerScope.startPos && child.endPos == registerScope.endPos {
+            else if child.startPos == declPos && child.endPos == registerScope.endPos {
                 // we already have the scope
                 return child;
             }
-            else if child.startPos < registerScope.startPos && child.endPos > registerScope.endPos {
-                return self.addRegisterScope(registerScope, child);
+            else if child.startPos < declPos && child.endPos >= registerScope.endPos {
+                return self.addRegisterScope(registerScope, declPos, child);
             }
         }
-        var [line, column] = self.file.lineColumn(registerScope.startPos);
+        var [line, column] = self.file.lineColumn(declPos);
         llvm:Metadata diScope = self.diBuilder.createLexicalBlock(parent.diScope, self.diFile, line, column);
-        Scope newScope = { diScope, startPos: registerScope.startPos, endPos: registerScope.endPos, childScopes: [] };
+        Scope newScope = { diScope, startPos: declPos, endPos: registerScope.endPos, childScopes: [] };
         if addIndex is () {
             parent.childScopes.push(newScope);
         }
@@ -114,35 +121,16 @@ class RegisterDebugStore {
         }
         llvm:Metadata emptyExpr = self.diBuilder.createExpression([]);
         foreach bir:Register register in self.code.registers {
-            if register is bir:NarrowRegister|bir:DeclRegister {
-                Scope scope = self.addRegisterScope(register.scope, self.rootScope);
-                if register is bir:DeclRegister {
-                    // pr-todo make sure this is not getting narrowed
-                    var [line, column] = self.file.lineColumn(register.pos);
-                    llvm:Metadata tyMeta = self.registerTypeToMetadata(register);
-                    llvm:Metadata diScope = scope.diScope;
-                    llvm:Metadata varMeta = self.diBuilder.createAutoVariable(ty=tyMeta, scope=diScope, name=register.name, lineNo=line, file=self.diFile);
-                    llvm:Metadata declLoc = self.diBuilder.createDebugLocation(self.mod.llContext, line, column, diScope);
-                    self.diBuilder.insertDeclareAtEnd(self.scaffold.address(register), varMeta, emptyExpr, declLoc, initBlock);
-                }
+            if register !is bir:DeclRegister {
+                continue;
             }
-        }
-    }
-
-    private function addRegisterDeclare(bir:Register[] registers, llvm:BasicBlock bb) {
-        if !self.debugFull {
-            return;
-        }
-        llvm:Metadata emptyExpr = self.diBuilder.createExpression([]);
-        foreach var register in registers {
-            if register is bir:DeclRegister {
-                var [line, column] = self.file.lineColumn(register.pos);
-                llvm:Metadata tyMeta = self.registerTypeToMetadata(register);
-                llvm:Metadata scope = self.scope(register.pos);
-                llvm:Metadata varMeta = self.diBuilder.createAutoVariable(ty=tyMeta, scope=scope, name=register.name, lineNo=line, file=self.diFile);
-                llvm:Metadata declLoc = self.diBuilder.createDebugLocation(self.mod.llContext, line, column, scope);
-                self.diBuilder.insertDeclareAtEnd(self.scaffold.address(register), varMeta, emptyExpr, declLoc, bb);
-            }
+            Scope scope = self.addRegisterScope(register.scope, register.pos, self.rootScope);
+            var [line, column] = self.file.lineColumn(register.pos);
+            llvm:Metadata tyMeta = self.registerTypeToMetadata(register);
+            llvm:Metadata diScope = scope.diScope;
+            llvm:Metadata varMeta = self.diBuilder.createAutoVariable(ty=tyMeta, scope=diScope, name=register.name, lineNo=line, file=self.diFile);
+            llvm:Metadata declLoc = self.diBuilder.createDebugLocation(self.mod.llContext, line, column, diScope);
+            self.diBuilder.insertDeclareAtEnd(self.scaffold.address(register), varMeta, emptyExpr, declLoc, initBlock);
         }
     }
 
@@ -153,8 +141,8 @@ class RegisterDebugStore {
 
     private function scopeInner(bir:Position pos, Scope parent) returns Scope {
         foreach var child in parent.childScopes {
-            if child.startPos <= pos {
-                return child;
+            if child.startPos <= pos && child.endPos >= pos {
+                return self.scopeInner(pos, child);
             }
         }
         return parent;
