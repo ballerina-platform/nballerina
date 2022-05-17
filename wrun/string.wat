@@ -1,13 +1,17 @@
 (module 
   ;; type
+  (type $Any (struct (field $type i32)))
   (type $Surrogate (array (mut i32))) 
-  (type $String (struct (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
+  (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
   ;; import
   (import "string" "create" (func $str_create (param i32) (param i32) (result anyref))) 
   (import "string" "length" (func $str_length (param anyref) (result i32))) 
   (import "string" "concat" (func $str_concat (param anyref) (param anyref) (result anyref))) 
   (import "string" "eq" (func $str_eq (param anyref) (param anyref) (result i32))) 
   (import "string" "comp" (func $str_comp (param i32) (param anyref) (param anyref) (result i32))) 
+  ;; global
+  (global $rttAny (rtt 0 $Any) (rtt.canon $Any))
+  (global $rttString (rtt 1 $String) (rtt.sub $String (global.get $rttAny)))
   ;; export
   (export "get_string" (func $get_string)) 
   ;; $bal_str_len
@@ -92,6 +96,7 @@
             (br $block2$continue)))) 
       (return 
         (struct.new_with_rtt $String 
+          (i32.const 5)
           (call $str_concat 
             (struct.get $String $val 
               (local.get $0)) 
@@ -100,14 +105,14 @@
           (ref.as_non_null 
             (local.get $6))
           (i32.const -1) 
-          (rtt.canon $String)))))
+          (global.get $rttString)))))
   ;; get_string
   (func $get_string (param $0 eqref) (result anyref) 
     (struct.get $String $val 
       (ref.cast 
         (ref.as_data 
           (local.get $0)) 
-        (rtt.canon $String))))
+        (global.get $rttString))))
   ;; $length
   (func $length (param $0 eqref) (result i64) 
     (local $1 i64) 
@@ -120,13 +125,13 @@
               (br_on_cast_fail $blockStr 
                 (ref.as_data 
                   (local.get $0)) 
-                (rtt.canon $String))) 
+                (global.get $rttString))) 
             (local.set $1 
               (call $bal_str_len 
                 (ref.cast 
                   (ref.as_data 
                     (local.get $0)) 
-                  (rtt.canon $String)))) 
+                  (global.get $rttString)))) 
             (br $blockList) 
             (ref.null any))) 
         (local.set $1 
@@ -134,7 +139,7 @@
             (ref.cast 
               (ref.as_data 
                 (local.get $0)) 
-              (rtt.canon $List))))) 
+              (global.get $rttList))))) 
       (return 
         (local.get $1))))
   ;; end

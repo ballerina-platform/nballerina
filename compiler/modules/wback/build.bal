@@ -79,7 +79,7 @@ function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns w
 }
 
 function buildTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Expression value) returns wasm:Expression {
-    return module.structNew(BOXED_INT_TYPE, [value]);
+    return module.structNew(BOXED_INT_TYPE, [module.addConst({ i32: TYPE_INT }), value]);
 }
 
 function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {

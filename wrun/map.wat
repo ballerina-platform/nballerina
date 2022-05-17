@@ -1,13 +1,18 @@
 (module 
   ;; type
+  (type $Any (struct (field $type i32)))
   (type $HashTable (array (mut i32))) 
   (type $MapField (struct (field $key (mut eqref)) (field $value (mut eqref)))) 
   (type $MapKeys (array (mut eqref))) 
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
-  (type $Map (struct (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
+  (type $Map (struct (field $type i32) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   ;; import
   (import "string" "hash" (func $hash_string (param anyref) (result i32))) 
+  ;; global
+    ;; global
+  (global $rttAny (rtt 0 $Any) (rtt.canon $Any))
+  (global $rttMap (rtt 1 $Map) (rtt.sub $Map (global.get $rttAny)))
   ;; export
   (export "_bal_map_array_len" (func $_bal_map_array_len)) 
   (export "_bal_mapping_construct" (func $_bal_mapping_construct)) 
@@ -82,6 +87,7 @@
         (local.get $1)
         (i32.const 1)))
     (struct.new_with_rtt $Map
+      (i32.const 6)
       (local.get $1)
       (array.new_with_rtt $HashTable
         (i32.const -1)
@@ -95,7 +101,7 @@
           (rtt.canon $MapFieldArr))
         (i32.const 0)
         (rtt.canon $MapFields))
-      (rtt.canon $Map)))
+      (global.get $rttMap)))
   ;; $_bal_mapping_init_member
   (func $_bal_mapping_init_member (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
     (local $3 i32)
@@ -377,14 +383,14 @@
         (ref.cast
           (ref.as_data
             (local.get $1))
-          (rtt.canon $String)))
+          (global.get $rttString)))
       (struct.get $String $val
         (ref.cast
           (ref.as_data
             (struct.get $MapField $key
               (ref.as_non_null
                 (local.get $3))))
-          (rtt.canon $String)))))
+          (global.get $rttString)))))
   ;; $_bal_map_fetch
   (func $_bal_map_fetch (param $0 (ref $HashTable)) (param $1 i32) (result i32);; $0 - hashtable ; 1-i; 2-n
     (local $3 i32)
@@ -448,7 +454,7 @@
       (ref.cast
         (ref.as_data
           (local.get $0))
-        (rtt.canon $Map)))
+        (global.get $rttMap)))
     (local.set $2
       (call $_bal_map_lookup
         (ref.as_non_null
@@ -480,7 +486,7 @@
       (ref.cast
         (ref.as_data
           (local.get $0))
-        (rtt.canon $Map)))
+        (global.get $rttMap)))
     (local.set $2
       (struct.get $MapFields $length
         (struct.get $Map $fArray
@@ -545,13 +551,13 @@
               (br_on_cast_fail $blockStr 
                 (ref.as_data 
                   (local.get $0)) 
-                (rtt.canon $String))) 
+                (global.get $rttString))) 
             (local.set $1 
               (call $bal_str_len 
                 (ref.cast 
                   (ref.as_data 
                     (local.get $0)) 
-                  (rtt.canon $String)))) 
+                  (global.get $rttString)))) 
             (br $blockList) 
             (ref.null any)))
         (drop 
@@ -561,7 +567,7 @@
               (br_on_cast_fail $blockMap
                 (ref.as_data 
                   (local.get $0)) 
-                (rtt.canon $Map))) 
+                (global.get $rttMap))) 
             (local.set $1 
               (i64.extend_i32_u
                 (call $_bal_mapping_num_keys 
@@ -569,7 +575,7 @@
                     (ref.cast 
                       (ref.as_data 
                         (local.get $0)) 
-                      (rtt.canon $Map)))))) 
+                      (global.get $rttMap)))))) 
             (br $blockList) 
             (ref.null any)))   
         (local.set $1 
@@ -577,7 +583,7 @@
             (ref.cast 
               (ref.as_data 
                 (local.get $0)) 
-              (rtt.canon $List))))) 
+              (global.get $rttList))))) 
       (return 
         (local.get $1))))
   ;; $get_string_hash
@@ -589,7 +595,7 @@
       (ref.cast 
         (ref.as_data
           (local.get $0))
-        (rtt.canon $String)))
+        (global.get $rttString)))
     (local.set $2
       (struct.get $String $hash
         (ref.as_non_null

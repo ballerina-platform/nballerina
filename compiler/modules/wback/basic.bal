@@ -35,8 +35,8 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:ConvertToIntInsn {
             body.push(buildConvertToInt(module, scaffold, insn));
         }
-        else if insn is bir:CondNarrowInsn {
-            body.push(buildCondNarrow(module, scaffold, insn));
+        else if insn is bir:TypeBranchInsn {
+            body.push(buildTypeBranch(module, scaffold, insn));
         }
         else if insn is bir:CallInsn {
             body.push(buildCall(module, scaffold, insn));
@@ -123,8 +123,19 @@ function buildAssign(wasm:Module module, Scaffold scaffold, bir:AssignInsn insn)
     return module.localSet(insn.result.number, buildWideRepr(module, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType));
 }
 
-function buildCondNarrow(wasm:Module module, Scaffold scaffold, bir:CondNarrowInsn insn) returns wasm:Expression {
-    return module.localSet(insn.result.number, module.localGet(insn.operand.number));
+function buildTypeBranch(wasm:Module module, Scaffold scaffold, bir:TypeBranchInsn insn) returns wasm:Expression {
+    Repr repr = scaffold.getRepr(insn.operand);
+    if repr is UniformRepr {
+        if repr.wasm == "i64" {
+            t:IntSubtypeConstraints? intConstraints = t:intSubtypeConstraints(insn.semType);
+            int val = 0;
+            if intConstraints != () {
+                val = intConstraints.max;
+            }
+            return module.binary("i64.eq", module.localGet(insn.operand.number), module.addConst( { i64: val }));
+        }
+    }
+    return module.localGet(insn.operand.number);
 }
 
 function buildBooleanNotInsn(wasm:Module module, bir:BooleanNotInsn insn) returns wasm:Expression {

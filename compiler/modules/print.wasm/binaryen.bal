@@ -254,7 +254,7 @@ public class Module {
         foreach Expression value in values {
             inst.push(...value.tokens);
         }
-        inst.push(...appendBraces(["rtt.canon", "$" + kind]));
+        inst.push(...appendBraces(["global.get", "$rtt" + kind]));
         return { tokens: appendBraces(inst) };
     }
 

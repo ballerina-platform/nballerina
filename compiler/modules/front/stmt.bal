@@ -142,17 +142,41 @@ class StmtContext {
         return bir:createBasicBlock(self.code, name);
     }
 
-    function openRegion(bir:Label entry, bir:RegionKind kind, bir:Label? exit = ()) {
+    function openRegion(bir:Label entry, bir:RegionKind kind, bir:Label? exit = ()) returns bir:RegionIndex? {
         bir:RegionIndex regionIndex = self.code.regions.length();
+        bir:Region? lastRegion = regionIndex > 0 ? self.code.regions[regionIndex - 1]: ();
+        if lastRegion != () && lastRegion.entry == entry {
+            return ();
+        } 
         int openCount = self.openRegions.length();
         bir:RegionIndex? parent = openCount > 0 ? self.openRegions[openCount - 1] : ();
         self.code.regions.push({ entry, kind, exit, parent });
         self.openRegions.push(regionIndex);
+        return regionIndex;
     }
 
-    function closeRegion(bir:Label? exit = ()) {
-        int regionIndex = self.openRegions.pop();
-        self.code.regions[regionIndex].exit = exit;
+    function closeRegion(bir:RegionIndex? regionIndex, bir:Label? exit = ()) {
+        if regionIndex != () {
+            _ = self.openRegions.pop();
+            if exit != () {
+                bir:Region region = self.code.regions[regionIndex];
+                if region.entry + 1 == exit && region.kind == bir:REGION_LOOP {
+                    bir:Label loopBodyLabel = -1;
+                    bir:Insn lastInsn = self.code.blocks[region.entry].insns[self.code.blocks[region.entry].insns.length() - 1];
+                    if lastInsn is bir:CondBranchInsn|bir:TypeBranchInsn {
+                        loopBodyLabel = lastInsn.ifTrue;
+                    }
+                    else if lastInsn is bir:BranchInsn {
+                        loopBodyLabel = lastInsn.dest;
+                    }
+                    if loopBodyLabel == region.entry + 1 {
+                        _ = self.code.regions.remove(regionIndex);
+                        return;
+                    }
+                }
+            } 
+            self.code.regions[regionIndex].exit = exit;
+        }
     }
 
     function qNameRange(Position startPos) returns Range {
@@ -466,7 +490,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
-    cx.openRegion(loopHead.label, bir:REGION_LOOP);
+    bir:RegionIndex? regionIndex = cx.openRegion(loopHead.label, bir:REGION_LOOP);
     bir:BasicBlock exit = cx.createBasicBlock();
     bir:BranchInsn forwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     initLoopVar.insns.push(forwardBranchToLoopHead);
@@ -498,7 +522,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
         loopStep.insns.push(increment, incrementAssign, backwardBranchToLoopHead);
     }
     cx.popLoopContext();
-    cx.closeRegion(exit.label);
+    cx.closeRegion(regionIndex, exit.label);
     // XXX shouldn't we be passing up assignments here
     return { block: exit };
 }
@@ -506,7 +530,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
 function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:WhileStmt stmt) returns CodeGenError|StmtEffect {
     ExprContext ec = cx.exprContext(env);
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
-    cx.openRegion(loopHead.label, bir:REGION_LOOP);
+    bir:RegionIndex? regionIndex = cx.openRegion(loopHead.label, bir:REGION_LOOP);
     bir:BranchInsn forwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     startBlock.insns.push(forwardBranchToLoopHead);
 
@@ -522,17 +546,17 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         }
     }
     else if trueMerger is TypeMerger && falseMerger is () {
-        return finishCodeGenWhileStmt(cx, env, stmt, loopHead, trueMerger, startRegister);
+        return finishCodeGenWhileStmt(cx, env, stmt, loopHead, trueMerger, startRegister, regionIndex);
     }
     else if trueMerger is TypeMerger && falseMerger is TypeMerger {
         var { block: exit, binding: _ } = codeGenTypeMergeFromMerger(ec, falseMerger, stmt.body.endPos); // binding is ignored, see: #ballerina-spec/1019
-        return finishCodeGenWhileStmt(cx, env, stmt, loopHead, trueMerger, startRegister, exit);
+        return finishCodeGenWhileStmt(cx, env, stmt, loopHead, trueMerger, startRegister, regionIndex, exit);
     }
     panic err:impossible();
 }
 
 // JBUG #35748 had to be broken into a separate function
-function finishCodeGenWhileStmt(StmtContext cx, Environment env, s:WhileStmt stmt, bir:BasicBlock loopHead, TypeMerger loopBodyMerger, int startRegister, bir:BasicBlock? exit = ()) returns CodeGenError|StmtEffect {
+function finishCodeGenWhileStmt(StmtContext cx, Environment env, s:WhileStmt stmt, bir:BasicBlock loopHead, TypeMerger loopBodyMerger, int startRegister, bir:RegionIndex? regionIndex, bir:BasicBlock? exit = ()) returns CodeGenError|StmtEffect {
     ExprContext ec = cx.exprContext(env);
     var { block: loopBody, bindings: loopBodyBindings } = codeGenTypeMergeFromMerger(ec, loopBodyMerger, stmt.body.startPos);
     cx.pushLoopContext(exit, loopHead, true, startRegister);
@@ -549,11 +573,11 @@ function finishCodeGenWhileStmt(StmtContext cx, Environment env, s:WhileStmt stm
     bir:BasicBlock? breakBlock = cx.loopBreakBlock();
     cx.popLoopContext();
     if breakBlock != () {
-        cx.closeRegion(breakBlock.label);
+        cx.closeRegion(regionIndex, breakBlock.label);
         return { block: breakBlock, assignments };
     }
     else {
-        cx.closeRegion();
+        cx.closeRegion(regionIndex);
         return { block: () };
     }
 }
@@ -603,6 +627,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     Assignment[] assignments = [];
     ExprContext ec = cx.exprContext(env);
     var { result: matched, block: testBlock, binding } = check codeGenExpr(ec, startBlock, (), stmt.expr);
+    bir:RegionIndex? regionIndex = cx.openRegion(testBlock.label, bir:REGION_COND);
     t:Context tc = cx.mod.tc;
     t:SemType matchedType = operandSemType(tc, matched);
     // defaultCodeIndex is either () or the index of the last clause;
@@ -668,6 +693,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     }
     BindingChain?[] clauseBindings = [];
     clauseBindings[stmt.clauses.length() - 1] = ();
+    bir:RegionIndex?[] openedRegions = [regionIndex];
     if binding != () {
         // Match expression is a variable
         // We get one type narrowing per clause (which combines all the patterns in the clause)
@@ -683,6 +709,9 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
             bir:NarrowRegister ifFalseRegister = cx.createNarrowRegister(clauseUnmatchedLooksLike[i], binding.reg, pos);
             bir:BasicBlock nextBlock;
             nextBlock = cx.createBasicBlock("gard." + i.toString());
+            if i + 1 != defaultClauseIndex {
+                openedRegions.push(cx.openRegion(nextBlock.label, bir:REGION_COND));
+            }
             bir:TypeBranchInsn typeBranch = {
                 ifTrue: clauseBlocks[i].label,
                 ifFalse: nextBlock.label,
@@ -721,15 +750,20 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
             }
             bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
             patternIndex += 1;
+            if patternIndex != defaultClauseIndex {
+                openedRegions.push(cx.openRegion(nextBlock.label, bir:REGION_COND));
+            }
             bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[clauseIndex].label, ifFalse: nextBlock.label, pos: mt.pos } ;
             testBlock.insns.push(condBranch);
             testBlock = nextBlock;
         }
     }
     bir:BasicBlock? contBlock = ();
+    openedRegions = openedRegions.reverse();
     foreach int clauseIndex in 0 ..< stmt.clauses.length() {
-        s:MatchClause clause = stmt.clauses[clauseIndex];
-        bir:BasicBlock stmtBlock = clauseBlocks[clauseIndex];
+        int index = stmt.clauses.length() - clauseIndex - 1;
+        s:MatchClause clause = stmt.clauses[index];
+        bir:BasicBlock stmtBlock = clauseBlocks[index];
         Environment clauseEnv = env;
         var { block: stmtBlockEnd, assignments: blockAssignments } = check codeGenScope(cx, stmtBlock, clauseEnv, clause.block, clauseBindings[clauseIndex]);
         if stmtBlockEnd == () {
@@ -737,6 +771,12 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         }
         else {
             bir:BasicBlock b = maybeCreateBasicBlock(ec, contBlock);
+            if index == 0 {
+                cx.closeRegion(openedRegions.remove(0), b.label);
+            }
+            else if index != defaultClauseIndex {
+                cx.closeRegion(openedRegions.remove(0));
+            }
             contBlock = b;
             bir:BranchInsn branchToCont = { dest: b.label, pos: clause.startPos };
             stmtBlockEnd.insns.push(branchToCont);
@@ -800,7 +840,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
         }
     }
     else {
-        cx.openRegion(startBlock.label, bir:REGION_COND);
+        bir:RegionIndex? regionIndex = cx.openRegion(startBlock.label, bir:REGION_COND);
         var { block: ifContBlock, assignments, bindings: ifBindings } = check codeGenScopeWithTypeMerger(cx, trueMerger, env, ifTrue);
         if ifFalse == () {
             // Just an if branch
@@ -810,7 +850,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
                 ifContBlock.insns.push(branch);
                 contMerger = { dest: falseMerger.dest, origins: { bindings: ifBindings, label: ifContBlock.label, prev: falseMerger.origins } };
             }
-            cx.closeRegion(contMerger.dest.label);
+            cx.closeRegion(regionIndex, contMerger.dest.label);
             return codeGenTypeMergeFromMerger(ec, contMerger, ifTrue.endPos);
         }
         else {
@@ -826,14 +866,14 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
                 elseContBlock.insns.push(branch);
                 TypeMergeOrigin? combinedOrigin = { bindings: ifBindings, label: ifContBlock.label, prev: { bindings: elseBindings, label: elseContBlock.label, prev: () } };
                 BindingChain? bindings = codeGenTypeMerge(ec, contBlock, env.bindings, combinedOrigin, ifTrue.endPos);
-                cx.closeRegion(contBlock.label);
+                cx.closeRegion(regionIndex, contBlock.label);
                 return { block: contBlock, assignments, bindings };
             }
             else {
                 // One or both arms are branching outside.
                 bir:BasicBlock? contBlock = ifContBlock ?: elseContBlock;
                 BindingChain? bindings = ifBindings ?: elseBindings;
-                cx.closeRegion(contBlock?.label);
+                cx.closeRegion(regionIndex, contBlock?.label);
                 return { block: contBlock, assignments, bindings };
             }
         }
