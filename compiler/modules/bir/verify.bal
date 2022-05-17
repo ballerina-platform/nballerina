@@ -101,27 +101,43 @@ function verifyRegions(VerifyContext vc, Position pos) returns Error? {
     foreach TmpRegion tmpRegion in vc.regions {
         boolean created = false;
         foreach Region region in vc.code.regions {
-            if region.entry == tmpRegion.entry && region.exit == tmpRegion.exit && region.kind is REGION_LOOP {
-                created = true;
-                break;
+            if region.entry == tmpRegion.entry && region.kind is REGION_LOOP {
+                int? exit = tmpRegion.exit;
+                Insn? insn = ();
+                while insn is BranchInsn? && exit != () {
+                    if region.exit == exit {
+                        created = true;
+                        break;
+                    }
+                    insn = vc.code.blocks[exit].insns[vc.code.blocks[exit].insns.length() - 1];
+                    if insn is BranchInsn {
+                        exit = insn.dest;
+                    }
+                }
+                if region.exit == exit {
+                    break;
+                }
             }
         }
         if created {
             break;
         } 
-        //return vc.invalidErr("region not created in front end", pos);
+        return vc.invalidErr("region not created in front end", pos);
     }
 }
 
-function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loops, boolean[] visited, Position pos, Label?[] paths, Label[] cond = []) returns Error|Label? {
+function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loops, boolean[] visited, Position pos, Label?[] paths) returns Error|Label? {
     visited[label] = true;
     Insn[] insns = vc.code.blocks[label].insns;
     var insnsLen = insns.length();
     Label entry2 = entry;
     int? i = loops.indexOf(label);
     // if a entry is reached again no exit in that path
-    if i is int && i != 0 {
-        _ = loops.remove(i);
+    if i is int && loops.length() > 0 {
+        Insn insn = insns[insnsLen - 1];
+        if insn is CondBranchInsn {
+            return insn.ifFalse;
+        }
         return ();
     }
     // change entry for inner loops
@@ -138,7 +154,7 @@ function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loop
                 exit = ();
             }
             else {
-                exit = check traverseRegion(vc, entry, insn.dest, loops, visited, pos, paths, cond);
+                exit = check traverseRegion(vc, entry, insn.dest, loops, visited, pos, paths);
             }
         }
         else if insn is CondBranchInsn {
@@ -154,13 +170,8 @@ function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loop
                 exit = insn.ifFalse;
             }
             else {
-                if cond.indexOf(label) != () {
-                    return ();
-                }
-                cond.push(label);
-                Label? ifTrue = check traverseRegion(vc, entry2, insn.ifTrue, loops, visited, pos, paths, cond);
-                Label? ifFalse = check traverseRegion(vc, entry2, insn.ifFalse, loops, visited, pos, paths, cond);
-                cond.removeAll();
+                Label? ifTrue = check traverseRegion(vc, entry2, insn.ifTrue, loops, visited, pos, paths);
+                Label? ifFalse = check traverseRegion(vc, entry2, insn.ifFalse, loops, visited, pos, paths);
                 if ifFalse is () && ifTrue is () {
                     exit = ();
                 }
@@ -194,7 +205,7 @@ function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loop
     }
     if loops[loops.length() - 1] == label {
         vc.regions.push({ entry : entry2, exit, isLoop : true });
-        
+        _ = loops.pop();
     }
     return exit;
 }
