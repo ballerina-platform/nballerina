@@ -36,7 +36,7 @@ type SubtypePropositionGenerator function (PropositionGenContext cx, Proposition
 type NonEmptyPropositionGenerator function (PropositionGenContext cx, PropositionPath path) returns NonEmptyProposition; 
 
 type PropositionGenBounds readonly & record {|
-    readonly int maxTupleMembers = 6;
+    readonly int maxMemberCount = 6;
     readonly int maxStringConstLen = 20;
     readonly int duplicationFactor = 6;
 |};
@@ -51,6 +51,7 @@ class PropositionGenContext {
     final int seed;
     final lib:Random random;
     final TypeBuilder types;
+    final Proposition[] failedPropositions = [];
 
     function init(t:Context cx, int seed, PropositionGenBounds bounds = {}) {
         self.typeContext = cx;
@@ -89,6 +90,10 @@ class PropositionGenContext {
         }
         list[depth].push(proposition); 
     }
+
+    function failed(Proposition proposition) {
+        self.failedPropositions.push(proposition);
+    }
 }
 
 type PropositionPath record {|
@@ -125,9 +130,12 @@ function init() {
                                         subtypeGenListUnionUnionList, 
                                         subtypeGenSimpleTuple, 
                                         subtypeGenTupleWithRest, 
-                                        subtypeGenTupleUnequalMemberCount, 
+                                        subtypeGenTupleUnequalMemberCount,
                                         subtypeGenUnion,
-                                        subtypeGenFixedTupleUnion);
+                                        subtypeGenFixedTupleUnion,
+                                        subtypeGenMap,
+                                        subtypeGenClosedRecord,
+                                        subtypeGenRecord);
     NONEMPTY_PROPOSITION_GENERATORS.push(nonEmptyGenUnion,
                                          nonEmptyGenTuple,
                                          nonEmptyGenNonRestTuple);
@@ -207,14 +215,14 @@ function subtypeGenList(PropositionGenContext cx, PropositionPath path) returns 
 
 // T1 <: S1, T2 <: S2, ..., Tn <: Sn -> [T1, T2, ..Tn] < [S1, S2, ..Sn]
 function subtypeGenSimpleTuple(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
-    int memberCount = cx.random.nextRange(cx.bounds.maxTupleMembers);
+    int memberCount = cx.random.nextRange(cx.bounds.maxMemberCount);
     var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, propositionBranch(path));
     return { left: cx.types.list(subtypes), right: cx.types.list(supertypes) };
 }
 
 // T1 <: S1, T2 <: S2, ..., Tn <: Sn, Tr, <: Sr -> [T1, T2, ..Tn, Tr...] < [S1, S2, ..Sn, Sr...]
 function subtypeGenTupleWithRest(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
-    int memberCount = cx.random.nextRange(cx.bounds.maxTupleMembers);
+    int memberCount = cx.random.nextRange(cx.bounds.maxMemberCount);
     var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, propositionBranch(path));
     SubtypeProposition restProposition = generateSubtypeProposition(cx, propositionBranch(path));
     int left = cx.types.list(subtypes, rest = restProposition.left);
@@ -224,7 +232,7 @@ function subtypeGenTupleWithRest(PropositionGenContext cx, PropositionPath path)
 
 // T1 <: S1, T2 <: S2, T3 <: S3, Tr <: Sr -> [T1, T2, T3, Tr...] < [S1, S2, (S3|Sr)...]
 function subtypeGenTupleUnequalMemberCount(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
-    int memberCount = cx.random.nextRange(cx.bounds.maxTupleMembers);
+    int memberCount = cx.random.nextRange(cx.bounds.maxMemberCount);
     var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, propositionBranch(path));
     SubtypeProposition rest = generateSubtypeProposition(cx, propositionBranch(path));
     int left = cx.types.list(subtypes, rest = rest.left);
@@ -241,7 +249,7 @@ function subtypeGenTupleUnequalMemberCount(PropositionGenContext cx, Proposition
 
 // T <: S, NE(T1), NE(T2)... -> T[] <: []|[S]|[(S|T1), S]|[S, S, (S|T2)...]
 function subtypeGenFixedTupleUnion(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
-    int memberCount = cx.random.nextRange(cx.bounds.maxTupleMembers);
+    int memberCount = cx.random.nextRange(cx.bounds.maxMemberCount);
     SubtypeProposition p = generateSubtypeProposition(cx, propositionBranch(path));
     int left = cx.types.list(rest = p.left);
     int right = t:NEVER;
@@ -308,6 +316,54 @@ function generateNSubtypePropositions(PropositionGenContext cx, int n, Propositi
     return [subtypes, supertypes];
 }
 
+// T <: S -> map<T> <: map<S>
+function subtypeGenMap(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    SubtypeProposition p = generateSubtypeProposition(cx, propositionBranch(path));
+    int left = cx.types.mapping(rest = p.left);
+    int right = cx.types.mapping(rest = p.right);
+    return { left, right };
+}
+
+// T1 <: S1, T2 <: S2 -> map<T1>|map<T2> <: map<S1|S2>
+function subtypeGenMapUnion(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    SubtypeProposition p1 = generateSubtypeProposition(cx, propositionBranch(path));
+    SubtypeProposition p2 = generateSubtypeProposition(cx, propositionBranch(path));
+    int left = cx.types.union(cx.types.mapping(rest = p2.left), cx.types.mapping(rest = p2.left));
+    int right = cx.types.mapping(rest = cx.types.union(p1.right, p2.right));
+    return { left, right };
+}
+
+// T1 <: S1, T2 <: S2, Tn <: Sn-> record {| l1=>T1, l2=>T2, ln=>Tn |} < record {| l1=>S1, l2=>S2, ln=>Sn |}
+function subtypeGenClosedRecord(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    var [subFields, superFields] = generateRecordFields(cx, path);
+    int left = cx.types.mapping(subFields);
+    int right = cx.types.mapping(superFields);
+    return { left, right };
+}
+
+// T1 <: S1, T2 <: S2, Tn <: Sn, Tr <: Sr -> record { l1=>T1, l2=>T2, ln=>Tn, Tr... } < record { l1=>S1, l2=>S2, ln=>Sn, Sr... }
+function subtypeGenRecord(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    var [subFields, superFields] = generateRecordFields(cx, path);
+    SubtypeProposition rest = generateSubtypeProposition(cx, propositionBranch(path));
+    int left = cx.types.mapping(subFields, rest.left);
+    int right = cx.types.mapping(superFields, rest.right);
+    return { left, right };
+}
+
+function generateRecordFields(PropositionGenContext cx, PropositionPath path) returns [[string, int][], [string, int][]] {
+    int memberCount = cx.random.nextRange(cx.bounds.maxMemberCount);
+    var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, propositionBranch(path));
+    [string, int][] subFields = [];
+    [string, int][] superFields = [];
+    foreach int i in 0 ..< memberCount {
+        int len = cx.random.nextRange(cx.bounds.maxStringConstLen);
+        string label = cx.random.randomStringValue(len);
+        subFields.push([label, subtypes[i]]);
+        superFields.push([label, supertypes[i]]);
+    }
+    return [subFields, superFields];
+}
+
 // Convert subtype proposition into non-empty preposition
 function nonEmptyFromAxiomaticSubtype(PropositionGenContext cx, PropositionPath path) returns NonEmptyProposition {
     while true {
@@ -354,7 +410,7 @@ function nonEmptyGenList(PropositionGenContext cx, PropositionPath path) returns
 function nonEmptyGenTuple(PropositionGenContext cx, PropositionPath path) returns NonEmptyProposition {
     NonEmptyProposition base = generateNonEmptyProposition(cx, propositionBranch(path));
     int rest = base.left;
-    int[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.bounds.maxTupleMembers) 
+    int[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.bounds.maxMemberCount) 
                                let var prop = generateNonEmptyProposition(cx, propositionBranch(path))
                                select prop.left;
     int t = cx.types.list(fixedMembers, rest = rest);
@@ -363,7 +419,7 @@ function nonEmptyGenTuple(PropositionGenContext cx, PropositionPath path) return
 }
 // NE(T1), NE(T2), ...NE(Tn) -> NE([T1, T2, ..Tn])
 function nonEmptyGenNonRestTuple(PropositionGenContext cx, PropositionPath path) returns NonEmptyProposition {
-    int[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.bounds.maxTupleMembers) 
+    int[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.bounds.maxMemberCount) 
                                let var prop = generateNonEmptyProposition(cx, propositionBranch(path))
                                select prop.left;
     int t = cx.types.list(fixedMembers);
@@ -389,22 +445,29 @@ function generateNonEmptyProposition(PropositionGenContext cx, PropositionPath p
 function evalProposition(PropositionGenContext cx, Proposition p) returns boolean {
     t:SemType left = cx.types.semtype(p.left);
     t:SemType right = cx.types.semtype(p.right);
+    boolean? result = ();
     match p.op {
         UNION => {
-            return t:isEmpty(cx.typeContext, t:union(left, right)) == p.isEmpty;
+            result = t:isEmpty(cx.typeContext, t:union(left, right)) == p.isEmpty;
         }
         INTERSECT => {
-            return t:isEmpty(cx.typeContext, t:intersect(left, right)) == p.isEmpty;
+            result = t:isEmpty(cx.typeContext, t:intersect(left, right)) == p.isEmpty;
         }
         DIFF => {
-            return t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty;
+            result = t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty;
         }
         DIFF2 => {
-            return t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty 
+            result = t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty 
                 && t:isEmpty(cx.typeContext, t:diff(right, left)) == p.isEmpty;
         }
+        _ => {
+            panic error("Invalid OP: " + p.op.toString());
+        }
     }
-    panic error("Invalid state");
+    if result == false {
+        cx.failed(p);
+    }
+    return <boolean>result;
 }
 
 type PropositionTestOnFail function(PropositionGenContext cx, Proposition failedProp);
@@ -414,17 +477,32 @@ type PropositionTestConfig record {|
     int depthLimit = 6;
     int widthLimit = 200;
     PropositionGenerator generator;
-    PropositionTestOnFail onFail = assertFail;
+    PropositionTestOnFail onFail?;
 |};
 
-function assertFail(PropositionGenContext cx, Proposition prop) {
-    test:assertFail("Failed for seed value: " + cx.seed.toString() + "\n" 
-                    + prop.toString()
-                    + "\n-------------left---------------------\n"
-                    + cx.types.typeToString(prop.left) 
-                    + "\n-------------right--------------------\n"
-                    + cx.types.typeToString(prop.right)
-                    + "\n--------------------------------------\n");
+function assertFail(PropositionGenContext cx, Proposition proposition) {
+    test:assertFail(propositionToString(cx, proposition));
+}
+
+function propositionToString(PropositionGenContext cx, Proposition proposition) returns string {
+    return "Failed for seed value: " + cx.seed.toString() + "\n"
+            + proposition.toString()
+            + "\n-------------left---------------------\n"
+            + cx.types.typeToString(proposition.left) 
+            + "\n-------------right--------------------\n"
+            + cx.types.typeToString(proposition.right)
+            + "\n--------------------------------------\n";
+}
+
+function printPropositionTestFailures(PropositionGenContext cx) {
+    foreach Proposition proposition in cx.failedPropositions {
+            io:println(propositionToString(cx, proposition));
+            io:println();
+    }
+    int failureCount = cx.failedPropositions.length();
+    if failureCount > 0 {
+        test:assertFail("Proposition test failures (" + failureCount.toString() + ")");
+    }
 }
 
 function testSemtypePropositions(*PropositionTestConfig config) {
@@ -437,11 +515,14 @@ function testSemtypePropositions(*PropositionTestConfig config) {
                 PropositionGenerator generator = config.generator;
                 Proposition prop = generator(cx, { depth, rands: [] });
                 if !evalProposition(cx, prop) {
-                    PropositionTestOnFail onFail = config.onFail;
-                    onFail(cx, prop);
+                    PropositionTestOnFail? onFail = config.onFail;
+                    if onFail != () {
+                        onFail(cx, prop);
+                    }
                 }
             }
         }
         io:println();
+        printPropositionTestFailures(cx);
     }
 }

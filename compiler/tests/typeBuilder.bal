@@ -27,6 +27,8 @@ type TypeBuilder object {
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
 
+    function mapping([string, int][] fields = [], int rest = -1) returns int;
+
     function union(int i1, int i2) returns int;
 };
 
@@ -105,6 +107,16 @@ class SemtypeBuilder {
         return self.push(t); 
     }
 
+    function mapping([string, int][] fields = [], int rest = -1) returns int {
+        [string, t:SemType][] fs = from var [name, index] in fields select [name, self.defns[index]];
+        t:SemType r = t:NEVER;
+        if rest != -1 {
+            r = self.defns[rest];
+        }
+        t:SemType t = (new t:MappingDefinition()).define(self.cx.env, fs, r);
+        return self.push(t);
+    }
+
     function union(int i1, int i2) returns int {
         return self.push(t:union(self.defns[i1], self.defns[i2]));
     }
@@ -152,6 +164,7 @@ class AstBasedTypeDefBuilder {
         }
         else if typeDesc is s:TupleTypeDesc {
             dependencies.push(...self.findIndices(...typeDesc.members));
+            dependencies.push(...self.findIndices(typeDesc.rest));
             tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         }
         else if typeDesc is s:ArrayTypeDesc {
@@ -164,6 +177,20 @@ class AstBasedTypeDefBuilder {
         }
         else if typeDesc is s:SingletonTypeDesc {
             tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
+        }
+        else if typeDesc is s:MappingTypeDesc {
+            dependencies.push(...self.findIndices(...(from var { typeDesc: td } in typeDesc.fields select td)));
+            s:TypeDesc|boolean? rest = typeDesc.rest;
+            if rest is s:TypeDesc {
+                dependencies.push(...self.findIndices(rest));
+            }
+            tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
+        }
+        else if typeDesc is s:BuiltinTypeDesc {
+            tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
+        } 
+        else {
+            panic error("Missing code to handle: " + (typeof typeDesc).toString());
         }
 
         foreach var index in dependencies {
@@ -179,7 +206,7 @@ class AstBasedTypeDefBuilder {
         return res.index;
     }
 
-    function findIndices(s:TypeDesc ...tds) returns int[] {
+    function findIndices(s:TypeDesc? ...tds) returns int[] {
         return from var td in tds
                where td is s:TypeDescRef
                let int? index = self.findIndex(td.typeName) 
@@ -316,6 +343,23 @@ class AstBasedTypeDefBuilder {
             td = { startPos, endPos, member: <s:TypeDescRef>restDesc , dimensions: [size] };
         }
         return self.createTypeDef(td);
+    }
+
+    function mapping([string, int][] fields = [], int rest = -1) returns int {
+        s:FieldDesc[] fs = from var [name, index] in fields select self.createField(name, index);
+        s:TypeDesc? r = ();
+        if rest != -1 {
+            r = self.createTypeDescRef(rest);
+        }
+        var [startPos, endPos] = self.calculatePosition();
+        s:MappingTypeDesc td = { startPos, endPos, fields: fs, rest: r };
+        return self.createTypeDef(td);
+    }
+
+    function createField(string name, int index) returns s:FieldDesc {
+        var [startPos, endPos] = self.calculatePosition();
+        s:TypeDescRef typeDesc = self.createTypeDescRef(index);
+        return { startPos, endPos, name, typeDesc };
     }
 
     function neverType() returns int {
