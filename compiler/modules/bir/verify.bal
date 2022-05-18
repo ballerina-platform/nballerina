@@ -100,11 +100,7 @@ type MultipleOperandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArith
     |DecimalArithmeticBinaryInsn|CompareInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn
     |MappingGetInsn|StringConcatInsn|EqualityInsn|TypeMergeInsn;
 
-type ResultInsn IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
-    |FloatArithmeticBinaryInsn|FloatNegateInsn|DecimalArithmeticBinaryInsn|DecimalNegateInsn
-    |ConvertToIntInsn|ConvertToFloatInsn|ConvertToDecimalInsn|BooleanNotInsn|CompareInsn
-    |EqualityInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn|MappingGetInsn
-    |StringConcatInsn|CallInsn|TypeCastInsn|TypeTestInsn|CatchInsn|ErrorConstructInsn;
+type ResultInsn readonly & record { *ResultInsnBase; };
 
 function verifyInsnRegisterKinds(VerifyContext vc, Insn insn) returns Error? {
     if insn is ResultInsn {
