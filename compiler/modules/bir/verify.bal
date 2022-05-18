@@ -124,11 +124,11 @@ function verifyRegions(VerifyContext vc, Position pos) returns Error? {
             continue;
         } 
         // TODO enable after fixing front end
-        //return vc.invalidErr("region not created in front end", pos);
+        // return vc.invalidErr("region not created in front end", pos);
     }
 }
 
-function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loops, boolean[] visited, Position pos, Label?[] paths) returns Error|Label? {
+function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loops, boolean[] visited, Position pos, Label?[] paths, Label[] merge = []) returns Error|Label? {
     Insn[] insns = vc.code.blocks[label].insns;
     var insnsLen = insns.length();
     Label entry2 = entry; 
@@ -150,7 +150,7 @@ function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loop
         entry2 = label;
     }
     if visited[label] {
-        return label;
+        merge.push(label);
     }
     visited[label] = true;
     Label? exit = label;
@@ -158,16 +158,23 @@ function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loop
     if insnsLen > 0 {
         Insn insn = insns[insnsLen - 1];
         if insn is BranchInsn {
-            exit = check traverseRegion(vc, entry, insn.dest, loops, visited, pos, paths);
+            exit = check traverseRegion(vc, entry, insn.dest, loops, visited, pos, paths, merge);
         }
         else if insn is CondBranchInsn {
             // If all paths lead back to entry, exit is nil.
             // Otherwise, exit is the first acyclic block where all the other paths merge.  
 
-            Label? ifTrue = check traverseRegion(vc, entry2, insn.ifTrue, loops, visited, pos, paths);
-            Label? ifFalse = check traverseRegion(vc, entry2, insn.ifFalse, loops, visited, pos, paths);
+            Label? ifTrue = check traverseRegion(vc, entry2, insn.ifTrue, loops, visited, pos, paths, merge);
+            Label? ifFalse = check traverseRegion(vc, entry2, insn.ifFalse, loops, visited, pos, paths, merge);
+            
             if ifFalse is () && ifTrue is () {
                 exit = ();
+                if merge.length() > 0 {
+                    _ = merge.pop();
+                }
+            }
+            else if merge.length() > 0{
+                exit = merge.pop();
             }
             else if ifFalse is () {
                 exit = insn.ifTrue;
@@ -197,6 +204,9 @@ function traverseRegion(VerifyContext vc, Label entry, Label label, Label[] loop
         }
     }
     if loops[loops.length() - 1] == label {
+        if merge.length() > 0 {
+            exit = merge.pop();
+        }
         vc.regions.push({ entry : entry2, exit, isLoop : true });
         _ = loops.pop();
         if exit != () && paths[exit] != () {
