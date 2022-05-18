@@ -78,7 +78,8 @@ type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 type Error err:Semantic|err:Internal;
 
 function verifyGraph(VerifyContext vc, BasicBlock[] blocks, Position pos) returns Error? {
-    boolean[] visited = from int b in 0 ..< blocks.length() select false;
+    boolean[] visited = [];
+    visited[blocks.length() - 1] = false;
     check traveseGraph(vc, blocks, 0, visited, visited, pos);
     if visited.indexOf(false) != () {
         return vc.invalidErr("unreachable blocks in function code", pos);
@@ -98,30 +99,32 @@ function traveseGraph(VerifyContext vc, BasicBlock[] blocks, Label label, boolea
     }
     visited[label] = true;
     currentGraph[label] = true;
-    Insn[] insns = blocks[label].insns;
-    var insnsLen = insns.length();
-    if insnsLen > 0 {
-        Insn insn = insns[insnsLen - 1];
-        if insn is BranchInsn {
-            if insn.backward {
-                if visited[insn.dest] {
-                    insn = blocks[insn.dest].insns[blocks[insn.dest].insns.length() - 1];
-                    if insn is BranchInsn|CondBranchInsn {
-                        return;
-                    }
+    Insn insn = check terminator(vc, blocks[label], pos);
+    if insn is BranchInsn {
+        if insn.backward {
+            if visited[insn.dest] {
+                insn = check terminator(vc, blocks[insn.dest], pos);
+                if insn is BranchInsn|CondBranchInsn {
+                    return;
                 }
-                return vc.invalidErr("backwards branch directs to non loop head", pos);
-            } 
-            else {
-               check traveseGraph(vc, blocks, insn.dest, visited, currentGraph, pos); 
             }
-        }
-        else if insn is CondBranchInsn {
-            boolean[] curGraph = currentGraph.clone();
-            check traveseGraph(vc, blocks, insn.ifFalse, visited, currentGraph, pos);
-            check traveseGraph(vc, blocks, insn.ifTrue, visited, curGraph, pos);
+            return vc.invalidErr("backwards branch directs to non loop head", pos);
+        } 
+        else {
+            check traveseGraph(vc, blocks, insn.dest, visited, currentGraph, pos); 
         }
     }
+    else if insn is CondBranchInsn {
+        boolean[] curGraph = currentGraph.clone();
+        check traveseGraph(vc, blocks, insn.ifFalse, visited, currentGraph, pos);
+        check traveseGraph(vc, blocks, insn.ifTrue, visited, curGraph, pos);
+    }  
+}
+
+function terminator(VerifyContext vc, BasicBlock block, Position pos) returns Insn|Error {
+    Insn[] insns = block.insns;
+    int insnsLen = insns.length();
+    return insnsLen > 0 ? insns[insnsLen - 1] : vc.invalidErr("block does not have any instructions", pos);
 }
 
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
