@@ -16,7 +16,7 @@ TAG_BOOLEAN = 0x01
 TAG_INT = 0x07
 TAG_FLOAT = 0x08
 TAG_STRING = 0x0A
-
+TAG_ERROR = 0x0B
 INT_MAX = (2**64) -1
 
 STRING_LARGE_FLAG = 1
@@ -58,11 +58,18 @@ class TaggedPrinter:
             return str(bool(ptr_body))
         if tag == TAG_STRING:
             return tagged_str_to_string(self.val)
+        if tag == TAG_ERROR:
+            return "error(" + error_to_string(self.val) + ")"
         raise Exception("Unimplemented tag")
 
     def get_tag(self):
         pointer = int(self.val)
         return (pointer >> TAG_SHIFT) & TAG_MASK
+
+def error_to_string(tagged_ptr):
+    bits = int(tagged_ptr)
+    err_ptr = gdb.Value(extract_ptr(bits)).cast(gdb.lookup_type("long").pointer());
+    return tagged_str_to_string(err_ptr.dereference())
 
 def tagged_str_to_string(tagged_ptr):
     str_len = string_len(tagged_ptr)
@@ -71,7 +78,7 @@ def tagged_str_to_string(tagged_ptr):
         nBytes = str_len
         shift_len = ((8-nBytes)*8)
         body = ((bits << shift_len) & INT_MAX) >> shift_len
-        return str(body.to_bytes(7, 'little').decode('utf-8'))
+        return str(body.to_bytes(str_len, 'little').decode('utf-8'))
     elif bits & STRING_LARGE_FLAG == 0:
         return string_ptr_to_string(tagged_ptr, str_len, 4)
     else:
