@@ -104,7 +104,7 @@ function traveseGraph(VerifyContext vc, BasicBlock[] blocks, Label label, boolea
         if insn.backward {
             if visited[insn.dest] {
                 insn = check terminator(vc, blocks[insn.dest], pos);
-                if insn is BranchInsn|CondBranchInsn {
+                if insn is BranchInsn|CondBranchInsn|TypeBranchInsn {
                     return;
                 }
             }
@@ -114,7 +114,7 @@ function traveseGraph(VerifyContext vc, BasicBlock[] blocks, Label label, boolea
             check traveseGraph(vc, blocks, insn.dest, visited, currentGraph, pos); 
         }
     }
-    else if insn is CondBranchInsn {
+    else if insn is CondBranchInsn|TypeBranchInsn {
         boolean[] curGraph = currentGraph.clone();
         check traveseGraph(vc, blocks, insn.ifFalse, visited, currentGraph, pos);
         check traveseGraph(vc, blocks, insn.ifTrue, visited, curGraph, pos);
