@@ -34,14 +34,14 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
         wasm:Expression operand1 = buildInt(module, insn.operands[0]);
         wasm:Expression operand2 = buildInt(module, insn.operands[1]);
         wasm:Expression operation = module.localSet(insn.result.number, module.binary(op, operand1, operand2));
-        // if ["i64.add", "i64.sub", "i64.mul", "i64.div_s"].indexOf(op) != () {
-        //     scaffold.addExceptionTag(OVERFLOW_TAG);
-        //     wasm:Expression? overflowCheck = checkOverflow(module, op, operand1, operand2);
-        //     if overflowCheck != () {
-        //         return module.block([overflowCheck, operation]);
-        //     }
-        //     return operation;
-        // }
+        if ["i64.add", "i64.sub", "i64.mul", "i64.div_s"].indexOf(op) != () {
+            scaffold.addExceptionTag(OVERFLOW_TAG);
+            wasm:Expression? overflowCheck = checkOverflow(module, op, operand1, operand2);
+            if overflowCheck != () {
+                return module.block([overflowCheck, operation]);
+            }
+            return operation;
+        }
         return operation;
     }
     panic error("unimplemented");

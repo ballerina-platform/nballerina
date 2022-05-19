@@ -45,6 +45,9 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
             hasType = module.binary("i32.and", module.binary("i64.le_s", module.addConst({ i64 : intConstraints.min }), value),
                 module.binary("i64.ge_s", module.addConst({ i64 : intConstraints.max }), value));
         }
+        else {
+            hasType = module.binary("i64.eq", module.localGet(operand.number), module.addConst( { i64: 0 }));
+        }
     }
     else if baseRepr == BASE_REPR_BOOLEAN {
         BASE_REPR_BOOLEAN _ = baseRepr;
@@ -64,6 +67,10 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
         return module.binary("i32.eq", module.call("get_type", [operand], "i32"), module.addConst({ i32: getTypeCode(semTypeRepr(semType)) }));
     }
     foreach var [code, subtype] in some {
+        if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:UT_TABLE_RW {
+            values.push(module.binary("i32.eq", module.call("get_type", [operand], "i32"), module.addConst({ i32: getTypeCode(semTypeRepr(semType)) })));
+            continue;
+        }
         match code {
             t:UT_STRING => {
                 t:StringSubtype sub = <t:StringSubtype>t:stringSubtype(subtype);
@@ -132,6 +139,14 @@ function getTypeCode(Repr repr) returns int {
     panic error("unimplemented typec code");
 }
 
+function getTypeString(TaggedRepr repr) returns string {
+    wasm:Type wasmType = repr.wasm;
+    if wasmType is wasm:ComplexRefType {
+        return wasmType.base;
+    }
+    return "eqref";
+}
+
 function buildNarrowReg(wasm:Module module, Scaffold scaffold, bir:NarrowRegister register) returns wasm:Expression {
     var sourceReg = register.underlying;
     var sourceRepr = scaffold.getRepr(sourceReg);
@@ -143,7 +158,7 @@ function buildNarrowReg(wasm:Module module, Scaffold scaffold, bir:NarrowRegiste
 function buildNarrowRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
     BaseRepr sourceBaseRepr = sourceRepr.base;
     BaseRepr targetBaseRepr = targetRepr.base;
-    if sourceBaseRepr == targetBaseRepr {
+    if sourceBaseRepr == targetBaseRepr && targetBaseRepr != BASE_REPR_TAGGED {
         return value;
     }
     if sourceBaseRepr == BASE_REPR_TAGGED {

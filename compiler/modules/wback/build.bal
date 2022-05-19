@@ -88,7 +88,7 @@ function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression ta
 }
 
 function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, string 'type) returns wasm:Expression {
-    return module.refCast(tagged, module.rtt('type));
+    return module.refCast(module.refAs("ref.as_data", tagged), module.globalGet("rtt" + 'type));
 }
 
 function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand operand) returns wasm:Expression {
@@ -100,12 +100,12 @@ function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand op
         op = module.localGet((<bir:Register>operand).number);
     }
     wasm:Expression asData = module.refAs("ref.as_data", op);
-    return module.refCast(asData, module.rtt(STRING_TYPE));
+    return module.refCast(asData, module.globalGet("rttString"));
 }
 
 function buildStringRef(wasm:Module module, wasm:Expression operand) returns wasm:Expression {
     wasm:Expression asData = module.refAs("ref.as_data", operand);
-    wasm:Expression cast = module.refCast(asData, module.rtt(STRING_TYPE));
+    wasm:Expression cast = module.refCast(asData, module.globalGet("rtt" + STRING_TYPE));
     return module.structGet(STRING_TYPE, "val", cast);
 }
 
@@ -136,7 +136,13 @@ function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression va
             return buildUntagBoolean(module, value);
         }
         BASE_REPR_TAGGED => {
-            return value;
+            string 'type = getTypeString(<TaggedRepr>targetRepr);
+            if 'type == "eqref" {
+                return value;
+            }
+            else {
+                return buildCast(module, scaffold, value, 'type);
+            }
         }
     }
     panic error("unreached in buildUntagged");
