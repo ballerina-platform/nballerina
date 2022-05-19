@@ -709,7 +709,10 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
             bir:NarrowRegister ifFalseRegister = cx.createNarrowRegister(clauseUnmatchedLooksLike[i], binding.reg, pos);
             bir:BasicBlock nextBlock;
             nextBlock = cx.createBasicBlock("gard." + i.toString());
-            if i + 1 != defaultClauseIndex {
+            if defaultClauseIndex != () && i + 1 != defaultClauseIndex {
+                openedRegions.push(cx.openRegion(nextBlock.label, bir:REGION_COND));
+            }
+            else if defaultClauseIndex == () && i + 1 != stmt.clauses.length() {
                 openedRegions.push(cx.openRegion(nextBlock.label, bir:REGION_COND));
             }
             bir:TypeBranchInsn typeBranch = {
@@ -750,7 +753,10 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
             }
             bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
             patternIndex += 1;
-            if patternIndex != defaultClauseIndex {
+            if defaultClauseIndex != () && patternIndex != defaultClauseIndex {
+                openedRegions.push(cx.openRegion(nextBlock.label, bir:REGION_COND));
+            }
+            else if defaultClauseIndex == () && patternIndex != stmt.clauses.length() {
                 openedRegions.push(cx.openRegion(nextBlock.label, bir:REGION_COND));
             }
             bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[clauseIndex].label, ifFalse: nextBlock.label, pos: mt.pos } ;
@@ -765,7 +771,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         s:MatchClause clause = stmt.clauses[index];
         bir:BasicBlock stmtBlock = clauseBlocks[index];
         Environment clauseEnv = env;
-        var { block: stmtBlockEnd, assignments: blockAssignments } = check codeGenScope(cx, stmtBlock, clauseEnv, clause.block, clauseBindings[clauseIndex]);
+        var { block: stmtBlockEnd, assignments: blockAssignments } = check codeGenScope(cx, stmtBlock, clauseEnv, clause.block, clauseBindings[index]);
         if stmtBlockEnd == () {
             continue;
         }
