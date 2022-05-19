@@ -81,18 +81,11 @@ type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 type Error err:Semantic|err:Internal;
 
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb, boolean[] tmpRegisterUsed) returns Error? {
-    
     foreach Insn insn in bb.insns {
         check verifyInsn(vc, insn);
         check verifyInsnRegisterKinds(vc, insn, tmpRegisterUsed);
     }
 }
-
-type MultipleOperandInsn IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|FloatArithmeticBinaryInsn
-    |DecimalArithmeticBinaryInsn|CompareInsn|ListConstructInsn|ListGetInsn|MappingConstructInsn
-    |MappingGetInsn|StringConcatInsn|EqualityInsn|TypeMergeInsn;
-
-type ResultInsn readonly & record { *ResultInsnBase; };
 
 function verifyInsnRegisterKinds(VerifyContext vc, Insn insn, boolean[] tmpRegisterUsed) returns Error? {
     if insn is ResultInsnBase {
@@ -117,15 +110,19 @@ function verifyInsnRegisterKinds(VerifyContext vc, Insn insn, boolean[] tmpRegis
         check verifyRegisterKind(vc, insn.operands[1], tmpRegisterUsed);
         check verifyRegisterKind(vc, insn.operands[2], tmpRegisterUsed);
     }
-    else if insn is MultipleOperandInsn {
-        // JBUG #35557 can't iterate insn.operands
-        Operand[] operands = insn.operands;
-        foreach Operand op in operands {
-            check verifyRegisterKind(vc, op, tmpRegisterUsed);
-        }
-    }
     else {
-        check verifyRegisterKind(vc, insn.operand, tmpRegisterUsed);
+        match insn {
+            var { operand } => {
+                check verifyRegisterKind(vc, operand, tmpRegisterUsed);
+            }
+            var { operands } => {
+                // JBUG #35557 can't iterate operands
+                Operand[] ops = operands;
+                foreach Operand op in ops {
+                    check verifyRegisterKind(vc, op, tmpRegisterUsed);
+                }
+            }
+        }
     }
 }
 
