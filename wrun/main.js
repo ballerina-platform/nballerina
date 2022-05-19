@@ -4,12 +4,9 @@ let getType = null;
 let untagInt = null;
 let untagBoolean = null;
 let len = null;
-let strLen = null;
 let arrayGet = null;
-let getCharAt = null;
 let getTypeChildren = null;
 let getObject = null;
-let getMap = null;
 let mem = null;
 let bal_map_get_keys = null
 let bal_mapping_get = null
@@ -191,29 +188,12 @@ const getValue = (ref, parent = null) => {
 }
 
 const hash_string = (str) => {
-  let result = 0;
-  for (let i = 0; i < str.length; ++i) {
-    // Normalize to 4 byte range, 0 ... 2^32.
-    result = (31 * result + str.charCodeAt(i)) >>> 0;
+  var hash = 5381,
+  i    = str.length;
+  while(i) {
+    hash = (hash * 33) ^ (2654435761 * str.charCodeAt(--i));
   }
-  return result;
-}
-
-const create_map = () => {
-  return new Map();
-}
-
-const set_map = (map, key, val) => {
-  map.set(key, val);
-}
-
-const get_map = (map, key) => {
-  if (map.has(key)) {
-    return map.get(key);
-  }
-  else {
-    return null;
-  }
+  return hash >>> 0;
 }
 
 const errorHandler = err => {

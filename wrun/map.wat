@@ -188,6 +188,46 @@
               (local.get $5)
               (i32.const 1))))
         (br $loop))))
+  ;; $_bal_map_insert_init
+  (func $_bal_map_insert_init (param $0 (ref $Map)) (param $1 eqref) (param $2 i32) (param $3 i32) ;;map, key, hash, index in fArray ;; tableLength
+    (local $4 i32)
+    (local $5 i32)
+    (local $6 i32)
+    (local $7 i32)
+    (local.set $4
+      (i32.sub
+        (i32.shl
+          (i32.const 1)
+          (struct.get $Map $tableLengthShift
+            (local.get $0)))
+        (i32.const 1)))
+    (local.set $5
+      (i32.and  
+        (local.get $2)
+        (local.get $4)))
+    (block $loop$br
+      (loop $loop
+        (local.set $6
+          (call $_bal_map_replace
+            (struct.get $Map $table ;;Hashtable
+              (local.get $0))
+            (local.get $5) ;; index to check
+            (local.get $3))) ;; index in fArray
+        (if 
+          (i32.eq 
+            (local.get $6)
+            (i32.const -1))
+          (br $loop$br))
+        (if 
+          (i32.eqz
+            (local.get $5))
+          (local.set $5
+            (local.get $4))
+          (local.set $5
+            (i32.sub
+              (local.get $5)
+              (i32.const 1))))
+        (br $loop))))
   ;; $_bal_mapping_set
   (func $_bal_mapping_set (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
     (local $3 (ref null $MapFields))
@@ -235,7 +275,7 @@
               (i32.const 1))))
         (if
           (i32.ge_u
-            (local.get $5)
+            (local.get $4)
             (local.get $6))
           (block
             (struct.set $Map $tableLengthShift
@@ -299,7 +339,7 @@
                 (ref.as_non_null
                   (local.get $3))
                 (local.get $5))))
-          (call $_bal_map_insert 
+          (call $_bal_map_insert_init 
             (local.get $0)
             (local.get $6)
             (call $get_string_hash
