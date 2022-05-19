@@ -17,9 +17,18 @@ TAG_INT = 0x07
 TAG_FLOAT = 0x08
 TAG_STRING = 0x0A
 TAG_ERROR = 0x0B
+TAG_LIST_RW = 0x12
+
 INT_MAX = (2**64) -1
 
 STRING_LARGE_FLAG = 1
+
+i32 = gdb.lookup_type("long")
+i64 = gdb.lookup_type("long long")
+f64 = gdb.lookup_type("double")
+u8 = gdb.lookup_type("unsigned char")
+
+# use either camel case or snake case
 
 def extract_ptr(bits):
     ptr_body = bits & POINTER_MASK
@@ -37,53 +46,106 @@ class TaggedPrinter:
         self.val = val
 
     def to_string(self):
-        ptr_val = int(self.val)
+        return self.tagged_ptr_to_string(self.val)
+
+    def tagged_ptr_to_string(self, tagged_ptr):
+        ptr_val = int(tagged_ptr)
         ptr_body = ptr_val & POINTER_MASK
-        tag = self.get_tag() & UT_MASK
+        tag = self.get_tag(tagged_ptr) & UT_MASK
         new_ptr = (ptr_body & ALIGN_MASK)
         if tag == TAG_NIL:
             return "()"
         if tag == TAG_INT:
             if is_immediate(ptr_val):
                 return str(ptr_body)
-            long_ty = gdb.lookup_type("long")
-            new_val = gdb.Value(new_ptr).cast(long_ty.pointer()).dereference()
+            new_val = gdb.Value(new_ptr).cast(i64.pointer()).dereference()
             return str(int(new_val))
         if tag == TAG_FLOAT:
-            double_ty = gdb.lookup_type("double")
-            new_val = gdb.Value(new_ptr).cast(double_ty.pointer()).dereference()
+            new_val = gdb.Value(new_ptr).cast(f64.pointer()).dereference()
             float_val = float(new_val)
             return float_to_string(float_val)
         if tag == TAG_BOOLEAN:
-            return str(bool(ptr_body))
+            return str(bool(ptr_body)).lower()
         if tag == TAG_STRING:
-            return tagged_str_to_string(self.val)
+            return self.tagged_str_to_string(tagged_ptr)
         if tag == TAG_ERROR:
-            return "error(" + error_to_string(self.val) + ")"
+            return self.error_to_string(tagged_ptr)
+        if tag == TAG_LIST_RW:
+            return self.list_to_string(tagged_ptr)
         raise Exception("Unimplemented tag")
 
-    def get_tag(self):
-        pointer = int(self.val)
+    # pr-todo: see if we can turn this in to seperate elements
+    def list_to_string(self, tagged_ptr):
+        body = ["["]
+        data = list_data(tagged_ptr)
+        print(data["restType"])
+        for i in range(data["length"]):
+            if i > 0:
+                body.append(", ")
+            body.append(str(self.get_list_element(data, i)))
+        body.append("]")
+        return "".join(body)
+
+    def error_to_string(self, tagged_ptr):
+        bits = int(tagged_ptr)
+        err_ptr = gdb.Value(extract_ptr(bits)).cast(i64.pointer());
+        return "error(" + self.tagged_str_to_string(err_ptr.dereference()) + ")"
+
+    def tagged_str_to_string(self, tagged_ptr):
+        str_len = string_len(tagged_ptr)
+        bits = int(tagged_ptr)
+        if is_immediate(bits):
+            nBytes = str_len
+            shift_len = ((8-nBytes)*8)
+            body = ((bits << shift_len) & INT_MAX) >> shift_len
+            return '"' + str(body.to_bytes(str_len, 'little').decode('utf-8')) + '"'
+        elif bits & STRING_LARGE_FLAG == 0:
+            return '"' + string_ptr_to_string(tagged_ptr, str_len, 4) + '"'
+        else:
+            return '"' + string_ptr_to_string(tagged_ptr, str_len, 16) + '"'
+
+    def get_list_element(self, list_data, index):
+        restType = list_data["restType"]
+        array_ptr = list_data["array_ptr"]
+        ptr = array_ptr + (index * 8)
+        # derive this
+        if restType == 257:
+            # int[]
+            return int(gdb.Value(ptr).cast(i64.pointer()).dereference())
+        if restType == 513:
+            # float[]
+            return float(gdb.Value(ptr).cast(f64.pointer()).dereference())
+        if restType == 4338136:
+            # byte[]
+            ptr = array_ptr + index
+            return int(gdb.Value(ptr).cast(u8.pointer()).dereference())
+        else:
+            # any[]
+            tagged_ptr = int(gdb.Value(ptr).cast(i64.pointer()).dereference())
+            return self.tagged_ptr_to_string(tagged_ptr)
+
+    def get_tag(self, tagged_ptr):
+        pointer = int(tagged_ptr)
         return (pointer >> TAG_SHIFT) & TAG_MASK
 
-def error_to_string(tagged_ptr):
+# pr-todo: remove unwanted data
+def list_data(tagged_ptr):
     bits = int(tagged_ptr)
-    err_ptr = gdb.Value(extract_ptr(bits)).cast(gdb.lookup_type("long").pointer());
-    return tagged_str_to_string(err_ptr.dereference())
+    ptr = extract_ptr(bits)
+    data_ptr = int(gdb.Value(ptr).cast(i64.pointer()).dereference())
 
-def tagged_str_to_string(tagged_ptr):
-    str_len = string_len(tagged_ptr)
-    bits = int(tagged_ptr)
-    if is_immediate(bits):
-        nBytes = str_len
-        shift_len = ((8-nBytes)*8)
-        body = ((bits << shift_len) & INT_MAX) >> shift_len
-        return str(body.to_bytes(str_len, 'little').decode('utf-8'))
-    elif bits & STRING_LARGE_FLAG == 0:
-        return string_ptr_to_string(tagged_ptr, str_len, 4)
-    else:
-        return string_ptr_to_string(tagged_ptr, str_len, 16)
+    # pr-todo: why is this 0
+    tid = int(gdb.Value(data_ptr).cast(i32.pointer()).dereference())
+    nMemberTypes = int(gdb.Value(data_ptr + 4).cast(i32.pointer()).dereference())
+    minLength = int(gdb.Value(data_ptr + 8).cast(i64.pointer()).dereference())
+    restType = int(gdb.Value(data_ptr + 88).cast(i64.pointer()).dereference())
 
+    length = int(gdb.Value(ptr + 8).cast(i64.pointer()).dereference())
+    capacity = int(gdb.Value(ptr + 16).cast(i64.pointer()).dereference())
+    array_ptr = int(gdb.Value(ptr + 24).cast(i64.pointer()).dereference())
+    return { "tid": tid, "nMemberTypes": nMemberTypes, "minLength": minLength, "restType": restType, "length": length, "capacity": capacity, "array_ptr": array_ptr }
+
+# may be we can create a string type and wrap these in that class
 def string_len(tagged_ptr):
     bits = int(tagged_ptr)
     new_ptr = extract_ptr(bits)
@@ -91,12 +153,10 @@ def string_len(tagged_ptr):
         return immediate_string_len(bits)
     elif bits & STRING_LARGE_FLAG == 0:
         # medium string
-        int_ty = gdb.lookup_type("int")
-        header = gdb.Value(new_ptr).cast(int_ty.pointer()).dereference()
+        header = gdb.Value(new_ptr).cast(i32.pointer()).dereference()
         return header & 0xFFFF
     else:
-        long_ty = gdb.lookup_type("long")
-        header = gdb.Value(new_ptr).cast(long_ty.pointer()).dereference()
+        header = gdb.Value(new_ptr).cast(i64.pointer()).dereference()
         return header
 
 def immediate_string_len(bits):
@@ -112,8 +172,7 @@ def immediate_string_len(bits):
 def string_ptr_to_string(tagged_ptr, length, header_size):
     bits = int(tagged_ptr)
     new_ptr = extract_ptr(bits)
-    char_ty = gdb.lookup_type("unsigned char")
-    ptr = gdb.Value(new_ptr).cast(char_ty.pointer()) + header_size
+    ptr = gdb.Value(new_ptr).cast(u8.pointer()) + header_size
     value = int(ptr.dereference())
     for _ in range(1, length):
         ptr = ptr + 1
