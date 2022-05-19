@@ -20,5 +20,31 @@
         (rtt.canon $Surrogate))
       (i32.const -1) 
       (global.get $rttString)))
+  ;; $check_type_and_int_val
+  (func $check_type_and_int_val (param $0 eqref) (param $1 i64) (result i32)
+    (local $2 (ref null $BoxedInt)) 
+    (local $3 i32) 
+    (local.set $3
+      (i32.const 0)) 
+    (if 
+      (ref.is_data
+        (local.get $0))
+      (drop
+        (block $cast-fail (result (ref null any))
+          (local.set $2
+            (br_on_cast_fail $cast-fail 
+              (ref.as_data
+                (local.get $0)) 
+              (global.get $rttBoxedInt)))
+          (if
+            (i64.eq
+              (struct.get $BoxedInt $val
+                (local.get $2))
+              (local.get $1))
+            (local.set $3
+              (i32.const 1)))
+          (ref.null any))))
+    (return
+      (local.get $3))) 
   ;; end
   ) 

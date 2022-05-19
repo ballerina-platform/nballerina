@@ -142,5 +142,38 @@
               (global.get $rttList))))) 
       (return 
         (local.get $1))))
+  ;; $check_type_and_string_val
+  (func $check_type_and_string_val (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 (ref null $String)) 
+    (local $3 (ref null $String)) 
+    (local $4 i32) 
+    (local.set $4
+      (i32.const 0)) 
+    (if 
+      (ref.is_data
+        (local.get $0))
+      (drop
+        (block $cast-fail (result (ref null any))
+          (local.set $2
+            (br_on_cast_fail $cast-fail 
+              (ref.as_data
+                (local.get $0)) 
+              (global.get $rttString)))
+          (local.set $3
+            (ref.cast
+              (ref.as_data
+                (local.get $1))
+              (global.get $rttString)))
+          (if
+            (call $str_eq
+              (struct.get $String $val
+                (local.get $2))
+              (struct.get $String $val
+                (local.get $3)))
+            (local.set $4
+              (i32.const 1)))
+          (ref.null any))))
+    (return
+      (local.get $4))) 
   ;; end
   ) 

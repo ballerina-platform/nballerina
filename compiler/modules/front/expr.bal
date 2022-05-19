@@ -784,7 +784,7 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
         [TypeMerger?, TypeMerger?, TypeMerger] [trueMerger, falseMerger, rhsMerger] = isOr ? [lhsTrueMerger, (), lhsFalseMerger] : [(), lhsFalseMerger, lhsTrueMerger];
         // When switching from a chain of && to chain of || or vice versa we may need a type merge insn
         var { bindings: rhsBindings } = codeGenTypeMergeFromMerger(cx, rhsMerger, pos);
-        ExprContext rhsCx = rhsBindings != () ? check cx.exprContextWithBindings(rhsBindings) : cx;
+        ExprContext rhsCx = rhsBindings != () ? cx.exprContextWithBindings(rhsBindings) : cx;
         return codeGenExprForCond(rhsCx, rhsMerger.dest, right, { trueMerger, falseMerger });
     }
 }

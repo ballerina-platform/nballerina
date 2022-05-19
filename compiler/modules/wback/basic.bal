@@ -123,21 +123,6 @@ function buildAssign(wasm:Module module, Scaffold scaffold, bir:AssignInsn insn)
     return module.localSet(insn.result.number, buildWideRepr(module, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType));
 }
 
-function buildTypeBranch(wasm:Module module, Scaffold scaffold, bir:TypeBranchInsn insn) returns wasm:Expression {
-    Repr repr = scaffold.getRepr(insn.operand);
-    if repr is UniformRepr {
-        if repr.wasm == "i64" {
-            t:IntSubtypeConstraints? intConstraints = t:intSubtypeConstraints(insn.semType);
-            int val = 0;
-            if intConstraints != () {
-                val = intConstraints.max;
-            }
-            return module.binary("i64.eq", module.localGet(insn.operand.number), module.addConst( { i64: val }));
-        }
-    }
-    return module.localGet(insn.operand.number);
-}
-
 function buildBooleanNotInsn(wasm:Module module, bir:BooleanNotInsn insn) returns wasm:Expression {
     return module.localSet(insn.result.number, module.binary("i32.xor", module.localGet(insn.operand.number), module.addConst({ i32: 1 })));
 }

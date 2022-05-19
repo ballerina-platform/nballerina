@@ -127,6 +127,21 @@ function buildSurrogateArray(string val) returns int[] {
     return surrogate;
 }
 
+function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
+    match targetRepr.base {
+        BASE_REPR_INT => {
+            return buildUntagInt(module, scaffold, value);
+        }
+        BASE_REPR_BOOLEAN => {
+            return buildUntagBoolean(module, value);
+        }
+        BASE_REPR_TAGGED => {
+            return value;
+        }
+    }
+    panic error("unreached in buildUntagged");
+}
+
 function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
     var { name, returnType } = getTypeFunction;
     wasm:Expression taggedType = module.call(name, [tagged], returnType);

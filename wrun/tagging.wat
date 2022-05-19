@@ -63,6 +63,39 @@
         (i32.const 4)) 
       (return 
         (call $get_type 
-          (local.get $1))))) 
+          (local.get $1)))))
+  ;; $check_type_and_boolean_val
+  (func $check_type_and_boolean_val (param $0 eqref) (param $1 i32) (result i32)
+    (local $2 i32) 
+    (local.set $2
+      (i32.const 0)) 
+    (if 
+      (ref.is_i31
+        (local.get $0))
+      (if
+        (i32.eq
+          (i31.get_u
+            (ref.as_i31
+              (local.get $0)))
+          (local.get $1))
+        (local.set $2
+          (i32.const 1))))
+    (return 
+      (local.get $2)))
+  ;; $check_type_and_nil_val
+  (func $check_type_and_nil_val (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 i32) 
+    (local.set $2
+      (i32.const 0)) 
+    (if 
+      (i32.and
+        (ref.is_null
+          (local.get $0))
+        (ref.is_null
+          (local.get $1)))
+      (local.set $2
+        (i32.const 1)))
+    (return 
+      (local.get $2)))  
   ;; end
 ) 
