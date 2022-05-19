@@ -67,12 +67,12 @@ class VerifyContext {
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
     VerifyContext cx = new(mod, defn);
-    boolean[] tmpRegisterInit = [];
+    boolean[] tmpRegisterInitialized = [];
     if code.registers.length() > 0 {
-        tmpRegisterInit[code.registers.length() - 1] = false;
+        tmpRegisterInitialized[code.registers.length() - 1] = false;
     }
     foreach BasicBlock b in code.blocks {
-        check verifyBasicBlock(cx, b, tmpRegisterInit);
+        check verifyBasicBlock(cx, b, tmpRegisterInitialized);
     }
 }
 
@@ -80,39 +80,39 @@ type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
 type Error err:Semantic|err:Internal;
 
-function verifyBasicBlock(VerifyContext vc, BasicBlock bb, boolean[] tmpRegisterInit) returns Error? {
+function verifyBasicBlock(VerifyContext vc, BasicBlock bb, boolean[] tmpRegisterInitialized) returns Error? {
     foreach Insn insn in bb.insns {
         check verifyInsn(vc, insn);
-        check verifyInsnRegisterKinds(vc, insn, tmpRegisterInit);
+        check verifyTmpRegisters(vc, insn, tmpRegisterInitialized);
     }
 }
 
-function verifyInsnRegisterKinds(VerifyContext vc, Insn insn, boolean[] tmpRegisterInit) returns Error? {
+function verifyTmpRegisters(VerifyContext vc, Insn insn, boolean[] tmpRegisterInitialized) returns Error? {
     if insn is ResultInsnBase {
-        if tmpRegisterInit[insn.result.number] {
+        if tmpRegisterInitialized[insn.result.number] {
             return vc.invalidErr("multiple assignments to a tmp register", insn.pos);
         }
         else {
-            tmpRegisterInit[insn.result.number] = true;
+            tmpRegisterInitialized[insn.result.number] = true;
         }
     }
 
     match insn {
         var { operand } => {
-            check verifyTmpOprandInitialized(vc, operand, tmpRegisterInit, insn.pos);
+            check verifyTmpOperandInitialized(vc, operand, tmpRegisterInitialized, insn.pos);
         }
         var { operands } | var { args: operands } => {
             // JBUG #35557 can't iterate operands
             Operand[] ops = operands;
             foreach Operand op in ops {
-                check verifyTmpOprandInitialized(vc, op, tmpRegisterInit, insn.pos);
+                check verifyTmpOperandInitialized(vc, op, tmpRegisterInitialized, insn.pos);
             }
         }
     }
 }
 
-function verifyTmpOprandInitialized(VerifyContext vc, Operand r, boolean[] tmpRegisterInit, Position pos) returns Error? {
-    if r is TmpRegister && !tmpRegisterInit[r.number] {
+function verifyTmpOperandInitialized(VerifyContext vc, Operand r, boolean[] tmpRegisterInitialized, Position pos) returns Error? {
+    if r is TmpRegister && !tmpRegisterInitialized[r.number] {
         return vc.invalidErr("tmp register not initialized", pos);
     }
 }
