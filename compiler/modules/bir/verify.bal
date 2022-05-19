@@ -101,15 +101,9 @@ function verifyInsnRegisterKinds(VerifyContext vc, Insn insn, boolean[] tmpRegis
         var { operand } => {
             check verifyRegisterKind(vc, operand, tmpRegisterUsed, insn.pos);
         }
-        var { operands } => {
+        var { operands } | var { args: operands } => {
             // JBUG #35557 can't iterate operands
             Operand[] ops = operands;
-            foreach Operand op in ops {
-                check verifyRegisterKind(vc, op, tmpRegisterUsed, insn.pos);
-            }
-        }
-        var { args } => {
-            Operand[] ops = args;
             foreach Operand op in ops {
                 check verifyRegisterKind(vc, op, tmpRegisterUsed, insn.pos);
             }
