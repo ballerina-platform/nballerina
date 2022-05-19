@@ -11,7 +11,7 @@ class VerifyContext {
     private final t:Context tc;
     private final FunctionDefn defn;
 
-    function init(Module mod, FunctionDefn defn, FunctionCode code) {
+    function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
         t:Context tc  = mod.getTypeContext();
         self.tc = tc;
@@ -66,7 +66,7 @@ class VerifyContext {
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
-    VerifyContext cx = new(mod, defn, code);
+    VerifyContext cx = new(mod, defn);
     boolean[] tmpRegisterUsed = [];
     if code.registers.length() > 0 {
         tmpRegisterUsed[code.registers.length() - 1] = false;
