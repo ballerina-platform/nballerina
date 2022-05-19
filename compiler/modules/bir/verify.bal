@@ -97,25 +97,21 @@ function verifyInsnRegisterKinds(VerifyContext vc, Insn insn, boolean[] tmpRegis
         }
     }
 
-    if insn is BranchInsn|CatchInsn {
-        return;
-    }
-    else if insn is CallInsn {
-        foreach Operand arg in insn.args {
-            check verifyRegisterKind(vc, arg, tmpRegisterUsed, insn.pos);
+    match insn {
+        var { operand } => {
+            check verifyRegisterKind(vc, operand, tmpRegisterUsed, insn.pos);
         }
-    }
-    else {
-        match insn {
-            var { operand } => {
-                check verifyRegisterKind(vc, operand, tmpRegisterUsed, insn.pos);
+        var { operands } => {
+            // JBUG #35557 can't iterate operands
+            Operand[] ops = operands;
+            foreach Operand op in ops {
+                check verifyRegisterKind(vc, op, tmpRegisterUsed, insn.pos);
             }
-            var { operands } => {
-                // JBUG #35557 can't iterate operands
-                Operand[] ops = operands;
-                foreach Operand op in ops {
-                    check verifyRegisterKind(vc, op, tmpRegisterUsed, insn.pos);
-                }
+        }
+        var { args } => {
+            Operand[] ops = args;
+            foreach Operand op in ops {
+                check verifyRegisterKind(vc, op, tmpRegisterUsed, insn.pos);
             }
         }
     }
