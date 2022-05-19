@@ -90,7 +90,7 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb, boolean[] tmpRegister
 function verifyInsnRegisterKinds(VerifyContext vc, Insn insn, boolean[] tmpRegisterUsed) returns Error? {
     if insn is ResultInsnBase {
         if tmpRegisterUsed[insn.result.number] {
-            return vc.invalidErr("tmp register defined in multiple places", <Position>insn.result.pos);
+            return vc.invalidErr("tmp register defined in multiple places", insn.pos);
         }
         else {
             tmpRegisterUsed[insn.result.number] = true;
@@ -102,49 +102,33 @@ function verifyInsnRegisterKinds(VerifyContext vc, Insn insn, boolean[] tmpRegis
     }
     else if insn is CallInsn {
         foreach Operand arg in insn.args {
-            check verifyRegisterKind(vc, arg, tmpRegisterUsed);
+            check verifyRegisterKind(vc, arg, tmpRegisterUsed, insn.pos);
         }
-    }
-    else if insn is ListSetInsn|MappingSetInsn {
-        check verifyNonFinalRegisterKind(vc, insn.operands[0], tmpRegisterUsed);
-        check verifyRegisterKind(vc, insn.operands[1], tmpRegisterUsed);
-        check verifyRegisterKind(vc, insn.operands[2], tmpRegisterUsed);
     }
     else {
         match insn {
             var { operand } => {
-                check verifyRegisterKind(vc, operand, tmpRegisterUsed);
+                check verifyRegisterKind(vc, operand, tmpRegisterUsed, insn.pos);
             }
             var { operands } => {
                 // JBUG #35557 can't iterate operands
                 Operand[] ops = operands;
                 foreach Operand op in ops {
-                    check verifyRegisterKind(vc, op, tmpRegisterUsed);
+                    check verifyRegisterKind(vc, op, tmpRegisterUsed, insn.pos);
                 }
             }
         }
     }
 }
 
-function verifyNonFinalRegisterKind(VerifyContext vc, Operand r, boolean[] tmpRegisterUsed) returns Error? {
-    if r is FinalRegister {
-        return vc.invalidErr("invalid register kind final for insn: " + r.kind, <Position>r.pos);
-    }
-    check verifyRegisterKind(vc, r, tmpRegisterUsed);
-}
-
-function verifyRegisterKind(VerifyContext vc, Operand r, boolean[] tmpRegisterUsed) returns Error? {
+function verifyRegisterKind(VerifyContext vc, Operand r, boolean[] tmpRegisterUsed, Position pos) returns Error? {
     if r is TmpRegister && !tmpRegisterUsed[r.number] {
-        return vc.invalidErr("tmp register not initialized", <Position>r.pos);
+        return vc.invalidErr("tmp register not initialized", pos);
     }
 }
 
 function verifyNarrowRegister(VerifyContext vc, NarrowRegister r) returns Error? {
-    Register narrowed = r.underlying;
-    // while narrowed is NarrowRegister {
-    //     narrowed = narrowed.underlying;
-    // }
-    if !t:isSubtype(vc.typeContext(), r.semType, narrowed.semType) {
+    if !t:isSubtype(vc.typeContext(), r.semType, r.underlying.semType) {
         return vc.invalidErr("narrow register is not a subtype of narrowed register", <Position>r.pos);
     }
 }
@@ -300,6 +284,9 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns Error? {
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.semanticErr("list set applied to non-list", insn.pos);
     }
+    if insn.operands[0] is FinalRegister {
+        return vc.invalidErr("invalid register kind final for ListSetInsn", insn.pos);
+    }
     t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type", insn.pos);
 }
@@ -324,6 +311,9 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns Error? 
     check validOperandString(vc, insn.name, keyOperand, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping set applied to non-mapping", insn.pos);
+    }
+    if insn.operands[0] is FinalRegister {
+        return vc.invalidErr("invalid register kind final for MappingSetInsn", insn.pos);
     }
     t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type", insn.pos);
