@@ -2,12 +2,14 @@ import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
 import wso2/nballerina.types as t;
 
-const WASM_INT = "i64";
 const WASM_BOOLEAN = "i32";
+const WASM_INT = "i64";
+const WASM_FLOAT = "f64";
 const WASM_VOID = "None";
 
 enum UniformBaseRepr {
     BASE_REPR_INT,
+    BASE_REPR_FLOAT,
     BASE_REPR_BOOLEAN
 }
 
@@ -28,7 +30,25 @@ type TaggedRepr readonly & record {|
     wasm:Type wasm;
 |};
 
-type Repr UniformRepr|TaggedRepr;
+// Maps boolean to i32
+type BooleanRepr readonly & record {|
+    BASE_REPR_BOOLEAN base = BASE_REPR_BOOLEAN;
+    wasm:Type wasm = WASM_BOOLEAN;
+|};
+
+// Maps int to i64
+type IntRepr readonly & record {|
+    BASE_REPR_INT base = BASE_REPR_INT;
+    wasm:Type wasm = WASM_INT;
+|};
+
+// Maps float to f64
+type FloatRepr readonly & record {|
+    BASE_REPR_FLOAT base = BASE_REPR_FLOAT;
+    wasm:Type wasm = WASM_FLOAT;
+|};
+
+type Repr BooleanRepr|IntRepr|FloatRepr|TaggedRepr;
 
 type VoidRepr readonly & record {|
     BASE_REPR_VOID base;
@@ -116,8 +136,10 @@ class Scaffold {
 
 }
 
-final Repr REPR_INT = { base: BASE_REPR_INT, wasm: WASM_INT };
-final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, wasm: WASM_BOOLEAN };
+final IntRepr REPR_INT = { };
+final BooleanRepr REPR_BOOLEAN = { };
+final FloatRepr REPR_FLOAT = { };
+
 final TaggedRepr REPR_STRING = { base: BASE_REPR_TAGGED, wasm: "eqref", subtype: t:STRING };
 final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, wasm: "eqref", subtype: t:NIL };
 final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, wasm: "eqref" , subtype: t:ANY };
@@ -131,6 +153,7 @@ final readonly & record {|
     t:UniformTypeBitSet domain;
     Repr repr;
 |}[] typeReprs = [
+    { domain: t:FLOAT, repr: REPR_FLOAT },
     { domain: t:INT, repr: REPR_INT },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },

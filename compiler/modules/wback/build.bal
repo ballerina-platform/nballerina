@@ -8,6 +8,7 @@ const int TYPE_NIL     = 2;
 const int TYPE_LIST    = 3;
 const int TYPE_STRING  = 5;
 const int TYPE_MAP     = 6;
+const int TYPE_FLOAT   = 8;
 const int SELF_REFERENCE = 4;
 const int INITIAL_CAPACITY = 4;
 const int MAX_CAPACITY = 4294967295;
@@ -19,6 +20,7 @@ const RuntimeType MAP_TYPE = "Map";
 const RuntimeType ANY_ARR_TYPE = "AnyList";
 const RuntimeType STRING_TYPE = "String";
 const RuntimeType ANY_TYPE = "Any";
+const RuntimeType FLOAT_TYPE = "Float";
 
 public type ExceptionTag string;
 const ExceptionTag OVERFLOW_TAG = "overflow";
@@ -39,6 +41,11 @@ final RuntimeFunction taggedToIntFunction = {
 final RuntimeFunction taggedToBooleanFunction = {
     name: "tagged_to_boolean",
     returnType: "i32"
+};
+
+final RuntimeFunction taggedToFloatFunction = {
+    name: "tagged_to_float",
+    returnType: "f64"
 };
 
 final RuntimeFunction getTypeFunction = {
@@ -82,8 +89,22 @@ function buildTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Expression v
     return module.structNew(BOXED_INT_TYPE, [module.addConst({ i32: TYPE_INT }), value]);
 }
 
+function buildTaggedFloat(wasm:Module module, Scaffold scaffold, wasm:Expression value) returns wasm:Expression {
+    return module.structNew(FLOAT_TYPE, [module.addConst({ i32: TYPE_FLOAT }), value]);
+}
+
 function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
     var { name, returnType } = taggedToIntFunction;
+    return module.call(name, [tagged], returnType);
+}
+
+function buildUntagBoolean(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
+    var { name, returnType } = taggedToBooleanFunction;
+    return module.call(name, [tagged], returnType);
+}
+
+function buildUntagFloat(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
+    var { name, returnType } = taggedToFloatFunction;
     return module.call(name, [tagged], returnType);
 }
 
@@ -134,6 +155,9 @@ function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression va
         }
         BASE_REPR_BOOLEAN => {
             return buildUntagBoolean(module, value);
+        }
+        BASE_REPR_FLOAT => {
+            return buildUntagFloat(module, value);
         }
         BASE_REPR_TAGGED => {
             string 'type = getTypeString(<TaggedRepr>targetRepr);
@@ -218,7 +242,3 @@ function buildConvertRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr
     panic error("unimplemented conversion required");
 }
 
-function buildUntagBoolean(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
-    var { name, returnType } = taggedToBooleanFunction;
-    return module.call(name, [tagged], returnType);
-}

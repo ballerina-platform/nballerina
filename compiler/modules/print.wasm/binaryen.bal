@@ -37,7 +37,11 @@ public type LiteralInt64 record {
     int i64;
 };
 
-public type Literal LiteralInt32|LiteralInt64;
+public type LiteralFloat64 record {
+    float f64;
+};
+
+public type Literal LiteralInt32|LiteralInt64|LiteralFloat64;
 public type Wat string;
 public type Section "type"|"import"|"function"|"table"|"memory"|"tag"|"global"|"export"|"start"|"element"|"code"|"data";
 
@@ -72,6 +76,9 @@ public class Module {
         }
         else if value is LiteralInt64 {
             return { tokens: appendBraces(["i64.const", value.i64.toString()]) };
+        }
+        else if value is LiteralFloat64 {
+            return { tokens: appendBraces(["f64.const", value.f64.toString()]) };
         }
         panic error("invalid type");
     }
