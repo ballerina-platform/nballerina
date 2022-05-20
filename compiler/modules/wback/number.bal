@@ -12,7 +12,10 @@ final readonly & map<wasm:Op> signedInt64ArithmeticOps = {
 final readonly & map<wasm:Op> signedInt64BitwiseOps = {
     "|": "i64.or",
     "^": "i64.xor",
-    "&": "i64.and"
+    "&": "i64.and",
+    ">>>": "i64.shr_s",
+    ">>": "i64.shr_u",
+    "<<": "i64.shl"
 };
 
 final RuntimeModule numberMod = "number";

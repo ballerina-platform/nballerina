@@ -9,7 +9,7 @@ final readonly & map<wasm:Op> signedInt32CompareOps = {
     ">=": "i32.ge_s"
 };
 
-final readonly & map<bir:OrderOp> flipped32OrderOps = {
+final readonly & map<bir:OrderOp> flippedOrderOps = {
     ">=": "<=",
     ">" : "<",
     "<=": ">=",
@@ -23,6 +23,15 @@ final readonly & map<wasm:Op> signedInt64CompareOps = {
     ">=": "i64.ge_s",
     "==": "i64.eq",
     "!=": "i64.ne"
+};
+
+final readonly & map<wasm:Op> floatCompareOps = {
+    "<": "f64.lt",
+    "<=": "f64.le",
+    ">": "f64.gt",
+    ">=": "f64.ge",
+    "==": "f64.eq",
+    "!=": "f64.ne"
 };
 
 const COMPARE_LT = 0;
@@ -56,19 +65,28 @@ function buildCompare(wasm:Module module, Scaffold scaffold, bir:CompareInsn ins
                 return buildCompareTaggedInt(module, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             [BASE_REPR_INT, BASE_REPR_TAGGED] => {
-                return buildCompareTaggedInt(module, scaffold, buildIntCompareOp(flipped32OrderOps.get(insn.op)), rhsValue, lhsValue, result);
+                return buildCompareTaggedInt(module, scaffold, buildIntCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
             }
             [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
                 return buildCompareTaggedBoolean(module, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             [BASE_REPR_BOOLEAN, BASE_REPR_TAGGED] => {
-                return buildCompareTaggedBoolean(module, scaffold, buildBooleanCompareOp(flipped32OrderOps.get(insn.op)), rhsValue, lhsValue, result);
+                return buildCompareTaggedBoolean(module, scaffold, buildBooleanCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
             }
             [BASE_REPR_INT, BASE_REPR_INT] => {
                 return buildCompareInt(module, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN] => {
                 return buildCompareInt(module, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
+                return buildCompareTaggedFloat(module, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
+                return buildCompareTaggedFloat(module, scaffold, buildFloatCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
+            }
+            [BASE_REPR_FLOAT, BASE_REPR_FLOAT] => {
+                return buildCompareFloat(module, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             _ => {
                 panic error("no way to compare");
@@ -81,12 +99,20 @@ function buildCompareInt(wasm:Module module, wasm:Op op, wasm:Expression lhs, wa
     return module.localSet(result.number, module.binary(op, lhs, rhs));
 }
 
+function buildCompareFloat(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+    return module.localSet(result.number, module.binary(op, lhs, rhs));
+}
+
 function buildCompareString(wasm:Module module, int op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
     return module.localSet(result.number, module.call(stringCompFunction.name, [module.addConst({ i32: op }), buildStringRef(module, lhs), buildStringRef(module, rhs)], stringCompFunction.returnType));
 }
 
 function buildIntCompareOp(bir:OrderOp op) returns wasm:Op {
     return <wasm:Op>signedInt64CompareOps[op];
+}
+
+function buildFloatCompareOp(bir:OrderOp op) returns wasm:Op {
+    return <wasm:Op>floatCompareOps[op];
 }
 
 function buildBooleanCompareOp(bir:OrderOp op) returns wasm:Op {
@@ -99,6 +125,11 @@ function buildCompareTaggedBoolean(wasm:Module module, Scaffold scaffold, wasm:O
 }
 
 function buildCompareTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    wasm:Expression lhsUntagged = buildUntagInt(module, scaffold, lhs);
+    wasm:Expression lhsUntagged = buildUntagInt(module, lhs);
     return buildCompareInt(module, op, lhsUntagged, rhs, result);
+}
+
+function buildCompareTaggedFloat(wasm:Module module, Scaffold scaffold, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+    wasm:Expression lhsUntagged = buildUntagFloat(module, lhs);
+    return buildCompareFloat(module, op, lhsUntagged, rhs, result);
 }

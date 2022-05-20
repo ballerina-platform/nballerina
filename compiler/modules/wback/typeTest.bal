@@ -10,7 +10,7 @@ function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn i
         return buildTypeCastValue(module, scaffold, val, module.localSet(insn.result.number, buildUntagBoolean(module, val)), TYPE_BOOLEAN);
     }
     else if repr === REPR_INT {
-        return buildTypeCastValue(module, scaffold, val, module.localSet(insn.result.number, buildUntagInt(module, scaffold, val)), TYPE_INT);
+        return buildTypeCastValue(module, scaffold, val, module.localSet(insn.result.number, buildUntagInt(module, val)), TYPE_INT);
     }
     else if repr === REPR_MAPPING  {
         return buildTypeCastValue(module, scaffold, val, module.localSet(insn.result.number, buildCast(module, scaffold, val, MAP_TYPE)), TYPE_MAP);

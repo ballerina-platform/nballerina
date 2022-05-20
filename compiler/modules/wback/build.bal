@@ -93,7 +93,7 @@ function buildTaggedFloat(wasm:Module module, Scaffold scaffold, wasm:Expression
     return module.structNew(FLOAT_TYPE, [module.addConst({ i32: TYPE_FLOAT }), value]);
 }
 
-function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
+function buildUntagInt(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
     var { name, returnType } = taggedToIntFunction;
     return module.call(name, [tagged], returnType);
 }
@@ -151,7 +151,7 @@ function buildSurrogateArray(string val) returns int[] {
 function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
     match targetRepr.base {
         BASE_REPR_INT => {
-            return buildUntagInt(module, scaffold, value);
+            return buildUntagInt(module, value);
         }
         BASE_REPR_BOOLEAN => {
             return buildUntagBoolean(module, value);
@@ -202,6 +202,9 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
         else if value is int {
             return [REPR_INT, module.addConst({ i64: value })];
         }
+        else if value is float {
+            return [REPR_FLOAT, module.addConst({ f64: value })];
+        }
     }
     panic error("type not handled");
 }
@@ -237,6 +240,9 @@ function buildConvertRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr
         }
         else if sourceBaseRepr == BASE_REPR_BOOLEAN {
             return buildTaggedBoolean(module, value);
+        }
+        else if sourceBaseRepr == BASE_REPR_FLOAT {
+            return buildTaggedFloat(module, scaffold, value);
         }
     }
     panic error("unimplemented conversion required");

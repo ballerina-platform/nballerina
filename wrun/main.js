@@ -3,6 +3,7 @@ let tags = [];
 let getType = null;
 let untagInt = null;
 let untagBoolean = null;
+let untagFloat = null;
 let len = null;
 let arrayGet = null;
 let getTypeChildren = null;
@@ -90,6 +91,7 @@ if (process.argv.length > 2) {
       getTypeChildren = obj.instance.exports.get_type_children;
       untagInt = obj.instance.exports.tagged_to_int;
       untagBoolean = obj.instance.exports.tagged_to_boolean;
+      untagFloat = obj.instance.exports.tagged_to_float;
       len = obj.instance.exports.arr_len;
       arrayGet = obj.instance.exports.arr_get;
       getObject = obj.instance.exports.get_string;
@@ -184,6 +186,9 @@ const getValue = (ref, parent = null) => {
     }
     map += "}"
     return map;
+  }
+  else if (type == 8) {
+    return untagFloat(ref).toString();
   }
 }
 
