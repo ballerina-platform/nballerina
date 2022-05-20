@@ -18,6 +18,7 @@ TAG_FLOAT = 0x08
 TAG_STRING = 0x0A
 TAG_ERROR = 0x0B
 TAG_LIST_RW = 0x12
+TAG_MAPPING_RW = 0x13
 
 INT_MAX = (2**64) -1
 
@@ -72,13 +73,25 @@ class TaggedPrinter:
             return self.error_to_string(tagged_ptr)
         if tag == TAG_LIST_RW:
             return self.list_to_string(tagged_ptr)
+        if tag == TAG_MAPPING_RW:
+            return self.map_to_string(tagged_ptr)
         raise Exception("Unimplemented tag")
+
+    def map_to_string(self, tagged_ptr):
+        data = map_data(tagged_ptr)
+        body = ["{"];
+        for i in range(data["length"]):
+            if i > 0:
+                body.append(", ")
+            key, val = self.get_map_element(data, i)
+            body.append(f"{key}: {val}")
+        body.append("}");
+        return "".join(body)
 
     # pr-todo: see if we can turn this in to seperate elements
     def list_to_string(self, tagged_ptr):
         body = ["["]
         data = list_data(tagged_ptr)
-        print(data["restType"])
         for i in range(data["length"]):
             if i > 0:
                 body.append(", ")
@@ -104,6 +117,15 @@ class TaggedPrinter:
         else:
             return '"' + string_ptr_to_string(tagged_ptr, str_len, 16) + '"'
 
+    def get_map_element(self, map_data, index):
+        member_ptr = map_data["member_ptr"]
+        ptr = member_ptr + (index * 16)
+        key_ptr = int(gdb.Value(ptr).cast(i64.pointer()).dereference())
+        key = self.tagged_ptr_to_string(key_ptr).strip('"')
+        val_ptr = int(gdb.Value(ptr + 8).cast(i64.pointer()).dereference())
+        val = self.tagged_ptr_to_string(val_ptr)
+        return [key, val]
+
     def get_list_element(self, list_data, index):
         restType = list_data["restType"]
         array_ptr = list_data["array_ptr"]
@@ -128,22 +150,22 @@ class TaggedPrinter:
         pointer = int(tagged_ptr)
         return (pointer >> TAG_SHIFT) & TAG_MASK
 
-# pr-todo: remove unwanted data
+def map_data(tagged_ptr):
+    ptr = extract_ptr(int(tagged_ptr))
+    print("map_ptr: ", hex(ptr))
+    length = int(gdb.Value(ptr + 8).cast(i64.pointer()).dereference())
+    member_ptr = int(gdb.Value(ptr + 24).cast(i64.pointer()).dereference())
+    return { "length": length, "member_ptr": member_ptr }
+
 def list_data(tagged_ptr):
-    bits = int(tagged_ptr)
-    ptr = extract_ptr(bits)
+    ptr = extract_ptr(int(tagged_ptr))
     data_ptr = int(gdb.Value(ptr).cast(i64.pointer()).dereference())
 
-    # pr-todo: why is this 0
-    tid = int(gdb.Value(data_ptr).cast(i32.pointer()).dereference())
-    nMemberTypes = int(gdb.Value(data_ptr + 4).cast(i32.pointer()).dereference())
-    minLength = int(gdb.Value(data_ptr + 8).cast(i64.pointer()).dereference())
     restType = int(gdb.Value(data_ptr + 88).cast(i64.pointer()).dereference())
 
     length = int(gdb.Value(ptr + 8).cast(i64.pointer()).dereference())
-    capacity = int(gdb.Value(ptr + 16).cast(i64.pointer()).dereference())
     array_ptr = int(gdb.Value(ptr + 24).cast(i64.pointer()).dereference())
-    return { "tid": tid, "nMemberTypes": nMemberTypes, "minLength": minLength, "restType": restType, "length": length, "capacity": capacity, "array_ptr": array_ptr }
+    return { "restType": restType, "length": length, "array_ptr": array_ptr }
 
 # may be we can create a string type and wrap these in that class
 def string_len(tagged_ptr):
