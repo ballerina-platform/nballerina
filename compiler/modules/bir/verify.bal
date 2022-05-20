@@ -274,9 +274,7 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns Error? {
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.semanticErr("list set applied to non-list", insn.pos);
     }
-    if insn.operands[0] is FinalRegister {
-        return vc.invalidErr("invalid register kind final for ListSetInsn", insn.pos);
-    }
+
     t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type", insn.pos);
 }
@@ -301,9 +299,6 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns Error? 
     check validOperandString(vc, insn.name, keyOperand, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping set applied to non-mapping", insn.pos);
-    }
-    if insn.operands[0] is FinalRegister {
-        return vc.invalidErr("invalid register kind final for MappingSetInsn", insn.pos);
     }
     t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type", insn.pos);
