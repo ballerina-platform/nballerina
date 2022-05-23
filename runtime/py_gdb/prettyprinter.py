@@ -1,6 +1,12 @@
 import gdb.printing
 import gdb
 import math
+from decimal import *
+
+# getcontext().prec = 6176 # decimal precision
+decimal_context = getcontext();
+decimal_context.rounding = ROUND_HALF_EVEN;
+decimal_context.prec = 6176
 
 HEAP_ALIGNMENT = 8
 TAG_SHIFT = 56
@@ -15,6 +21,7 @@ TAG_NIL = 0x00
 TAG_BOOLEAN = 0x01
 TAG_INT = 0x07
 TAG_FLOAT = 0x08
+TAG_DECIMAL = 0x09
 TAG_STRING = 0x0A
 TAG_ERROR = 0x0B
 TAG_LIST_RW = 0x12
@@ -26,6 +33,7 @@ STRING_LARGE_FLAG = 1
 
 i32 = gdb.lookup_type("long")
 i64 = gdb.lookup_type("long long")
+u64 = gdb.lookup_type("unsigned long long")
 f64 = gdb.lookup_type("double")
 u8 = gdb.lookup_type("unsigned char")
 
@@ -75,7 +83,21 @@ class TaggedPrinter:
             return self.list_to_string(tagged_ptr)
         if tag == TAG_MAPPING_RW:
             return self.map_to_string(tagged_ptr)
+        if tag == TAG_DECIMAL:
+            return self.decimal_to_string(tagged_ptr)
         raise Exception("Unimplemented tag")
+
+    def decimal_to_string(self, tagged_ptr):
+        ptr = extract_ptr(int(tagged_ptr))
+        bits = (int(gdb.Value(ptr + 8).cast(u64.pointer()).dereference()) << 64) | int(gdb.Value(ptr).cast(u64.pointer()).dereference())
+        val = decimal_val(bits)
+        return val.to_eng_string()
+
+    def bits_in_range(self, bits, lower, upper):
+        upper_mask = (1 << upper) - 1
+        lower_mask = (1 << lower) - 1
+        mask = upper_mask ^ lower_mask
+        return (bits | mask) >> lower
 
     def map_to_string(self, tagged_ptr):
         data = map_data(tagged_ptr)
@@ -150,9 +172,39 @@ class TaggedPrinter:
         pointer = int(tagged_ptr)
         return (pointer >> TAG_SHIFT) & TAG_MASK
 
+def decimal_val(bits):
+    sign = ((1 << 127) & bits) >> 127
+    head = ((0b11111 << 122) & bits) >> 122
+    exponent_mask = (1 << 12) - 1
+    exponent = ((exponent_mask << 110) & bits) >> 110
+    if head >= 0b11000:
+        exponent_prefix = (head & 0b110) >> 1
+        significant_first_digit = 0b1000 | (head & 0b1)
+    else:
+        exponent_prefix = (head & 0b11000) >> 3
+        significant_first_digit = head & 0b111
+    exponent = Decimal(exponent | (exponent_prefix << 12))
+    # calculating significant
+    significant_digits = [str(significant_first_digit)]
+    dpd_mask = (1 << 10) - 1
+    for i in range(11):
+        shift = (10 - i) * 10
+        dpd = ((dpd_mask << shift) & bits) >> shift
+        str_num = map(str, dpd_to_int(dpd))
+        for num in str_num:
+            significant_digits.append(num)
+    significant = Decimal(''.join(significant_digits))
+    value = (Decimal(10) ** (exponent - 6176)) * significant
+    if sign:
+        value *= -1
+    return value
+
+# pr-todo: create a more readable solution
+def dpd_to_int(bits):
+    return [[bits&6,bits>>4&6,bits>>7&6,8][b"  eW7B]Oys"[~bits&8or~bits&6or~6|bits>>4]%x&3]|bits>>x%9&1for x in[7,4,9]]
+
 def map_data(tagged_ptr):
     ptr = extract_ptr(int(tagged_ptr))
-    print("map_ptr: ", hex(ptr))
     length = int(gdb.Value(ptr + 8).cast(i64.pointer()).dereference())
     member_ptr = int(gdb.Value(ptr + 24).cast(i64.pointer()).dereference())
     return { "length": length, "member_ptr": member_ptr }
