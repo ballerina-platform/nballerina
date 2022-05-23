@@ -117,12 +117,6 @@ function verifyTmpOperandInitialized(VerifyContext vc, Operand r, boolean[] tmpR
     }
 }
 
-function verifyNarrowRegister(VerifyContext vc, NarrowRegister r) returns Error? {
-    if !t:isSubtype(vc.typeContext(), r.semType, r.underlying.semType) {
-        return vc.invalidErr("narrow register is not a subtype of narrowed register", <Position>r.pos);
-    }
-}
-
 function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     string name = insn.name;
     if insn is IntBinaryInsn {
@@ -191,13 +185,6 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is ErrorConstructInsn {
         check validOperandString(vc, name, insn.operand, insn.pos);
-    }
-    else if insn is TypeMergeInsn {
-        check verifyNarrowRegister(vc, insn.result);
-    }
-    else if insn is TypeBranchInsn {
-        check verifyNarrowRegister(vc, insn.ifTrueRegister);
-        check verifyNarrowRegister(vc, insn.ifFalseRegister);
     }
 }
 
