@@ -10,14 +10,15 @@ public type Op  "i32.add"|"i32.sub"|
                 "i32.lt_s"|"i32.lt_u"|"i32.le_s"|"i32.gt_s"|"i32.ge_s"|"i32.ge_u"|"i32.eq"|"i32.ne"|"i32.eqz"|
                 "i32.or"|"i32.xor"|"i32.and"|
                 "i32.shr_u"|"i32.shl"|
-                "i32.wrap_i64"|
+                "i32.wrap_i64"|"i32.trunc_f64_s"|
                 "i64.add"|"i64.sub"|"i64.mul"|"i64.div_s"|"i64.rem_s"|
                 "i64.lt_s"|"i64.le_s"|"i64.gt_s"|"i64.ge_s"|"i64.eq"|"i64.ne"|"i64.ge_u"|
                 "i64.or"|"i64.xor"|"i64.and"|
                 "i64.shl"|"i64.shr_u"|"i64.shr_s"|
-                "i64.extend_i32_u"|
+                "i64.extend_i32_u"|"i64.trunc_f64_s"|"i64.extend_i32_s"|
                 "ref.is_null"|"ref.is_i31"|"ref.as_data"|"ref.as_i31"|"ref.as_non_null"|
-                "f64.lt"|"f64.le"|"f64.gt"|"f64.ge"|"f64.eq"|"f64.ne";
+                "f64.lt"|"f64.le"|"f64.gt"|"f64.ge"|"f64.eq"|"f64.ne"|
+                "f64.convert_i64_s";
 
 public type Token string;
 

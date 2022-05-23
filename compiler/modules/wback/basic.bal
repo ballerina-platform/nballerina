@@ -32,11 +32,17 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:TypeCastInsn {
             body.push(buildTypeCast(module, scaffold, insn));
         }
+        else if insn is bir:ConvertToFloatInsn {
+            body.push(buildConvertToFloat(module, scaffold, insn));
+        }
         else if insn is bir:ConvertToIntInsn {
             body.push(buildConvertToInt(module, scaffold, insn));
         }
         else if insn is bir:TypeBranchInsn {
             body.push(buildTypeBranch(module, scaffold, insn));
+        }
+        else if insn is bir:TypeTestInsn {
+            body.push(buildTypeTest(module, scaffold, insn));
         }
         else if insn is bir:CallInsn {
             body.push(buildCall(module, scaffold, insn));

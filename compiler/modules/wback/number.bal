@@ -51,8 +51,14 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
 }
 
 function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToIntInsn insn) returns wasm:Expression {
-    var [_, val] = buildReprValue(module, scaffold, insn.operand);
-    return module.localSet(insn.result.number, val);
+    var [repr, val] = buildReprValue(module, scaffold, insn.operand);
+    if repr.base == BASE_REPR_FLOAT {
+        return module.localSet(insn.result.number, module.unary("i64.trunc_f64_s", val));
+    }
+    else if repr.base == BASE_REPR_INT {
+        return module.localSet(insn.result.number, val);    
+    }
+    return module.localSet(insn.result.number, module.structNew(BOXED_INT_TYPE, [module.addConst({ i32: TYPE_INT }), module.call("convert_to_int", [val], "i64")]));   
 }
 
 function buildNoPanicArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntNoPanicArithmeticBinaryInsn insn) returns wasm:Expression {
@@ -64,7 +70,6 @@ function buildNoPanicArithmeticBinary(wasm:Module module, Scaffold scaffold, bir
     }
     panic error("invalid operation");
 }
-
 
 function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm:Expression op2) returns wasm:Expression? {
     wasm:Expression MAX_INT = module.addConst({ i64: 9223372036854775807 });
@@ -126,4 +131,17 @@ function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm
         return module.addIf(cond1, throw);
     }
     return ();
+}
+
+function buildConvertToFloat(wasm:Module module, Scaffold scaffold, bir:ConvertToFloatInsn insn) returns wasm:Expression { 
+    var [repr, val] = buildReprValue(module, scaffold, insn.operand);
+    if repr.base == BASE_REPR_INT {
+        return module.localSet(insn.result.number, module.unary("f64.convert_i64_s", val));
+    }
+    else if repr.base == BASE_REPR_FLOAT {
+        return module.localSet(insn.result.number, module.call("convert_to_float", [val], "f64"));
+    }
+    else {
+        return module.localSet(insn.result.number, module.structNew(FLOAT_TYPE, [module.addConst({ i32: TYPE_FLOAT }), module.call("convert_to_float", [val], "f64")]));
+    }
 }

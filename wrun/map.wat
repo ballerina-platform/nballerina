@@ -87,7 +87,7 @@
         (local.get $1)
         (i32.const 1)))
     (struct.new_with_rtt $Map
-      (i32.const 6)
+      (i32.const 524296)
       (local.get $1)
       (array.new_with_rtt $HashTable
         (i32.const -1)

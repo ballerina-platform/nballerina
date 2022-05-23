@@ -180,6 +180,12 @@ function semTypeRepr(t:SemType ty) returns Repr {
             return tr.repr;
         }
     }
+    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:LIST|t:MAPPING;
+    int maximized = w | supported;
+    if maximized == t:TOP || (w & supported) == w {
+        TaggedRepr repr = { base: BASE_REPR_TAGGED, subtype: w, wasm: "eqref" };
+        return repr;
+    }
     return REPR_NIL;
 }
 

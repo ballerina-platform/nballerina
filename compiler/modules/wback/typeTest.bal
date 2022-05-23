@@ -18,13 +18,15 @@ function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn i
     else if repr === REPR_LIST  {
         return buildTypeCastValue(module, scaffold, val, module.localSet(insn.result.number, buildCast(module, scaffold, val, LIST_TYPE)), TYPE_LIST);
     }
+    else if repr === REPR_FLOAT  {
+        return buildTypeCastValue(module, scaffold, val, module.localSet(insn.result.number, buildUntagFloat(module, val)), TYPE_FLOAT);
+    }
     else {
         return module.localSet(insn.result.number, val);
     }
 }
 
 function buildTypeCastValue(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, wasm:Expression converted, int ty) returns wasm:Expression {
-    scaffold.addExceptionTag(BAD_CONVERSION_TAG);
     return module.addIf(buildIsType(module, tagged, ty), converted, module.throw(BAD_CONVERSION_TAG));
 }
 
@@ -49,6 +51,19 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
             hasType = module.binary("i64.eq", module.localGet(operand.number), module.addConst( { i64: 0 }));
         }
     }
+    else if baseRepr == BASE_REPR_FLOAT {
+        t:FloatSubtype sub = <t:FloatSubtype>t:floatSubtype(semType);
+        if sub.allowed {
+            foreach float val in sub.values {
+                if hasType == () {
+                    hasType = module.binary("f64.eq", value, module.addConst({ f64: val }));
+                }
+                else {
+                    hasType = module.binary("i32.or", module.binary("f64.eq", module.addConst({ f64: val }), value), hasType);
+                }
+            }
+        }
+    }    
     else if baseRepr == BASE_REPR_BOOLEAN {
         BASE_REPR_BOOLEAN _ = baseRepr;
         t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(<t:ComplexSemType>semType);
@@ -64,11 +79,21 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
     wasm:Expression[] values = [];
     t:SplitSemType {all, some} = t:split(semType);
     if all != 0 {
-        return module.binary("i32.eq", module.call("get_type", [operand], "i32"), module.addConst({ i32: getTypeCode(semTypeRepr(semType)) }));
+        t:UniformTypeBitSet bitSet = t:widenToUniformTypes(semType);
+        if bitSet is t:UniformTypeCode {
+            return module.binary("i32.eq", module.call("get_type", [operand], "i32"), module.addConst({ i32: bitSet }));    
+        }
+        return module.binary("i32.ne", module.binary("i32.and", module.call("get_type", [operand], "i32"), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 }));    
     }
     foreach var [code, subtype] in some {
         if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:UT_TABLE_RW {
-            values.push(module.binary("i32.eq", module.call("get_type", [operand], "i32"), module.addConst({ i32: getTypeCode(semTypeRepr(semType)) })));
+            t:UniformTypeBitSet bitSet = t:widenToUniformTypes(semType);
+            if bitSet is t:UniformTypeCode {
+                values.push(module.binary("i32.eq", module.call("get_type", [operand], "i32"), module.addConst({ i32: bitSet })));    
+            }
+            else {
+                values.push(module.binary("i32.ne", module.binary("i32.and", module.call("get_type", [operand], "i32"), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 })));                
+            }
             continue;
         }
         match code {
@@ -96,6 +121,14 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
                     }
                 }
             }
+            t:UT_FLOAT => {
+                t:FloatSubtype sub = <t:FloatSubtype>t:floatSubtype(semType);
+                if sub.allowed {
+                    foreach float val in sub.values {
+                        values.push(module.call("check_type_and_float_val", [operand, module.addConst({ f64: val })], "i32"));
+                    }
+                }
+            }
             t:UT_BOOLEAN => {
                 t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(subtype);
                 values.push(module.call("check_type_and_boolean_val", [operand, module.addConst({ i32: sub.value ? 1 : 0 })], "i32"));
@@ -115,28 +148,6 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
         }
     }
     return condition;
-}
-
-function getTypeCode(Repr repr) returns int {
-    BaseRepr base = repr.base;
-    if base is BASE_REPR_INT {        
-        return TYPE_INT;
-    }
-    else if base is BASE_REPR_BOOLEAN {        
-        return TYPE_BOOLEAN;
-    }
-    else if repr is TaggedRepr {
-        if repr.subtype == t:STRING {
-            return TYPE_STRING;
-        }
-        else if repr.subtype == t:MAPPING || repr.subtype ==  t:MAPPING_RO|| repr.subtype == t:MAPPING_RW {
-            return TYPE_MAP;
-        }
-        else if repr.subtype == t:LIST || repr.subtype == t:LIST_RO || repr.subtype == t:LIST_RW {
-            return TYPE_LIST;
-        }
-    }
-    panic error("unimplemented typec code");
 }
 
 function getTypeString(TaggedRepr repr) returns string {
@@ -165,4 +176,12 @@ function buildNarrowRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr,
         return buildUntagged(module, scaffold, value, targetRepr);
     }
     panic error("unimplemented narrowing conversion required");
+}
+
+function buildTypeTest(wasm:Module module, Scaffold scaffold, bir:TypeTestInsn insn) returns wasm:Expression {
+    wasm:Expression hasType = buildTypeTestedValue(module, scaffold, insn.operand, insn.semType);
+    if insn.negated {
+        hasType = module.binary("i32.xor", module.addConst({ i32: 1 }), hasType);
+    }
+    return module.localSet(insn.result.number, hasType);
 }

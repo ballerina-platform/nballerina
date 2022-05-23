@@ -54,12 +54,12 @@
       (ref.is_i31
         (local.get $0))
       (return
-        (i32.const 1)) ;; TYPE_BOOLEAN
+        (i32.const 2)) ;; TYPE_BOOLEAN
       (if
         (ref.is_null
           (local.get $0))
         (return
-          (i32.const 2)) ;; TYPE_NIL
+          (i32.const 1)) ;; TYPE_NIL
         (return
           (struct.get $Any $type
             (ref.cast
@@ -110,6 +110,7 @@
         (i32.const 1)))
     (return 
       (local.get $2)))
+  
   ;; $tagged_equality
   (func $tagged_equality (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32) 
@@ -130,7 +131,7 @@
       (if 
         (i32.eq
           (local.get $2)
-          (i32.const 0))
+          (i32.const 128))
         (local.set $4
           (i64.eq
             (call $tagged_to_int
@@ -140,7 +141,7 @@
         (if
           (i32.eq
             (local.get $2)
-            (i32.const 1))
+            (i32.const 2))
           (local.set $4
             (i32.eq
               (call $tagged_to_boolean
@@ -150,7 +151,7 @@
           (if
             (i32.eq
               (local.get $2)
-              (i32.const 8))
+              (i32.const 256))
             (local.set $4
               (f64.eq
                 (call $tagged_to_float
@@ -160,7 +161,7 @@
             (if
               (i32.eq
                 (local.get $2)
-                (i32.const 5))
+                (i32.const 1024))
               (local.set $4
                 (call $str_eq
                   (struct.get $String $val 
@@ -176,7 +177,7 @@
               (if
                 (i32.eq
                   (local.get $2)
-                  (i32.const 2))
+                  (i32.const 1))
                 (local.set $4
                   (i32.and
                     (ref.is_null

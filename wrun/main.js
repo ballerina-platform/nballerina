@@ -125,19 +125,19 @@ const getValue = (ref, parent = null) => {
   if (parent !== null) {
     type = getTypeChildren(parent, ref);
   }
-  if (type == 0) {
+  if (type == 128) {
     return untagInt(ref).toString();
   }
-  else if (type == 1) {
+  else if (type == 2) {
     if (untagBoolean(ref).toString() === "1") {
       return "true";
     }
     return "false";
   }
-  else if (type == 2){
+  else if (type == 1){
     return "";
   }
-  else if (type == 3) {
+  else if (type == 262148) {
     let length = len(ref);
     let output = "[";
     for (let index = 0; index < length; index++) {
@@ -161,10 +161,10 @@ const getValue = (ref, parent = null) => {
   else if (type == 4) {
     return "...";
   }
-  else if (type == 5) {
+  else if (type == 1024) {
     return getObject(ref);
   }
-  else if (type == 6) {
+  else if (type == 524296) {
     let map = "{"
     let keys  = bal_map_get_keys(ref)
     let len = bal_mapping_num_keys(keys)
@@ -187,8 +187,12 @@ const getValue = (ref, parent = null) => {
     map += "}"
     return map;
   }
-  else if (type == 8) {
-    return untagFloat(ref).toString();
+  else if (type == 256) {
+    float = untagFloat(ref);
+    if (Number.isInteger(float)) {
+      return float.toFixed(1);
+    }
+    return float;
   }
 }
 

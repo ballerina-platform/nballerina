@@ -96,7 +96,7 @@
             (br $block2$continue)))) 
       (return 
         (struct.new_with_rtt $String 
-          (i32.const 5)
+          (i32.const 1024)
           (call $str_concat 
             (struct.get $String $val 
               (local.get $0)) 

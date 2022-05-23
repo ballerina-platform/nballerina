@@ -71,7 +71,7 @@
           (i64.const 4))) 
       (return 
         (struct.new_with_rtt $List
-          (i32.const 3)
+          (i32.const 262148)
           (array.new_default_with_rtt $AnyList 
             (i32.wrap_i64 
               (local.get $1)) 
