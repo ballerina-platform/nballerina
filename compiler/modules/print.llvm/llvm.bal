@@ -929,14 +929,6 @@ public class DIBuilder {
         return metadata;
     }
 
-    // Corresponds to LLVMDIBuilderInsertDbgValueAtEnd
-    public function insertDbgValueAtEnd(Value val, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
-        self.m.addDebugIntrinsic("dbg.value");
-        (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.value", "(", "metadata", typeToString(val.ty, self.context),
-                                    val.operand, ",", "metadata", varInfo.ref(), ",", "metadata", expr.ref(), ")"];
-        addInsnWithDbLocation(block, words, debugLoc);
-    }
-
     // Corresponds to LLVMDIBuilderInsertDeclareAtEnd
     public function insertDeclareAtEnd(Value storage, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
         self.m.addDebugIntrinsic("dbg.declare");

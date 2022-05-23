@@ -72,6 +72,7 @@ class RegisterDebugStore {
         return tyMeta;
     }
 
+    // we use a seperate declPosition instead of startPos of registerScope since register scope starts at the begining of the Stmt/Function
     private function addRegisterScope(bir:RegisterScope registerScope, bir:Position declPos, Scope parent) returns Scope {
         int childCount = parent.childScopes.length();
         int? addIndex = ();

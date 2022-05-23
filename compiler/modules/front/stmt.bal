@@ -311,6 +311,7 @@ function codeGenOnPanic(StmtContext cx, Position pos) {
 
 type Scope s:StmtBlock|s:IfElseStmt;
 
+type ScopedStmt s:MatchStmt|s:WhileStmt|s:ForeachStmt;
 // If the scope doesn't complete normally, will return empty assignments and bindings.
 function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv, Scope scope, BindingChain? initialBindings = ()) returns CodeGenError|StmtEffect {
     BindingChain? bodyBindings = initialBindings ?: initialEnv.bindings;
@@ -359,7 +360,6 @@ function addBindings(BindingChain? bindingLimit, BindingChain? bodyBindings, int
     return newBindings;
 }
 
-type ScopedStmt s:MatchStmt|s:WhileStmt|s:ForeachStmt|s:IfElseStmt;
 function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, s:Stmt stmt) returns CodeGenError|StmtEffect {
     boolean scopedStmt = stmt is ScopedStmt;
     StmtEffect|CodeGenError effect;

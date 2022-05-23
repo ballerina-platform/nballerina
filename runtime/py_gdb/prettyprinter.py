@@ -3,7 +3,6 @@ import gdb
 import math
 from decimal import *
 
-# getcontext().prec = 6176 # decimal precision
 decimal_context = getcontext();
 decimal_context.rounding = ROUND_HALF_EVEN;
 decimal_context.prec = 6176
@@ -31,24 +30,13 @@ INT_MAX = (2**64) -1
 
 STRING_LARGE_FLAG = 1
 
+# we are getting these type definitions because we say the compile unit's lanugage is DW_LANG_C99 in the ll file
 i32 = gdb.lookup_type("long")
+u32 = gdb.lookup_type("unsigned long")
 i64 = gdb.lookup_type("long long")
 u64 = gdb.lookup_type("unsigned long long")
 f64 = gdb.lookup_type("double")
 u8 = gdb.lookup_type("unsigned char")
-
-# use either camel case or snake case
-
-def extract_ptr(bits):
-    ptr_body = bits & POINTER_MASK
-    return (ptr_body & ALIGN_MASK)
-
-def is_immediate(val):
-    return int(val) & IMMEDIATE_FLAG != 0
-
-def count_leading_zeros(bits):
-    binary = bin(bits)[2:]
-    return 64 - len(binary)
 
 class TaggedPrinter:
     def __init__(self, val):
@@ -93,12 +81,6 @@ class TaggedPrinter:
         val = decimal_val(bits)
         return val.to_eng_string()
 
-    def bits_in_range(self, bits, lower, upper):
-        upper_mask = (1 << upper) - 1
-        lower_mask = (1 << lower) - 1
-        mask = upper_mask ^ lower_mask
-        return (bits | mask) >> lower
-
     def map_to_string(self, tagged_ptr):
         data = map_data(tagged_ptr)
         body = ["{"];
@@ -110,7 +92,6 @@ class TaggedPrinter:
         body.append("}");
         return "".join(body)
 
-    # pr-todo: see if we can turn this in to seperate elements
     def list_to_string(self, tagged_ptr):
         body = ["["]
         data = list_data(tagged_ptr)
@@ -152,7 +133,6 @@ class TaggedPrinter:
         restType = list_data["restType"]
         array_ptr = list_data["array_ptr"]
         ptr = array_ptr + (index * 8)
-        # derive this
         if restType == 257:
             # int[]
             return int(gdb.Value(ptr).cast(i64.pointer()).dereference())
@@ -219,7 +199,6 @@ def list_data(tagged_ptr):
     array_ptr = int(gdb.Value(ptr + 24).cast(i64.pointer()).dereference())
     return { "restType": restType, "length": length, "array_ptr": array_ptr }
 
-# may be we can create a string type and wrap these in that class
 def string_len(tagged_ptr):
     bits = int(tagged_ptr)
     new_ptr = extract_ptr(bits)
@@ -227,7 +206,7 @@ def string_len(tagged_ptr):
         return immediate_string_len(bits)
     elif bits & STRING_LARGE_FLAG == 0:
         # medium string
-        header = gdb.Value(new_ptr).cast(i32.pointer()).dereference()
+        header = gdb.Value(new_ptr).cast(u32.pointer()).dereference()
         return header & 0xFFFF
     else:
         header = gdb.Value(new_ptr).cast(i64.pointer()).dereference()
@@ -242,6 +221,10 @@ def immediate_string_len(bits):
         bits &= POINTER_MASK
         length = 8 - (count_leading_zeros(bits) >> 3)
         return length
+
+def count_leading_zeros(bits):
+    binary = bin(bits)[2:]
+    return 64 - len(binary)
 
 def string_ptr_to_string(tagged_ptr, length, header_size):
     bits = int(tagged_ptr)
@@ -268,6 +251,12 @@ def float_to_string(float_val):
         return "Infinity" if float_val > 0 else "-Infinity"
     return str(float_val)
 
+def extract_ptr(bits):
+    ptr_body = bits & POINTER_MASK
+    return (ptr_body & ALIGN_MASK)
+
+def is_immediate(val):
+    return int(val) & IMMEDIATE_FLAG != 0
 
 def build_pretty_printer():
     pp = gdb.printing.RegexpCollectionPrettyPrinter("bal_pp")
