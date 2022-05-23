@@ -127,6 +127,10 @@ public class DIBuilder {
         return new(jObj);
     }
 
+    public function insertDbgValueAtEnd(Value val, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
+        _ = jLLVMDIBuilderInsertDbgValueAtEnd(self.LLVMDIBuilder, val.LLVMValueRef, varInfo.llvmMetadata, expr.llvmMetadata, debugLoc.llvmMetadata, block.LLVMBasicBlockRef);
+    }
+
     public function insertDeclareAtEnd(Value storage, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
         _ = jLLVMDIBuilderInsertDeclareAtEnd(self.LLVMDIBuilder, storage.LLVMValueRef, varInfo.llvmMetadata, expr.llvmMetadata, debugLoc.llvmMetadata, block.LLVMBasicBlockRef);
     }
@@ -217,6 +221,13 @@ function jLLVMDIBuilderCreateAutoVariable(handle builder, handle scope, handle n
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "java.lang.String", "long",
                  "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "int", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "int", "int", "int"]
+} external;
+
+function jLLVMDIBuilderInsertDbgValueAtEnd(handle builder, handle val, handle varInfo, handle expr, handle debugLoc, handle block) returns handle = @java:Method {
+    name: "LLVMDIBuilderInsertDbgValueAtEnd",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef",
+                 "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef", "org.bytedeco.llvm.LLVM.LLVMBasicBlockRef"]
 } external;
 
 function jLLVMDIBuilderInsertDeclareAtEnd(handle builder, handle val, handle varInfo, handle expr, handle debugLoc, handle block) returns handle = @java:Method {

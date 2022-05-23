@@ -179,9 +179,56 @@ def decimal_val(bits):
         value *= -1
     return value
 
-# pr-todo: create a more readable solution
 def dpd_to_int(bits):
-    return [[bits&6,bits>>4&6,bits>>7&6,8][b"  eW7B]Oys"[~bits&8or~bits&6or~6|bits>>4]%x&3]|bits>>x%9&1for x in[7,4,9]]
+    # original bits are assumed to be Xabc Ydef Zghi
+    # encoding table https://en.wikipedia.org/wiki/Densely_packed_decimal
+    i = bits & 1;
+    f = (bits & 1 << 4) >> 4;
+    c = (bits & 1 << 7) >> 7;
+    if (bits >> 3 & 1) == 0:
+        # case 1
+        D1 = bits >> 7
+        D2 = (bits >> 4) & 0b111
+        D3 = bits & 0b111
+    else:
+        flag_1 = (bits >> 1) & 0b111
+        if flag_1 == 0b100:
+            # case 2
+            D1 = bits >> 7
+            D2 = (bits >> 4) & 0b111
+            D3 = 0b1000 | i
+        elif flag_1 == 0b101:
+            # case 3
+            D1 = bits >> 7
+            D2 = 0b1000 | f
+            gh = (bits >> 5) & 0b11
+            D3 = (gh << 1) | i
+        elif flag_1 == 0b110:
+            D1 = 0b1000 | c
+            D2 = (bits >> 4) & 0b111
+            gh = bits >> 8
+            D3 = (gh << 1) | i
+        else:
+            flag_2 = (bits >> 5) & 0b11
+            if flag_2 == 0:
+                D1 = 0b1000 | c
+                D2 = 0b1000 | f
+                gh = bits >> 8
+                D3 = (gh << 1) | i
+            elif flag_2 == 0b01:
+                D1 = 0b1000 | c
+                de = bits >> 8
+                D2 = (de << 1) | f
+                D3 = 0b1000 | i
+            elif flag_2 == 0b10:
+                D1 = bits >> 7
+                D2 = 0b1000 | f
+                D3 = 0b1000 | i
+            else:
+                D1 = 0b1000 | c
+                D2 = 0b1000 | f
+                D3 = 0b1000 | i
+    return [D1, D2, D3]
 
 def map_data(tagged_ptr):
     ptr = extract_ptr(int(tagged_ptr))
