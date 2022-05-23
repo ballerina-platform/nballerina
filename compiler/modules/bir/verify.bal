@@ -151,6 +151,47 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is ErrorConstructInsn {
         check validOperandString(vc, name, insn.operand, insn.pos);
     }
+    else if insn is TypeMergeInsn {
+        check verifyTypeMerge(vc, insn);
+    }
+    else if insn is TypeBranchInsn {
+        check verifyTypeBranch(vc, insn);
+    }
+}
+
+function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Internal? {
+    Register opRoot = rootUnderlying(insn.result);
+    SemType union = t:NEVER;
+    foreach Register r in insn.operands {
+        if opRoot != rootUnderlying(r) {
+            return vc.invalidErr("correct operand is not narrowed", insn.pos);
+        }
+        union = t:union(union, r.semType);
+    }
+    if !t:isSubtype(vc.typeContext(), union, insn.result.semType) {
+        return vc.invalidErr("register is not correctly narrowed", insn.pos);
+    }
+}
+
+function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Internal? {
+    Register opRoot = rootUnderlying(insn.operand);
+    if opRoot != rootUnderlying(insn.ifFalseRegister) || opRoot != rootUnderlying(insn.ifTrueRegister) {
+        return vc.invalidErr("correct operand is not narrowed", insn.pos);
+    }
+    if !t:isSubtype(vc.typeContext(), t:intersect(insn.operand.semType, insn.semType), insn.ifTrueRegister.semType) {
+        return vc.invalidErr("true register is not correctly narrowed", insn.pos);
+    }
+    if !t:isSubtype(vc.typeContext(), t:diff(insn.operand.semType, insn.semType), insn.ifFalseRegister.semType) {
+        return vc.invalidErr("false register is not correctly narrowed", insn.pos);
+    }
+}
+
+function rootUnderlying(Register r) returns Register {
+    Register narrowed = r;
+    while narrowed is NarrowRegister {
+        narrowed = narrowed.underlying;
+    }
+    return narrowed;
 }
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
