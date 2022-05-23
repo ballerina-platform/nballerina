@@ -10,12 +10,15 @@ class VerifyContext {
     private final Module mod;
     private final t:Context tc;
     private final FunctionDefn defn;
+    private final FunctionCode code;
+    private final Label[] loopHeads = [];
 
-    function init(Module mod, FunctionDefn defn) {
+    function init(Module mod, FunctionDefn defn, FunctionCode code) {
         self.mod = mod;
         t:Context tc  = mod.getTypeContext();
         self.tc = tc;
         self.defn = defn;
+        self.code = code;
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
@@ -63,10 +66,22 @@ class VerifyContext {
     function symbolToString(Symbol sym) returns string {
         return self.mod.symbolToString(self.defn.partIndex, sym);
     }
+
+    function getBlock(Label label) returns BasicBlock {
+        return self.code.blocks[label];
+    }
+
+    function isLoopHead(Label label) returns boolean {
+        return self.loopHeads.indexOf(label) != ();
+    }
+
+    function addLoopHead(Label label) {
+        self.loopHeads.push(label);
+    }
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
-    VerifyContext cx = new(mod, defn);
+    VerifyContext cx = new(mod, defn, code);
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
     }
@@ -80,14 +95,14 @@ type Error err:Semantic|err:Internal;
 function verifyGraph(VerifyContext vc, BasicBlock[] blocks, Position pos) returns Error? {
     boolean[] visited = [];
     visited[blocks.length() - 1] = false;
-    check traveseGraph(vc, blocks, 0, visited, visited, pos);
+    check traveseGraph(vc, blocks, 0, visited, pos);
     if visited.indexOf(false) != () {
         return vc.invalidErr("unreachable blocks in function code", pos);
     }
 }
 
-function traveseGraph(VerifyContext vc, BasicBlock[] blocks, Label label, boolean[] visited, boolean[] currentGraph, Position pos) returns Error? {
-    if currentGraph[label] {
+function traveseGraph(VerifyContext vc, BasicBlock[] blocks, Label label, boolean[] visited, Position pos, Label[] currentPath = []) returns Error? {
+    if currentPath.indexOf(label) != () {
         return vc.invalidErr("forward edge graph is not acyclic", pos);
     }
     if visited[label] {
@@ -98,27 +113,26 @@ function traveseGraph(VerifyContext vc, BasicBlock[] blocks, Label label, boolea
         visited[onPanic] = true;
     }
     visited[label] = true;
-    currentGraph[label] = true;
+    currentPath.push(label);
+
     Insn insn = check terminator(vc, blocks[label], pos);
     if insn is BranchInsn {
         if insn.backward {
-            if visited[insn.dest] {
-                insn = check terminator(vc, blocks[insn.dest], pos);
-                if insn is BranchInsn|CondBranchInsn|TypeBranchInsn {
-                    return;
-                }
+            if vc.isLoopHead(insn.dest) && visited[insn.dest] {
+                return;
             }
-            return vc.invalidErr("backwards branch directs to non loop head", pos);
-        } 
+            return vc.invalidErr("backwards branch does not direct to loop head", pos);
+        }
         else {
-            check traveseGraph(vc, blocks, insn.dest, visited, currentGraph, pos); 
+            check traveseGraph(vc, blocks, insn.dest, visited, pos, currentPath); 
         }
     }
     else if insn is CondBranchInsn|TypeBranchInsn {
-        boolean[] curGraph = currentGraph.clone();
-        check traveseGraph(vc, blocks, insn.ifFalse, visited, currentGraph, pos);
-        check traveseGraph(vc, blocks, insn.ifTrue, visited, curGraph, pos);
-    }  
+        int lenPath = currentPath.length();
+        check traveseGraph(vc, blocks, insn.ifTrue, visited, pos, currentPath);
+        currentPath.setLength(lenPath);
+        check traveseGraph(vc, blocks, insn.ifFalse, visited, pos, currentPath);
+    }
 }
 
 function terminator(VerifyContext vc, BasicBlock block, Position pos) returns Insn|Error {
@@ -201,6 +215,12 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is ErrorConstructInsn {
         check validOperandString(vc, name, insn.operand, insn.pos);
+    }
+    else if insn is BranchInsn && insn.backward {
+        if check terminator(vc, vc.getBlock(insn.dest), insn.pos) is BranchInsn|CondBranchInsn|TypeBranchInsn
+                && !vc.isLoopHead(insn.dest) {
+            vc.addLoopHead(insn.dest);
+        }
     }
 }
 
