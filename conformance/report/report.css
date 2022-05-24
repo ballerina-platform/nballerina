@@ -1,0 +1,59 @@
+table {
+    width: 98vw;
+    table-layout:fixed;
+}
+td {
+    vertical-align: top;
+}
+td,th {
+    width: 45vw;
+    border: 1px solid #969393;
+    padding: 4px;
+}
+tr:nth-child(even){
+    background-color: #f2f2f2;
+}
+pre {
+    width: 45vw;
+    white-space:pre-wrap;
+}
+th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+    background-color: #874c4c;
+    color: white;
+}
+.tab {
+  overflow: hidden;
+  border: 1px solid #969393;
+  background-color: #874c4c;
+}
+
+/* Style the buttons that are used to open the tab content */
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+  background-color: #f2f2f2;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+  background-color: #f2f2f2;
+}
+
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}
