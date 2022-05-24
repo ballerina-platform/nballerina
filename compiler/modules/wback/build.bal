@@ -78,6 +78,11 @@ final RuntimeFunction stringConcatFunction = {
     returnType: { base: STRING_TYPE }
 };
 
+final RuntimeFunction createStringFunction = {
+    name: "str_create",
+    returnType: "eqref"
+};
+
 final RuntimeModule stringMod = "string";
 final RuntimeModule taggingMod = "tagging";
 
@@ -146,6 +151,15 @@ function buildSurrogateArray(string val) returns int[] {
         }
     }
     return surrogate;
+}
+
+function buildFloat(wasm:Module module, Scaffold scaffold, bir:FloatOperand operand) returns wasm:Expression {
+    if operand is bir:FloatConstOperand {
+        return module.addConst({ f64: operand.value });
+    }
+    else {
+        return module.localGet(operand.number);
+    }
 }
 
 function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression value, Repr targetRepr) returns wasm:Expression {

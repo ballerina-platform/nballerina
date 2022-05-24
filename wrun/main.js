@@ -147,7 +147,7 @@ const getValue = (ref, parent = null) => {
       if (val === "") {
         val = "null"
       }
-      if (ty == 5) {
+      if (ty == 1024) {
         val = JSON.stringify(val)
       }
       output += val + ",";
@@ -173,7 +173,7 @@ const getValue = (ref, parent = null) => {
       let valRef = bal_mapping_get(ref, bal_mapping_get_key(keys, index));
       let valType = getType(valRef);
       let val = "";
-      if (valType == 2) {
+      if (valType == 1) {
         val = "null"
       }
       else {
@@ -189,8 +189,11 @@ const getValue = (ref, parent = null) => {
   }
   else if (type == 256) {
     float = untagFloat(ref);
-    if (Number.isInteger(float)) {
-      return float.toFixed(1);
+    if ((1/float) == -Infinity) {
+      return "-0.0"
+    }
+    else if (Number.isInteger(float)) {
+      return `${float}.0`;
     }
     return float;
   }

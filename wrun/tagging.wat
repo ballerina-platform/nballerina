@@ -110,7 +110,6 @@
         (i32.const 1)))
     (return 
       (local.get $2)))
-  
   ;; $tagged_equality
   (func $tagged_equality (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32) 
@@ -153,11 +152,12 @@
               (local.get $2)
               (i32.const 256))
             (local.set $4
-              (f64.eq
+              (call $float_eq
                 (call $tagged_to_float
                   (local.get $0))
                 (call $tagged_to_float
-                  (local.get $1))))
+                  (local.get $1))
+                (i32.const 0)))
             (if
               (i32.eq
                 (local.get $2)
@@ -184,6 +184,40 @@
                       (local.get $0))
                     (ref.is_null
                       (local.get $1))))))))))
+    (return 
+      (local.get $4))) 
+  ;; $exact_tagged_equality
+  (func $exact_tagged_equality (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 i32) 
+    (local $3 i32) 
+    (local $4 i32) 
+    (local.set $2
+      (call $get_type
+        (local.get $0)))
+    (local.set $3
+      (call $get_type
+        (local.get $1))) 
+    (local.set $4
+      (i32.const 0))
+    (if 
+      (i32.eq
+        (local.get $2)
+        (local.get $3))
+      (if 
+        (i32.eq
+          (local.get $2)
+          (i32.const 256))
+        (local.set $4
+          (call $float_eq
+            (call $tagged_to_float
+              (local.get $0))
+            (call $tagged_to_float
+              (local.get $1))
+            (i32.const 1)))
+        (local.set $4
+          (ref.eq
+            (local.get $0)
+            (local.get $1)))))
     (return 
       (local.get $4)))  
   ;; end

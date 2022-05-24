@@ -582,50 +582,40 @@
   ;; $length
   (func $length (param $0 eqref) (result i64) 
     (local $1 i64) 
-    (block 
-      (block $blockList 
-        (drop 
-          (block $blockStr 
-            (result (ref null any)) 
-            (drop 
-              (br_on_cast_fail $blockStr 
-                (ref.as_data 
-                  (local.get $0)) 
-                (global.get $rttString))) 
-            (local.set $1 
-              (call $bal_str_len 
-                (ref.cast 
-                  (ref.as_data 
-                    (local.get $0)) 
-                  (global.get $rttString)))) 
-            (br $blockList) 
-            (ref.null any)))
-        (drop 
-          (block $blockMap
-            (result (ref null any)) 
-            (drop 
-              (br_on_cast_fail $blockMap
-                (ref.as_data 
-                  (local.get $0)) 
-                (global.get $rttMap))) 
-            (local.set $1 
-              (i64.extend_i32_u
-                (call $_bal_mapping_num_keys 
-                  (call $_bal_map_get_keys
-                    (ref.cast 
-                      (ref.as_data 
-                        (local.get $0)) 
-                      (global.get $rttMap)))))) 
-            (br $blockList) 
-            (ref.null any)))   
+    (local $2 i32)
+    (local.set $2
+      (call $get_type
+        (local.get $0)))
+    (if
+      (i32.eq
+        (local.get $2)
+        (i32.const 1024))
+      (local.set $1
+        (call $bal_str_len
+          (ref.cast 
+            (ref.as_data 
+              (local.get $0)) 
+            (global.get $rttString))))
+      (if
+        (i32.eq
+          (local.get $2)
+          (i32.const 262148))
         (local.set $1 
           (struct.get $List $len 
             (ref.cast 
               (ref.as_data 
                 (local.get $0)) 
-              (global.get $rttList))))) 
+              (global.get $rttList))))
+        (local.set $1 
+          (i64.extend_i32_u
+            (call $_bal_mapping_num_keys 
+              (call $_bal_map_get_keys
+                (ref.cast 
+                  (ref.as_data 
+                    (local.get $0)) 
+                  (global.get $rttMap))))))))
       (return 
-        (local.get $1))))
+        (local.get $1)))
   ;; $get_string_hash
   (func $get_string_hash (param $0 eqref) (result i32)
     (local $1 (ref null $String))

@@ -47,6 +47,12 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:CallInsn {
             body.push(buildCall(module, scaffold, insn));
         }
+        else if insn is bir:FloatArithmeticBinaryInsn {
+            body.push(buildFloatArithmeticBinary(module, scaffold, insn));
+        }
+        else if insn is bir:FloatNegateInsn {
+            body.push(buildFloatNegate(module, scaffold, insn));
+        }
         else if insn is bir:ListConstructInsn {
             body.push(buildListConstruct(module, scaffold, insn));
         }

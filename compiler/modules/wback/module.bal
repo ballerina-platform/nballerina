@@ -83,8 +83,9 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
 
 function addStringInit(wasm:Module module, map<StringRecord> strings) returns wasm:Expression {
     wasm:Expression[] body = [];
+    var { name, returnType } = createStringFunction; 
     foreach StringRecord rec in strings {
-        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.addConst({ i32: TYPE_STRING}), module.call("str_create", [module.addConst({i32: rec.offset}), module.addConst({i32: rec.length})], "eqref"), module.arrayNewDef("Surrogate", module.addConst({i32: rec.surrogate.length()})), module.addConst({i32: -1})])));
+        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.addConst({ i32: TYPE_STRING}), module.call(name, [module.addConst({i32: rec.offset}), module.addConst({i32: rec.length})], returnType), module.arrayNewDef("Surrogate", module.addConst({i32: rec.surrogate.length()})), module.addConst({i32: -1})])));
         wasm:Expression asData = module.refAs("ref.as_data", module.globalGet(rec.global));
         wasm:Expression castToStr = module.refCast(asData, module.globalGet("rtt" + STRING_TYPE));
         foreach int i in 0 ..< rec.surrogate.length() {

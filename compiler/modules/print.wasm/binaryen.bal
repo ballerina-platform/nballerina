@@ -18,6 +18,7 @@ public type Op  "i32.add"|"i32.sub"|
                 "i64.extend_i32_u"|"i64.trunc_f64_s"|"i64.extend_i32_s"|
                 "ref.is_null"|"ref.is_i31"|"ref.as_data"|"ref.as_i31"|"ref.as_non_null"|
                 "f64.lt"|"f64.le"|"f64.gt"|"f64.ge"|"f64.eq"|"f64.ne"|
+                "f64.add"|"f64.sub"|"f64.mul"|"f64.div"|"f64.neg"|
                 "f64.convert_i64_s";
 
 public type Token string;

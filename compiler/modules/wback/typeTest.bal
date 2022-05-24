@@ -78,21 +78,22 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
 function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, wasm:Expression operand) returns wasm:Expression? {
     wasm:Expression[] values = [];
     t:SplitSemType {all, some} = t:split(semType);
+    var { name, returnType } = getTypeFunction;
     if all != 0 {
         t:UniformTypeBitSet bitSet = t:widenToUniformTypes(semType);
         if bitSet is t:UniformTypeCode {
-            return module.binary("i32.eq", module.call("get_type", [operand], "i32"), module.addConst({ i32: bitSet }));    
+            return module.binary("i32.eq", module.call(name, [operand], returnType), module.addConst({ i32: bitSet }));    
         }
-        return module.binary("i32.ne", module.binary("i32.and", module.call("get_type", [operand], "i32"), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 }));    
+        return module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 }));    
     }
     foreach var [code, subtype] in some {
         if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:UT_TABLE_RW {
             t:UniformTypeBitSet bitSet = t:widenToUniformTypes(semType);
             if bitSet is t:UniformTypeCode {
-                values.push(module.binary("i32.eq", module.call("get_type", [operand], "i32"), module.addConst({ i32: bitSet })));    
+                values.push(module.binary("i32.eq", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })));    
             }
             else {
-                values.push(module.binary("i32.ne", module.binary("i32.and", module.call("get_type", [operand], "i32"), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 })));                
+                values.push(module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 })));                
             }
             continue;
         }

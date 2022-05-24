@@ -116,64 +116,54 @@
   ;; $length
   (func $length (param $0 eqref) (result i64) 
     (local $1 i64) 
-    (block 
-      (block $blockList 
-        (drop 
-          (block $blockStr 
-            (result (ref null any)) 
-            (drop 
-              (br_on_cast_fail $blockStr 
-                (ref.as_data 
-                  (local.get $0)) 
-                (global.get $rttString))) 
-            (local.set $1 
-              (call $bal_str_len 
-                (ref.cast 
-                  (ref.as_data 
-                    (local.get $0)) 
-                  (global.get $rttString)))) 
-            (br $blockList) 
-            (ref.null any))) 
-        (local.set $1 
-          (struct.get $List $len 
-            (ref.cast 
-              (ref.as_data 
-                (local.get $0)) 
-              (global.get $rttList))))) 
+    (local $2 i32)
+    (local.set $2
+      (call $get_type
+        (local.get $0)))
+    (if
+      (i32.eq
+        (local.get $2)
+        (i32.const 1024))
+      (local.set $1
+        (call $bal_str_len
+          (ref.cast 
+            (ref.as_data 
+              (local.get $0)) 
+            (global.get $rttString))))
+      (local.set $1 
+        (struct.get $List $len 
+          (ref.cast 
+            (ref.as_data 
+              (local.get $0)) 
+            (global.get $rttList)))))
       (return 
-        (local.get $1))))
+        (local.get $1)))
   ;; $check_type_and_string_val
   (func $check_type_and_string_val (param $0 eqref) (param $1 eqref) (result i32)
-    (local $2 (ref null $String)) 
-    (local $3 (ref null $String)) 
-    (local $4 i32) 
-    (local.set $4
+    (local $2 i32) 
+    (local $3 i32) 
+    (local.set $2
       (i32.const 0)) 
+    (local.set $3
+      (call $get_type
+        (local.get $0))) 
     (if 
-      (ref.is_data
-        (local.get $0))
-      (drop
-        (block $cast-fail (result (ref null any))
-          (local.set $2
-            (br_on_cast_fail $cast-fail 
+      (i32.eq
+        (local.get $3)
+        (i32.const 1024))
+      (local.set $2
+        (call $str_eq
+          (struct.get $String $val
+            (ref.cast 
               (ref.as_data
-                (local.get $0)) 
+                (local.get $0))
               (global.get $rttString)))
-          (local.set $3
-            (ref.cast
+          (struct.get $String $val
+            (ref.cast 
               (ref.as_data
                 (local.get $1))
-              (global.get $rttString)))
-          (if
-            (call $str_eq
-              (struct.get $String $val
-                (local.get $2))
-              (struct.get $String $val
-                (local.get $3)))
-            (local.set $4
-              (i32.const 1)))
-          (ref.null any))))
+              (global.get $rttString))))))
     (return
-      (local.get $4))) 
+      (local.get $2))) 
   ;; end
   ) 

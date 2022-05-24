@@ -10,6 +10,16 @@ final RuntimeFunction equalTaggedTaggedFunction = {
     returnType: "i32"
 };
 
+final RuntimeFunction exactEqualTaggedTaggedFunction = {
+    name: "exact_tagged_equality",
+    returnType: "i32"
+};
+
+final RuntimeFunction floatEqFunction = {
+    name: "float_eq",
+    returnType: "i32"
+};
+
 function buildEquality(wasm:Module module, Scaffold scaffold, bir:EqualityInsn insn) returns wasm:Expression {
     var [lhsRepr, lhsValue] = buildReprValue(module, scaffold, insn.operands[0]);
     var [rhsRepr, rhsValue] = buildReprValue(module, scaffold, insn.operands[1]);
@@ -36,14 +46,16 @@ function buildEquality(wasm:Module module, Scaffold scaffold, bir:EqualityInsn i
             return buildEqualTaggedTagged(module, scaffold, exact, op, rhsValue, lhsValue, result);
         }
         [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
-            return buildEqualTaggedFloat(module, scaffold, op, lhsValue, rhsValue, result);
+            return buildEqualTaggedFloat(module, scaffold, op, exact, lhsValue, rhsValue, result);
         }
         [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
-            return buildEqualTaggedFloat(module, scaffold, op, rhsValue, lhsValue, result);
+            return buildEqualTaggedFloat(module, scaffold, op, exact, rhsValue, lhsValue, result);
+        }
+        [BASE_REPR_FLOAT, BASE_REPR_FLOAT] => {
+            return buildEqualFloatFloat(module, scaffold, op, exact, rhsValue, lhsValue, result);
         }
         [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN]
-        | [BASE_REPR_INT, BASE_REPR_INT] 
-        | [BASE_REPR_FLOAT, BASE_REPR_FLOAT] => {
+        | [BASE_REPR_INT, BASE_REPR_INT]  => {
             string operation = lhsRepr.wasm.toString() + "." +  op;
             io:println(operation);
             return module.localSet(result.number, module.binary(<wasm:Op>operation, lhsValue, rhsValue));
@@ -68,28 +80,39 @@ function buildEqualTaggedInt(wasm:Module module, Scaffold scaffold, CmpEqOp op, 
     return module.addIf(isTypeInt, trueBody, falseBody);
 }
 
-function buildEqualTaggedFloat(wasm:Module module, Scaffold scaffold, CmpEqOp op, wasm:Expression tagged, wasm:Expression untagged, bir:Register result) returns wasm:Expression {
-    wasm:Op operation =  op == "eq" ? "f64.eq" : "f64.ne";
+function buildEqualTaggedFloat(wasm:Module module, Scaffold scaffold, CmpEqOp op, boolean exact, wasm:Expression tagged, wasm:Expression untagged, bir:Register result) returns wasm:Expression {
     wasm:Expression isTypeFloat = buildIsType(module, tagged, TYPE_FLOAT);
-    wasm:Expression trueBody = module.localSet(result.number, module.binary(operation, buildUntagFloat(module, tagged), untagged));
+    var { name, returnType } = floatEqFunction;
+    wasm:Expression eq = module.call(name, [buildUntagFloat(module, tagged), untagged, module.addConst({ i32: exact ? 1: 0 })], returnType);
+    if op != "eq" {
+        eq = module.binary("i32.xor", module.addConst({ i32: 1 }), eq);
+    }
+    wasm:Expression trueBody = module.localSet(result.number, eq);
     wasm:Expression falseBody = module.localSet(result.number, module.addConst({ i32: op == "ne" ? 1: 0 }));
     return module.addIf(isTypeFloat, trueBody, falseBody);
 }
 
+function buildEqualFloatFloat(wasm:Module module, Scaffold scaffold, CmpEqOp op, boolean exact, wasm:Expression rhs, wasm:Expression lhs, bir:Register result) returns wasm:Expression {
+    var { name, returnType } = floatEqFunction;
+    wasm:Expression eq =  module.call(name, [lhs, rhs, module.addConst({ i32: exact ? 1: 0 })], returnType);
+    if op != "eq" {
+        eq = module.binary("i32.xor", module.addConst({ i32: 1 }), eq);
+    }
+    return module.localSet(result.number, eq);
+}
+
 function buildEqualTaggedTagged(wasm:Module module, Scaffold scaffold, boolean exact, CmpEqOp op, wasm:Expression rhs, wasm:Expression lhs, bir:Register result) returns wasm:Expression {
+    wasm:Expression eq;
     if exact {
-        wasm:Expression refEq = module.refEq(lhs, rhs);
-        if op != "eq" {
-            refEq = module.binary("i32.xor", module.addConst({ i32: 1 }), refEq);
-        }
-        return module.localSet(result.number, refEq);
+        var { name, returnType } = exactEqualTaggedTaggedFunction;
+        eq = module.call(name, [lhs, rhs], returnType);
     }
     else {
         var { name, returnType } = equalTaggedTaggedFunction;
-        wasm:Expression eq = module.call(name, [lhs, rhs], returnType);
-        if op != "eq" {
-            eq = module.binary("i32.xor", module.addConst({ i32: 1 }), eq);
-        }
-        return module.localSet(result.number, eq);
+        eq = module.call(name, [lhs, rhs], returnType);
     }
+    if op != "eq" {
+        eq = module.binary("i32.xor", module.addConst({ i32: 1 }), eq);
+    }
+    return module.localSet(result.number, eq);
 }
