@@ -153,7 +153,7 @@ class Scaffold {
         DIScaffold? diScaffold;
         ModuleDI? moduleDI = mod.di;
         if moduleDI !is () {
-            diScaffold = new(<DISubprogram>diFunc, moduleDI, self, code.registers, defn.position, defn.partIndex);
+            diScaffold = new(<DISubprogram>diFunc, moduleDI, self, defn.position, defn.partIndex);
         }
         else {
             diScaffold = ();
@@ -184,7 +184,7 @@ class Scaffold {
             self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
         }
         if diScaffold !is () {
-            diScaffold.declareVariables(entry);
+            diScaffold.declareVariables(entry, code.registers);
         }
     }
 

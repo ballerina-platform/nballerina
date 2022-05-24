@@ -38,21 +38,19 @@ class DIScaffold {
     private Scaffold scaffold;
     private map<llvm:Metadata> typeMetadata = {};
     private boolean debugFull;
-    private bir:Register[] registers;
     private Scope rootScope;
 
     private bir:Position? currentPosition = ();
     private DILocation? noLineLocation = ();
     private DILocation? currentDebugLocation = ();
 
-    function init(DISubprogram diFunc, ModuleDI moduleDI, Scaffold scaffold, bir:Register[] registers, bir:Position startPos, int partIndex) {
+    function init(DISubprogram diFunc, ModuleDI moduleDI, Scaffold scaffold, bir:Position startPos, int partIndex) {
         self.diFunc = diFunc;
         self.rootScope = { diScope: diFunc, startPos, endPos: int:MAX_VALUE, childScopes: [] };
         self.diBuilder = moduleDI.builder;
         self.diFile = moduleDI.files[partIndex];
         self.debugFull = moduleDI.debugFull;
         self.scaffold = scaffold;
-        self.registers = registers;
     }
 
     private function registerTypeToMetadata(bir:DeclRegister|bir:NarrowRegister register) returns llvm:Metadata {
@@ -139,12 +137,12 @@ class DIScaffold {
         return { diScope, startPos, endPos, childScopes };
     }
 
-    function declareVariables(llvm:BasicBlock initBlock) {
+    function declareVariables(llvm:BasicBlock initBlock, bir:Register[] registers) {
         if !self.debugFull {
             return;
         }
         llvm:Metadata emptyExpr = self.diBuilder.createExpression([]);
-        foreach bir:Register register in self.registers {
+        foreach bir:Register register in registers {
             if register !is bir:DeclRegister {
                 continue;
             }
