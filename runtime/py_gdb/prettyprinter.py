@@ -45,7 +45,7 @@ class TaggedPrinter:
     def to_string(self):
         return self.tagged_ptr_to_string(self.val)
 
-    def tagged_ptr_to_string(self, tagged_ptr):
+    def tagged_ptr_to_string(self, tagged_ptr, printer_stack=[]):
         ptr_val = int(tagged_ptr)
         ptr_body = ptr_val & POINTER_MASK
         tag = self.get_tag(tagged_ptr) & UT_MASK
@@ -68,9 +68,9 @@ class TaggedPrinter:
         if tag == TAG_ERROR:
             return self.error_to_string(tagged_ptr)
         if tag == TAG_LIST_RW:
-            return self.list_to_string(tagged_ptr)
+            return self.list_to_string(tagged_ptr, printer_stack)
         if tag == TAG_MAPPING_RW:
-            return self.map_to_string(tagged_ptr)
+            return self.map_to_string(tagged_ptr, printer_stack)
         if tag == TAG_DECIMAL:
             return self.decimal_to_string(tagged_ptr)
         raise Exception("Unimplemented tag")
@@ -81,25 +81,35 @@ class TaggedPrinter:
         val = decimal_val(bits)
         return val.to_eng_string()
 
-    def map_to_string(self, tagged_ptr):
+    def map_to_string(self, tagged_ptr, printer_stack):
         data = map_data(tagged_ptr)
         body = ["{"];
+        ptr = int(tagged_ptr)
+        if ptr in printer_stack:
+            return "..."
+        printer_stack.append(ptr);
         for i in range(data["length"]):
             if i > 0:
                 body.append(", ")
             key, val = self.get_map_element(data, i)
             body.append(f"{key}: {val}")
         body.append("}");
+        printer_stack.pop()
         return "".join(body)
 
-    def list_to_string(self, tagged_ptr):
-        body = ["["]
+    def list_to_string(self, tagged_ptr, printer_stack):
         data = list_data(tagged_ptr)
+        ptr = int(tagged_ptr)
+        if ptr in printer_stack:
+            return "..."
+        printer_stack.append(ptr);
+        body = ["["]
         for i in range(data["length"]):
             if i > 0:
                 body.append(", ")
-            body.append(str(self.get_list_element(data, i)))
+            body.append(str(self.get_list_element(data, i, printer_stack)))
         body.append("]")
+        printer_stack.pop()
         return "".join(body)
 
     def error_to_string(self, tagged_ptr):
@@ -129,7 +139,7 @@ class TaggedPrinter:
         val = self.tagged_ptr_to_string(val_ptr)
         return [key, val]
 
-    def get_list_element(self, list_data, index):
+    def get_list_element(self, list_data, index, printer_stack):
         restType = list_data["restType"]
         array_ptr = list_data["array_ptr"]
         ptr = array_ptr + (index * 8)
@@ -146,7 +156,8 @@ class TaggedPrinter:
         else:
             # any[]
             tagged_ptr = int(gdb.Value(ptr).cast(i64.pointer()).dereference())
-            return self.tagged_ptr_to_string(tagged_ptr)
+            print(tagged_ptr, printer_stack)
+            return self.tagged_ptr_to_string(tagged_ptr, printer_stack)
 
     def get_tag(self, tagged_ptr):
         pointer = int(tagged_ptr)
@@ -174,7 +185,7 @@ def decimal_val(bits):
         for num in str_num:
             significant_digits.append(num)
     significant = Decimal(''.join(significant_digits))
-    value = (Decimal(10) ** (exponent - 6176)) * significant
+    value = (Decimal(10) ** Decimal(exponent - 6176)) * significant
     if sign:
         value *= -1
     return value
@@ -183,9 +194,9 @@ def dpd_to_int(bits):
     # original bits are assumed to be Xabc Ydef Zghi
     # encoding table https://en.wikipedia.org/wiki/Densely_packed_decimal
     i = bits & 1;
-    f = (bits & 1 << 4) >> 4;
-    c = (bits & 1 << 7) >> 7;
-    if (bits >> 3 & 1) == 0:
+    f = (bits & (1 << 4)) >> 4;
+    c = (bits & (1 << 7)) >> 7;
+    if ((bits >> 3) & 1) == 0:
         # case 1
         D1 = bits >> 7
         D2 = (bits >> 4) & 0b111
