@@ -3,6 +3,13 @@ import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
 import wso2/nballerina.comm.err;
 
+type DIBuilder llvm:DIBuilder;
+type DISubprogram llvm:Metadata;
+type DILocation llvm:Metadata;
+type DIFile llvm:Metadata;
+type DICompileUnit llvm:Metadata;
+type DISubroutineType llvm:Metadata;
+
 type Scope record {|
     llvm:Metadata diScope;
     bir:Position startPos;
@@ -10,27 +17,42 @@ type Scope record {|
     Scope[] childScopes;
 |};
 
-class RegisterDebugStore {
+type ModuleDI record {|
+    DIBuilder builder;
+    DIFile[] files;
+    DICompileUnit compileUnit;
+    DISubroutineType funcType;
+    boolean debugFull;
+|};
+
+// Debug location will always be added
+public const int DEBUG_USAGE_ERROR_CONSTRUCT = 0;
+public const int DEBUG_USAGE_CALL = 1;
+
+public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL;
+
+class DIScaffold {
     private DIBuilder diBuilder;
     private DIFile diFile;
-    private bir:File file;
-    private Module mod;
+    private DISubprogram diFunc;
     private Scaffold scaffold;
     private map<llvm:Metadata> typeMetadata = {};
     private boolean debugFull;
-    private bir:FunctionCode code;
+    private bir:Register[] registers;
     private Scope rootScope;
 
-    function init(bir:FunctionDefn defn, DISubprogram diFunc, Module mod, Scaffold scaffold, bir:FunctionCode code) {
-        self.rootScope = { diScope: diFunc, startPos: defn.position, endPos: int:MAX_VALUE, childScopes: [] };
-        self.file = mod.partFiles[defn.partIndex];
-        ModuleDI moduleDI = <ModuleDI>mod.di;
+    private bir:Position? currentPosition = ();
+    private DILocation? noLineLocation = ();
+    private DILocation? currentDebugLocation = ();
+
+    function init(DISubprogram diFunc, ModuleDI moduleDI, Scaffold scaffold, bir:Register[] registers, bir:Position startPos, int partIndex) {
+        self.diFunc = diFunc;
+        self.rootScope = { diScope: diFunc, startPos, endPos: int:MAX_VALUE, childScopes: [] };
         self.diBuilder = moduleDI.builder;
-        self.diFile = moduleDI.files[defn.partIndex];
-        self.mod = mod;
-        self.scaffold = scaffold;
+        self.diFile = moduleDI.files[partIndex];
         self.debugFull = moduleDI.debugFull;
-        self.code = code;
+        self.scaffold = scaffold;
+        self.registers = registers;
     }
 
     private function registerTypeToMetadata(bir:DeclRegister|bir:NarrowRegister register) returns llvm:Metadata {
@@ -112,28 +134,32 @@ class RegisterDebugStore {
     }
 
     private function createScope(bir:Position startPos, bir:Position endPos, Scope parent, Scope[] childScopes) returns Scope {
-        var [line, column] = self.file.lineColumn(startPos);
+        var [line, column] = self.scaffold.lineColumn(startPos);
         llvm:Metadata diScope = self.diBuilder.createLexicalBlock(parent.diScope, self.diFile, line, column);
         return { diScope, startPos, endPos, childScopes };
     }
 
-    function initialize(llvm:BasicBlock initBlock) {
+    function declareVariables(llvm:BasicBlock initBlock) {
         if !self.debugFull {
             return;
         }
         llvm:Metadata emptyExpr = self.diBuilder.createExpression([]);
-        foreach bir:Register register in self.code.registers {
+        foreach bir:Register register in self.registers {
             if register !is bir:DeclRegister {
                 continue;
             }
             Scope scope = self.addRegisterScope(register.scope, register.pos, self.rootScope);
-            var [line, column] = self.file.lineColumn(register.pos);
+            var [line, column] = self.scaffold.lineColumn(register.pos);
             llvm:Metadata tyMeta = self.registerTypeToMetadata(register);
             llvm:Metadata diScope = scope.diScope;
             llvm:Metadata varMeta = self.diBuilder.createAutoVariable(ty=tyMeta, scope=diScope, name=register.name, lineNo=line, file=self.diFile);
-            llvm:Metadata declLoc = self.diBuilder.createDebugLocation(self.mod.llContext, line, column, diScope);
+            llvm:Metadata declLoc = self.diBuilder.createDebugLocation(line, column, diScope);
             self.diBuilder.insertDeclareAtEnd(self.scaffold.address(register), varMeta, emptyExpr, declLoc, initBlock);
         }
+    }
+
+    function currentPos() returns bir:Position {
+        return <bir:Position> self.currentPosition;
     }
 
     private function scope(bir:Position pos) returns llvm:Metadata {
@@ -150,8 +176,53 @@ class RegisterDebugStore {
         return parent;
     }
 
+    function clearDebugLocation(llvm:Builder builder) {
+        // in debugFull case every instruction must have a debug location
+        if !self.debugFull {
+            builder.setCurrentDebugLocation(());
+            self.currentDebugLocation = ();
+        }
+    }
+
+    function setCurrentPosition(llvm:Builder builder, bir:Position pos) {
+        self.currentPosition = pos;
+        if self.debugFull {
+            self.currentDebugLocation = self.debugLocation(pos);
+            builder.setCurrentDebugLocation(self.currentDebugLocation);
+        }
+        else {
+            self.currentDebugLocation = ();
+        }
+    }
+
+    function useDebugLocation(llvm:Builder builder, DebugLocationUsage usage) {
+        // In the debugFull case, there is no need to do anything for DEBUG_USAGE_ERROR_CONSTRUCT
+        // because the full location will have been set earlier.
+        if usage == DEBUG_USAGE_ERROR_CONSTRUCT && self.debugFull {
+            return;
+        }
+        DILocation loc;
+        if usage == DEBUG_USAGE_ERROR_CONSTRUCT {
+            DILocation? noLineLoc = self.noLineLocation;
+            if noLineLoc == () {
+                loc = self.debugLocation(0);
+                self.noLineLocation = loc;
+            }
+            else {
+                loc = noLineLoc;
+            }
+        }
+        else {
+            if self.currentDebugLocation == () {
+                self.currentDebugLocation = self.debugLocation(self.currentPos());
+            }
+            loc = <DILocation>self.currentDebugLocation;
+        }
+        builder.setCurrentDebugLocation(loc);
+    }
+
     function debugLocation(bir:Position pos) returns DILocation {
-        var [line, column] = self.file.lineColumn(pos);
-        return self.diBuilder.createDebugLocation(self.mod.llContext, line, column, self.scope(pos));
+        var [line, column] = self.scaffold.lineColumn(pos);
+        return self.diBuilder.createDebugLocation(line, column, self.scope(pos));
     }
 }

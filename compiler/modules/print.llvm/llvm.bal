@@ -1034,7 +1034,7 @@ public class DIBuilder {
         return metadata;
     }
 
-    public function createDebugLocation(Context context, int line, int column, Metadata? scope, Metadata? inlinedAt=()) returns Metadata {
+    public function createDebugLocation(int line, int column, Metadata? scope, Metadata? inlinedAt=()) returns Metadata {
         Metadata metadata = self.m.addMetadata();
         string[] words = [metadata.ref(), "=", "!", "DILocation", "("];
         words.push("line", ":", line.toString());

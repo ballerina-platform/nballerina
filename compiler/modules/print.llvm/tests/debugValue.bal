@@ -24,9 +24,9 @@ function debugVal() returns Module {
     Metadata emptyExpr = dIBuilder.createExpression([]);
 
     Metadata bScope = dIBuilder.createLexicalBlock(functionData, fileData, 3, 2);
-    Metadata loc1 = dIBuilder.createDebugLocation(context, 2, 2, bScope);
-    Metadata loc2 = dIBuilder.createDebugLocation(context, 3, 2, functionData);
-    Metadata loc3 = dIBuilder.createDebugLocation(context, 4, 2, functionData);
+    Metadata loc1 = dIBuilder.createDebugLocation(2, 2, bScope);
+    Metadata loc2 = dIBuilder.createDebugLocation(3, 2, functionData);
+    Metadata loc3 = dIBuilder.createDebugLocation(4, 2, functionData);
 
     builder.setCurrentDebugLocation(loc1);
     FunctionDefn mainFunction = m.addFunctionDefn("main", {returnType: "i64", paramTypes: []});

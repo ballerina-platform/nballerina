@@ -36,9 +36,11 @@ final readonly & map<int> encodingToInt = {
 
 public class DIBuilder {
     handle LLVMDIBuilder;
+    Context context;
 
-    function init(Module m) {
+    function init(Module m, Context context) {
         self.LLVMDIBuilder = jLLVMCreateDIBuilder(m.LLVMModule);
+        self.context = context;
     }
 
     public function createCompileUnit(*CompileUnitProperties props) returns Metadata {
@@ -90,10 +92,10 @@ public class DIBuilder {
         return new(jObj);
     }
 
-    public function createDebugLocation(Context context, int line, int column, Metadata? scope, Metadata? inlinedAt=()) returns Metadata {
+    public function createDebugLocation(int line, int column, Metadata? scope, Metadata? inlinedAt=()) returns Metadata {
         handle scopeJObj = getMetadataProp(scope);
         handle inlinedAtJObj = getMetadataProp(inlinedAt);
-        handle jObj = jLLVMDIBuilderCreateDebugLocation(context.LLVMContext, line, column, scopeJObj, inlinedAtJObj);
+        handle jObj = jLLVMDIBuilderCreateDebugLocation(self.context.LLVMContext, line, column, scopeJObj, inlinedAtJObj);
         return new(jObj);
     }
 
