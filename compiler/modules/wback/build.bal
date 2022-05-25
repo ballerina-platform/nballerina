@@ -9,6 +9,7 @@ final int TYPE_LIST    = t:LIST;
 final int TYPE_STRING  = t:STRING;
 final int TYPE_MAP     = t:MAPPING;
 final int TYPE_FLOAT   = t:FLOAT;
+final int TYPE_ERROR   = t:ERROR;
 const int SELF_REFERENCE = 4;
 const int INITIAL_CAPACITY = 4;
 const int MAX_CAPACITY = 4294967295;
@@ -21,11 +22,10 @@ const RuntimeType ANY_ARR_TYPE = "AnyList";
 const RuntimeType STRING_TYPE = "String";
 const RuntimeType ANY_TYPE = "Any";
 const RuntimeType FLOAT_TYPE = "Float";
+const RuntimeType ERROR_TYPE = "Error";
 
 public type ExceptionTag string;
 const ExceptionTag OVERFLOW_TAG = "overflow";
-const ExceptionTag INDEX_OUT_0F_BOUND_TAG = "index-outof-bound";
-const ExceptionTag INDEX_TOO_LARGE_TAG = "index-too-large";
 const ExceptionTag BAD_CONVERSION_TAG = "bad-conversion";
 
 type RuntimeFunction record {|

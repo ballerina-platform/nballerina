@@ -25,7 +25,7 @@ type UniformRepr readonly & record {|
 |};
 
 type TaggedRepr readonly & record {|
-    BASE_REPR_TAGGED base;
+    BASE_REPR_TAGGED base = BASE_REPR_TAGGED;
     t:UniformTypeBitSet subtype;
     wasm:Type wasm;
 |};
@@ -140,13 +140,14 @@ final IntRepr REPR_INT = { };
 final BooleanRepr REPR_BOOLEAN = { };
 final FloatRepr REPR_FLOAT = { };
 
-final TaggedRepr REPR_STRING = { base: BASE_REPR_TAGGED, wasm: "eqref", subtype: t:STRING };
-final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, wasm: "eqref", subtype: t:NIL };
-final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, wasm: "eqref" , subtype: t:ANY };
-final TaggedRepr REPR_LIST_RW = { base: BASE_REPR_TAGGED, subtype: t:LIST_RW, wasm: { base: "List", initial: "null" } };
-final TaggedRepr REPR_LIST = { base: BASE_REPR_TAGGED, subtype: t:LIST, wasm: { base: "List", initial: "null" } };
-final TaggedRepr REPR_MAPPING_RW = { base: BASE_REPR_TAGGED, subtype: t:MAPPING_RW, wasm: { base: "Map", initial: "null" } };
-final TaggedRepr REPR_MAPPING = { base: BASE_REPR_TAGGED, subtype: t:MAPPING, wasm: { base: "Map", initial: "null" } };
+final TaggedRepr REPR_STRING = { wasm: "eqref", subtype: t:STRING };
+final TaggedRepr REPR_NIL = { wasm: "eqref", subtype: t:NIL };
+final TaggedRepr REPR_ANY = { wasm: "eqref" , subtype: t:ANY };
+final TaggedRepr REPR_LIST_RW = { subtype: t:LIST_RW, wasm: { base: "List", initial: "null" } };
+final TaggedRepr REPR_LIST = { subtype: t:LIST, wasm: { base: "List", initial: "null" } };
+final TaggedRepr REPR_MAPPING_RW = { subtype: t:MAPPING_RW, wasm: { base: "Map", initial: "null" } };
+final TaggedRepr REPR_MAPPING = { subtype: t:MAPPING, wasm: { base: "Map", initial: "null" } };
+final TaggedRepr REPR_ERROR = { subtype: t:ERROR, wasm: { base: "Error", initial: "null" } };
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, wasm: WASM_VOID };
 
 final readonly & record {|
@@ -180,7 +181,7 @@ function semTypeRepr(t:SemType ty) returns Repr {
             return tr.repr;
         }
     }
-    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:LIST|t:MAPPING;
+    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:LIST|t:MAPPING|t:ERROR;
     int maximized = w | supported;
     if maximized == t:TOP || (w & supported) == w {
         TaggedRepr repr = { base: BASE_REPR_TAGGED, subtype: w, wasm: "eqref" };

@@ -9,6 +9,7 @@ const SELF_REFERENCE = 4;
 const TYPE_INT = 128;
 const TYPE_FLOAT = 256;
 const TYPE_STRING = 1024;
+const TYPE_ERROR = 2048;
 const TYPE_LIST = 262148;
 const TYPE_MAP = 524296;
 const COMPARE_LT = 0;
@@ -138,6 +139,8 @@ const getValue = (ref, parent = null) => {
       }
       result = "{" + pairs.join(",") + "}";
       break;
+      case TYPE_ERROR:
+        return "error(\"" +WasmModule.get_error(ref) + "\")";
   }
   return result;
 }

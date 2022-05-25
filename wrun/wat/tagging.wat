@@ -3,6 +3,7 @@
   (type $Any (struct (field $type i32)))
   (type $BoxedInt (struct (field $type i32) (field $val i64)))
   (type $Float (struct (field $type i32) (field $val f64)))
+  (type $Error (struct (field $type i32) (field $val (ref $String))))
   (type $HashTable (array (mut i32))) 
   (type $MapField (struct (field $key (mut eqref)) (field $value (mut eqref)))) 
   (type $MapKeys (array (mut eqref))) 
@@ -20,6 +21,7 @@
   (global $rttList (rtt 1 $List) (rtt.sub $List (global.get $rttAny)))
   (global $rttString (rtt 1 $String) (rtt.sub $String (global.get $rttAny)))
   (global $rttMap (rtt 1 $Map) (rtt.sub $Map (global.get $rttAny)))
+  (global $rttError (rtt 1 $Error) (rtt.sub $Error (global.get $rttAny)))
   ;; export
   (export "tagged_to_int" (func $tagged_to_int)) 
   (export "tagged_to_float" (func $tagged_to_float)) 
@@ -77,6 +79,23 @@
       (return 
         (call $get_type 
           (local.get $1)))))
+  ;; $get_error
+  (func $get_error (param $0 eqref) (result anyref) 
+    (return 
+      (struct.get $String $val
+        (struct.get $Error $val 
+          (ref.cast 
+            (ref.as_data 
+              (local.get $0)) 
+            (global.get $rttError))))))
+  ;; $message
+  (func $message (param $0 eqref) (result (ref $String)) 
+    (return 
+      (struct.get $Error $val 
+        (ref.cast 
+          (ref.as_data 
+            (local.get $0)) 
+          (global.get $rttError))))) 
   ;; $check_type_and_boolean_val
   (func $check_type_and_boolean_val (param $0 eqref) (param $1 i32) (result i32)
     (local $2 i32) 
