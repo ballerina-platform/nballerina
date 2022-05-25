@@ -126,6 +126,10 @@ class StmtContext {
         return bir:createTmpRegister(self.code, t, pos);
     }
 
+    function createAssignTmpRegister(bir:SemType t, Position? pos = ()) returns bir:AssignTmpRegister {
+        return bir:createAssignTmpRegister(self.code, t, pos);
+    }
+
     function nextRegisterNumber() returns int {
         return self.code.registers.length();
     }
@@ -699,6 +703,12 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     else {
         // Match expression is not a variable: we do not get type narrowing
         int patternIndex = 0;
+        if matched is bir:TmpRegister {
+            bir:AssignTmpRegister result = cx.createAssignTmpRegister(matched.semType, matched.pos);
+            bir:AssignInsn insn = { result, operand: matched, pos : stmt.startPos };
+            matched = result;
+            testBlock.insns.push(insn);
+        }
         foreach var mt in matchTests {
             int clauseIndex = mt.clauseIndex;
             if clauseIndex == defaultClauseIndex {
