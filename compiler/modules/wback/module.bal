@@ -85,11 +85,11 @@ function addStringInit(wasm:Module module, map<StringRecord> strings) returns wa
     wasm:Expression[] body = [];
     var { name, returnType } = createStringFunction; 
     foreach StringRecord rec in strings {
-        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.addConst({ i32: TYPE_STRING}), module.call(name, [module.addConst({i32: rec.offset}), module.addConst({i32: rec.length})], returnType), module.arrayNewDef("Surrogate", module.addConst({i32: rec.surrogate.length()})), module.addConst({i32: -1})])));
+        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.addConst({ i32: TYPE_STRING}), module.call(name, [module.addConst({ i32: rec.offset }), module.addConst({i32: rec.length})], returnType), module.arrayNewDef("Surrogate", module.addConst({ i32: rec.surrogate.length() })), module.addConst({ i32: -1 })])));
         wasm:Expression asData = module.refAs("ref.as_data", module.globalGet(rec.global));
         wasm:Expression castToStr = module.refCast(asData, module.globalGet("rtt" + STRING_TYPE));
         foreach int i in 0 ..< rec.surrogate.length() {
-            body.push(module.arraySet("Surrogate", module.structGet(STRING_TYPE, "surrogate", castToStr), module.addConst({i32: i}), module.addConst({i32: rec.surrogate[i]})));
+            body.push(module.arraySet("Surrogate", module.structGet(STRING_TYPE, "surrogate", castToStr), module.addConst({ i32: i }), module.addConst({ i32: rec.surrogate[i] })));
         }
     }
     return module.block(body);
@@ -103,7 +103,7 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
         string absPath = check file:getAbsolutePath("");
         string mainDir = "nballerina";
         int index = <int>absPath.lastIndexOf(mainDir);
-        string path = absPath.substring(0, index + mainDir.length()) + "/wrun/" + mod + ".wat";
+        string path = absPath.substring(0, index + mainDir.length()) + "/wrun/wat/" + mod + ".wat";
         wasm:Wat[] wat = check io:fileReadLines(path);
         string? identifier = ();
         string[] content = [];

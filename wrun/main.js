@@ -1,215 +1,171 @@
 const fs = require('fs');
-let tags = [];
-let getType = null;
-let untagInt = null;
-let untagBoolean = null;
-let untagFloat = null;
-let len = null;
-let arrayGet = null;
-let getTypeChildren = null;
-let getObject = null;
-let mem = null;
-let bal_map_get_keys = null
-let bal_mapping_get = null
-let bal_mapping_num_keys = null
-let bal_mapping_get_key = null
+let WasmModule = {
+  tags: [],
+  memory: null
+};
+const TYPE_NIL = 1;
+const TYPE_BOOLEAN = 2;
+const SELF_REFERENCE = 4;
+const TYPE_INT = 128;
+const TYPE_FLOAT = 256;
+const TYPE_STRING = 1024;
+const TYPE_LIST = 262148;
+const TYPE_MAP = 524296;
 const COMPARE_LT = 0;
 const COMPARE_LE = 1;
 const COMPARE_GT = 2;
 const COMPARE_GE = 3;
-const create_string = (offset, length) => {
-  var bytes = new Uint8Array(mem.buffer, offset, length);
-  var string = new TextDecoder('utf8').decode(bytes);
-  return string;
-} 
-const string = String.prototype;
-string.create = create_string;
-if (process.argv.length > 2) {
-  let fileName = process.argv[2];
-  const wasmBuffer = fs.readFileSync(fileName);
-  if (process.argv.length > 3) {
-    let importObject = {
-      console: {
-        log: function(arg) {
-          console.log(getValue(arrayGet(arg, 0)));
-        }
-      },
-      string: {
-        create: function(offset, length) {
-          return create_string(offset, length);
-        },
-        length: function(arg) {
-           return arg.length;
-        },
-        concat: function(arg1, arg2) {
-          return arg1 + arg2
-        },
-        eq: function(arg1, arg2) {
-          return arg1 == arg2;
-        },
-        comp: function(op, arg1, arg2) {
-          let result = false;
-          switch (op) {
-            case COMPARE_GE:
-              result = arg1 >= arg2
-              break;
-            case COMPARE_GT:
-              result = arg1 > arg2
-              break;
-            case COMPARE_LE:
-              result = arg1 <= arg2
-              break;
-            case COMPARE_LT:
-              result = arg1 < arg2
-              break;
-            default:
-              break;
-          }
-          return result;
-        },
-        hash: function(arg) {
-          return hash_string(arg);
-        }
-      },
-      int: {
-        hex: function (arg) {
-          return arg.toString(16)
-        }
-      }
-    };
-    WebAssembly.instantiate(wasmBuffer, importObject).then(obj => {
-      let exported = Object.getOwnPropertyNames(obj.instance.exports);
-      exported.forEach(element => {
-        let attr = obj.instance.exports[element];
-        if (typeof attr === "object") {
-          if (attr instanceof WebAssembly.Tag) {
-            tags.push({ name: element, tag: attr});
-          }
-        }
-      });
-      getType = obj.instance.exports.get_type;
-      getTypeChildren = obj.instance.exports.get_type_children;
-      untagInt = obj.instance.exports.tagged_to_int;
-      untagBoolean = obj.instance.exports.tagged_to_boolean;
-      untagFloat = obj.instance.exports.tagged_to_float;
-      len = obj.instance.exports.arr_len;
-      arrayGet = obj.instance.exports.arr_get;
-      getObject = obj.instance.exports.get_string;
-      getMap = obj.instance.exports.get_map;
-      getCharAt = obj.instance.exports.get_char_at;
-      mem = obj.instance.exports.memory;
-      bal_map_get_keys = obj.instance.exports._bal_map_get_keys 
-      bal_mapping_get = obj.instance.exports._bal_mapping_get 
-      bal_mapping_num_keys = obj.instance.exports._bal_mapping_num_keys 
-      bal_mapping_get_key = obj.instance.exports._bal_mapping_get_key 
-      obj.instance.exports.main();
-    }).catch((err) => {
-        if(typeof err == "object" &&  err instanceof WebAssembly.Exception) {
-            let tag = tags.filter(tag => err.is(tag.tag));
-            if (tag.length > 0) {
-              err.message = tag[0].name;
-            }
-        }
-        errorHandler(err);
-    });
+
+let fileName = process.argv[2];
+const wasmBuffer = fs.readFileSync(fileName);
+
+const stringImport = {
+  create: (offset, length) => {
+    var bytes = new Uint8Array(WasmModule.memory.buffer, offset, length);
+    var string = new TextDecoder('utf8').decode(bytes);
+    return string;
+  },
+  length: (arg) => {
+    return arg.length;
+  },
+  concat: (arg1, arg2) => {
+    return arg1 + arg2
+  },
+  eq: (arg1, arg2) => {
+    return arg1 == arg2;
+  },
+  comp: (op, arg1, arg2) => {
+    let result = false;
+    switch (op) {
+      case COMPARE_GE:
+        result = arg1 >= arg2
+        break;
+      case COMPARE_GT:
+        result = arg1 > arg2
+        break;
+      case COMPARE_LE:
+        result = arg1 <= arg2
+        break;
+      case COMPARE_LT:
+        result = arg1 < arg2
+        break;
+      default:
+        break;
+    }
+    return result;
+  },
+  hash: (str) => {
+    var hash = 5381,
+      i = str.length;
+    while (i) {
+      hash = (hash * 33) ^ (2654435761 * str.charCodeAt(--i));
+    }
+    return hash >>> 0;
   }
-  else {
-    WebAssembly.instantiate(wasmBuffer).then(obj => {
-      obj.instance.exports.main()
-    }).catch((err) => errorHandler(err));
+};
+
+const intImport = {
+  hex: (arg) => {
+    return arg.toString(16)
   }
-}
+};
+
+const ioImport = {
+  log: (arg) => {
+    console.log(getValue(WasmModule.arr_get(arg, 0)));
+  }
+};
+
+let importObject = {
+  console: ioImport,
+  string: stringImport,
+  int: intImport
+};
+
+WebAssembly.instantiate(wasmBuffer, importObject).then(obj => {
+  processExports(obj.instance.exports);
+  obj.instance.exports.main();
+}).catch((err) => {
+  handleError(err);
+});
 
 const getValue = (ref, parent = null) => {
-  let type = getType(ref);
-  if (parent !== null) {
-    type = getTypeChildren(parent, ref);
-  }
-  if (type == 128) {
-    return untagInt(ref).toString();
-  }
-  else if (type == 2) {
-    if (untagBoolean(ref).toString() === "1") {
-      return "true";
-    }
-    return "false";
-  }
-  else if (type == 1){
-    return "";
-  }
-  else if (type == 262148) {
-    let length = len(ref);
-    let output = "[";
-    for (let index = 0; index < length; index++) {
-      let element = arrayGet(ref, index);
-      let val = getValue(element, ref);
-      let ty = getType(element);
-      if (val === "") {
-        val = "null"
+  let type = parent == null ? WasmModule.get_type(ref) : WasmModule.get_type_children(parent, ref);
+  let result = null;
+  switch (type) {
+    case TYPE_NIL:
+      result = parent == null ? "" : "null";
+      break;
+    case TYPE_BOOLEAN:
+      result = WasmModule.tagged_to_boolean(ref).toString() === "1" ? "true" : "false";
+      break;
+    case SELF_REFERENCE:
+      result = "...";
+      break;
+    case TYPE_INT:
+      result = WasmModule.tagged_to_int(ref).toString();
+      break;
+    case TYPE_FLOAT:
+      result = WasmModule.tagged_to_float(ref);
+      if ((1 / result) == -Infinity) {
+        result = "-0.0";
       }
-      if (ty == 1024) {
-        val = JSON.stringify(val)
+      else if (Number.isInteger(result)) {
+        result = `${result}.0`;
       }
-      output += val + ",";
-    }
-    if (output.indexOf(",") != -1) {
-      output = output.substring(0, output.length - 1)
-    }
-    output += "]"
-    return output;
-  }
-  else if (type == 4) {
-    return "...";
-  }
-  else if (type == 1024) {
-    return getObject(ref);
-  }
-  else if (type == 524296) {
-    let map = "{"
-    let keys  = bal_map_get_keys(ref)
-    let len = bal_mapping_num_keys(keys)
-    for (let index = 0; index < len; index++) {
-      let key = getObject(bal_mapping_get_key(keys, index));
-      let valRef = bal_mapping_get(ref, bal_mapping_get_key(keys, index));
-      let valType = getType(valRef);
-      let val = "";
-      if (valType == 1) {
-        val = "null"
+      break;
+    case TYPE_STRING:
+      result = WasmModule.get_string(ref);
+      if (parent != null) result = JSON.stringify(result)
+      break;
+    case TYPE_LIST:
+      let length = WasmModule.arr_len(ref);
+      let elements = []
+      for (let index = 0; index < length; index++) {
+        let element = getValue(WasmModule.arr_get(ref, index), ref);
+        elements.push(element);
       }
-      else {
-        val = getValue(valRef)
+      result = "[" + elements.join(",") + "]"
+      break;
+    case TYPE_MAP:
+      let pairs = []
+      let keys = WasmModule._bal_map_get_keys(ref)
+      let len = WasmModule._bal_mapping_num_keys(keys)
+      for (let index = 0; index < len; index++) {
+        let key = WasmModule.get_string(WasmModule._bal_mapping_get_key(keys, index));
+        let val = getValue(WasmModule._bal_mapping_get(ref, WasmModule._bal_mapping_get_key(keys, index)), ref);
+        pairs.push(`"${key}":${val}`)
       }
-      map += `"${key}":${val},`
-    }
-    if (map.indexOf(",") != -1) {
-      map = map.substring(0, map.length - 1)
-    }
-    map += "}"
-    return map;
+      result = "{" + pairs.join(",") + "}";
+      break;
   }
-  else if (type == 256) {
-    float = untagFloat(ref);
-    if ((1/float) == -Infinity) {
-      return "-0.0"
-    }
-    else if (Number.isInteger(float)) {
-      return `${float}.0`;
-    }
-    return float;
-  }
+  return result;
 }
 
-const hash_string = (str) => {
-  var hash = 5381,
-  i    = str.length;
-  while(i) {
-    hash = (hash * 33) ^ (2654435761 * str.charCodeAt(--i));
-  }
-  return hash >>> 0;
+const processExports = (exports) => {
+  let exported = Object.getOwnPropertyNames(exports);
+  exported.forEach(element => {
+    let attr = exports[element];
+    if (typeof attr === "object") {
+      if (attr instanceof WebAssembly.Tag) {
+        WasmModule.tags.push({ name: element, tag: attr });
+      }
+      else if (attr instanceof WebAssembly.Memory) {
+        WasmModule.memory = attr;
+      }
+    }
+    else {
+      WasmModule[element] = attr;
+    }
+  });
 }
 
-const errorHandler = err => {
+const handleError = (err) => {
   let msg = "panic: ";
+  if (typeof err == "object" && err instanceof WebAssembly.Exception) {
+    let tag = WasmModule.tags.find(tag => err.is(tag.tag));
+    if (tag != undefined) err.message = tag.name;
+  }
   if (err.message == "divide result unrepresentable") {
     msg += "arithmetic overflow"
   }
@@ -236,3 +192,4 @@ const errorHandler = err => {
   }
   console.log(msg)
 }
+
