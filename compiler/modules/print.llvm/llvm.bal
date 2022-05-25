@@ -869,18 +869,20 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderCreatePointerType
-    public function createPointerType(Metadata pointeeTy, int sizeInBits, Alignment? alignInBits = (), int addressSpace = 0, string? name = ()) returns Metadata {
+    public function createPointerType(*PointerTypeMetdataProperties props) returns Metadata {
         Metadata metadata = self.m.addMetadata();
         string[] body = [metadata.ref(), "=", "!", "DIDerivedType", "(", "tag", ":", "DW_TAG_pointer_type"];
+        string? name = props.name;
         if name is string {
             body.push(",", "name", ":", "\"", name, "\"");
         }
-        body.push(",", "baseType", ":", pointeeTy.ref(), ",", "size", ":", sizeInBits.toString());
+        body.push(",", "baseType", ":", props.pointeeTy.ref(), ",", "size", ":", props.sizeInBits.toString());
+        Alignment? alignInBits = props.alignInBits;
         if alignInBits is Alignment {
             body.push(",", "align", ":", alignInBits.toString());
         }
-        if addressSpace != 0 {
-            body.push(",", "dwarfAddressSpace", ":", addressSpace.toString());
+        if props.addressSpace != 0 {
+            body.push(",", "dwarfAddressSpace", ":", props.addressSpace.toString());
         }
         body.push(")");
         metadata.addLine(...body);
@@ -930,18 +932,20 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderInsertDbgValueAtEnd
-    public function insertDbgValueAtEnd(Value val, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
+    // update jni
+    public function insertDbgValueAtEnd(*ValueMetadataProperties props) {
         self.m.addDebugIntrinsic("dbg.value");
-        (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.value", "(", "metadata", typeToString(val.ty, self.context),
-                                    val.operand, ",", "metadata", varInfo.ref(), ",", "metadata", expr.ref(), ")"];
-        addInsnWithDbLocation(block, words, debugLoc);
+        (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.value", "(", "metadata", typeToString(props.value.ty, self.context),
+                                    props.value.operand, ",", "metadata", props.varInfo.ref(), ",", "metadata", props.expr.ref(), ")"];
+        addInsnWithDbLocation(props.block, words, props.debugLoc);
     }
+
     // Corresponds to LLVMDIBuilderInsertDeclareAtEnd
-    public function insertDeclareAtEnd(Value storage, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
+    public function insertDeclareAtEnd(*ValueMetadataProperties props) {
         self.m.addDebugIntrinsic("dbg.declare");
-        (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.declare", "(", "metadata", typeToString(storage.ty, self.context),
-                                    storage.operand, ",", "metadata", varInfo.ref(), ",", "metadata", expr.ref(), ")"];
-        addInsnWithDbLocation(block, words, debugLoc);
+        (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.declare", "(", "metadata", typeToString(props.value.ty, self.context),
+                                    props.value.operand, ",", "metadata", props.varInfo.ref(), ",", "metadata", props.expr.ref(), ")"];
+        addInsnWithDbLocation(props.block, words, props.debugLoc);
     }
 
 

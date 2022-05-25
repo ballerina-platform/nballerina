@@ -99,10 +99,10 @@ public class DIBuilder {
         return new(jObj);
     }
 
-    public function createPointerType(Metadata pointeeTy, int sizeInBits, Alignment? alignInBits = (), int addressSpace = 0, string? name = ()) returns Metadata {
-        int align = getIntProp(alignInBits);
-        var [tyName, nameLen] = getStringProp(name);
-        handle jObj = jLLVMDIBuilderCreatePointerType(self.LLVMDIBuilder, pointeeTy.llvmMetadata, sizeInBits, align, addressSpace, tyName, nameLen);
+    public function createPointerType(*PointerTypeMetdataProperties props) returns Metadata {
+        int align = getIntProp(props.alignInBits);
+        var [tyName, nameLen] = getStringProp(props.name);
+        handle jObj = jLLVMDIBuilderCreatePointerType(self.LLVMDIBuilder, props.pointeeTy.llvmMetadata, props.sizeInBits, align, props.addressSpace, tyName, nameLen);
         return new(jObj);
     }
 
@@ -129,12 +129,14 @@ public class DIBuilder {
         return new(jObj);
     }
 
-    public function insertDbgValueAtEnd(Value val, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
-        _ = jLLVMDIBuilderInsertDbgValueAtEnd(self.LLVMDIBuilder, val.LLVMValueRef, varInfo.llvmMetadata, expr.llvmMetadata, debugLoc.llvmMetadata, block.LLVMBasicBlockRef);
+    public function insertDbgValueAtEnd(*ValueMetadataProperties props) {
+        _ = jLLVMDIBuilderInsertDbgValueAtEnd(self.LLVMDIBuilder, props.value.LLVMValueRef, props.varInfo.llvmMetadata, props.expr.llvmMetadata,
+                                              props.debugLoc.llvmMetadata, props.block.LLVMBasicBlockRef);
     }
 
-    public function insertDeclareAtEnd(Value storage, Metadata varInfo, Metadata expr, Metadata debugLoc, BasicBlock block) {
-        _ = jLLVMDIBuilderInsertDeclareAtEnd(self.LLVMDIBuilder, storage.LLVMValueRef, varInfo.llvmMetadata, expr.llvmMetadata, debugLoc.llvmMetadata, block.LLVMBasicBlockRef);
+    public function insertDeclareAtEnd(*ValueMetadataProperties props) {
+        _ = jLLVMDIBuilderInsertDeclareAtEnd(self.LLVMDIBuilder, props.value.LLVMValueRef, props.varInfo.llvmMetadata, props.expr.llvmMetadata,
+                                             props.debugLoc.llvmMetadata, props.block.LLVMBasicBlockRef);
     }
 
     public function createExpression(int[] addr) returns Metadata {

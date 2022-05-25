@@ -34,7 +34,6 @@ public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL;
 class DIScaffold {
     private DIBuilder diBuilder;
     private DIFile diFile;
-    private DISubprogram diFunc;
     private Scaffold scaffold;
     private map<llvm:Metadata> typeMetadata = {};
     private boolean debugFull;
@@ -45,7 +44,6 @@ class DIScaffold {
     private DILocation? currentDebugLocation = ();
 
     function init(DISubprogram diFunc, ModuleDI moduleDI, Scaffold scaffold, bir:Position startPos, int partIndex) {
-        self.diFunc = diFunc;
         self.rootScope = { diScope: diFunc, startPos, endPos: int:MAX_VALUE, childScopes: [] };
         self.diBuilder = moduleDI.builder;
         self.diFile = moduleDI.files[partIndex];
@@ -53,7 +51,7 @@ class DIScaffold {
         self.scaffold = scaffold;
     }
 
-    private function registerTypeToMetadata(bir:DeclRegister|bir:NarrowRegister register) returns llvm:Metadata {
+    private function registerTypeToMetadata(bir:Register register) returns llvm:Metadata {
         t:SemType semType = register.semType;
         "int"|"float"|"boolean"|"any" ty;
         if t:isSubtypeSimple(semType, t:INT) {
@@ -85,7 +83,8 @@ class DIScaffold {
             }
             _ => {
                 llvm:Metadata charMeta = self.diBuilder.createBasicType(name="char", encoding="signed_char", sizeInBits=8);
-                tyMeta = self.diBuilder.createTypedef(self.diBuilder.createPointerType(charMeta, sizeInBits=64, addressSpace=1), "TaggedPtr", self.diFile, 0, scope=self.diFile);
+                tyMeta = self.diBuilder.createTypedef(self.diBuilder.createPointerType(pointeeTy=charMeta, sizeInBits=64, addressSpace=1),
+                                                      "TaggedPtr", self.diFile, 0, scope=self.diFile);
             }
         }
         self.typeMetadata[ty] = tyMeta;
@@ -152,7 +151,7 @@ class DIScaffold {
             llvm:Metadata diScope = scope.diScope;
             llvm:Metadata varMeta = self.diBuilder.createAutoVariable(ty=tyMeta, scope=diScope, name=register.name, lineNo=line, file=self.diFile);
             llvm:Metadata declLoc = self.diBuilder.createDebugLocation(line, column, diScope);
-            self.diBuilder.insertDeclareAtEnd(self.scaffold.address(register), varMeta, emptyExpr, declLoc, initBlock);
+            self.diBuilder.insertDeclareAtEnd(value=self.scaffold.address(register), varInfo=varMeta, expr=emptyExpr, debugLoc=declLoc, block=initBlock);
         }
     }
 
