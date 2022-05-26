@@ -2,7 +2,10 @@ COMPILER_SRC=$(wildcard *.bal) $(wildcard modules/*/*.bal)
 COMPILER_JAR=../build/bin/nballerina.jar
 BAL?=bal
 BAL_BUILD_FLAGS ?= --offline
+
+ifneq (BAL_ALL_TESTS, true)
 BAL_TEST_FLAGS ?= --disable-groups longRunning
+endif
 
 all: $(COMPILER_JAR)
 
