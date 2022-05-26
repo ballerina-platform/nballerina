@@ -83,9 +83,6 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:TypeTestInsn {
             check buildTypeTest(builder, scaffold, insn);
         }
-        else if insn is bir:CondNarrowInsn {
-            check buildCondNarrow(builder, scaffold, insn);
-        }
         else if insn is bir:CallInsn {
             check buildCall(builder, scaffold, insn);
         }
@@ -115,6 +112,12 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         }
         else if insn is bir:CondBranchInsn {
             check buildCondBranch(builder, scaffold, insn);
+        }
+        else if insn is bir:TypeBranchInsn {
+            check buildTypeBranch(builder, scaffold, insn);
+        }
+        else if insn is bir:TypeMergeInsn {
+            check buildTypeMerge(builder, scaffold, insn);
         }
         else if insn is bir:AbnormalRetInsn {
             buildAbnormalRet(builder, scaffold, insn);

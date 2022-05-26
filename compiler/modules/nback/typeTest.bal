@@ -114,10 +114,45 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
     return { hasType, valueToExactify, value, repr };
 }
 
-function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrowInsn insn) returns BuildError? {
-    var [sourceRepr, value] = check buildReprValue(builder, scaffold, insn.operand);
+function buildTypeBranch(llvm:Builder builder, Scaffold scaffold, bir:TypeBranchInsn insn) returns BuildError? {
+    TypeTestedValue { hasType } = check buildTypeTestedValue(builder, scaffold, insn.operand, insn.pos, insn.semType);
+    llvm:BasicBlock ifTrue = scaffold.basicBlock(insn.ifTrue);
+    llvm:BasicBlock ifFalse = scaffold.basicBlock(insn.ifFalse);
+    builder.condBr(hasType, ifTrue, ifFalse);
+    builder.positionAtEnd(ifTrue);
+    check buildNarrowReg(builder, scaffold, insn.ifTrueRegister);
+    builder.positionAtEnd(ifFalse);
+    check buildNarrowReg(builder, scaffold, insn.ifFalseRegister);
+    // No need to positionAtEnd(originalBB) since this is a terminator
+}
+
+function buildNarrowReg(llvm:Builder builder, Scaffold scaffold, bir:NarrowRegister register) returns BuildError? {
+    var sourceReg = register.underlying;
+    var sourceRepr = scaffold.getRepr(sourceReg);
+    var value = builder.load(scaffold.address(sourceReg));
+    t:SemType semType = register.semType;
+    if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsUniformBitSet(scaffold.typeContext(), register.underlying.semType, semType) == () {
+        value = buildExactify(builder, scaffold, <llvm:PointerValue>value, semType);
+    }
+    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(register));
+    builder.store(narrowed, scaffold.address(register));
+}
+
+function unnarrow(bir:Register reg) returns bir:Register {
+    if reg is bir:NarrowRegister {
+        return unnarrow(reg.underlying);
+    }
+    else {
+        return reg;
+    }
+}
+
+function buildTypeMerge(llvm:Builder builder, Scaffold scaffold, bir:TypeMergeInsn insn) returns BuildError? {
+    // Improvement: unnarrowed should be the lowest command ancestor of all operands
+    bir:Register unnarrowed = unnarrow(insn.operands[0]);
+    var [sourceRepr, value] = check buildReprValue(builder, scaffold, unnarrowed);
     t:SemType semType = insn.result.semType;
-    if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsUniformBitSet(scaffold.typeContext(), insn.operand.semType, semType) == () {
+    if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsUniformBitSet(scaffold.typeContext(), unnarrowed.semType, semType) == () {
         value = buildExactify(builder, scaffold, <llvm:PointerValue>value, semType);
     }
     llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
