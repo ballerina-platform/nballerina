@@ -164,25 +164,25 @@ function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Inter
     SemType union = t:NEVER;
     foreach Register r in insn.operands {
         if opRoot != rootUnderlying(r) {
-            return vc.invalidErr("correct operand is not narrowed", insn.pos);
+            return vc.invalidErr("underlying Register of NarrowRegister is incorrect", insn.pos);
         }
         union = t:union(union, r.semType);
     }
     if !t:isSubtype(vc.typeContext(), union, insn.result.semType) {
-        return vc.invalidErr("register is not correctly narrowed", insn.pos);
+        return vc.invalidErr("result type of TypeMerge is not a subtype of operand types", insn.pos);
     }
 }
 
 function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Internal? {
     Register opRoot = rootUnderlying(insn.operand);
     if opRoot != rootUnderlying(insn.ifFalseRegister) || opRoot != rootUnderlying(insn.ifTrueRegister) {
-        return vc.invalidErr("correct operand is not narrowed", insn.pos);
+        return vc.invalidErr("underlying Register of NarrowRegister is incorrect", insn.pos);
     }
     if !t:isSubtype(vc.typeContext(), t:intersect(insn.operand.semType, insn.semType), insn.ifTrueRegister.semType) {
-        return vc.invalidErr("true register is not correctly narrowed", insn.pos);
+        return vc.invalidErr("true register is not a subtype of the tested type", insn.pos);
     }
     if !t:isSubtype(vc.typeContext(), t:diff(insn.operand.semType, insn.semType), insn.ifFalseRegister.semType) {
-        return vc.invalidErr("false register is not correctly narrowed", insn.pos);
+        return vc.invalidErr("false register is not a subtype of the tested type complement", insn.pos);
     }
 }
 
