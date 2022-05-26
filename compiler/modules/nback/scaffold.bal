@@ -1,4 +1,5 @@
 import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.lib;
 import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
@@ -98,7 +99,7 @@ const STRING_VARIANT_LARGE = 1;
 type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT_SMALL|;
 
 type StringDefn llvm:ConstPointerValue;
-type DecimalDefn llvm:ConstPointerValue;
+type DecimalDefn [llvm:ConstValue, llvm:ConstValue];
 
 type Module record {|
     llvm:Context llContext;
@@ -245,14 +246,8 @@ class Scaffold {
     }
 
     function getDecimal(decimal val) returns DecimalDefn {
-        string str = val.toString();
-        DecimalDefn? curDefn = self.mod.decimalDefns[str];
-        if curDefn != () {
-            return curDefn;
-        }
-        DecimalDefn newDefn = addDecimalDefn(self.mod.llContext, self.mod.llMod, self.mod.decimalDefns.length(), str);
-        self.mod.decimalDefns[str] = newDefn;
-        return newDefn;
+        var [top, bottom] = lib:toDecimal128(val);
+        return [llvm:constInt("i64", top), llvm:constInt("i64", bottom)];
     }
 
     function addBasicBlock() returns llvm:BasicBlock {

@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -248,12 +249,12 @@ IntWithOverflow _bal_decimal_to_int(TaggedPtr tp) {
     return res;
 }
 
-TaggedPtr _bal_decimal_const(const char *decString) {
-    decContext cx;
-    initContext(&cx);
-    decQuad dq;
-    decQuadFromString(&dq, decString, &cx);
-    return createDecimal(&dq);
+TaggedPtr _bal_decimal_const(uint64_t top, uint64_t bottom) {
+    DecimalPtr dp = _bal_alloc(sizeof(decQuad));
+    int64_t *ptr = (int64_t*)dp;
+    ptr[0] = bottom;
+    ptr[1] = top;
+    return ptrAddFlags(dp, (uint64_t)TAG_DECIMAL << TAG_SHIFT);
 }
 
 bool _bal_decimal_subtype_contains(UniformSubtypePtr stp, TaggedPtr tp) {
