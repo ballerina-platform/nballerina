@@ -411,7 +411,7 @@ function nonEmptyGenList(PropositionGenContext cx, PropositionPath path) returns
 function nonEmptyGenTuple(PropositionGenContext cx, PropositionPath path) returns NonEmptyProposition {
     NonEmptyProposition base = generateNonEmptyProposition(cx, propositionBranch(path));
     int rest = base.left;
-    int[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.bounds.maxMemberCount) 
+    int[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.bounds.maxMemberCount)
                                let var prop = generateNonEmptyProposition(cx, propositionBranch(path))
                                select prop.left;
     int t = cx.types.list(fixedMembers, rest = rest);
@@ -420,7 +420,7 @@ function nonEmptyGenTuple(PropositionGenContext cx, PropositionPath path) return
 }
 // NE(T1), NE(T2), ...NE(Tn) -> NE([T1, T2, ..Tn])
 function nonEmptyGenNonRestTuple(PropositionGenContext cx, PropositionPath path) returns NonEmptyProposition {
-    int[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.bounds.maxMemberCount) 
+    int[] fixedMembers = from var _ in 0 ... cx.random.nextRange(cx.bounds.maxMemberCount)
                                let var prop = generateNonEmptyProposition(cx, propositionBranch(path))
                                select prop.left;
     int t = cx.types.list(fixedMembers);
@@ -458,7 +458,7 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
             result = t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty;
         }
         DIFF2 => {
-            result = t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty 
+            result = t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty
                 && t:isEmpty(cx.typeContext, t:diff(right, left)) == p.isEmpty;
         }
         _ => {
@@ -489,7 +489,7 @@ function propositionToString(PropositionGenContext cx, Proposition proposition) 
     return "Failed for seed value: " + cx.seed.toString() + "\n"
             + proposition.toString()
             + "\n-------------left---------------------\n"
-            + cx.types.typeToString(proposition.left) 
+            + cx.types.typeToString(proposition.left)
             + "\n-------------right--------------------\n"
             + cx.types.typeToString(proposition.right)
             + "\n--------------------------------------\n";
