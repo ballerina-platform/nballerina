@@ -126,10 +126,6 @@ class StmtContext {
         return bir:createTmpRegister(self.code, t, pos);
     }
 
-    function createAssignTmpRegister(bir:SemType t, Position? pos = ()) returns bir:AssignTmpRegister {
-        return bir:createAssignTmpRegister(self.code, t, pos);
-    }
-
     function nextRegisterNumber() returns int {
         return self.code.registers.length();
     }
