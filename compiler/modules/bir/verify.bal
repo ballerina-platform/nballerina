@@ -96,25 +96,6 @@ function verifyTmpRegisters(VerifyContext vc, Insn insn, boolean[] tmpRegisterIn
             tmpRegisterInitialized[insn.result.number] = true;
         }
     }
-
-    match insn {
-        var { operand } => {
-            check verifyTmpOperandInitialized(vc, operand, tmpRegisterInitialized, insn.pos);
-        }
-        var { operands } | var { args: operands } => {
-            // JBUG #35557 can't iterate operands
-            Operand[] ops = operands;
-            foreach Operand op in ops {
-                check verifyTmpOperandInitialized(vc, op, tmpRegisterInitialized, insn.pos);
-            }
-        }
-    }
-}
-
-function verifyTmpOperandInitialized(VerifyContext vc, Operand r, boolean[] tmpRegisterInitialized, Position pos) returns Error? {
-    if r is TmpRegister && !tmpRegisterInitialized[r.number] {
-        return vc.invalidErr("tmp register not initialized", pos);
-    }
 }
 
 function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
