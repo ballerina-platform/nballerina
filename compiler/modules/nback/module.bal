@@ -102,16 +102,11 @@ function orderByFwdTargets(bir:BasicBlock[] blocks, bir:Label label, boolean[] v
     ordered.push(label);
 }
 
-isolated function index(UsedSemType ty) returns int {
-    return ty.index;
-}
-
 function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
     byte[] uses = [];
     t:SemType[] types = [];
     // JBUG 36056 can't directly iterate over usedSemTypes
-    UsedSemType[] usedSemTy = usedSemTypes.toArray();
-    usedSemTy = usedSemTy.sort("ascending", index);
+    UsedSemType[] usedSemTy = from var semType in usedSemTypes.toArray() order by semType.index select semType;
     foreach var used in usedSemTy {
         types.push(used.semType);
         byte use = 0;
