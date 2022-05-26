@@ -105,7 +105,9 @@ function orderByFwdTargets(bir:BasicBlock[] blocks, bir:Label label, boolean[] v
 function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
     byte[] uses = [];
     t:SemType[] types = [];
-    foreach var used in usedSemTypes {
+    // JBUG 36056 can't directly iterate over usedSemTypes
+    UsedSemType[] usedSemTy = from var semType in usedSemTypes.toArray() order by semType.index select semType;
+    foreach var used in usedSemTy {
         types.push(used.semType);
         byte use = 0;
         if used.inherentType != () {
