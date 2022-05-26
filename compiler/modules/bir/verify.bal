@@ -83,11 +83,11 @@ type Error err:Semantic|err:Internal;
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb, boolean[] tmpRegisterInitialized) returns Error? {
     foreach Insn insn in bb.insns {
         check verifyInsn(vc, insn);
-        check verifyTmpRegisters(vc, insn, tmpRegisterInitialized);
+        check verifyTmpRegisterAssignment(vc, insn, tmpRegisterInitialized);
     }
 }
 
-function verifyTmpRegisters(VerifyContext vc, Insn insn, boolean[] tmpRegisterInitialized) returns Error? {
+function verifyTmpRegisterAssignment(VerifyContext vc, Insn insn, boolean[] tmpRegisterInitialized) returns Error? {
     if insn is ResultInsnBase {
         if tmpRegisterInitialized[insn.result.number] {
             return vc.invalidErr("multiple assignments to a tmp register", insn.pos);
