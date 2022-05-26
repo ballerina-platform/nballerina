@@ -1,11 +1,11 @@
 import ballerina/test;
 
-@test:Config
+@test:Config { groups: ["longRunning"] }
 function testSubtyping() {
     testSemtypePropositions(generator = generateSubtypeProposition);
 }
 
-@test:Config
+@test:Config { groups: ["longRunning"] }
 function testNonEmptyTypes() {
     testSemtypePropositions(generator = generateNonEmptyProposition);
 }

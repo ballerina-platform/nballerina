@@ -134,6 +134,7 @@ function init() {
                                         subtypeGenUnion,
                                         subtypeGenFixedTupleUnion,
                                         subtypeGenMap,
+                                        subtypeGenMapUnion,
                                         subtypeGenClosedRecord,
                                         subtypeGenRecord);
     NONEMPTY_PROPOSITION_GENERATORS.push(nonEmptyGenUnion,
@@ -474,8 +475,8 @@ type PropositionTestOnFail function(PropositionGenContext cx, Proposition failed
 
 type PropositionTestConfig record {|
     int totalTestRuns = 10;
-    int depthLimit = 6;
-    int widthLimit = 200;
+    int depthLimit = 5;
+    int widthLimit = 120;
     PropositionGenerator generator;
     PropositionTestOnFail onFail?;
 |};
