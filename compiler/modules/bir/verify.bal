@@ -160,10 +160,10 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
 }
 
 function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Internal? {
-    Register opRoot = rootUnderlying(insn.result);
+    Register opRoot = unnarrow(insn.result);
     SemType union = t:NEVER;
     foreach Register r in insn.operands {
-        if opRoot != rootUnderlying(r) {
+        if opRoot != unnarrow(r) {
             return vc.invalidErr("underlying Register of NarrowRegister is incorrect", insn.pos);
         }
         union = t:union(union, r.semType);
@@ -174,8 +174,8 @@ function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Inter
 }
 
 function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Internal? {
-    Register opRoot = rootUnderlying(insn.operand);
-    if opRoot != rootUnderlying(insn.ifFalseRegister) || opRoot != rootUnderlying(insn.ifTrueRegister) {
+    Register opRoot = unnarrow(insn.operand);
+    if opRoot != unnarrow(insn.ifFalseRegister) || opRoot != unnarrow(insn.ifTrueRegister) {
         return vc.invalidErr("underlying Register of NarrowRegister is incorrect", insn.pos);
     }
     if !t:isSubtype(vc.typeContext(), t:intersect(insn.operand.semType, insn.semType), insn.ifTrueRegister.semType) {
@@ -186,12 +186,13 @@ function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Int
     }
 }
 
-function rootUnderlying(Register r) returns Register {
-    Register narrowed = r;
-    while narrowed is NarrowRegister {
-        narrowed = narrowed.underlying;
+function unnarrow(Register reg) returns Register {
+    if reg is NarrowRegister {
+        return unnarrow(reg.underlying);
     }
-    return narrowed;
+    else {
+        return reg;
+    }
 }
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
