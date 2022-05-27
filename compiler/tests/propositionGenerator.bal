@@ -486,13 +486,13 @@ function assertFail(PropositionGenContext cx, Proposition proposition) {
 }
 
 function propositionToString(PropositionGenContext cx, Proposition proposition) returns string {
-    return "Failed for seed value: " + cx.seed.toString() + "\n"
-            + proposition.toString()
-            + "\n-------------left---------------------\n"
+    return "\\Failed for seed value: " + cx.seed.toString() + "\n"
+            + "\\\\" + proposition.toString()
+            + "\n\\\\-------------left---------------------\n"
             + cx.types.typeToString(proposition.left)
-            + "\n-------------right--------------------\n"
+            + "\n\\\\-------------right--------------------\n"
             + cx.types.typeToString(proposition.right)
-            + "\n--------------------------------------\n";
+            + "\n\\\\--------------------------------------\n";
 }
 
 function printPropositionTestFailures(PropositionGenContext cx) {
