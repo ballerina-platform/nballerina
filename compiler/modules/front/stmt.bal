@@ -1228,6 +1228,11 @@ function codeGenCheckingStmt(StmtContext cx, bir:BasicBlock bb, Environment env,
 function codeGenCheckingCond(ExprContext cx, bir:BasicBlock bb, bir:Register operand, Binding? operandBinding, t:SemType errorType, s:CheckingKeyword checkingKeyword, t:SemType okType, Position pos) returns CodeGenError|RegExprEffect {
     bir:BasicBlock errorBlock = cx.createBasicBlock();
     bir:BasicBlock okBlock = cx.createBasicBlock();
+    StmtContext? stmtCx =  cx.sc;
+    if stmtCx != () {
+        bir:RegionIndex? index = stmtCx.openRegion(errorBlock.label - 1, bir:REGION_COND);
+        stmtCx.closeRegion(index);
+    }
     bir:Register reg = <bir:Register>operand;
     bir:NarrowRegister errorReg = cx.createNarrowRegister(errorType, reg);
     bir:NarrowRegister result = cx.createNarrowRegister(okType, reg);

@@ -41,6 +41,9 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:ErrorConstructInsn {
             body.push(buildErrorConstruct(module, scaffold, insn));
         }
+        else if insn is bir:PanicInsn {
+            body.push(buildPanic(module, scaffold, insn));
+        }
         else if insn is bir:TypeBranchInsn {
             body.push(buildTypeBranch(module, scaffold, insn));
         }
@@ -96,7 +99,7 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
 
 function buildBranch(wasm:Module module, Scaffold scaffold, bir:BranchInsn insn, bir:Label label) returns wasm:Expression? {
     if insn.backward || scaffold.brBlockLabels.indexOf(label) != () || scaffold.contBlockLabels.indexOf(insn.dest) != () {
-        return module.br("$block$" + insn.dest.toString() + "$break");
+        return module.br("block$" + insn.dest.toString() + "$break");
     }
     return ();
 }
@@ -140,6 +143,12 @@ function buildAssign(wasm:Module module, Scaffold scaffold, bir:AssignInsn insn)
 
 function buildErrorConstruct(wasm:Module module, Scaffold scaffold, bir:ErrorConstructInsn insn) returns wasm:Expression {
     return module.localSet(insn.result.number, module.structNew(ERROR_TYPE, [module.addConst({ i32: TYPE_ERROR }), buildString(module, scaffold, insn.operand)]));
+}
+
+function buildPanic(wasm:Module module, Scaffold scaffold, bir:PanicInsn insn) returns wasm:Expression {
+    scaffold.setPanicBlock();
+    wasm:Expression errSet = module.globalSet("bal$err", module.localGet(insn.operand.number));
+    return module.block([errSet, module.br("normal-block")]);
 }
 
 function buildBooleanNotInsn(wasm:Module module, bir:BooleanNotInsn insn) returns wasm:Expression {

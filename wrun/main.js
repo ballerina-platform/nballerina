@@ -168,6 +168,7 @@ const handleError = (err) => {
   if (typeof err == "object" && err instanceof WebAssembly.Exception) {
     let tag = WasmModule.tags.find(tag => err.is(tag.tag));
     if (tag != undefined) err.message = tag.name;
+    if (err.message === "custom-exception") err.message = err.getArg(tag.tag, 0)
   }
   if (err.message == "divide result unrepresentable") {
     msg += "arithmetic overflow"

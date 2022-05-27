@@ -205,8 +205,12 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function throw(string tag) returns Expression {
-        return { tokens: appendBraces(["throw", "$" + tag]) };
+    public function throw(string tag, Expression? arg = ()) returns Expression {
+        Token[] inst = ["throw", "$" + tag];
+        if arg != () {
+            inst.push(...arg.tokens);
+        }
+        return { tokens: appendBraces(inst) };
     }
 
     public function try(Expression body) returns Expression {
@@ -217,12 +221,20 @@ public class Module {
         return { tokens: appendBraces(tryBody)};
     }
 
-    public function addTag(string name) {
-        addSectionData(self.sections, appendBraces(["tag",  "$" + name]), "tag");
+    public function addTag(string name, Type? kind = ()) {
+        Token[] inst = ["tag",  "$" + name];
+        if kind != () {
+        inst.push(...appendBraces(["param", getTypeString(kind)]));
+        }
+        addSectionData(self.sections, appendBraces(inst), "tag");
     }
 
-    public function br(string name) returns Expression {
-        return { tokens: appendBraces(["br", name]) };
+    public function br(string name, Expression? arg = ()) returns Expression {
+        Token[] inst = ["br", "$" + name];
+        if arg != () {
+            inst.push(...arg.tokens);
+        }
+        return { tokens: appendBraces(inst) };
     }
 
     public function brOnCastFail(string target, Expression val, Expression ty) returns Expression {

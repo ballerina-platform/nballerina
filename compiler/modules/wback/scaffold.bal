@@ -74,14 +74,17 @@ class Scaffold {
     bir:Label[] contBlockLabels = [];
     bir:Label[] regionsWithBr = [];
     private Context context = {};
+    boolean hasPanic = false;
     int funcExceptionTags = 0;
-    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, Context context) {
+    private t:Context typeContext;
+    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, Context context, t:Context typeContext) {
         self.module = module;
         self.blocks = code.blocks;
         self.regions = code.regions.reverse();
         self.defn = def;
         self.returnType = def.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
+        self.typeContext = typeContext;
         self.initializeReprs(code.registers);
         self.context = context;
     }
@@ -95,9 +98,9 @@ class Scaffold {
         self.reprs = reprs;
     }
 
-    public function addExceptionTag(string tag) {
+    public function addExceptionTag(string tag, wasm:Type? kind = ()) {
         if self.context.exceptionTags.indexOf(tag) == () {
-            self.module.addTag(tag);
+            self.module.addTag(tag, kind);
             self.module.addTagExport(tag, tag);
             self.context.exceptionTags.push(tag);
             self.funcExceptionTags += 1;
@@ -133,6 +136,12 @@ class Scaffold {
             self.context.runtimeModules.push(module);
         } 
     }
+
+    function setPanicBlock() {
+        self.hasPanic = true;
+    }
+
+    function getTypeContext() returns t:Context => self.typeContext;
 
 }
 

@@ -31,7 +31,7 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
-        Scaffold scaffold = new (module, code, functionDefns[i], context);
+        Scaffold scaffold = new (module, code, functionDefns[i], context, mod.getTypeContext());
         wasm:Expression body = buildFunctionBody(scaffold, module);
         string funcName = functionDefns[i].symbol.identifier;
         wasm:Type[] params = [];
@@ -43,6 +43,17 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
             locals.push(semTypeReprWasm(code.registers[j].semType));
         }
         Repr retType = semTypeRepr(scaffold.returnType);
+        if scaffold.hasPanic {
+            wasm:Expression[] normalBody = [body];
+            if retType is TaggedRepr && retType.subtype == t:NIL {
+                normalBody.push(module.br("outer-block"));
+            }
+            wasm:Expression normalBlock = module.block(normalBody, "$normal-block");
+            wasm:Expression message =  module.structGet(STRING_TYPE, "val", module.structGet(ERROR_TYPE, "val", buildCast(module, scaffold, module.globalGet("bal$err"), ERROR_TYPE)));
+            wasm:Expression panicBlock = module.block([module.throw("custom-exception", message)]);
+            body = module.block([normalBlock, panicBlock], "$outer-block");
+            scaffold.addExceptionTag("custom-exception", "anyref");
+        }
         if funcName == "main" {
             mainBody = body;
             mainLocals = locals;
@@ -77,6 +88,7 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     int pages = (context.offset / 65536) + 1;
     module.setMemory(pages, "memory", strings, offsetExpr, false);
     module.addFunctionImport("println", "console", "log", ["eqref"], "None");
+    module.addGlobal("bal$err", "eqref", module.refNull());
     _ = check addRttFunctions(module, context.runtimeModules);
     return module.finish();
 }
@@ -284,6 +296,7 @@ function buildBlockInRegion(Scaffold scaffold, wasm:Module module, bir:Region? c
 
 function preProcessRegions(Scaffold scaffold) {
     getRegionBlocks(scaffold);
+    printBlocks(scaffold);
     foreach int i in 0 ..< scaffold.regions.length() {
         bir:Region region = scaffold.regions[i];
         if region.kind == bir:REGION_LOOP {

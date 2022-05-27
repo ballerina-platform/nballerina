@@ -28,6 +28,7 @@
   (export "tagged_to_boolean" (func $tagged_to_boolean)) 
   (export "get_type" (func $get_type)) 
   (export "get_type_children" (func $get_type_children)) 
+  (export "get_error" (func $get_error)) 
   ;; $tagged_to_int
   (func $tagged_to_int (param $0 eqref) (result i64) 
     (return 
