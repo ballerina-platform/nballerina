@@ -361,16 +361,43 @@ function addBindings(BindingChain? bindingLimit, BindingChain? bodyBindings, int
 }
 
 function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, s:Stmt stmt) returns CodeGenError|StmtEffect {
-    boolean scopedStmt = stmt is ScopedStmt;
-    StmtEffect|CodeGenError effect;
-    if scopedStmt {
-        cx.pushScope(stmt.startPos, stmt.endPos);
-    }
     if curBlock == () {
         return cx.semanticErr("unreachable code", s:range(stmt));
     }
+    else if stmt is ScopedStmt {
+        return codeGenScopedStmt(cx, curBlock, env, stmt);
+    }
     else if stmt is s:IfElseStmt {
-        effect = codeGenIfElseStmt(cx, curBlock, env, stmt);
+        return codeGenIfElseStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:BreakContinueStmt {
+        return codeGenBreakContinueStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:ReturnStmt {
+        return codeGenReturnStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:PanicStmt {
+        return codeGenPanicStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:VarDeclStmt {
+        return codeGenVarDeclStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:AssignStmt {
+        return codeGenAssignStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:CompoundAssignStmt {
+        return codeGenCompoundAssignStmt(cx, curBlock, env, stmt);
+    }
+    else {
+        return codeGenCallStmt(cx, curBlock, env, stmt);
+    }
+}
+
+function codeGenScopedStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, ScopedStmt stmt) returns CodeGenError|StmtEffect {
+    StmtEffect|CodeGenError effect;
+    cx.pushScope(stmt.startPos, stmt.endPos);
+    if curBlock == () {
+        return cx.semanticErr("unreachable code", s:range(stmt));
     }
     else if stmt is s:MatchStmt {
         effect = codeGenMatchStmt(cx, curBlock, env, stmt);
@@ -378,33 +405,10 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, 
     else if stmt is s:WhileStmt {
         effect = codeGenWhileStmt(cx, curBlock, env, stmt);
     }
-    else if stmt is s:ForeachStmt {
+    else {
         effect = codeGenForeachStmt(cx, curBlock, env, stmt);
     }
-    else if stmt is s:BreakContinueStmt {
-        effect = codeGenBreakContinueStmt(cx, curBlock, env, stmt);
-    }
-    else if stmt is s:ReturnStmt {
-        effect = codeGenReturnStmt(cx, curBlock, env, stmt);
-    }
-    else if stmt is s:PanicStmt {
-        effect = codeGenPanicStmt(cx, curBlock, env, stmt);
-    }
-    else if stmt is s:VarDeclStmt {
-        effect = codeGenVarDeclStmt(cx, curBlock, env, stmt);
-    }
-    else if stmt is s:AssignStmt {
-        effect = codeGenAssignStmt(cx, curBlock, env, stmt);
-    }
-    else if stmt is s:CompoundAssignStmt {
-        effect = codeGenCompoundAssignStmt(cx, curBlock, env, stmt);
-    }
-    else {
-        effect = codeGenCallStmt(cx, curBlock, env, stmt);
-    }
-    if scopedStmt {
-        cx.popScope();
-    }
+    cx.popScope();
     return effect;
 }
 
