@@ -65,11 +65,242 @@ class VerifyContext {
     }
 }
 
+type RegSet boolean[];
+type BlockSet boolean[];
+
+// The set of registers that are initialized via a given edge starting at `origin` in to a block
+type RegFlow record {|
+    Label? origin; // origin == () iff entry
+    RegSet regs;
+|};
+
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
-    VerifyContext cx = new(mod, defn);
-    foreach BasicBlock b in code.blocks {
-        check verifyBasicBlock(cx, b);
+    VerifyContext vc = new(mod, defn);
+    Position funcPos = defn.position;
+    BasicBlock[] blocks = code.blocks;
+    Label entry = 0;
+    int numBlocks = blocks.length();
+    if numBlocks == 0 {
+        return vc.invalidErr("no basic blocks for function", funcPos);
     }
+    // Checks are done in two DFS rounds. During first round, forward in degree is calculated for each block.
+    int[] fwdInDegrees = [];
+    fwdInDegrees.setLength(numBlocks);
+    BlockSet preds = []; // predecessors of the currently visiting block
+    preds.setLength(numBlocks);
+    check verifyGraph(vc, blocks, fwdInDegrees, preds, entry, funcPos);
+    check verifyReachable(vc, fwdInDegrees, blocks, funcPos);
+    // In second round, previously calculated forward in degree is used as an input.
+    RegSet params = check verifyParamRegs(vc, code.registers);
+    RegFlow[][] blocksFlows = [];
+    blocksFlows.setLength(numBlocks);
+    check verifyRegFlow({ vc, blocks, fwdInDegrees, blocksFlows }, entry, { origin: (), regs: params }, funcPos);
+
+    foreach BasicBlock b in blocks {
+        check verifyBasicBlock(vc, b);
+    }
+}
+
+// Verify forward edgers form a DAG
+// Verify backward branch points to a predecessor XXX: need to also verify it's a dominator
+// Calculates forward in-degree for each block
+function verifyGraph(VerifyContext vc, BasicBlock[] blocks, int[] fwdInDegree, BlockSet preds, Label current, Position predPos) returns Error? {
+    BasicBlock block = blocks[current];
+    Insn term = check blockTerminator(vc, block, predPos);
+    Position termPos = term.pos;
+    Label? onPanic = block.onPanic;
+    preds[current] = true; // mark self before visiting children
+    if onPanic != () {
+        check verifyChildGraph(vc, blocks, fwdInDegree, preds, onPanic, termPos);
+    }
+    if term is BranchInsn {
+        check verifyChildGraph(vc, blocks, fwdInDegree, preds, term.dest, termPos, term.backward);
+    }
+    else if term is TypeBranchInsn|CondBranchInsn {
+        check verifyChildGraph(vc, blocks, fwdInDegree, preds, term.ifTrue, termPos);
+        check verifyChildGraph(vc, blocks, fwdInDegree, preds, term.ifFalse, termPos);
+    }
+    preds[current] = false; // unmark self after visiting children
+    fwdInDegree[current] = 1; // fwdInDegree[current] was 0 until now since above recursions can't cycle back to self.
+}
+
+function verifyChildGraph(VerifyContext vc, BasicBlock[] blocks, int[] fwdInDegree, BlockSet preds, Label child, Position pos, boolean backward = false) returns Error? {
+    boolean cycle = preds[child];
+    if backward != cycle {
+        return vc.invalidErr(backward ? "backward branch to non-predecessor" : "forward branch form a cycle", pos);
+    }
+    if backward {
+        return;
+    }
+    int fid = fwdInDegree[child];
+    if fid == 0 { // unvisited
+        check verifyGraph(vc, blocks, fwdInDegree, preds, child, pos);
+    }
+    else {
+        fwdInDegree[child] = fid + 1;
+    }
+}
+
+function verifyReachable(VerifyContext vc, int[] fwdInDegree, BasicBlock[] blocks, Position funcPos) returns Error? {
+    int i = 0;
+    foreach int fid in fwdInDegree {
+        if fid == 0 {
+            Insn[] insns = blocks[i].insns;
+            if insns.length() > 0 {
+                return vc.invalidErr(`unreachable block: ${i}`, insns[0].pos);
+            }
+            else {
+                return vc.invalidErr(`unreachable and empty block: ${i}`, funcPos);
+            }
+        }
+        i += 1;
+    }
+}
+
+// Verify param registers are at the beginning of the list and return those.
+function verifyParamRegs(VerifyContext vc, Register[] regs) returns RegSet|Error {
+    RegSet paramRegs = [];
+    boolean afterParams = false;
+    foreach var reg in regs {
+        if reg is ParamRegister {
+            if afterParams {
+                return vc.invalidErr("param register is not at the beginning of the register list", reg.pos);
+            }
+            paramRegs.push(true);
+        }
+        else {
+            paramRegs.push(false);
+            afterParams = true;
+        }
+    }
+    return paramRegs;
+}
+
+type VerifyRegFlowContext record {|
+    VerifyContext vc;
+    BasicBlock[] blocks;
+    int[] fwdInDegrees;
+    RegFlow[][] blocksFlows; // RegFlow per block, per each incoming forward edge
+|};
+
+// Verify Registers are initialized before used, including TypeMergeInsn's pred dependent Registers.
+function verifyRegFlow(VerifyRegFlowContext cx, Label current, RegFlow viaFlow, Position viaPos) returns Error? {
+    BasicBlock block = cx.blocks[current];
+    RegFlow[] flows = cx.blocksFlows[current];
+    flows.push(viaFlow);
+    if cx.fwdInDegrees[current] != flows.length() {
+        return;
+    }
+    RegSet regs = mergeFlows(flows);
+    boolean afterMerge = false;
+    foreach var insn in block.insns {
+        if insn is TypeMergeInsn {
+            check verifyTypeMergeFlow(cx, afterMerge, flows, insn);
+        }
+        else {
+            afterMerge = true;
+        }
+        match insn {
+            var { result } => {
+                regs[result.number] = true;
+            }
+            var { operand } => {
+                check verifyOperandInitialized(cx, operand, regs, insn.pos);
+            }
+            var { operands } | var { args: operands } => {
+                // JBUG #35557 compilation fails without redundant cast
+                foreach Operand op in <Operand[]>operands {
+                    check verifyOperandInitialized(cx, op, regs, insn.pos);
+                }
+            }
+        }
+    }
+    Label? onPanic = block.onPanic;
+    Insn term = check blockTerminator(cx.vc, block, viaPos);
+    Position termPos = term.pos;
+    if onPanic != () {
+        check verifyRegFlow(cx, onPanic, { origin: current, regs }, termPos);
+    }
+    if term is BranchInsn && !term.backward {
+        check verifyRegFlow(cx, term.dest, { origin: current, regs }, termPos);
+    }
+    else if term is CondBranchInsn {
+        check verifyRegFlow(cx, term.ifTrue, { origin: current, regs: regs.clone() }, termPos);
+        check verifyRegFlow(cx, term.ifFalse, { origin: current, regs }, termPos);
+    }
+    else if term is TypeBranchInsn {
+        RegSet trueRegs = regs.clone();
+        RegSet falseRegs = regs;
+        trueRegs[term.ifTrueRegister.number] = true;
+        falseRegs[term.ifFalseRegister.number] = true;
+        check verifyRegFlow(cx, term.ifTrue, { origin: current, regs: trueRegs }, termPos);
+        check verifyRegFlow(cx, term.ifFalse, { origin: current, regs: falseRegs }, termPos);
+    }
+}
+
+function verifyTypeMergeFlow(VerifyRegFlowContext cx, boolean afterMerge, RegFlow[] flows, TypeMergeInsn merge) returns Error? {
+    if afterMerge {
+        return cx.vc.invalidErr("TypeMergeInsn is not at the beginning of the basic block", merge.pos);
+    }
+    int numFlows = flows.length();
+    if merge.predecessors.length() != numFlows || merge.operands.length() != numFlows {
+        return cx.vc.invalidErr(`predecessor count(${merge.predecessors.length()})/operand count(${merge.operands.length()}) mismatch with incoming edge count(${numFlows})`, merge.pos);
+    }
+    int i = 0;
+    foreach Label pred in merge.predecessors {
+        RegFlow? flow = flowOriginating(flows, pred);
+        if flow!= () {
+            check verifyOperandInitialized(cx, merge.operands[i], flow.regs, merge.pos);
+        }
+        else {
+            return cx.vc.invalidErr(`superfluous predecessor ${pred} in TypeMergeInsn`, merge.pos);
+        }
+        i += 1;
+    }
+}
+
+function blockTerminator(VerifyContext vc, BasicBlock block, Position predPos) returns Insn|Error {
+    Insn[] insns = block.insns;
+    int insnsLen = insns.length();
+    if insnsLen > 0 {
+        return insns[insnsLen - 1];
+    }
+    return vc.invalidErr("empty basic block", predPos);
+}
+
+function flowOriginating(RegFlow[] flows, Label origin) returns RegFlow? {
+    foreach RegFlow flow in flows {
+        if flow.origin == origin {
+            return flow;
+        }
+    }
+    return ();
+}
+
+function verifyOperandInitialized(VerifyRegFlowContext cx, Operand op, RegSet regs, Position usagePos) returns Error? {
+    if op is Register && !regs[op.number] {
+        return cx.vc.invalidErr("operand register not initialized ", usagePos);
+    }
+}
+
+// Pre-requisite: flow.length() > 0
+function mergeFlows(RegFlow[] flow) returns RegSet {
+    if flow.length() == 1 {
+        return flow[0].regs; // Just an optimization.
+    }
+    RegSet result = [];
+    int numReg = flow[0].regs.length(); // Assume all flows have same regs.length()
+    foreach int i in 0 ..< numReg {
+        boolean conj = true;
+        foreach var { regs } in flow {
+            if !regs[i] {
+                conj = false;
+                break;
+            }
+        }
+        result.push(conj);
+    }
+    return result;
 }
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
