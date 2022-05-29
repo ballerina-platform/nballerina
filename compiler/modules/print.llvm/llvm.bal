@@ -932,7 +932,6 @@ public class DIBuilder {
     }
 
     // Corresponds to LLVMDIBuilderInsertDbgValueAtEnd
-    // update jni
     public function insertDbgValueAtEnd(*ValueMetadataProperties props) {
         self.m.addDebugIntrinsic("dbg.value");
         (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.value", "(", "metadata", typeToString(props.value.ty, self.context),

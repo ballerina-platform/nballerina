@@ -393,13 +393,10 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, 
     }
 }
 
-function codeGenScopedStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, ScopedStmt stmt) returns CodeGenError|StmtEffect {
+function codeGenScopedStmt(StmtContext cx, bir:BasicBlock curBlock, Environment env, ScopedStmt stmt) returns CodeGenError|StmtEffect {
     StmtEffect|CodeGenError effect;
     cx.pushScope(stmt.startPos, stmt.endPos);
-    if curBlock == () {
-        return cx.semanticErr("unreachable code", s:range(stmt));
-    }
-    else if stmt is s:MatchStmt {
+    if stmt is s:MatchStmt {
         effect = codeGenMatchStmt(cx, curBlock, env, stmt);
     }
     else if stmt is s:WhileStmt {

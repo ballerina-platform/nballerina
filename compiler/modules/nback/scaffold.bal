@@ -183,8 +183,8 @@ class Scaffold {
             }
             self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
         }
-        if diScaffold !is () {
-            diScaffold.declareVariables(entry, code.registers);
+        if moduleDI !is () && moduleDI.debugFull {
+            declareVariables(self, <DIScaffold>diScaffold, entry, code.registers);
         }
     }
 

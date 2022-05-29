@@ -124,7 +124,7 @@ class TaggedPrinter:
             nBytes = str_len
             shift_len = ((8-nBytes)*8)
             body = ((bits << shift_len) & INT_MAX) >> shift_len
-            return '"' + str(body.to_bytes(str_len, 'little').decode('utf-8')) + '"'
+            return '"' + str(body.to_bytes(str_len, "little").decode("utf-8")) + '"'
         elif bits & STRING_LARGE_FLAG == 0:
             return '"' + string_ptr_to_string(tagged_ptr, str_len, 4) + '"'
         else:
@@ -184,7 +184,7 @@ def decimal_val(bits):
         str_num = map(str, dpd_to_int(dpd))
         for num in str_num:
             significant_digits.append(num)
-    significant = Decimal(''.join(significant_digits))
+    significant = Decimal("".join(significant_digits))
     value = (Decimal(10) ** Decimal(exponent - 6176)) * significant
     if sign:
         value *= -1
@@ -250,9 +250,7 @@ def map_data(tagged_ptr):
 def list_data(tagged_ptr):
     ptr = extract_ptr(int(tagged_ptr))
     data_ptr = int(gdb.Value(ptr).cast(i64.pointer()).dereference())
-
     restType = int(gdb.Value(data_ptr + 88).cast(i64.pointer()).dereference())
-
     length = int(gdb.Value(ptr + 8).cast(i64.pointer()).dereference())
     array_ptr = int(gdb.Value(ptr + 24).cast(i64.pointer()).dereference())
     return { "restType": restType, "length": length, "array_ptr": array_ptr }
@@ -292,7 +290,7 @@ def string_ptr_to_string(tagged_ptr, length, header_size):
     for _ in range(1, length):
         ptr = ptr + 1
         value = (value << 8) | int(ptr.dereference())
-    return str(value.to_bytes(length, 'big').decode('utf-8'))
+    return str(value.to_bytes(length, "big").decode("utf-8"))
 
 class FloatPrinter:
     def __init__(self, val):
@@ -318,8 +316,8 @@ def is_immediate(val):
 
 def build_pretty_printer():
     pp = gdb.printing.RegexpCollectionPrettyPrinter("bal_pp")
-    pp.add_printer('TaggedPtr', '^TaggedPtr$', TaggedPrinter)
-    pp.add_printer('float', '^float$', FloatPrinter)
+    pp.add_printer("TaggedPtr", "^TaggedPtr$", TaggedPrinter)
+    pp.add_printer("float", "^float$", FloatPrinter)
     return pp
 
 gdb.printing.register_pretty_printer(

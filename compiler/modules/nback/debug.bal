@@ -9,9 +9,10 @@ type DILocation llvm:Metadata;
 type DIFile llvm:Metadata;
 type DICompileUnit llvm:Metadata;
 type DISubroutineType llvm:Metadata;
+type DIScope llvm:Metadata;
 
 type Scope record {|
-    llvm:Metadata diScope;
+    DIScope diScope;
     bir:Position startPos;
     bir:Position endPos;
     Scope[] childScopes;
@@ -25,6 +26,8 @@ type ModuleDI record {|
     boolean debugFull;
 |};
 
+type DWARFType "int"|"float"|"boolean"|"any";
+
 // Debug location will always be added
 public const int DEBUG_USAGE_ERROR_CONSTRUCT = 0;
 public const int DEBUG_USAGE_CALL = 1;
@@ -32,12 +35,12 @@ public const int DEBUG_USAGE_CALL = 1;
 public type DebugLocationUsage DEBUG_USAGE_ERROR_CONSTRUCT|DEBUG_USAGE_CALL;
 
 class DIScaffold {
-    private DIBuilder diBuilder;
-    private DIFile diFile;
     private Scaffold scaffold;
     private map<llvm:Metadata> typeMetadata = {};
     private boolean debugFull;
-    private Scope rootScope;
+    final Scope rootScope;
+    final DIBuilder diBuilder;
+    final DIFile diFile;
 
     private bir:Position? currentPosition = ();
     private DILocation? noLineLocation = ();
@@ -51,48 +54,26 @@ class DIScaffold {
         self.scaffold = scaffold;
     }
 
-    private function registerTypeToMetadata(bir:Register register) returns llvm:Metadata {
+    function registerTypeToMetadata(bir:Register register) returns llvm:Metadata {
         t:SemType semType = register.semType;
-        "int"|"float"|"boolean"|"any" ty;
-        if t:isSubtypeSimple(semType, t:INT) {
-            ty = "int";
-        }
-        else if t:isSubtypeSimple(semType, t:FLOAT) {
-            ty = "float";
-        }
-        else if t:isSubtypeSimple(semType, t:BOOLEAN) {
-            ty = "boolean";
-        }
-        else {
-            ty = "any";
-        }
+        DWARFType ty = semTypeToDWARF(semType);
         llvm:Metadata? stored = self.typeMetadata[ty];
         if stored !is () {
             return stored;
         }
-        llvm:Metadata tyMeta;
-        match ty {
-            "int" => {
-                tyMeta = self.diBuilder.createBasicType(name="int", encoding="signed", sizeInBits=64);
-            }
-            "float" => {
-                tyMeta = self.diBuilder.createBasicType(name="float", encoding="float", sizeInBits=64);
-            }
-            "boolean" => {
-                tyMeta = self.diBuilder.createBasicType(name="boolean", encoding="boolean", sizeInBits=1);
-            }
-            _ => {
-                llvm:Metadata charMeta = self.diBuilder.createBasicType(name="char", encoding="signed_char", sizeInBits=8);
-                tyMeta = self.diBuilder.createTypedef(self.diBuilder.createPointerType(pointeeTy=charMeta, sizeInBits=64, addressSpace=1),
-                                                      "TaggedPtr", self.diFile, 0, scope=self.diFile);
-            }
-        }
+        llvm:Metadata tyMeta = DWARFTypeMetadata(ty, self.diBuilder, self.diFile);
         self.typeMetadata[ty] = tyMeta;
         return tyMeta;
     }
 
+    function createScope(bir:Position startPos, bir:Position endPos, Scope parent, Scope[] childScopes) returns Scope {
+        var [line, column] = self.scaffold.lineColumn(startPos);
+        DIScope diScope = self.diBuilder.createLexicalBlock(parent.diScope, self.diFile, line, column);
+        return { diScope, startPos, endPos, childScopes };
+    }
+
     // we use a seperate declPosition instead of startPos of registerScope since register scope starts at the begining of the Stmt/Function
-    private function addRegisterScope(bir:RegisterScope registerScope, bir:Position declPos, Scope parent) returns Scope {
+    function addRegisterScope(bir:RegisterScope registerScope, bir:Position declPos, Scope parent) returns Scope {
         int childCount = parent.childScopes.length();
         int? addIndex = ();
         foreach int i in 0 ..< childCount {
@@ -130,47 +111,8 @@ class DIScaffold {
         return newScope;
     }
 
-    private function createScope(bir:Position startPos, bir:Position endPos, Scope parent, Scope[] childScopes) returns Scope {
-        var [line, column] = self.scaffold.lineColumn(startPos);
-        llvm:Metadata diScope = self.diBuilder.createLexicalBlock(parent.diScope, self.diFile, line, column);
-        return { diScope, startPos, endPos, childScopes };
-    }
-
-    function declareVariables(llvm:BasicBlock initBlock, bir:Register[] registers) {
-        if !self.debugFull {
-            return;
-        }
-        llvm:Metadata emptyExpr = self.diBuilder.createExpression([]);
-        foreach bir:Register register in registers {
-            if register !is bir:DeclRegister {
-                continue;
-            }
-            Scope scope = self.addRegisterScope(register.scope, register.pos, self.rootScope);
-            var [line, column] = self.scaffold.lineColumn(register.pos);
-            llvm:Metadata tyMeta = self.registerTypeToMetadata(register);
-            llvm:Metadata diScope = scope.diScope;
-            llvm:Metadata varMeta = self.diBuilder.createAutoVariable(ty=tyMeta, scope=diScope, name=register.name, lineNo=line, file=self.diFile);
-            llvm:Metadata declLoc = self.diBuilder.createDebugLocation(line, column, diScope);
-            self.diBuilder.insertDeclareAtEnd(value=self.scaffold.address(register), varInfo=varMeta, expr=emptyExpr, debugLoc=declLoc, block=initBlock);
-        }
-    }
-
     function currentPos() returns bir:Position {
         return <bir:Position> self.currentPosition;
-    }
-
-    private function scope(bir:Position pos) returns llvm:Metadata {
-        Scope scope = self.scopeInner(pos, self.rootScope);
-        return scope.diScope;
-    }
-
-    private function scopeInner(bir:Position pos, Scope parent) returns Scope {
-        foreach var child in parent.childScopes {
-            if child.startPos <= pos && child.endPos >= pos {
-                return self.scopeInner(pos, child);
-            }
-        }
-        return parent;
     }
 
     function clearDebugLocation(llvm:Builder builder) {
@@ -220,6 +162,69 @@ class DIScaffold {
 
     function debugLocation(bir:Position pos) returns DILocation {
         var [line, column] = self.scaffold.lineColumn(pos);
-        return self.diBuilder.createDebugLocation(line, column, self.scope(pos));
+        return self.diBuilder.createDebugLocation(line, column, diScope(pos, self.rootScope));
     }
+}
+
+function diScope(bir:Position pos, Scope parent) returns DIScope {
+    foreach var child in parent.childScopes {
+        if child.startPos <= pos && child.endPos >= pos {
+            return diScope(pos, child);
+        }
+    }
+    return parent.diScope;
+}
+
+function semTypeToDWARF(t:SemType semType) returns DWARFType {
+    if t:isSubtypeSimple(semType, t:INT) {
+        return "int";
+    }
+    else if t:isSubtypeSimple(semType, t:FLOAT) {
+        return "float";
+    }
+    else if t:isSubtypeSimple(semType, t:BOOLEAN) {
+        return "boolean";
+    }
+    else {
+        return "any";
+    }
+}
+
+function DWARFTypeMetadata(DWARFType ty, DIBuilder diBuilder, DIFile diFile) returns llvm:Metadata {
+    match ty {
+        "int" => {
+            return diBuilder.createBasicType(name="int", encoding="signed", sizeInBits=64);
+        }
+        "float" => {
+            return diBuilder.createBasicType(name="float", encoding="float", sizeInBits=64);
+        }
+        "boolean" => {
+            return diBuilder.createBasicType(name="boolean", encoding="boolean", sizeInBits=1);
+        }
+        _ => {
+            llvm:Metadata charMeta = diBuilder.createBasicType(name="char", encoding="signed_char", sizeInBits=8);
+            return diBuilder.createTypedef(diBuilder.createPointerType(pointeeTy=charMeta, sizeInBits=64, addressSpace=1),
+                                                  "TaggedPtr", diFile, 0, scope=diFile);
+        }
+    }
+}
+
+function declareVariables(Scaffold scaffold, DIScaffold diScaffold, llvm:BasicBlock initBlock, bir:Register[] registers) {
+    llvm:Metadata emptyExpr = diScaffold.diBuilder.createExpression([]);
+    foreach bir:Register register in registers {
+        if register !is bir:DeclRegister {
+            continue;
+        }
+        Scope scope = diScaffold.addRegisterScope(register.scope, register.pos, diScaffold.rootScope);
+        var [line, column] = scaffold.lineColumn(register.pos);
+        llvm:Metadata tyMeta = diScaffold.registerTypeToMetadata(register);
+        declareVariable(initBlock, register, diScaffold.diBuilder, diScaffold.diFile, scope.diScope, emptyExpr, tyMeta, scaffold.address(register), line, column);
+    }
+}
+
+function declareVariable(llvm:BasicBlock bb, bir:DeclRegister register, DIBuilder diBuilder, DIFile diFile, DIScope diScope, llvm:Metadata expr,
+                         llvm:Metadata tyMeta, llvm:Value value, int line, int column) {
+    llvm:Metadata varMeta = diBuilder.createAutoVariable(ty=tyMeta, scope=diScope, name=register.name, lineNo=line, file=diFile);
+    llvm:Metadata declLoc = diBuilder.createDebugLocation(line, column, diScope);
+    diBuilder.insertDeclareAtEnd(value=value, varInfo=varMeta, expr=expr, debugLoc=declLoc, block=bb);
 }
