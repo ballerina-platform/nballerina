@@ -1,12 +1,11 @@
 import wso2/nballerina.comm.err;
-import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
 import ballerina/io;
 import ballerina/file;
 
-type TestKind "output" | "panic" | "error";
+type TestKind "output" | "panic" | "error" | "parser-error";
 
 type BaltTestHeader record {|
     TestKind 'Test\-Case;
@@ -29,35 +28,40 @@ enum State {
 // http://www.bitdance.com/blog/2011/04/11_01_Email6_Rewriting_Header_Folding/
 const CONTINUATION_WS = " ";
 
-function compileBaltFile(string filename, string outDir, nback:Options nbackOptions, Options options) returns error? {
+function compileBaltFile(string filename, string basename, string outDir, nback:Options nbackOptions, Options options) returns error? {
     BaltTestCase[] tests = check parseBalt(filename);
     foreach var [i, t] in tests.enumerate() {
-        if t.header.Test\-Case == "error" || t.header["Fail-Issue"] != () {
+        if t.header["Fail-Issue"] != () {
             continue;
         }
-        string outBasename = chooseBaltCaseOutputFilename(t, i);
+        string outBasename = check chooseBaltCaseOutputFilename(filename, t, i);
+        string initFilename = check file:joinPath(outDir, outBasename) + "._init" + OUTPUT_EXTENSION;
         string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
         string[] lines = t.content;
-        check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename);
+        CompileContext cx = new(basename, check file:joinPath(outDir, outBasename), nbackOptions, options);
+        CompileError? err = compileAndOutputModule(cx, DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename, initFilename);
+        if t.header.Test\-Case is "panic" && err != () {
+            continue;
+        }
+        if t.header.Test\-Case is "parser-error"|"error" {
+            if err is () {
+                panic error("expected error in " + filename + " test: " + (i + 1).toString());
+            }
+        }
+        else if err != () {
+            io:println("unexpected error in ", filename, " test: ", i + 1);
+            return err;
+        }
         string? expectOutDir = options.expectOutDir;
         string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
         check io:fileWriteLines(expectFilename, expect(t.content));
     }
 }
 
-function compileAndOutputModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename) returns CompileError? {
-    LlvmModule llMod = check compileModule(modId, sources, nbackOptions);
-    if outFilename != () {
-        check outputModule(llMod, outFilename, outOptions);
-    }
-}
-
-function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns LlvmModule|CompileError {
-    t:Env env = new;
-    front:ScannedModule scanned = check front:scanModule(sources, modId);
-    bir:Module birMod = check front:resolveModule(scanned, env, []);
-    var [llMod, _] = check nback:buildModule(birMod, nbackOptions);
-    return llMod;
+function compileAndOutputModule(CompileContext cx, bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename, string? initFilename) returns CompileError? {
+    front:ResolvedModule mod = check processModule(cx, modId, sources, <string>cx.outputFilename());
+    check mod.validMain();
+    check generateInitModule(cx, mod);
 }
 
 function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Diagnostic {
@@ -154,7 +158,7 @@ function expect(string[] src) returns string[] {
         int begin = <int> comment + 2;
         int? output = l.indexOf(OUTPUT_MARKER, begin);
         if output != () {
-            expect.push(l.substring(output + OUTPUT_MARKER.length()).trim());
+            expect.push(l.substring(output + OUTPUT_MARKER.length() + 1));
         }
         int? err = l.indexOf(ERROR_MARKER, begin);
         if err != () {
@@ -162,20 +166,22 @@ function expect(string[] src) returns string[] {
         }
         int? pnk = l.indexOf(PANIC_MARKER, begin);
         if pnk != () {
-            string msg = l.substring(pnk + PANIC_MARKER.length()).trim();
+            string msg = l.substring(pnk + PANIC_MARKER.length() + 1);
             expect.push("panic: line " + (i + 1).toString() + ": " + msg);
         }
     }
     return expect;
 }
 
-function chooseBaltCaseOutputFilename(BaltTestCase t, int i) returns string {
-   return pad4(i.toString()) + "L" + pad4(t.offset.toString()) + "-" + testKindToLetter(t.header.Test\-Case);
+function chooseBaltCaseOutputFilename(string filename, BaltTestCase t, int i) returns string|file:Error {
+   string basename = check file:basename(filename);
+   basename = basename.substring(0, basename.length() - 5);
+   return basename + pad4(i.toString()) + "L" + pad4(t.offset.toString()) + "-" + testKindToLetter(t.header.Test\-Case);
 }
 
 function testKindToLetter(TestKind k) returns string:Char {
     match k {
-        "error" => {
+        "error"|"parser-error" => {
             return "e";
         }
         "panic" => {
