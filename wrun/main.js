@@ -188,6 +188,9 @@ const handleError = (err) => {
   else if (err.message == "index-too-large") {
     msg += "list too long"
   }
+  else if (err.message == "bad-list-store") {
+    msg += "bad list store"
+  }
   else if (err.message == "Maximum call stack size exceeded") {
     msg += "stack overflow";
   }

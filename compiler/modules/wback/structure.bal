@@ -1,5 +1,6 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
+import wso2/nballerina.types as t;
 
 final RuntimeFunction mappingSetFunction = {
     name: "_bal_mapping_set",
@@ -26,11 +27,59 @@ type RuntimeModule string;
 final RuntimeModule mapMod = "map";
 final RuntimeModule listMod = "list";
 
+type ListReprPrefix "generic"|"int_array"|"boolean_array"|"float_array"|"string_array";
+
+type ListRepr record {|
+    ListReprPrefix prefixRepr;
+    t:SemType rest;
+|};
+function listAtomicTypeToListReprPrefix(t:ListAtomicType? atomic) returns ListRepr {
+    t:SemType rest = t:ANY;
+    ListReprPrefix prefixRepr = "generic";
+    if atomic != () && atomic.members.fixedLength == 0 {
+        rest = atomic.rest;
+        if rest == t:INT {
+            prefixRepr = "int_array";
+        }
+        else if rest == t:FLOAT {
+            prefixRepr = "float_array";
+        }
+        else if rest == t:BOOLEAN {
+            prefixRepr = "boolean_array";
+        }
+        else if rest == t:STRING {
+            prefixRepr = "string_array";
+        }
+    }
+    return { prefixRepr, rest };
+}
+
+function listDefaultValue(wasm:Module module, Scaffold scaffold, ListReprPrefix prefix) returns wasm:Expression {
+    if prefix == "int_array" {
+        return module.structNew(BOXED_INT_TYPE, [module.addConst({ i32: TYPE_INT }), module.addConst({ i64: 0 })]);
+    }
+    else if prefix == "float_array" {
+        return module.structNew(FLOAT_TYPE, [module.addConst({ i32: TYPE_FLOAT }), module.addConst({ f64: 0.0 })]);
+    }
+    else if prefix == "string_array" {
+        return buildConstString(module, scaffold, "");
+    }
+    else if prefix == "boolean_array" {
+        return module.i31New(module.addConst({ i32: 0 }));
+    }
+    return module.refNull("data");
+}
+
 function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConstructInsn insn) returns wasm:Expression {
     final int length = insn.operands.length();
-    wasm:Expression list = module.call(arrCreateFunction.name, [module.addConst({ i64: length })], arrCreateFunction.returnType);
+    t:SemType listType = insn.result.semType;
+    var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.getTypeContext(), listType);
+    var { prefixRepr, rest } = listAtomicTypeToListReprPrefix(atomic);
+    wasm:Expression default = listDefaultValue(module, scaffold, prefixRepr);
+    wasm:Expression list = module.call(arrCreateFunction.name, [module.addConst({ i64: length }), default, module.addConst({ i32: <int>rest })], arrCreateFunction.returnType);
     wasm:Expression setList = module.localSet(insn.result.number, list);
     wasm:Expression[] children = [setList];
+    _ = semTypeRepr(insn.result.semType);
     foreach int i in 0 ..< length {
         wasm:Expression arr = module.refAs("ref.as_non_null", module.localGet(insn.result.number));
         wasm:Expression val = buildWideRepr(module, scaffold, insn.operands[i], REPR_ANY, insn.result.semType);
@@ -45,6 +94,10 @@ function buildListGet(wasm:Module module, Scaffold scaffold, bir:ListGetInsn ins
     wasm:Expression list = module.localGet(insn.operands[0].number);
     wasm:Expression index = module.unary("i32.wrap_i64", buildRepr(module, scaffold, insn.operands[1], REPR_INT));
     wasm:Expression call = module.call(arrGetFunction.name, [list, index], arrGetFunction.returnType);
+    Repr repr = semTypeRepr(insn.result.semType);
+    if repr !is TaggedRepr {
+        return module.localSet(insn.result.number, buildUntagged(module, scaffold, call, repr));
+    }
     return module.localSet(insn.result.number, call);
 }
 
