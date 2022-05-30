@@ -26,7 +26,7 @@ type ModuleDI record {|
     boolean debugFull;
 |};
 
-type DWARFType "int"|"float"|"boolean"|"any";
+type DwarfType "int"|"float"|"boolean"|"any";
 
 // Debug location will always be added
 public const int DEBUG_USAGE_ERROR_CONSTRUCT = 0;
@@ -56,12 +56,12 @@ class DIScaffold {
 
     function registerTypeToMetadata(bir:Register register) returns llvm:Metadata {
         t:SemType semType = register.semType;
-        DWARFType ty = semTypeToDWARF(semType);
+        DwarfType ty = semTypeToDWARF(semType);
         llvm:Metadata? stored = self.typeMetadata[ty];
         if stored !is () {
             return stored;
         }
-        llvm:Metadata tyMeta = DWARFTypeMetadata(ty, self.diBuilder, self.diFile);
+        llvm:Metadata tyMeta = DwarfTypeMetadata(ty, self.diBuilder, self.diFile);
         self.typeMetadata[ty] = tyMeta;
         return tyMeta;
     }
@@ -73,44 +73,6 @@ class DIScaffold {
     }
 
     // we use a seperate declPosition instead of startPos of registerScope since register scope starts at the begining of the Stmt/Function
-    function addRegisterScope(bir:RegisterScope registerScope, bir:Position declPos, Scope parent) returns Scope {
-        int childCount = parent.childScopes.length();
-        int? addIndex = ();
-        foreach int i in 0 ..< childCount {
-            Scope child = parent.childScopes[i];
-            if declPos < child.startPos {
-                if registerScope.endPos > child.startPos {
-                    if registerScope.endPos < child.endPos {
-                        // this should never happen
-                        panic err:impossible("unexpected scope");
-                    }
-                    Scope newScope = self.createScope(declPos, registerScope.endPos, parent, [child]);
-                    parent.childScopes[i] = newScope;
-                    return newScope;
-                }
-                addIndex = i;
-                break;
-            }
-            else if child.startPos == declPos && child.endPos == registerScope.endPos {
-                // we already have the scope
-                return child;
-            }
-            else if child.startPos < declPos && child.endPos >= registerScope.endPos {
-                return self.addRegisterScope(registerScope, declPos, child);
-            }
-        }
-        Scope newScope = self.createScope(declPos, registerScope.endPos, parent, []);
-        if addIndex is () {
-            parent.childScopes.push(newScope);
-        }
-        else {
-            Scope[] newChildScopes = parent.childScopes.slice(0, addIndex);
-            newChildScopes.push(newScope, ...parent.childScopes.slice(addIndex));
-            parent.childScopes = newChildScopes;
-        }
-        return newScope;
-    }
-
     function currentPos() returns bir:Position {
         return <bir:Position> self.currentPosition;
     }
@@ -175,7 +137,7 @@ function diScope(bir:Position pos, Scope parent) returns DIScope {
     return parent.diScope;
 }
 
-function semTypeToDWARF(t:SemType semType) returns DWARFType {
+function semTypeToDWARF(t:SemType semType) returns DwarfType {
     if t:isSubtypeSimple(semType, t:INT) {
         return "int";
     }
@@ -190,7 +152,7 @@ function semTypeToDWARF(t:SemType semType) returns DWARFType {
     }
 }
 
-function DWARFTypeMetadata(DWARFType ty, DIBuilder diBuilder, DIFile diFile) returns llvm:Metadata {
+function DwarfTypeMetadata(DwarfType ty, DIBuilder diBuilder, DIFile diFile) returns llvm:Metadata {
     match ty {
         "int" => {
             return diBuilder.createBasicType(name="int", encoding="signed", sizeInBits=64);
@@ -204,7 +166,7 @@ function DWARFTypeMetadata(DWARFType ty, DIBuilder diBuilder, DIFile diFile) ret
         _ => {
             llvm:Metadata charMeta = diBuilder.createBasicType(name="char", encoding="signed_char", sizeInBits=8);
             return diBuilder.createTypedef(diBuilder.createPointerType(pointeeTy=charMeta, sizeInBits=64, addressSpace=1),
-                                                  "TaggedPtr", diFile, 0, scope=diFile);
+                                           "TaggedPtr", diFile, 0, scope=diFile);
         }
     }
 }
@@ -215,11 +177,49 @@ function declareVariables(Scaffold scaffold, DIScaffold diScaffold, llvm:BasicBl
         if register !is bir:DeclRegister {
             continue;
         }
-        Scope scope = diScaffold.addRegisterScope(register.scope, register.pos, diScaffold.rootScope);
+        Scope scope = addToParentScope(register.scope, register.pos, diScaffold.rootScope, diScaffold);
         var [line, column] = scaffold.lineColumn(register.pos);
         llvm:Metadata tyMeta = diScaffold.registerTypeToMetadata(register);
         declareVariable(initBlock, register, diScaffold.diBuilder, diScaffold.diFile, scope.diScope, emptyExpr, tyMeta, scaffold.address(register), line, column);
     }
+}
+
+function addToParentScope(bir:RegisterScope registerScope, bir:Position declPos, Scope parent, DIScaffold diScaffold) returns Scope {
+    int childCount = parent.childScopes.length();
+    int? addIndex = ();
+    foreach int i in 0 ..< childCount {
+        Scope child = parent.childScopes[i];
+        if declPos < child.startPos {
+            if registerScope.endPos > child.startPos {
+                if registerScope.endPos < child.endPos {
+                    // this should never happen
+                    panic err:impossible("unexpected scope");
+                }
+                Scope newScope = diScaffold.createScope(declPos, registerScope.endPos, parent, [child]);
+                parent.childScopes[i] = newScope;
+                return newScope;
+            }
+            addIndex = i;
+            break;
+        }
+        else if child.startPos == declPos && child.endPos == registerScope.endPos {
+            // we already have the scope
+            return child;
+        }
+        else if child.startPos < declPos && child.endPos >= registerScope.endPos {
+            return addToParentScope(registerScope, declPos, child, diScaffold);
+        }
+    }
+    Scope newScope = diScaffold.createScope(declPos, registerScope.endPos, parent, []);
+    if addIndex is () {
+        parent.childScopes.push(newScope);
+    }
+    else {
+        Scope[] newChildScopes = parent.childScopes.slice(0, addIndex);
+        newChildScopes.push(newScope, ...parent.childScopes.slice(addIndex));
+        parent.childScopes = newChildScopes;
+    }
+    return newScope;
 }
 
 function declareVariable(llvm:BasicBlock bb, bir:DeclRegister register, DIBuilder diBuilder, DIFile diFile, DIScope diScope, llvm:Metadata expr,
