@@ -131,6 +131,8 @@ function init() {
                                         subtypeGenSimpleTuple, 
                                         subtypeGenTupleWithRest, 
                                         subtypeGenTupleUnequalMemberCount,
+                                        subtypeGenXmlSequence,
+                                        subtypeGenXmlSequenceUnion,
                                         subtypeGenUnion,
                                         subtypeGenFixedTupleUnion,
                                         subtypeGenMap,
@@ -152,17 +154,32 @@ function fromList(PropositionGenerator[]... generators) returns readonly & Propo
     return all.cloneReadOnly();
 }
 
-final (function (TypeBuilder) returns int)[] TYPES_GENERATOR_LIST = [
+type TypeGeneratorFunction function (TypeBuilder) returns int;
+
+final TypeGeneratorFunction[] XML_TYPES_GENERATOR_LIST = [
+    d => d.xmlType(),
+    d => d.xmlElementType(),
+    d => d.xmlCommentType(),
+    d => d.xmlProcessingInstructionType(),
+    d => d.xmlTextType()
+];
+
+final TypeGeneratorFunction[] TYPES_GENERATOR_LIST = [
     d => d.intType(),
     d => d.floatType(),
     d => d.byteType(),
     d => d.stringType(),
-    d => d.neverType()
+    d => d.neverType(),
+    XML_TYPES_GENERATOR_LIST[0],
+    XML_TYPES_GENERATOR_LIST[1],
+    XML_TYPES_GENERATOR_LIST[2],
+    XML_TYPES_GENERATOR_LIST[3],
+    XML_TYPES_GENERATOR_LIST[4]
 ];
 
 function subtypeSameSimpleType(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
     int r = cx.random.nextRange(TYPES_GENERATOR_LIST.length());
-    (function (TypeBuilder) returns int) g = TYPES_GENERATOR_LIST[r];
+    TypeGeneratorFunction g = TYPES_GENERATOR_LIST[r];
     int index = g(cx.types);
     return { left: index, right: index };
 }
@@ -181,6 +198,47 @@ function subtypeGenSingletonInt8(PropositionGenContext cx, PropositionPath path)
 function subtypeGenSingletonString(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
     int l = cx.random.nextRange(cx.bounds.maxStringConstLen);
     return { left: cx.types.stringConst(cx.random.randomStringValue(l)), right: cx.types.stringType() };
+}
+
+// Generate random xml or xml subtype
+function generateXmlType(PropositionGenContext cx) returns int {
+    int index = cx.random.nextRange(XML_TYPES_GENERATOR_LIST.length());
+    TypeGeneratorFunction generator = XML_TYPES_GENERATOR_LIST[index];
+    return generator(cx.types);
+}
+
+// Generate random xml sequence
+function subtypeGenXmlSequence(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    int t1 = generateXmlType(cx);
+    int r = cx.random.nextRange(3);
+    if  r == 0 {
+        return { 
+            left: cx.types.xmlSequenceType(t1), 
+            right: cx.types.xmlSequenceType(t1) 
+        };
+    }
+    int t2 = generateXmlType(cx);
+    if r == 1 {
+        return { 
+            left: cx.types.xmlSequenceType(t1), 
+            right: cx.types.xmlSequenceType(cx.types.union(t1, t2)) 
+        };
+    }
+    
+    return { 
+        left: cx.types.xmlSequenceType(cx.types.union(t1, t2)), 
+        right: cx.types.xmlSequenceType(cx.types.union(t1, t2)) 
+    };
+}
+
+// X, Y in XML -> xml<X>|xml<Y> <: xml<X|Y>
+function subtypeGenXmlSequenceUnion(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    int t1 = generateXmlType(cx);
+    int t2 = generateXmlType(cx);
+    return {
+        left: cx.types.union(cx.types.xmlSequenceType(t1), cx.types.xmlSequenceType(t2)),
+        right: cx.types.xmlSequenceType(cx.types.union(t1, t2))
+    };
 }
 
 // T1 <: S1, T2 <: S2 -> (T1 | T2) <: (S1 | S2)
@@ -474,15 +532,19 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
 type PropositionTestOnFail function(PropositionGenContext cx, Proposition failedProp);
 
 type PropositionTestConfig record {|
-    int totalTestRuns = 10;
+    int totalTestRuns = 3;
     int depthLimit = 5;
-    int widthLimit = 120;
+    int widthLimit = 60;
     PropositionGenerator generator;
-    PropositionTestOnFail onFail?;
+    PropositionTestOnFail onFail = printFailureMessage;
 |};
 
 function assertFail(PropositionGenContext cx, Proposition proposition) {
     test:assertFail(propositionToString(cx, proposition));
+}
+
+function printFailureMessage(PropositionGenContext cx, Proposition proposition) {
+    io:print("[Failure]");
 }
 
 function propositionToString(PropositionGenContext cx, Proposition proposition) returns string {
@@ -507,7 +569,7 @@ function printPropositionTestFailures(PropositionGenContext cx) {
 }
 
 function testSemtypePropositions(*PropositionTestConfig config) {
-    foreach int i in 0 ... config.totalTestRuns {
+    foreach int i in 0 ..< config.totalTestRuns {
         time:Utc seed = time:utcNow();
         PropositionGenContext cx = new PropositionGenContext(t:typeContext(new), seed[0]);
         foreach int depth in 0 ... config.depthLimit {

@@ -25,6 +25,18 @@ type TypeBuilder object {
 
     function intWidthSigned(int bits) returns int;
 
+    function xmlType() returns int;
+
+    function xmlElementType() returns int;
+
+    function xmlCommentType() returns int;
+
+    function xmlProcessingInstructionType() returns int;
+
+    function xmlTextType() returns int;
+
+    function xmlSequenceType(int constituentType) returns int;
+
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
 
     function mapping([string, int][] fields = [], int rest = -1) returns int;
@@ -97,6 +109,30 @@ class SemtypeBuilder {
         return self.push(t:intWidthSigned(bits));
     } 
 
+    function xmlSequenceType(int constituentType) returns int {
+        return self.push(t:xmlSequence(self.semtype(constituentType)));
+    }
+
+    function xmlType() returns int {
+        return self.push(t:XML);
+    }
+
+    function xmlElementType() returns int {
+        return self.push(t:XML_ELEMENT);
+    }
+
+    function xmlCommentType() returns int {
+        return self.push(t:XML_COMMENT);
+    }
+
+    function xmlProcessingInstructionType() returns int {
+        return self.push(t:XML_PI);
+    }
+
+    function xmlTextType() returns int {
+        return self.push(t:XML_TEXT);
+    }
+
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int {
         t:SemType[] m = from var index in members select self.defns[index];
         t:SemType r = t:NEVER;
@@ -141,6 +177,12 @@ class AstBasedTypeDefBuilder {
     private int? intIndex = ();
     private int? stringIndex = ();
     private int? neverIndex = ();
+    private int? xmlIndex = ();
+    private int? xmlElementIndex = ();
+    private int? xmlCommentIndex = ();
+    private int? xmlPiIndex = ();
+    private int? xmlTextIndex = ();
+
 
     function init(t:Context cx) {
         self.cx = cx;
@@ -322,6 +364,55 @@ class AstBasedTypeDefBuilder {
             }
         }
         panic error("Unsupported int subtype: " + bits.toString());
+    }
+
+    function xmlSequenceType(int constituentType) returns int {
+        s:TypeDescRef constituentRef = self.createTypeDescRef(constituentType);
+        var [startPos, endPos] = self.calculatePosition();
+        s:XmlSequenceTypeDesc td = { startPos, endPos, pos:startPos, constituent: constituentRef };
+        return self.createTypeDef(td);
+    }
+
+    function xmlType() returns int {
+        int? index = self.xmlIndex;
+        if index == () {
+            var [startPos, endPos] = self.calculatePosition();
+            s:BuiltinTypeDesc td = { startPos, endPos, builtinTypeName: "xml" };
+            self.xmlIndex = self.createTypeDef(td);
+        }
+        return <int>self.xmlIndex;
+    }
+
+    function xmlElementType() returns int {
+        if self.xmlElementIndex == () {
+            s:TypeDescRef element = self.createQualifiedTypeDescRef("Element", "xml");
+            self.xmlElementIndex = self.createTypeDef(element);
+        }
+        return <int>self.xmlElementIndex;
+    }
+
+    function xmlCommentType() returns int {
+        if self.xmlCommentIndex == () {
+            s:TypeDescRef comment = self.createQualifiedTypeDescRef("Comment", "xml");
+            self.xmlCommentIndex = self.createTypeDef(comment);
+        }
+        return <int>self.xmlCommentIndex;
+    }
+
+    function xmlProcessingInstructionType() returns int {
+        if self.xmlPiIndex == () {
+            s:TypeDescRef pi = self.createQualifiedTypeDescRef("ProcessingInstruction", "xml");
+            self.xmlPiIndex = self.createTypeDef(pi);
+        }
+        return <int>self.xmlPiIndex;
+    }
+
+    function xmlTextType() returns int {
+        if self.xmlTextIndex == () {
+            s:TypeDescRef pi = self.createQualifiedTypeDescRef("Text", "xml");
+            self.xmlTextIndex = self.createTypeDef(pi);
+        }
+        return <int>self.xmlTextIndex;
     }
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int {
