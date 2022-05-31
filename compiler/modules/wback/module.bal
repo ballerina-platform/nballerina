@@ -296,7 +296,6 @@ function buildBlockInRegion(Scaffold scaffold, wasm:Module module, bir:Region? c
 
 function preProcessRegions(Scaffold scaffold) {
     getRegionBlocks(scaffold);
-    printBlocks(scaffold);
     foreach int i in 0 ..< scaffold.regions.length() {
         bir:Region region = scaffold.regions[i];
         if region.kind == bir:REGION_LOOP {

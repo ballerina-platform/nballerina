@@ -203,9 +203,79 @@
                     (ref.is_null
                       (local.get $0))
                     (ref.is_null
+                      (local.get $1))))
+                (if 
+                  (i32.eq
+                    (local.get $2)
+                    (i32.const 262148))
+                  (local.set $4
+                    (call $list_equality
+                      (local.get $0)
                       (local.get $1))))))))))
     (return 
       (local.get $4))) 
+  ;; $list_equality
+  (func $list_equality (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 i32)
+    (local $3 (ref null $List))
+    (local $4 (ref null $List))
+    (local $5 i32)
+    (local $6 i32)
+    (local $7 i32)
+    (local.set $2
+      (i32.const 0))
+    (local.set $7
+      (i32.const 0))
+    (local.set $3
+      (ref.cast 
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttList)))
+    (local.set $4
+      (ref.cast 
+        (ref.as_data
+          (local.get $1))
+        (global.get $rttList)))
+    (local.set $5
+      (i32.wrap_i64
+        (struct.get $List $len
+          (local.get $3))))
+    (local.set $6
+      (i32.wrap_i64
+        (struct.get $List $len
+          (local.get $4))))
+    (if 
+      (i32.eq
+        (local.get $5)
+        (local.get $6))
+      (block $loop$br 
+        (loop $loop$cont
+          (if 
+            (i32.lt_u
+              (local.get $7)
+              (local.get $5))
+            (if 
+              (call $tagged_equality
+                (call $arr_get
+                  (local.get $3)
+                  (local.get $7))
+                (call $arr_get
+                  (local.get $4)
+                  (local.get $7)))
+              (block
+                (local.set $7
+                  (i32.add
+                    (local.get $7)
+                    (i32.const 1)))
+                (local.set $2
+                  (i32.const 1))
+                (br $loop$cont))
+              (block
+                (local.set $2
+                  (i32.const 0))
+                (br $loop$br)))))))
+    (return 
+      (local.get $2)))
   ;; $exact_tagged_equality
   (func $exact_tagged_equality (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32) 

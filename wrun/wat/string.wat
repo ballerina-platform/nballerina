@@ -23,7 +23,39 @@
             (local.get $0))) 
         (array.len $Surrogate 
           (struct.get $String $surrogate 
-            (local.get $0)))))) 
+            (local.get $0))))))
+  ;; $string_compare
+  (func $string_compare (param $0 eqref) (param $1 eqref) (result i32) 
+    (local $2 anyref)
+    (local $3 anyref)
+    (local.set $2
+      (struct.get $String $val
+        (ref.cast
+          (ref.as_data
+            (local.get $0))
+          (global.get $rttString))))
+    (local.set $3
+      (struct.get $String $val
+        (ref.cast
+          (ref.as_data
+            (local.get $1))
+          (global.get $rttString))))
+    (if
+      (call $str_comp
+        (i32.const 0)
+        (local.get $2)
+        (local.get $3))
+      (return 
+        (i32.const 0))
+      (if
+        (call $str_comp
+          (i32.const 2)
+          (local.get $2)
+          (local.get $3))
+        (return 
+          (i32.const 2))
+        (return 
+          (i32.const 1)))))
   ;; $w_str_concat
   (func $w_str_concat (param $0 (ref $String)) (param $1 (ref $String)) (result (ref $String)) 
     (local $2 (ref null $Surrogate)) 

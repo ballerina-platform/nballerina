@@ -57,6 +57,24 @@ function buildCompare(wasm:Module module, Scaffold scaffold, bir:CompareInsn ins
         if subtype == t:STRING {
             return buildCompareString(module, <int>stringCompareOp[insn.op], lhsValue, rhsValue, result);
         }
+        else {
+            t:UniformTypeBitSet orderTypeMinusNil = subtype & ~t:NIL;
+            if t:isSubtypeSimple(orderTypeMinusNil, t:LIST) {
+                return module.localSet(insn.result.number, module.call("array_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
+            }
+            else if orderTypeMinusNil == t:INT {
+                return module.localSet(insn.result.number, module.call("opt_int_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
+            }
+            else if orderTypeMinusNil == t:FLOAT {
+                return module.localSet(insn.result.number, module.call("opt_float_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
+            }
+            else if orderTypeMinusNil == t:STRING {
+                return module.localSet(insn.result.number, module.call("opt_string_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
+            }
+            else if orderTypeMinusNil == t:BOOLEAN {
+                return module.localSet(insn.result.number, module.call("opt_boolean_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
+            }
+        }
         panic error("not in the subset");
     }
     else {
@@ -125,8 +143,10 @@ function buildCompareTaggedBoolean(wasm:Module module, Scaffold scaffold, wasm:O
 }
 
 function buildCompareTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    wasm:Expression lhsUntagged = buildUntagInt(module, lhs);
-    return buildCompareInt(module, op, lhsUntagged, rhs, result);
+    wasm:Expression isType = buildIsType(module, lhs, TYPE_INT);
+    wasm:Expression trueBody = buildCompareInt(module, op, buildUntagInt(module, lhs), rhs, result);
+    wasm:Expression falseBody = module.localSet(result.number, module.addConst({ i32: 0 }));
+    return module.addIf(isType, trueBody, falseBody);
 }
 
 function buildCompareTaggedFloat(wasm:Module module, Scaffold scaffold, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
