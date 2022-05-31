@@ -249,7 +249,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     foreach int i in 0 ..< defn.params.length() {
         var param = defn.params[i];
         bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], param.namePos, param.name);
-        bindings = { head: { name: <string>param.name, reg, isFinal: true, pos: param.namePos }, prev: bindings };
+        bindings = { head: { name: <string>param.name, reg, isFinal: true }, prev: bindings };
     }
     var { block: endBlock } = check codeGenScope(cx, startBlock, bindings, defn.body);
     if endBlock != () {
@@ -313,8 +313,7 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, BindingChain? initialBi
 function addBindings(BindingChain? bindingLimit, BindingChain? bodyBindings, int startRegister) returns BindingChain? {
     BindingChain? newBindings = bindingLimit;
     foreach var b in bindingsUpTo(bindingLimit, bodyBindings).reverse() {
-        Binding? unnarrowed = b.unnarrowed;
-        if unnarrowed != () && unnarrowed.reg.number < startRegister {
+        if b is OccurrenceBinding && b.unnarrowed.reg.number < startRegister {
             newBindings = { prev: newBindings, head: b };
         }
     }
@@ -325,8 +324,7 @@ function addBindings(BindingChain? bindingLimit, BindingChain? bodyBindings, int
 function addAssignments(BindingChain? bindingLimit, BindingChain? bindings, BindingChain? rootBindings, int startRegister) returns BindingChain? {
     BindingChain? newBindings = rootBindings;
     foreach var b in bindingsUpTo(bindingLimit, bindings).reverse() {
-        var { assignmentInvalidatedReg, reg } = b;
-        if assignmentInvalidatedReg != () && reg.number < startRegister { // For assignments, reg is same as unnarrowed.reg
+        if b is AssignmentBinding && b.reg.number < startRegister { // For assignments, reg is same as unnarrowed.reg
             newBindings = { prev: newBindings, head: b };
         }
     }
@@ -400,8 +398,9 @@ function unusedLocalVariables(StmtContext cx, BindingChain? blockBindings, Bindi
     while bindings !== bindingLimit {
         // Since `bindingLimit` is a sub-chain of `bindings.binding`, we never reach nil on `bindings`.
         var { head, prev } = <BindingChain>bindings;
-        if head.unnarrowed == () && !head.used {
-            return cx.semanticErr(`unused local variable ${head.name}`, <Position>head.reg.pos);}
+        if head is DeclBinding && !head.used {
+            return cx.semanticErr(`unused local variable ${head.name}`, <Position>head.reg.pos);
+        }
         bindings = prev;
     }
 }
@@ -429,7 +428,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCh
     loopHead.insns.push(branch);
     var startRegister = cx.nextRegisterNumber();
     cx.pushLoopContext(exit, (), false);
-    BindingChain loopBodyBindings = { head: { name: varName, reg: loopVar, isFinal: true, pos: stmt.namePos }, prev: initialBindings };
+    BindingChain loopBodyBindings = { head: { name: varName, reg: loopVar, isFinal: true }, prev: initialBindings };
     var { block: loopEnd, bindings: loopEndBindings } = check codeGenScope(cx, loopBody, loopBodyBindings, stmt.body);
     bir:BasicBlock? loopStep = cx.loopContinueBlock();
     if loopEnd != () {
@@ -512,9 +511,9 @@ function validLoopAssignments(StmtContext cx, BindingChain? bindingLimit, Bindin
     BindingChain? b = bindings;
     while b !== bindingLimit {
         // Since `bindingLimit` is a sub-chain of `bindings`, we never reach nil on `b`.
-        var { head: { assignmentInvalidatedReg, name, pos }, prev } = <BindingChain>b;
-        if assignmentInvalidatedReg != () && assignmentInvalidatedReg.number < startRegister {
-            return cx.semanticErr(`assignment to narrowed variable ${ name } in loop`, pos);
+        var { head, prev } = <BindingChain>b;
+        if head is AssignmentBinding && head.invalidates.number < startRegister {
+            return cx.semanticErr(`assignment to narrowed variable ${ head.name } in loop`, head.pos);
         }
         b = prev;
     }
@@ -852,7 +851,7 @@ function codeGenVarDeclStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCh
         t:SemType semType = check cx.resolveTypeDesc(td);
         bir:VarRegister|bir:FinalRegister result = isFinal ? cx.createFinalRegister(semType, namePos, name) : cx.createVarRegister(semType, namePos, name);
         bir:BasicBlock nextBlock = check codeGenAssign(cx, initialBindings, startBlock, result, initExpr, semType, stmt.opPos);
-        return { block: nextBlock, bindings: { head: { name, reg: result, isFinal, pos: namePos }, prev: initialBindings } };
+        return { block: nextBlock, bindings: { head: { name, reg: result, isFinal }, prev: initialBindings } };
     }
 }
 
@@ -887,22 +886,19 @@ function codeGenAssignToVar(StmtContext cx, bir:BasicBlock startBlock, BindingCh
 
 function lookupVarRefForAssign(StmtContext cx, BindingChain? initialBindings, string varName, Position pos) returns CodeGenError|[bir:VarRegister, BindingChain?] {
     Binding binding = check lookupVarRefBinding(cx, varName, initialBindings, pos);
-    if binding.isFinal {
+    DeclBinding unnarrowed = unnarrowBinding(binding);
+    if unnarrowed.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`, pos);
     }
-    bir:VarRegister unnarrowedReg;
-    Binding? unnarrowedBinding = binding.unnarrowed;
+    bir:VarRegister unnarrowedReg = <bir:VarRegister>unnarrowed.reg; // assigning to final or param registers are semantic errors
     BindingChain? bindings;
-    if unnarrowedBinding == () {
-        // no narrowed binding in effect
-        unnarrowedReg = <bir:VarRegister>binding.reg; // assigning to final or param registers are semantic errors and assigning to narrow register is invalid
-        bindings = ();
+    if binding is NarrowBinding {
+        // create an assignment binding shadowing the narrowed binding
+        bindings = { head: { name: varName, reg: unnarrowedReg, unnarrowed, pos, invalidates: binding.reg }, prev: initialBindings };
     }
     else {
-        // invalidate the narrowed binding
-        // and use the unnarrowed binding
-        unnarrowedReg = <bir:VarRegister>unnarrowedBinding.reg; // assigning to final or param registers are semantic errors and assigning to narrow register is invalid
-        bindings = { head: { name: varName, isFinal: false, reg: unnarrowedReg, unnarrowed: unnarrowedBinding, pos, assignmentInvalidatedReg: <bir:NarrowRegister>binding.reg }, prev: initialBindings };
+        // no narrowed binding in effect
+        bindings = ();
     }
     return [unnarrowedReg, bindings];
 }
@@ -1197,18 +1193,8 @@ function lookupLocalVarRef(err:SemanticContext cx, ModuleSymbols mod, string nam
 function envLookup(string name, BindingChain? bindings) returns Binding? {
     Binding? binding = bindingsLookup(name, bindings);
     if binding != () {
-        Binding? unnarrowed = binding.unnarrowed;
-        if unnarrowed != () {
-            unnarrowed.used = true;
-            // This is a narrowed binding
-            if binding.assignmentInvalidatedReg != () {
-                // This binding has been invalidated by an assignment
-                return unnarrowed;
-            }
-        }
-        else {
-            binding.used = true;
-        }
+        DeclBinding unnarrowed = unnarrowBinding(binding);
+        unnarrowed.used = true;
     }
     return binding;
 }

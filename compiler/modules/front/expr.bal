@@ -26,21 +26,29 @@ type ExprEffect record {|
     Binding? binding = ();
 |};
 
-type Binding record {|
+type DeclBinding record {|
     string name;
-    bir:DeclRegister|bir:NarrowRegister reg;
+    bir:DeclRegister reg;
     boolean isFinal;
     boolean used = false;
-    // When this binding represents a narrowing, this refers to the
-    // original binding that was not narrowed.
-    // In the case of the nested narrowing, this points all the way
-    // back to the original explicit binding, not to the previous narrowing.
-    Binding? unnarrowed = ();
-    Position pos;
-    // Non-nil iff binding is created due to an assignment to a previously narrowed variable.
-    // Points to immediate previous narrowing while unnarrowed.reg points all the way back.
-    bir:NarrowRegister? assignmentInvalidatedReg = ();
 |};
+
+type NarrowBinding record {|
+    string name;
+    bir:NarrowRegister reg;
+    DeclBinding unnarrowed;
+|};
+
+type AssignmentBinding record {|
+    string name;
+    bir:DeclRegister reg; // same as unnarrowed.reg and invalidates.underlying.underling...
+    DeclBinding unnarrowed;
+    bir:NarrowRegister invalidates;
+    Position pos;
+|};
+
+type OccurrenceBinding NarrowBinding|AssignmentBinding;
+type Binding DeclBinding|NarrowBinding|AssignmentBinding;
 
 type BooleanExprEffect record {|
     *ExprEffect;
@@ -1169,7 +1177,7 @@ function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemT
 
 // Narrow `binding` with `reg` and add it to `bindings` chain.
 function narrow(BindingChain? bindings, Binding binding, bir:NarrowRegister reg, Position pos) returns BindingChain {
-    return { head: { name: binding.name, reg, isFinal: binding.isFinal, unnarrowed: binding.unnarrowed ?: binding, pos }, prev: bindings };
+    return { head: { name: binding.name, reg, unnarrowed: unnarrowBinding(binding) }, prev: bindings };
 }
 
 function createMergers(ExprContext cx, bir:Label originLabel, BindingChain? trueBindings, BindingChain? falseBindings, PrevTypeMergers? prevs) returns [bir:Label, bir:Label, CondExprEffect] {
@@ -1361,7 +1369,7 @@ function codeGenTypeMergeFromMerger(ExprContext cx, TypeMerger merger, Position 
 type MergeOriginGroup record {|
     // Same as unnarrowed.number
     readonly int number;
-    Binding unnarrowed;
+    DeclBinding unnarrowed;
     t:SemType union;
     bir:Register[] narrowedRegs;
     bir:Label[] origins;
@@ -1396,16 +1404,19 @@ function codeGenTypeMerge(ExprContext cx, bir:BasicBlock block, BindingChain? bi
 }
 
 // Bindings form each origin, up to the limit, grouped by the underling reg.
+// If a group has less origins than numOrigins, some path doesn't narrow, and the group can be ignored.
 function groupOriginsByUnnarrowed(BindingChain? bindingLimit, TypeMergeOrigin? origins) returns [int, OriginGroupTable] {
     int numOrigins = 0;
     TypeMergeOrigin? origin = origins;
-    final table<MergeOriginGroup> key(number) originGroups = table [];
+    final OriginGroupTable originGroups = table [];
     while origin != () {
         BindingChain? bindings = origin.bindings;
         boolean[] added = [];
         while bindings !== bindingLimit {
-            var { head: { reg, unnarrowed }, prev } = <BindingChain>bindings;
-            if unnarrowed != () {
+            var { head, prev } = <BindingChain>bindings;
+            if head is OccurrenceBinding {
+                bir:Register reg = head.reg;
+                var unnarrowed = head.unnarrowed;
                 int number = unnarrowed.reg.number;
                 if number >= added.length() || !added[number] {
                     MergeOriginGroup? originGroup = originGroups[number];
@@ -1844,4 +1855,8 @@ function typeMergerPairSingleton(TypeMergerPair pair) returns [boolean, TypeMerg
         panic err:impossible("empty type merger pair");
     }
     return [constCond, merger];
+}
+
+function unnarrowBinding(Binding binding) returns DeclBinding {
+    return binding is DeclBinding ? binding : binding.unnarrowed;
 }
