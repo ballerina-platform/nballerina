@@ -84,14 +84,26 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
         return module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 })); 
     }
     foreach var [code, subtype] in some {
-        if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO {
-            t:UniformTypeBitSet bitSet = t:widenToUniformTypes(subtype);
-            // var atomic = t:listAtomicTypeRw(scaffold.getTypeContext(), subtype);
-            // ListRepr repr = listAtomicTypeToListReprPrefix(atomic);
-            //_ =  t:listAtomicTypeApplicableMemberTypes(scaffold.getTypeContext(), atomic, semType);
-            // // _ = t:listAllMemberTypes(scaffold.getTypeContext(), subtype);
-            // t:SemType ty = t:listMemberType(scaffold.getTypeContext(), subtype, semType);
-            values.push(module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 })));
+        if code == t:UT_LIST_RO {
+            // t:UniformTypeBitSet bitSet = t:widenToUniformTypes(subtype);
+            var atomic = t:listAtomicTypeRw(scaffold.getTypeContext(), subtype);
+            if atomic != () {
+                t:SemType[] types = t:listAtomicTypeApplicableMemberTypes(scaffold.getTypeContext(), atomic, semType);
+                foreach t:SemType ty in types {
+                    values.push(module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: <int>ty })), module.addConst({ i32: 0 })));
+                }
+            }
+            // values.push(module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 })));
+            continue;
+        }
+        else if code == t:UT_MAPPING_RO {
+            t:MappingAtomicType? atomic = t:mappingAtomicTypeRw(scaffold.getTypeContext(), subtype);
+            if atomic != () {
+                t:SemType[] types = t:mappingAtomicTypeApplicableMemberTypes(scaffold.getTypeContext(), atomic, semType);
+                foreach t:SemType ty in types {
+                    values.push(module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: <int>ty })), module.addConst({ i32: 0 })));
+                }
+            }
             continue;
         }
         match code {
