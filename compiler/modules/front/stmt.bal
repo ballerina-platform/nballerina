@@ -8,39 +8,11 @@ type Position d:Position;
 
 type Range d:Range;
 
-type BindingChain record {|
-    Binding head;
-    BindingChain? prev;
-|};
-
 type StmtEffect record {|
     bir:BasicBlock? block;
     BindingChain? bindings = ();
 |};
 
-// Linked list of incoming branches to a TypeMerger
-type TypeMergeOrigin record {|
-    TypeMergeOrigin? prev;
-    bir:Label label;
-    BindingChain? bindings;
-|};
-
-// A partially constructed potential TypeMergeInsn
-type TypeMerger record {|
-    TypeMergeOrigin? origins = ();
-    bir:BasicBlock dest;
-|};
-
-type TypeMergerPair record {|
-    TypeMerger? trueMerger = ();
-    TypeMerger? falseMerger = ();
-|};
-
-// At least one TypeMerger is non-nil
-type CondExprEffect TypeMergerPair;
-
-// One and only one TypeMerger is non-nil
-type PrevTypeMergers TypeMergerPair;
 type LExprEffect record {|
     bir:BasicBlock block;
     bir:Register result;
@@ -331,7 +303,7 @@ function addAssignments(BindingChain? bindingLimit, BindingChain? bindings, Bind
     return newBindings;
 }
 
-// List Bindings from `bindings` to `bindingLimit`.
+// List Bindings from `bindings` up to `bindingLimit`.
 function bindingsUpTo(BindingChain? bindingLimit, BindingChain? bindings) returns Binding[] {
     Binding[] result = [];
     BindingChain? b = bindings;
@@ -396,7 +368,7 @@ function codeGenScopedStmt(StmtContext cx, bir:BasicBlock curBlock, BindingChain
 function unusedLocalVariables(StmtContext cx, BindingChain? blockBindings, BindingChain? bindingLimit) returns CodeGenError? {
     BindingChain? bindings = blockBindings;
     while bindings !== bindingLimit {
-        // Since `bindingLimit` is a sub-chain of `bindings.binding`, we never reach nil on `bindings`.
+        // Since `bindingLimit` is a sub-chain of `blockBindings`, we never reach nil on `bindings`.
         var { head, prev } = <BindingChain>bindings;
         if head is DeclBinding && !head.used {
             return cx.semanticErr(`unused local variable ${head.name}`, <Position>head.reg.pos);
@@ -683,8 +655,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
     foreach int clauseIndex in 0 ..< stmt.clauses.length() {
         s:MatchClause clause = stmt.clauses[clauseIndex];
         bir:BasicBlock stmtBlock = clauseBlocks[clauseIndex];
-        BindingChain? clauseEnv = initialBindings;
-        var { block: stmtBlockEnd, bindings: blockBindings } = check codeGenScope(cx, stmtBlock, clauseBindings[clauseIndex] ?: clauseEnv, clause.block);
+        var { block: stmtBlockEnd, bindings: blockBindings } = check codeGenScope(cx, stmtBlock, clauseBindings[clauseIndex] ?: initialBindings, clause.block);
         if stmtBlockEnd == () {
             continue;
         }
@@ -734,7 +705,7 @@ function maybeCreateBasicBlock(ExprContext cx, bir:BasicBlock? block) returns bi
 function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain? initialBindings, s:IfElseStmt stmt) returns CodeGenError|StmtEffect {
     ExprContext ec = cx.exprContext(initialBindings);
     var { condition, ifTrue, ifFalse } = stmt;
-    CondExprEffect condEffect = check codeGenExprForCond(cx.exprContext(initialBindings), startBlock, condition);
+    CondExprEffect condEffect = check codeGenExprForCond(ec, startBlock, condition);
     var {trueMerger, falseMerger} = condEffect;
     if trueMerger == () || falseMerger == () {
         // this will happen when type of condition is singleton true or singleton false
@@ -776,7 +747,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
                 bir:BranchInsn branch = { dest: contBlock.label, pos: joinPos };
                 ifContBlock.insns.push(branch);
                 elseContBlock.insns.push(branch);
-                TypeMergeOrigin? combinedOrigin = { bindings: ifBindings, label: ifContBlock.label, prev: { bindings: elseBindings, label: elseContBlock.label, prev: () } };
+                TypeMergerOrigin? combinedOrigin = { bindings: ifBindings, label: ifContBlock.label, prev: { bindings: elseBindings, label: elseContBlock.label, prev: () } };
                 BindingChain? bindings = codeGenTypeMerge(ec, contBlock, initialBindings, combinedOrigin, ifTrue.endPos);
                 cx.closeRegion(contBlock.label);
                 return { block: contBlock, bindings };
@@ -1016,13 +987,13 @@ function codeGenCompoundAssignStmt(StmtContext cx, bir:BasicBlock startBlock, Bi
 
 function codeGenCompoundAssignToVar(StmtContext cx,
                                     bir:BasicBlock startBlock,
-                                    BindingChain? bindings,
+                                    BindingChain? initialBindings,
                                     s:VarRefExpr lValue,
                                     s:Expr rexpr,
                                     s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                     Position pos) returns CodeGenError|StmtEffect {
-    var [result, narrowedBindings] = check lookupVarRefForAssign(cx, bindings, lValue.name, pos);
-    var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(bindings), startBlock, op, pos, result, rexpr);
+    var [result, narrowedBindings] = check lookupVarRefForAssign(cx, initialBindings, lValue.name, pos);
+    var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx.exprContext(initialBindings), startBlock, op, pos, result, rexpr);
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return { block: nextBlock, bindings: narrowedBindings };
@@ -1030,13 +1001,13 @@ function codeGenCompoundAssignToVar(StmtContext cx,
 
 function codeGenCompoundAssignToListMember(StmtContext cx,
                                            bir:BasicBlock bb,
-                                           BindingChain? bindings,
+                                           BindingChain? initialBindings,
                                            s:MemberAccessLExpr lValue,
                                            bir:Register list,
                                            s:Expr rexpr,
                                            s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                            Position pos) returns CodeGenError|StmtEffect {
-    var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, bindings, lValue.index);
+    var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, initialBindings, lValue.index);
     t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, index.semType);
     if t:isEmpty(cx.mod.tc, memberType) {
         return cx.semanticErr("index out of range", s:range(lValue.index));
@@ -1044,7 +1015,7 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
     bir:TmpRegister member = cx.createTmpRegister(memberType, lValue.opPos);
     bir:ListGetInsn getInsn = { result: member, operands: [list, index], pos: lValue.opPos };
     nextBlock.insns.push(getInsn);
-    var { result, block } = check codeGenCompoundableBinaryExpr(cx.exprContext(bindings), nextBlock, op, pos, member, rexpr);
+    var { result, block } = check codeGenCompoundableBinaryExpr(cx.exprContext(initialBindings), nextBlock, op, pos, member, rexpr);
     bir:ListSetInsn setInsn = { operands: [list, index, result], pos: lValue.opPos };
     block.insns.push(setInsn);
     return { block };
@@ -1052,14 +1023,14 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
 
 function codeGenCompoundAssignToMappingMember(StmtContext cx,
                                               bir:BasicBlock bb,
-                                              BindingChain? bindings,
+                                              BindingChain? initialBindings,
                                               s:MemberAccessLExpr|s:FieldAccessLExpr lValue,
                                               bir:Register mapping,
                                               s:Expr rexpr,
                                               s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                               Position pos) returns CodeGenError|StmtEffect {
-    var { result: k, block: block1 } = check codeGenLExprMappingKey(cx, bb, bindings, lValue, mapping.semType);
-    ExprContext ec = cx.exprContext(bindings);
+    var { result: k, block: block1 } = check codeGenLExprMappingKey(cx, bb, initialBindings, lValue, mapping.semType);
+    ExprContext ec = cx.exprContext(initialBindings);
     var { result: member, block: block2 } = check codeGenMappingGet(ec, block1, mapping, "[", k, pos);
     var { result, block } = check codeGenCompoundableBinaryExpr(ec, block2, op, pos, member, rexpr);
     bir:MappingSetInsn setInsn = { operands: [ mapping, k, result], pos: lValue.opPos };
