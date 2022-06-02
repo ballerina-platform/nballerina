@@ -9,7 +9,7 @@
   (type $MapKeys (array (mut eqref))) 
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
-  (type $Map (struct (field $type i32) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
+  (type $Map (struct (field $type i32) (field $atomic i32) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
   ;; import
@@ -130,6 +130,66 @@
         (i32.const 1)))
     (return 
       (local.get $2)))
+  ;; $check_type_and_list_atomic
+  (func $check_type_and_list_atomic (param $0 eqref) (param $1 i32) (result i32)
+    (local $2 (ref null $List))
+    (if 
+      (i32.ne
+        (i32.and
+          (call $get_type
+            (local.get $0))
+          (i32.const 262148))
+        (i32.const 0))
+      (block
+        (local.set $2
+          (ref.cast 
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttList)))
+        (if
+          (i32.ne
+            (i32.and
+              (struct.get $List $atomic
+                (ref.as_non_null
+                  (local.get $2)))
+              (local.get $1))
+            (i32.const 0))
+          (return 
+            (i32.const 1))
+          (return 
+            (i32.const 0))))
+      (return 
+        (i32.const 0))))
+  ;; $check_type_and_map_atomic
+  (func $check_type_and_map_atomic (param $0 eqref) (param $1 i32) (result i32)
+    (local $2 (ref null $Map))
+    (if 
+      (i32.ne
+        (i32.and
+          (call $get_type
+            (local.get $0))
+          (i32.const 524296))
+        (i32.const 0))
+      (block
+        (local.set $2
+          (ref.cast 
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttMap)))
+        (if
+          (i32.ne
+            (i32.and
+              (struct.get $Map $atomic
+                (ref.as_non_null
+                  (local.get $2)))
+              (local.get $1))
+            (i32.const 0))
+          (return 
+            (i32.const 1))
+          (return 
+            (i32.const 0))))
+      (return 
+        (i32.const 0))))
   ;; $tagged_equality
   (func $tagged_equality (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32) 
@@ -211,7 +271,15 @@
                   (local.set $4
                     (call $list_equality
                       (local.get $0)
-                      (local.get $1))))))))))
+                      (local.get $1)))
+                  (if 
+                    (i32.eq
+                      (local.get $2)
+                      (i32.const 524296))
+                    (local.set $4
+                      (call $map_equality
+                        (local.get $0)
+                        (local.get $1)))))))))))
     (return 
       (local.get $4))) 
   ;; $list_equality
@@ -262,6 +330,68 @@
                 (call $arr_get
                   (local.get $4)
                   (local.get $7)))
+              (block
+                (local.set $7
+                  (i32.add
+                    (local.get $7)
+                    (i32.const 1)))
+                (local.set $2
+                  (i32.const 1))
+                (br $loop$cont))
+              (block
+                (local.set $2
+                  (i32.const 0))
+                (br $loop$br)))))))
+    (return 
+      (local.get $2)))
+  ;; map_equality
+  (func $map_equality (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 i32)
+    (local $3 eqref)
+    (local $4 eqref)
+    (local $5 i32)
+    (local $6 i32)
+    (local $7 i32)
+    (local.set $2
+      (i32.const 0))
+    (local.set $7
+      (i32.const 0))
+    (local.set $3
+      (call $_bal_map_get_keys
+        (local.get $0)))
+    (local.set $4
+      (call $_bal_map_get_keys
+        (local.get $1)))
+    (local.set $5
+      (call $_bal_mapping_num_keys 
+        (ref.as_non_null
+          (local.get $3))))
+    (local.set $6
+      (call $_bal_mapping_num_keys 
+        (ref.as_non_null
+          (local.get $4))))
+    (if 
+      (i32.eq
+        (local.get $5)
+        (local.get $6))
+      (block $loop$br 
+        (loop $loop$cont
+          (if 
+            (i32.lt_u
+              (local.get $7)
+              (local.get $5))
+            (if 
+              (call $tagged_equality
+                (call $_bal_mapping_get
+                  (local.get $0)
+                  (call $_bal_mapping_get_key
+                    (local.get $3)
+                    (local.get $7)))
+                (call $_bal_mapping_get
+                  (local.get $1)
+                  (call $_bal_mapping_get_key
+                    (local.get $3)
+                    (local.get $7))))
               (block
                 (local.set $7
                   (i32.add

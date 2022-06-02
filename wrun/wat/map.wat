@@ -6,7 +6,9 @@
   (type $MapKeys (array (mut eqref))) 
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
-  (type $Map (struct (field $type i32) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
+  (type $Map (struct (field $type i32) (field $atomic i32) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
+  ;; tag
+  (tag $bad-mapping-store)
   ;; import
   (import "string" "hash" (func $hash_string (param anyref) (result i32))) 
   ;; global
@@ -14,6 +16,7 @@
   (global $rttAny (rtt 0 $Any) (rtt.canon $Any))
   (global $rttMap (rtt 1 $Map) (rtt.sub $Map (global.get $rttAny)))
   ;; export
+  (export "bad-mapping-store" (tag $bad-mapping-store)) 
   (export "_bal_map_array_len" (func $_bal_map_array_len)) 
   (export "_bal_mapping_construct" (func $_bal_mapping_construct)) 
   (export "_bal_mapping_init_member" (func $_bal_mapping_init_member)) 
@@ -61,12 +64,12 @@
     (return 
       (local.get $1)))
   ;; $_bal_mapping_construct
-  (func $_bal_mapping_construct (param $0 i32) (result (ref $Map))
-    (local $1 i32)
+  (func $_bal_mapping_construct (param $0 i32) (param $1 i32) (result (ref $Map))
     (local $2 i32)
-    (local.set $1
-      (i32.const 2))
+    (local $3 i32)
     (local.set $2
+      (i32.const 2))
+    (local.set $3
       (call $_bal_map_array_len 
         (local.get $0)))    
     (loop $loop
@@ -75,29 +78,30 @@
           (local.get $0)
           (i32.shl
             (i32.const 1)
-            (local.get $1)))
+            (local.get $2)))
         (block
-          (local.set $1
+          (local.set $2
             (i32.add  
-              (local.get $1)
+              (local.get $2)
               (i32.const 1)))
           (br $loop))))
-    (local.set $1
+    (local.set $2
       (i32.add  
-        (local.get $1)
+        (local.get $2)
         (i32.const 1)))
     (struct.new_with_rtt $Map
       (i32.const 524296)
       (local.get $1)
+      (local.get $2)
       (array.new_with_rtt $HashTable
         (i32.const -1)
         (i32.shl 
           (i32.const 1)
-          (local.get $1))
+          (local.get $2))
         (rtt.canon $HashTable))
       (struct.new_with_rtt $MapFields 
         (array.new_default_with_rtt $MapFieldArr
-          (local.get $2)
+          (local.get $3)
           (rtt.canon $MapFieldArr))
         (i32.const 0)
         (rtt.canon $MapFields))
@@ -235,6 +239,14 @@
     (local $5 i32)
     (local $6 i32)
     (local $7 i32)
+    (if
+      (i32.eqz
+        (i32.and
+          (call $get_type
+            (local.get $2))
+          (struct.get $Map $atomic
+            (local.get $0))))
+      (throw $bad-mapping-store))
     (local.set $7
       (call $_bal_map_lookup
         (local.get $0)

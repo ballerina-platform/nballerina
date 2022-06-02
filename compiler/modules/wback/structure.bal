@@ -111,7 +111,8 @@ function buildListSet(wasm:Module module, Scaffold scaffold, bir:ListSetInsn ins
 function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:MappingConstructInsn insn) returns wasm:Expression {
     scaffold.addRuntimeModule(stringMod);
     scaffold.addRuntimeModule(mapMod);
-    wasm:Expression mapping = module.call(mappingConstructFunction.name, [module.addConst({ i32: insn.fieldNames.length() })], mappingConstructFunction.returnType);
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(scaffold.getTypeContext(), insn.result.semType);  
+    wasm:Expression mapping = module.call(mappingConstructFunction.name, [module.addConst({ i32: insn.fieldNames.length() }), module.addConst({ i32: <int>mat.rest })], mappingConstructFunction.returnType);
     wasm:Expression mapSet = module.localSet(insn.result.number, mapping);
     wasm:Expression[] children = [mapSet];
     foreach int i in 0..<insn.fieldNames.length() {

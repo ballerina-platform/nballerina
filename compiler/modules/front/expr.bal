@@ -1158,7 +1158,7 @@ function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemT
     BindingChain? trueBinding = narrow(bindings, opBinding, ifTrueRegister);
     BindingChain? falseBinding = narrow(bindings, opBinding, ifFalseRegister);
     var [ifTrue, ifFalse, effect] = createMergers(cx, nextBlock.label, trueBinding, falseBinding, prevs);
-    bir:TypeBranchInsn insn = { operand: reg, semType: intersect, ifTrue, ifFalse, ifTrueRegister, ifFalseRegister, pos };
+    bir:TypeBranchInsn insn = { operand: reg, semType: negated ? intersect: semType , ifTrue, ifFalse, ifTrueRegister, ifFalseRegister, pos };
     nextBlock.insns.push(insn);
     return effect;
 }

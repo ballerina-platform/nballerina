@@ -85,25 +85,33 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
     }
     foreach var [code, subtype] in some {
         if code == t:UT_LIST_RO {
-            // t:UniformTypeBitSet bitSet = t:widenToUniformTypes(subtype);
-            var atomic = t:listAtomicTypeRw(scaffold.getTypeContext(), subtype);
+            var atomic = t:listAtomicTypeRw(scaffold.getTypeContext(), semType);
+            t:UniformTypeBitSet bitSet = t:widenToUniformTypes(subtype);
+            wasm:Expression? condition = ();
             if atomic != () {
-                t:SemType[] types = t:listAtomicTypeApplicableMemberTypes(scaffold.getTypeContext(), atomic, semType);
-                foreach t:SemType ty in types {
-                    values.push(module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: <int>ty })), module.addConst({ i32: 0 })));
+                t:SemType? ty = t:listAtomicSimpleArrayMemberType(atomic);
+                if ty != () {
+                    condition = module.call("check_type_and_list_atomic", [operand, module.addConst({ i32: <int>ty })], "i32");
                 }
             }
-            // values.push(module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 })));
+            if condition == () {
+                condition = module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 }));
+            }
+            values.push(<wasm:Expression>condition);
             continue;
         }
         else if code == t:UT_MAPPING_RO {
-            t:MappingAtomicType? atomic = t:mappingAtomicTypeRw(scaffold.getTypeContext(), subtype);
+            t:MappingAtomicType? atomic = t:mappingAtomicTypeRw(scaffold.getTypeContext(), semType);
+            t:UniformTypeBitSet bitSet = t:widenToUniformTypes(subtype);
+            wasm:Expression? cond = ();
             if atomic != () {
-                t:SemType[] types = t:mappingAtomicTypeApplicableMemberTypes(scaffold.getTypeContext(), atomic, semType);
-                foreach t:SemType ty in types {
-                    values.push(module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: <int>ty })), module.addConst({ i32: 0 })));
-                }
+                t:SemType ty = atomic.rest;
+                cond = module.call("check_type_and_map_atomic", [operand, module.addConst({ i32: <int>ty })], "i32");
             }
+            if cond == () {
+                cond = module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 }));
+            }
+            values.push(<wasm:Expression>cond);
             continue;
         }
         match code {

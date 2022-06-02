@@ -191,6 +191,12 @@ const handleError = (err) => {
   else if (err.message == "bad-list-store") {
     msg += "bad list store"
   }
+  else if (err.message == "bad-mapping-store") {
+    msg += "bad mapping store";
+  }
+  else if (err.message == "no-filler-value") {
+    msg += "no filler value";
+  }
   else if (err.message == "Maximum call stack size exceeded") {
     msg += "stack overflow";
   }
