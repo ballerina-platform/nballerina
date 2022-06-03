@@ -81,7 +81,7 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
     var { name, returnType } = getTypeFunction;
     if all != 0 {
         t:UniformTypeBitSet bitSet = t:widenToUniformTypes(semType);
-        return module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 })); 
+        return module.binary("i32.eq", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.call(name, [operand], returnType)); 
     }
     foreach var [code, subtype] in some {
         if code == t:UT_LIST_RO {
@@ -95,7 +95,7 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
                 }
             }
             if condition == () {
-                condition = module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 }));
+                condition = module.binary("i32.eq", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.call(name, [operand], returnType));
             }
             values.push(<wasm:Expression>condition);
             continue;
@@ -109,7 +109,7 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
                 cond = module.call("check_type_and_map_atomic", [operand, module.addConst({ i32: <int>ty })], "i32");
             }
             if cond == () {
-                cond = module.binary("i32.ne", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.addConst({ i32: 0 }));
+                cond = module.binary("i32.eq", module.binary("i32.and", module.call(name, [operand], returnType), module.addConst({ i32: bitSet })), module.call(name, [operand], returnType));
             }
             values.push(<wasm:Expression>cond);
             continue;

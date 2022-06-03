@@ -133,27 +133,33 @@
   ;; $check_type_and_list_atomic
   (func $check_type_and_list_atomic (param $0 eqref) (param $1 i32) (result i32)
     (local $2 (ref null $List))
+    (local $3 i32)
+    (local $4 i32)
+    (local.set $3
+      (call $get_type
+        (local.get $0)))
     (if 
-      (i32.ne
+      (i32.eq
         (i32.and
-          (call $get_type
-            (local.get $0))
+          (local.get $3)
           (i32.const 262148))
-        (i32.const 0))
+        (local.get $3))
       (block
         (local.set $2
           (ref.cast 
             (ref.as_data
               (local.get $0))
             (global.get $rttList)))
+        (local.set $4
+          (struct.get $List $atomic
+            (ref.as_non_null
+              (local.get $2))))
         (if
-          (i32.ne
+          (i32.eq
             (i32.and
-              (struct.get $List $atomic
-                (ref.as_non_null
-                  (local.get $2)))
+              (local.get $4)
               (local.get $1))
-            (i32.const 0))
+            (local.get $4))
           (return 
             (i32.const 1))
           (return 
@@ -163,27 +169,33 @@
   ;; $check_type_and_map_atomic
   (func $check_type_and_map_atomic (param $0 eqref) (param $1 i32) (result i32)
     (local $2 (ref null $Map))
+    (local $3 i32)
+    (local $4 i32)
+    (local.set $3
+      (call $get_type
+        (local.get $0)))
     (if 
-      (i32.ne
+      (i32.eq
         (i32.and
-          (call $get_type
-            (local.get $0))
+          (local.get $3)  
           (i32.const 524296))
-        (i32.const 0))
+        (local.get $3))
       (block
         (local.set $2
           (ref.cast 
             (ref.as_data
               (local.get $0))
             (global.get $rttMap)))
+        (local.set $4
+          (struct.get $Map $atomic
+            (ref.as_non_null
+              (local.get $2))))
         (if
-          (i32.ne
+          (i32.eq
             (i32.and
-              (struct.get $Map $atomic
-                (ref.as_non_null
-                  (local.get $2)))
+              (local.get $4)
               (local.get $1))
-            (i32.const 0))
+            (local.get $4))
           (return 
             (i32.const 1))
           (return 
