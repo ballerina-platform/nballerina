@@ -35,23 +35,13 @@ const stringImport = {
   eq: (arg1, arg2) => {
     return arg1 == arg2;
   },
-  comp: (op, arg1, arg2) => {
-    let result = false;
-    switch (op) {
-      case COMPARE_GE:
-        result = arg1 >= arg2
-        break;
-      case COMPARE_GT:
-        result = arg1 > arg2
-        break;
-      case COMPARE_LE:
-        result = arg1 <= arg2
-        break;
-      case COMPARE_LT:
-        result = arg1 < arg2
-        break;
-      default:
-        break;
+  comp: (arg1, arg2) => {
+    let result = 1;
+    if (arg1 < arg2) {
+      result = 0; 
+    }
+    else if (arg1 > arg2) {
+      result = 2;
     }
     return result;
   },

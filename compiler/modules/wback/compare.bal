@@ -1,8 +1,9 @@
+import wso2/nballerina.comm.err;
 import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
 import wso2/nballerina.types as t;
 
-final readonly & map<wasm:Op> signedInt32CompareOps = {
+final readonly & map<wasm:Op> booleanPredicateOps = {
     "<": "i32.lt_s",
     "<=": "i32.le_s",
     ">": "i32.gt_s",
@@ -16,7 +17,7 @@ final readonly & map<bir:OrderOp> flippedOrderOps = {
     "<" : ">"
 };
 
-final readonly & map<wasm:Op> signedInt64CompareOps = {
+final readonly & map<wasm:Op> signedIntPredicateOps = {
     "<": "i64.lt_s",
     "<=": "i64.le_s",
     ">": "i64.gt_s",
@@ -25,7 +26,7 @@ final readonly & map<wasm:Op> signedInt64CompareOps = {
     "!=": "i64.ne"
 };
 
-final readonly & map<wasm:Op> floatCompareOps = {
+final readonly & map<wasm:Op> floatPredicateOps = {
     "<": "f64.lt",
     "<=": "f64.le",
     ">": "f64.gt",
@@ -39,12 +40,70 @@ const COMPARE_LE = 1;
 const COMPARE_GT = 2;
 const COMPARE_GE = 3;
 
-final readonly & map<int> stringCompareOp = {
+final readonly & map<int> predicateOpCode = {
     "<": COMPARE_LT,
     "<=": COMPARE_LE,
     ">": COMPARE_GT,
     ">=": COMPARE_GE
 };
+
+final RuntimeFunction optIntCompareFunction = {
+    name: "_bal_opt_int_compare",
+    returnType: "i32"
+};
+
+final RuntimeFunction optFloatCompareFunction = {
+    name: "_bal_opt_float_compare",
+    returnType: "i32"
+};
+
+final RuntimeFunction optBooleanCompareFunction = {
+    name: "_bal_opt_boolean_compare",
+    returnType: "i32"
+};
+
+final RuntimeFunction optStringCompareFunction = {
+    name: "_bal_opt_string_compare",
+    returnType: "i32"
+};
+
+final RuntimeFunction arrayIntCompareFunction = {
+    name: "_bal_array_int_compare",
+    returnType: "i32"
+};
+
+final RuntimeFunction arrayFloatCompareFunction = {
+    name: "_bal_array_float_compare",
+    returnType: "i32"
+};
+
+final RuntimeFunction arrayBooleanCompareFunction = {
+    name: "_bal_array_boolean_compare",
+    returnType: "i32"
+};
+
+final RuntimeFunction arrayStringCompareFunction = {
+    name: "_bal_array_string_compare",
+    returnType: "i32"
+};
+
+final RuntimeFunction transformCompareResultFunction = {
+    name: "_bal_transform_compare_result",
+    returnType: "i32"
+};
+
+type TaggedCompareFunction readonly & record {|
+    t:UniformTypeBitSet utCode;
+    RuntimeFunction optCompareFunction;
+    RuntimeFunction arrayCompareFunction;
+|};
+
+final readonly & table<TaggedCompareFunction> key(utCode) compareFunctions = table [
+    { utCode: t:UT_INT, optCompareFunction: optIntCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
+    { utCode: t:UT_FLOAT, optCompareFunction: optFloatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
+    { utCode: t:UT_BOOLEAN, optCompareFunction: optBooleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
+    { utCode: t:UT_STRING, optCompareFunction: optStringCompareFunction, arrayCompareFunction: arrayStringCompareFunction }
+];
 
 function buildCompare(wasm:Module module, Scaffold scaffold, bir:CompareInsn insn) returns wasm:Expression {
     bir:Operand lhs = insn.operands[0];
@@ -54,102 +113,128 @@ function buildCompare(wasm:Module module, Scaffold scaffold, bir:CompareInsn ins
     bir:Register result = insn.result;
     if lhsRepr is TaggedRepr && rhsRepr is TaggedRepr {
         t:UniformTypeBitSet subtype = lhsRepr.subtype | rhsRepr.subtype;
+        int opCode = predicateOpCode.get(insn.op);
         if subtype == t:STRING {
-            return buildCompareString(module, <int>stringCompareOp[insn.op], lhsValue, rhsValue, result);
+            return buildCompareString(module, predicateOpCode.get(insn.op), lhsValue, rhsValue, result);
         }
         else {
             t:UniformTypeBitSet orderTypeMinusNil = subtype & ~t:NIL;
             if t:isSubtypeSimple(orderTypeMinusNil, t:LIST) {
-                return module.localSet(insn.result.number, module.call("array_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
+                t:Context tc = scaffold.getTypeContext();
+                t:SemType lhsType = lhs.semType;
+                t:SemType rhsType = rhs.semType; 
+                RuntimeFunction compareFunc = getArrayCompareFunction(tc, [lhsType, rhsType]);
+                return buildCompareStore(module, opCode, 
+                                         buildRuntimeFunctionCall(module, compareFunc, [lhsValue, rhsValue]), 
+                                         insn.result);
             }
-            else if orderTypeMinusNil == t:INT {
-                return module.localSet(insn.result.number, module.call("opt_int_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
-            }
-            else if orderTypeMinusNil == t:FLOAT {
-                return module.localSet(insn.result.number, module.call("opt_float_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
-            }
-            else if orderTypeMinusNil == t:STRING {
-                return module.localSet(insn.result.number, module.call("opt_string_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
-            }
-            else if orderTypeMinusNil == t:BOOLEAN {
-                return module.localSet(insn.result.number, module.call("opt_boolean_compare", [lhsValue, rhsValue, module.addConst({ i32: <int>stringCompareOp[insn.op] })], "i32"));
+            else {
+                var orderTypeMinusNilCode = <t:UniformTypeCode>t:uniformTypeCode(orderTypeMinusNil);
+                RuntimeFunction compareFunc = compareFunctions.get(orderTypeMinusNilCode).optCompareFunction;
+                return buildCompareStore(module, opCode,
+                                         buildRuntimeFunctionCall(module, compareFunc, [lhsValue, rhsValue]),
+                                         insn.result);
             }
         }
-        panic error("not in the subset");
     }
     else {
         match [lhsRepr.base, rhsRepr.base] {
             [BASE_REPR_TAGGED, BASE_REPR_INT] => {
-                return buildCompareTaggedInt(module, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
+                return buildCompareTaggedInt(module, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             [BASE_REPR_INT, BASE_REPR_TAGGED] => {
-                return buildCompareTaggedInt(module, scaffold, buildIntCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
-            }
-            [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
-                return buildCompareTaggedBoolean(module, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
-            }
-            [BASE_REPR_BOOLEAN, BASE_REPR_TAGGED] => {
-                return buildCompareTaggedBoolean(module, scaffold, buildBooleanCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
-            }
-            [BASE_REPR_INT, BASE_REPR_INT] => {
-                return buildCompareInt(module, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
-            }
-            [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN] => {
-                return buildCompareInt(module, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
+                return buildCompareTaggedInt(module, buildIntCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
             }
             [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
-                return buildCompareTaggedFloat(module, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
+                return buildCompareTaggedFloat(module, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
-                return buildCompareTaggedFloat(module, scaffold, buildFloatCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
+                return buildCompareTaggedFloat(module, buildFloatCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
             }
+            [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
+                return buildCompareTaggedBoolean(module, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            [BASE_REPR_BOOLEAN, BASE_REPR_TAGGED] => {
+                return buildCompareTaggedBoolean(module, buildBooleanCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
+            }
+            [BASE_REPR_INT, BASE_REPR_INT] => {
+                return buildCompareNumeric(module, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN] => {
+                return buildCompareNumeric(module, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            
             [BASE_REPR_FLOAT, BASE_REPR_FLOAT] => {
-                return buildCompareFloat(module, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
+                return buildCompareNumeric(module, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             _ => {
-                panic error("no way to compare");
+                panic err:impossible(`no way to compare ${lhsRepr.base}/${rhsRepr.base}`);
             }
         }
     }
 }
 
-function buildCompareInt(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    return module.localSet(result.number, module.binary(op, lhs, rhs));
+function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns RuntimeFunction {
+    t:UniformTypeBitSet memberType = 0;
+    foreach int i in 0 ..< 2 {
+        memberType |= t:widenToUniformTypes(t:listMemberType(tc, semTypes[i], t:INT));
+    }
+    memberType &= ~t:NIL;
+    t:UniformTypeCode memberTypeCode = <t:UniformTypeCode>t:uniformTypeCode(memberType);
+    TaggedCompareFunction tcf = compareFunctions.get(memberTypeCode);
+    return tcf.arrayCompareFunction;
 }
 
-function buildCompareFloat(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    return module.localSet(result.number, module.binary(op, lhs, rhs));
+function buildCompareStore(wasm:Module module, int expected, wasm:Expression compareResult, bir:Register reg) returns wasm:Expression {
+    wasm:Expression transformResult = buildRuntimeFunctionCall(module, transformCompareResultFunction, 
+                                                               [
+                                                                   module.addConst({ i32: expected}), 
+                                                                   compareResult
+                                                               ]);
+    return buildStore(module, reg, transformResult);
+}
+
+function buildCompareNumeric(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+    return buildStore(module, result, module.binary(op, lhs, rhs));
 }
 
 function buildCompareString(wasm:Module module, int op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    return module.localSet(result.number, module.call(stringCompFunction.name, [module.addConst({ i32: op }), buildStringRef(module, lhs), buildStringRef(module, rhs)], stringCompFunction.returnType));
+    wasm:Expression value = buildRuntimeFunctionCall(module, stringCompFunction, [lhs, rhs]);
+    return buildCompareStore(module, op, value, result);
 }
 
 function buildIntCompareOp(bir:OrderOp op) returns wasm:Op {
-    return <wasm:Op>signedInt64CompareOps[op];
+    return signedIntPredicateOps.get(op);
 }
 
 function buildFloatCompareOp(bir:OrderOp op) returns wasm:Op {
-    return <wasm:Op>floatCompareOps[op];
+    return floatPredicateOps.get(op);
 }
 
 function buildBooleanCompareOp(bir:OrderOp op) returns wasm:Op {
-    return <wasm:Op>signedInt32CompareOps[op];
+    return booleanPredicateOps.get(op);
 }
 
-function buildCompareTaggedBoolean(wasm:Module module, Scaffold scaffold, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+function buildCompareTaggedBoolean(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+    wasm:Expression isBoolean = buildIsType(module, lhs, TYPE_BOOLEAN);
     wasm:Expression lhsUntagged = buildUntagBoolean(module, lhs);
-    return buildCompareInt(module, op, lhsUntagged, rhs, result);
+    wasm:Expression trueBody = buildCompareNumeric(module, op, lhsUntagged, rhs, result);
+    wasm:Expression falseBody = buildStore(module, result, module.addConst({ i32: 0 }));
+    return module.addIf(isBoolean, trueBody, falseBody);
 }
 
-function buildCompareTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    wasm:Expression isType = buildIsType(module, lhs, TYPE_INT);
-    wasm:Expression trueBody = buildCompareInt(module, op, buildUntagInt(module, lhs), rhs, result);
-    wasm:Expression falseBody = module.localSet(result.number, module.addConst({ i32: 0 }));
-    return module.addIf(isType, trueBody, falseBody);
+function buildCompareTaggedInt(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+    wasm:Expression isInt = buildIsType(module, lhs, TYPE_INT);
+    wasm:Expression lhsUntagged = buildUntagInt(module, lhs);
+    wasm:Expression trueBody = buildCompareNumeric(module, op, lhsUntagged, rhs, result);
+    wasm:Expression falseBody = buildStore(module, result, module.addConst({ i32: 0 }));
+    return module.addIf(isInt, trueBody, falseBody);
 }
 
-function buildCompareTaggedFloat(wasm:Module module, Scaffold scaffold, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+function buildCompareTaggedFloat(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+    wasm:Expression isFloat = buildIsType(module, lhs, TYPE_FLOAT);
     wasm:Expression lhsUntagged = buildUntagFloat(module, lhs);
-    return buildCompareFloat(module, op, lhsUntagged, rhs, result);
+    wasm:Expression trueBody = buildCompareNumeric(module, op, lhsUntagged, rhs, result);
+    wasm:Expression falseBody = buildStore(module, result, module.addConst({ i32: 0 }));
+    return module.addIf(isFloat, trueBody, falseBody);
 }

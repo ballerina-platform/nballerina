@@ -28,7 +28,7 @@ public type ExceptionTag string;
 const ExceptionTag OVERFLOW_TAG = "overflow";
 const ExceptionTag BAD_CONVERSION_TAG = "bad-conversion";
 
-type RuntimeFunction record {|
+type RuntimeFunction readonly & record {|
     string name;
     wasm:Type returnType;
 |};
@@ -69,7 +69,7 @@ final RuntimeFunction arrSetFunction = {
 };
 
 final RuntimeFunction stringCompFunction = {
-    name: "str_comp",
+    name: "string_compare",
     returnType: "i32"
 };
 
@@ -90,11 +90,11 @@ function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns w
     return module.i31New(value);
 }
 
-function buildTaggedInt(wasm:Module module, Scaffold scaffold, wasm:Expression value) returns wasm:Expression {
+function buildTaggedInt(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     return module.structNew(BOXED_INT_TYPE, [module.addConst({ i32: TYPE_INT }), value]);
 }
 
-function buildTaggedFloat(wasm:Module module, Scaffold scaffold, wasm:Expression value) returns wasm:Expression {
+function buildTaggedFloat(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     return module.structNew(FLOAT_TYPE, [module.addConst({ i32: TYPE_FLOAT }), value]);
 }
 
@@ -142,6 +142,11 @@ function buildConstString(wasm:Module module, Scaffold scaffold, string value) r
     return module.globalGet(label);
 }
 
+function buildRuntimeFunctionCall(wasm:Module module, RuntimeFunction rf, wasm:Expression[] args) returns wasm:Expression {
+    var { name, returnType } = rf;
+    return module.call(name, args, returnType);
+}
+
 function buildSurrogateArray(string val) returns int[] {
     int[] surrogate = [];
     foreach int i in 0..<val.length() {
@@ -153,7 +158,7 @@ function buildSurrogateArray(string val) returns int[] {
     return surrogate;
 }
 
-function buildFloat(wasm:Module module, Scaffold scaffold, bir:FloatOperand operand) returns wasm:Expression {
+function buildFloat(wasm:Module module, bir:FloatOperand operand) returns wasm:Expression {
     if operand is bir:FloatConstOperand {
         return module.addConst({ f64: operand.value });
     }
@@ -232,6 +237,14 @@ function buildInt(wasm:Module module, bir:IntOperand operand) returns wasm:Expre
     }
 }
 
+function buildStore(wasm:Module module, bir:Register reg, wasm:Expression value) returns wasm:Expression {
+    return module.localSet(reg.number, value);
+} 
+
+function buildLoad(wasm:Module module, bir:Register reg) returns wasm:Expression {
+    return module.localGet(reg.number);
+}
+
 function buildWideRepr(wasm:Module module, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType, int? result = ()) returns wasm:Expression {
     wasm:Expression value = buildRepr(module, scaffold, operand, targetRepr);
     return value;
@@ -239,10 +252,10 @@ function buildWideRepr(wasm:Module module, Scaffold scaffold, bir:Operand operan
 
 function buildRepr(wasm:Module module, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns wasm:Expression {
     var [sourceRepr, value] = buildReprValue(module, scaffold, operand);
-    return buildConvertRepr(module, scaffold, sourceRepr, value, targetRepr);
+    return buildConvertRepr(module, sourceRepr, value, targetRepr);
 }
 
-function buildConvertRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
+function buildConvertRepr(wasm:Module module, Repr sourceRepr, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
     BaseRepr sourceBaseRepr = sourceRepr.base;
     BaseRepr targetBaseRepr = targetRepr.base;
     if sourceBaseRepr == targetBaseRepr {
@@ -250,13 +263,13 @@ function buildConvertRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr
     }
     if targetBaseRepr == BASE_REPR_TAGGED {
         if sourceBaseRepr == BASE_REPR_INT {
-            return buildTaggedInt(module, scaffold, value);
+            return buildTaggedInt(module, value);
         }
         else if sourceBaseRepr == BASE_REPR_BOOLEAN {
             return buildTaggedBoolean(module, value);
         }
         else if sourceBaseRepr == BASE_REPR_FLOAT {
-            return buildTaggedFloat(module, scaffold, value);
+            return buildTaggedFloat(module, value);
         }
     }
     panic error("unimplemented conversion required");

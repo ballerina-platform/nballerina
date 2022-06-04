@@ -1,7 +1,7 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
 
-final readonly & map<wasm:Op> signedInt64ArithmeticOps = {
+final readonly & map<wasm:Op> intArithmeticOps = {
     "+": "i64.add",
     "-": "i64.sub",
     "*": "i64.mul",
@@ -9,7 +9,7 @@ final readonly & map<wasm:Op> signedInt64ArithmeticOps = {
     "%": "i64.rem_s"
 };
 
-final readonly & map<wasm:Op> signedInt64BitwiseOps = {
+final readonly & map<wasm:Op> binaryBitwiseOp = {
     "|": "i64.or",
     "^": "i64.xor",
     "&": "i64.and",
@@ -38,37 +38,28 @@ final RuntimeFunction convertToFloatFunction = {
 };
 
 final RuntimeFunction floatModulusFunction = {
-    name: "float_rem",
+    name: "_bal_float_rem",
     returnType: "f64"
 };
 
-function buildBitwiseBinary(wasm:Module module, Scaffold scaffold, bir:IntBitwiseBinaryInsn insn) returns wasm:Expression {
-    wasm:Op? op = signedInt64BitwiseOps[insn.op];
-    wasm:Expression operand1 = buildInt(module, insn.operands[0]);
-    wasm:Expression operand2 = buildInt(module, insn.operands[1]);
-    if op != () {
-        return module.localSet(insn.result.number, module.binary(op, operand1, operand2));
-    }
-    panic error("invalid bitwise operation");
+function buildBitwiseBinary(wasm:Module module, bir:IntBitwiseBinaryInsn insn) returns wasm:Expression {
+    wasm:Op op = binaryBitwiseOp.get(insn.op);
+    wasm:Expression lhs = buildInt(module, insn.operands[0]);
+    wasm:Expression rhs = buildInt(module, insn.operands[1]);
+    return buildStore(module, insn.result, module.binary(op, lhs, rhs));
 }
 
 function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntArithmeticBinaryInsn insn) returns wasm:Expression {
-    wasm:Op? op = signedInt64ArithmeticOps[insn.op];
-    if op != () {
-        wasm:Expression operand1 = buildInt(module, insn.operands[0]);
-        wasm:Expression operand2 = buildInt(module, insn.operands[1]);
-        wasm:Expression operation = module.localSet(insn.result.number, module.binary(op, operand1, operand2));
-        if ["i64.add", "i64.sub", "i64.mul", "i64.div_s"].indexOf(op) != () {
-            scaffold.addExceptionTag(OVERFLOW_TAG);
-            wasm:Expression? overflowCheck = checkOverflow(module, op, operand1, operand2);
-            if overflowCheck != () {
-                return module.block([overflowCheck, operation]);
-            }
-            return operation;
-        }
-        return operation;
+    wasm:Op op = intArithmeticOps.get(insn.op);
+    wasm:Expression lhs = buildInt(module, insn.operands[0]);
+    wasm:Expression rhs = buildInt(module, insn.operands[1]);
+    wasm:Expression operation = buildStore(module, insn.result, module.binary(op, lhs, rhs));
+    if op != "i64.rem_s" {
+        scaffold.addExceptionTag(OVERFLOW_TAG);
+        wasm:Expression overflowCheck = checkOverflow(module, op, lhs, rhs);
+        return module.block([overflowCheck, operation]);
     }
-    panic error("unimplemented");
+    return operation;
 }
 
 function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToIntInsn insn) returns wasm:Expression {
@@ -83,17 +74,14 @@ function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToI
     return module.localSet(insn.result.number, module.structNew(BOXED_INT_TYPE, [module.addConst({ i32: TYPE_INT }), module.call(name, [val], returnType)]));   
 }
 
-function buildNoPanicArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntNoPanicArithmeticBinaryInsn insn) returns wasm:Expression {
+function buildNoPanicArithmeticBinary(wasm:Module module, bir:IntNoPanicArithmeticBinaryInsn insn) returns wasm:Expression {
     wasm:Expression lhs = buildInt(module, insn.operands[0]);
     wasm:Expression rhs = buildInt(module, insn.operands[1]);
-    wasm:Op? op = signedInt64ArithmeticOps[insn.op];
-    if op != () {
-        return module.localSet(insn.result.number, module.binary(op, lhs, rhs));
-    }
-    panic error("invalid operation");
+    wasm:Op op = intArithmeticOps.get(insn.op);
+    return buildStore(module, insn.result, module.binary(op, lhs, rhs));
 }
 
-function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm:Expression op2) returns wasm:Expression? {
+function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm:Expression op2) returns wasm:Expression {
     wasm:Expression MAX_INT = module.addConst({ i64: 9223372036854775807 });
     wasm:Expression MIN_INT = module.addConst({ i64: -9223372036854775808 });
     wasm:Expression op1GZ = module.binary("i64.gt_s", op1, module.addConst({ i64: 0 }));
@@ -152,7 +140,7 @@ function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm
         wasm:Expression cond1 = module.binary("i32.and", nEOp2, minEOp2);
         return module.addIf(cond1, throw);
     }
-    return ();
+    panic error("impossible");
 }
 
 function buildConvertToFloat(wasm:Module module, Scaffold scaffold, bir:ConvertToFloatInsn insn) returns wasm:Expression { 
@@ -169,23 +157,22 @@ function buildConvertToFloat(wasm:Module module, Scaffold scaffold, bir:ConvertT
     }
 }
 
-function buildFloatArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:FloatArithmeticBinaryInsn insn) returns wasm:Expression {
-    wasm:Expression lhs = buildFloat(module, scaffold, insn.operands[0]);
-    wasm:Expression rhs = buildFloat(module, scaffold, insn.operands[1]);
+function buildFloatArithmeticBinary(wasm:Module module, bir:FloatArithmeticBinaryInsn insn) returns wasm:Expression {
+    wasm:Expression lhs = buildFloat(module, insn.operands[0]);
+    wasm:Expression rhs = buildFloat(module, insn.operands[1]);
     wasm:Expression result;
     if insn.op == "%" {
-        var { name, returnType } = floatModulusFunction;
-        result = module.call(name, [lhs, rhs], returnType);
+        result = buildRuntimeFunctionCall(module, floatModulusFunction, [lhs, rhs]);
     }
     else {
         wasm:Op op = floatArithmeticOps.get(insn.op);
         result = module.binary(op, lhs, rhs);
     }
-    return module.localSet(insn.result.number, result);                                  
+    return buildStore(module, insn.result, result);                                  
 }
 
-function buildFloatNegate(wasm:Module module, Scaffold scaffold, bir:FloatNegateInsn insn) returns wasm:Expression {
-    wasm:Expression operand = buildFloat(module, scaffold, insn.operand);
+function buildFloatNegate(wasm:Module module, bir:FloatNegateInsn insn) returns wasm:Expression {
+    wasm:Expression operand = buildFloat(module, insn.operand);
     wasm:Expression result = module.unary("f64.neg", operand);
     return module.localSet(insn.result.number, result);
 }

@@ -8,7 +8,7 @@
   (import "string" "length" (func $str_length (param anyref) (result i32))) 
   (import "string" "concat" (func $str_concat (param anyref) (param anyref) (result anyref))) 
   (import "string" "eq" (func $str_eq (param anyref) (param anyref) (result i32))) 
-  (import "string" "comp" (func $str_comp (param i32) (param anyref) (param anyref) (result i32))) 
+  (import "string" "comp" (func $str_comp (param anyref) (param anyref) (result i32))) 
   ;; global
   (global $rttAny (rtt 0 $Any) (rtt.canon $Any))
   (global $rttString (rtt 1 $String) (rtt.sub $String (global.get $rttAny)))
@@ -40,22 +40,30 @@
           (ref.as_data
             (local.get $1))
           (global.get $rttString))))
-    (if
+    (return 
       (call $str_comp
-        (i32.const 0)
         (local.get $2)
-        (local.get $3))
-      (return 
-        (i32.const 0))
-      (if
-        (call $str_comp
-          (i32.const 2)
-          (local.get $2)
-          (local.get $3))
-        (return 
-          (i32.const 2))
-        (return 
-          (i32.const 1)))))
+        (local.get $3))))
+  ;; $_bal_string_eq
+  (func $_bal_string_eq (param $0 eqref) (param $1 eqref) (result i32) 
+    (local $2 anyref)
+    (local $3 anyref)
+    (local.set $2
+      (struct.get $String $val
+        (ref.cast
+          (ref.as_data
+            (local.get $0))
+          (global.get $rttString))))
+    (local.set $3
+      (struct.get $String $val
+        (ref.cast
+          (ref.as_data
+            (local.get $1))
+          (global.get $rttString))))
+    (return 
+      (call $str_eq
+        (local.get $2)
+        (local.get $3))))
   ;; $w_str_concat
   (func $w_str_concat (param $0 (ref $String)) (param $1 (ref $String)) (result (ref $String)) 
     (local $2 (ref null $Surrogate)) 

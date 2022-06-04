@@ -202,8 +202,8 @@
             (i32.const 0))))
       (return 
         (i32.const 0))))
-  ;; $tagged_equality
-  (func $tagged_equality (param $0 eqref) (param $1 eqref) (result i32)
+  ;; $_bal_eq
+  (func $_bal_eq (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32) 
     (local $3 i32) 
     (local $4 i32) 
@@ -244,28 +244,11 @@
               (local.get $2)
               (i32.const 256))
             (local.set $4
-              (call $float_eq
+              (call $_bal_float_eq
                 (call $tagged_to_float
                   (local.get $0))
                 (call $tagged_to_float
-                  (local.get $1))
-                (i32.const 0)))
-            (if
-              (i32.eq
-                (local.get $2)
-                (i32.const 1024))
-              (local.set $4
-                (call $str_eq
-                  (struct.get $String $val 
-                    (ref.cast 
-                      (ref.as_data 
-                        (local.get $0)) 
-                      (global.get $rttString)))
-                  (struct.get $String $val 
-                    (ref.cast 
-                      (ref.as_data 
-                        (local.get $1)) 
-                      (global.get $rttString)))))
+                  (local.get $1))))
               (if
                 (i32.eq
                   (local.get $2)
@@ -291,7 +274,15 @@
                     (local.set $4
                       (call $map_equality
                         (local.get $0)
-                        (local.get $1)))))))))))
+                        (local.get $1)))
+                    (if 
+                      (i32.eq 
+                        (local.get $2)
+                        (i32.const 1024))
+                      (local.set $4
+                        (call $_bal_string_eq
+                          (local.get $0)
+                          (local.get $1)))))))))))
     (return 
       (local.get $4))) 
   ;; $list_equality
@@ -335,7 +326,7 @@
               (local.get $7)
               (local.get $5))
             (if 
-              (call $tagged_equality
+              (call $_bal_eq
                 (call $arr_get
                   (local.get $3)
                   (local.get $7))
@@ -393,7 +384,7 @@
               (local.get $7)
               (local.get $5))
             (if 
-              (call $tagged_equality
+              (call $_bal_eq
                 (call $_bal_mapping_get
                   (local.get $0)
                   (call $_bal_mapping_get_key
@@ -418,8 +409,8 @@
                 (br $loop$br)))))))
     (return 
       (local.get $2)))
-  ;; $exact_tagged_equality
-  (func $exact_tagged_equality (param $0 eqref) (param $1 eqref) (result i32)
+  ;; $_bal_exact_eq
+  (func $_bal_exact_eq (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32) 
     (local $3 i32) 
     (local $4 i32) 
@@ -440,12 +431,11 @@
           (local.get $2)
           (i32.const 256))
         (local.set $4
-          (call $float_eq
+          (call $_bal_float_exact_eq
             (call $tagged_to_float
               (local.get $0))
             (call $tagged_to_float
-              (local.get $1))
-            (i32.const 1)))
+              (local.get $1))))
         (local.set $4
           (ref.eq
             (local.get $0)

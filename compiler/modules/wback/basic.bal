@@ -9,10 +9,10 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
             body.push(buildArithmeticBinary(module, scaffold, insn));
         }
         else if insn is bir:IntNoPanicArithmeticBinaryInsn {
-            body.push(buildNoPanicArithmeticBinary(module, scaffold, insn));
+            body.push(buildNoPanicArithmeticBinary(module, insn));
         }
         else if insn is bir:IntBitwiseBinaryInsn {
-            body.push(buildBitwiseBinary(module, scaffold, insn));
+            body.push(buildBitwiseBinary(module, insn));
         }
         else if insn is bir:CompareInsn {
             body.push(buildCompare(module, scaffold, insn));
@@ -32,11 +32,11 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:TypeCastInsn {
             body.push(buildTypeCast(module, scaffold, insn));
         }
-        else if insn is bir:ConvertToFloatInsn {
-            body.push(buildConvertToFloat(module, scaffold, insn));
-        }
         else if insn is bir:ConvertToIntInsn {
             body.push(buildConvertToInt(module, scaffold, insn));
+        }
+        else if insn is bir:ConvertToFloatInsn {
+            body.push(buildConvertToFloat(module, scaffold, insn));
         }
         else if insn is bir:ErrorConstructInsn {
             body.push(buildErrorConstruct(module, scaffold, insn));
@@ -54,10 +54,10 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
             body.push(buildCall(module, scaffold, insn));
         }
         else if insn is bir:FloatArithmeticBinaryInsn {
-            body.push(buildFloatArithmeticBinary(module, scaffold, insn));
+            body.push(buildFloatArithmeticBinary(module, insn));
         }
         else if insn is bir:FloatNegateInsn {
-            body.push(buildFloatNegate(module, scaffold, insn));
+            body.push(buildFloatNegate(module, insn));
         }
         else if insn is bir:ListConstructInsn {
             body.push(buildListConstruct(module, scaffold, insn));
@@ -89,9 +89,6 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:CondBranchInsn {
             body.push(buildCondBranch(module, insn));
         }
-        else {
-            continue;
-        }
     }
     scaffold.processedBlocks.push(block.label);
     return body;
@@ -110,14 +107,18 @@ function buildCondBranch(wasm:Module module, bir:CondBranchInsn insn) returns wa
 
 function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) returns wasm:Expression {
     RetRepr repr = scaffold.getRetRepr();
-    wasm:Expression? retValue = repr is Repr ? buildWideRepr(module, scaffold, insn.operand, repr, scaffold.returnType) : ();
-    return module.addReturn(retValue);
+    wasm:Expression? ret = repr is Repr ? buildWideRepr(module, scaffold, insn.operand, repr, scaffold.returnType) : ();
+    return module.addReturn(ret);
 }
 
 function buildStringConcat(wasm:Module module, Scaffold scaffold, bir:StringConcatInsn insn) returns wasm:Expression {
-    wasm:Expression operand1 = buildString(module, scaffold, insn.operands[0]);
-    wasm:Expression operand2 = buildString(module, scaffold, insn.operands[1]);
-    return module.localSet(insn.result.number, module.call(stringConcatFunction.name, [operand1, operand2], stringConcatFunction.returnType));
+    wasm:Expression value = buildRuntimeFunctionCall(module,
+                                                     stringConcatFunction,
+                                                     [
+                                                         buildString(module, scaffold, insn.operands[0]),
+                                                         buildString(module, scaffold, insn.operands[1])
+                                                     ]);
+    return buildStore(module, insn.result, value);
 }
 
 function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) returns wasm:Expression {
@@ -131,14 +132,13 @@ function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) ret
     }
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
     wasm:Expression call = module.call(ref.symbol.identifier, args, retRepr.wasm);
-    if retRepr !is VoidRepr {
-        return module.localSet(insn.result.number, call);
-    }
-    return call;
+    return retRepr !is VoidRepr ? buildStore(module, insn.result, call) : call;
 }
 
 function buildAssign(wasm:Module module, Scaffold scaffold, bir:AssignInsn insn) returns wasm:Expression {
-    return module.localSet(insn.result.number, buildWideRepr(module, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType));
+    return buildStore(module,
+                      insn.result, 
+                      buildWideRepr(module, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType));
 }
 
 function buildErrorConstruct(wasm:Module module, Scaffold scaffold, bir:ErrorConstructInsn insn) returns wasm:Expression {
@@ -152,5 +152,7 @@ function buildPanic(wasm:Module module, Scaffold scaffold, bir:PanicInsn insn) r
 }
 
 function buildBooleanNotInsn(wasm:Module module, bir:BooleanNotInsn insn) returns wasm:Expression {
-    return module.localSet(insn.result.number, module.binary("i32.xor", module.localGet(insn.operand.number), module.addConst({ i32: 1 })));
+    return buildStore(module, 
+                      insn.result, 
+                      module.binary("i32.xor", buildLoad(module, insn.operand), module.addConst({ i32: 1 })));
 }
