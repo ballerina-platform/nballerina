@@ -246,8 +246,15 @@ class Scaffold {
     }
 
     function getDecimal(decimal val) returns DecimalDefn {
+        string str = val.toString();
+        DecimalDefn? curDefn = self.mod.decimalDefns[str];
+        if curDefn != () {
+            return curDefn;
+        }
         var [top, bottom] = lib:toDecimal128(val);
-        return [llvm:constInt("i64", top), llvm:constInt("i64", bottom)];
+        DecimalDefn newDefn = [llvm:constInt("i64", top), llvm:constInt("i64", bottom)];
+        self.mod.decimalDefns[str] = newDefn;
+        return newDefn;
     }
 
     function addBasicBlock() returns llvm:BasicBlock {

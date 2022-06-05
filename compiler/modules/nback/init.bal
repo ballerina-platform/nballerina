@@ -612,7 +612,6 @@ function getInitString(InitModuleContext cx, string str) returns llvm:ConstPoint
 }
 
 // This is relatively uncommon and LLVM will eliminate duplicates for us.
-// This stores decimal as as a string
 function getInitDecimal(InitModuleContext cx, decimal d) returns llvm:ConstPointerValue {
     var[topVal, bottomVal] = lib:toDecimal128(d);
     llvm:ConstValue top = llvm:constInt("i64", topVal);
