@@ -1,5 +1,4 @@
 #include <errno.h>
-#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -251,7 +250,7 @@ IntWithOverflow _bal_decimal_to_int(TaggedPtr tp) {
 
 TaggedPtr _bal_decimal_const(uint64_t top, uint64_t bottom) {
     DecimalPtr dp = _bal_alloc(sizeof(decQuad));
-    int64_t *ptr = (int64_t*)dp;
+    uint64_t *ptr = (uint64_t*)dp;
     ptr[0] = bottom;
     ptr[1] = top;
     return ptrAddFlags(dp, (uint64_t)TAG_DECIMAL << TAG_SHIFT);
@@ -276,8 +275,7 @@ static bool decimalListContains(const DecimalConstPtr *start, const DecimalConst
     initContext(&cx);
     while (start < end) {
         const DecimalConstPtr *mid = start + (end - start)/2;
-        decQuad midVal;
-        decQuadFromString(&midVal, *mid, &cx);
+        decQuad midVal = (**mid);
         decQuad cmp;
         decQuadCompare(&cmp, dq, &midVal, &cx);
         enum decClass cmpClass = decQuadClass(&cmp);

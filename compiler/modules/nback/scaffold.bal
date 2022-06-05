@@ -423,21 +423,6 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
                                       [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
 }
 
-function addDecimalDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue {
-    byte[] bytes = str.toBytes();
-    bytes.push(0);
-    llvm:ConstValue val = context.constString(bytes);
-    llvm:Type ty = llvm:arrayType("i8", bytes.length());
-    llvm:ConstPointerValue ptr = mod.addGlobal(ty,
-                                               decimalDefnSymbol(defnIndex),
-                                               initializer = val,
-                                               align = 8,
-                                               isConstant = true,
-                                               unnamedAddr = true,
-                                               linkage = "internal");
-    return context.constBitCast(ptr, LLVM_DECIMAL_CONST);
-}
-
 function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolean {
     return nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7);
 }

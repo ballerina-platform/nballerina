@@ -1,10 +1,9 @@
-#include <bits/stdint-intn.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>
-
+#include "third-party/decNumber/decQuad.h"
 #include "tag.h"
 #include "panic.h"
 #define TAG_MASK 0xFF
@@ -270,7 +269,7 @@ typedef struct {
     double floats[];
 } *FloatSubtypePtr;
 
-typedef const char *DecimalConstPtr;
+typedef const decQuad *DecimalConstPtr;
 
 typedef struct {
     UniformSubtype uniform;

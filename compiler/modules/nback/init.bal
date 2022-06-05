@@ -1,5 +1,6 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.lib;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
@@ -611,9 +612,19 @@ function getInitString(InitModuleContext cx, string str) returns llvm:ConstPoint
 }
 
 // This is relatively uncommon and LLVM will eliminate duplicates for us.
-// pr-todo: this should change as well
+// This stores decimal as as a string
 function getInitDecimal(InitModuleContext cx, decimal d) returns llvm:ConstPointerValue {
-    llvm:ConstPointerValue val = addDecimalDefn(cx.llContext, cx.llMod, cx.decimalCount, d.toString());
+    var[topVal, bottomVal] = lib:toDecimal128(d);
+    llvm:ConstValue top = llvm:constInt("i64", topVal);
+    llvm:ConstValue bottom = llvm:constInt("i64", bottomVal);
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llvm:arrayType("i64", 2),
+                                                    decimalDefnSymbol(cx.decimalCount),
+                                                    initializer = cx.llContext.constArray("i64", [bottom, top]),
+                                                    align = 8,
+                                                    isConstant = true,
+                                                    unnamedAddr = true,
+                                                    linkage = "internal");
+    llvm:ConstPointerValue pointerVal = cx.llContext.constBitCast(ptr, LLVM_DECIMAL_CONST);
     cx.decimalCount += 1;
-    return val;
+    return pointerVal;
 }
