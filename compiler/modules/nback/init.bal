@@ -618,7 +618,7 @@ function getInitDecimal(InitModuleContext cx, decimal d) returns llvm:ConstPoint
     llvm:ConstValue bottom = llvm:constInt("i64", bottomVal);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llvm:arrayType("i64", 2),
                                                     decimalDefnSymbol(cx.decimalCount),
-                                                    initializer = cx.llContext.constArray("i64", [bottom, top]),
+                                                    initializer = cx.llContext.constArray("i64", [top, bottom]),
                                                     align = 8,
                                                     isConstant = true,
                                                     unnamedAddr = true,

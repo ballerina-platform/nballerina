@@ -251,8 +251,8 @@ IntWithOverflow _bal_decimal_to_int(TaggedPtr tp) {
 TaggedPtr _bal_decimal_const(uint64_t top, uint64_t bottom) {
     DecimalPtr dp = _bal_alloc(sizeof(decQuad));
     uint64_t *ptr = (uint64_t*)dp;
-    ptr[0] = bottom;
-    ptr[1] = top;
+    ptr[0] = top;
+    ptr[1] = bottom;
     return ptrAddFlags(dp, (uint64_t)TAG_DECIMAL << TAG_SHIFT);
 }
 

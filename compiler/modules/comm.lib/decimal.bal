@@ -19,61 +19,56 @@ public function toDecimal128(decimal val) returns [int, int] {
     if significantBcd.length() > 34 {
         panic error("overflowing significant"); // this should not happen since we are starting from a decimal
     }
-    int:Unsigned32[] dpds = from int index in  0 ... 10 select getDpd(significantBcd, index);
-    int top = sign | combination(exponent, significantBcd) | (dpds[0] << 36) | (dpds[1] << 26) | (dpds[2] << 16) | (dpds[3] << 6) | (dpds[4] >> 4);
-    int bottom = (dpds[4] & 0xf) << 60 | (dpds[5] << 50) | (dpds[6] << 40) | (dpds[7] << 30) | (dpds[8] << 20) | (dpds[9] << 10) | dpds[10];
+    int paddingLen = 34 - significantBcd.length();
+    if paddingLen > 0 {
+        byte[] paddedSignificant = from int i in 0 ..< paddingLen select 0;
+        paddedSignificant.push(...significantBcd);
+        significantBcd = paddedSignificant;
+    }
+    int:Unsigned32[] dpds = from int index in  0 ... 10 select getDpd(significantBcd, (index * 3) + 1);
+    int bottom = sign | combination(exponent, significantBcd) | (dpds[0] << 36) | (dpds[1] << 26) | (dpds[2] << 16) | (dpds[3] << 6) | (dpds[4] >> 4);
+    int top = (dpds[4] & 0xf) << 60 | (dpds[5] << 50) | (dpds[6] << 40) | (dpds[7] << 30) | (dpds[8] << 20) | (dpds[9] << 10) | dpds[10];
     return [top, bottom];
 }
 
-function getDpd(byte[] significantBcd, int decletIndex) returns int:Unsigned32 {
-    int offset = 33 - significantBcd.length();
-    int startingIndex = (3 * decletIndex) - offset;
-    if startingIndex + 2 < 0 {
-        return 0; //leading zero
+function getDpd(byte[] significantBcd, int startingIndex) returns int:Unsigned16 {
+    byte[] bcds = from int index in startingIndex ..< startingIndex + 3 select significantBcd[index];
+    boolean[] isSmall = from byte bcd in bcds select bcd < 8;
+    int encoding = ((bcds[0] & 1) << 7) | ((bcds[1] & 1) << 4) | (bcds[2] & 1); // these bit positions are constant in all encodings
+    // checked in the order of most common to least common
+    if isSmall[0] && isSmall[1] { // combine d3 being large and small since same result
+        encoding = (bcds[0] << 7) | (bcds[1] << 4) | bcds[2];
     }
     else {
-        byte d1 = startingIndex >= 0 ? significantBcd[startingIndex] : 0;         //Xabc
-        byte d2 = startingIndex + 1 >= 0 ? significantBcd[startingIndex + 1] : 0; //Ydef
-        byte d3 = startingIndex + 2 >= 0 ? significantBcd[startingIndex + 2] : 0; //Zghi
-        boolean d1Small = d1 < 8;
-        boolean d2Small = d2 < 8;
-        boolean d3Small = d3 < 8;
-        int encoding = ((d1 & 1) << 7) | ((d2 & 1) << 4) | (d3 & 1); // these bit positions are constant in all encodings
-        // checked in the order of most common to least common
-        if d1Small && d2Small { // combine d3 being large and small since same result
-            encoding = (d1 << 7) | (d2 << 4) | d3;
+        // at least 1 large
+        encoding |= 1 << 3;
+        int de = (bcds[1] >> 1) & 3;
+        int gh = (bcds[2] >> 1) & 3;
+        if isSmall[0] && isSmall[2] {
+            encoding |= (bcds[0] << 7) | (gh << 5) | 2;
         }
-        else {
-            // at least 1 large
-            encoding |= 1 << 3;
-            int de = (d2 >> 1) & 3;
-            int gh = (d3 >> 1) & 3;
-            if d1Small && d3Small {
-                encoding |= (d1 << 7) | (gh << 5) | 2;
+        else if isSmall[1] && isSmall[2] {
+            encoding |= (gh << 8) | (de << 5) | 4;
+        }
+        else{
+            // at least 2 large
+            encoding |= 14; // 111_
+            if isSmall[2] {
+                encoding |= (gh << 8);
             }
-            else if d2Small && d3Small {
-                encoding |= (gh << 8) | (de << 5) | 4;
+            else if isSmall[1] {
+                encoding |= (de << 8) | 32;
             }
-            else{
-                // at least 2 large
-                encoding |= 14; // 111_
-                if d3Small {
-                    encoding |= (gh << 8);
-                }
-                else if d2Small {
-                    encoding |= (de << 8) | 32;
-                }
-                else if d1Small {
-                    encoding |= (d1 << 7) | 64;
-                }
-                else {
-                    // all large
-                    encoding |= 110; // 11_111_
-                }
+            else if isSmall[0] {
+                encoding |= (bcds[0] << 7) | 64;
+            }
+            else {
+                // all large
+                encoding |= 110; // 11_111_
             }
         }
-        return <int:Unsigned32>encoding;
     }
+    return <int:Unsigned16> encoding;
 }
 
 function combination(int exponent, byte[] significantBcd) returns int {
