@@ -71,8 +71,8 @@
           (local.get $1))))
     (return
       (local.get $2)))
-  ;; $convert_to_float
-  (func $convert_to_float (param $0 eqref) (result f64)
+  ;; $_bal_convert_to_float
+  (func $_bal_convert_to_float (param $0 eqref) (result (ref $Float))
     (local $1 i32)
     (local $2 f64)
     (local.set $1
@@ -101,9 +101,12 @@
                 (global.get $rttBoxedInt)))))
         (throw $bad-conversion)))
     (return 
-      (local.get $2)))
-  ;; $convert_to_int
-  (func $convert_to_int (param $0 eqref) (result i64)
+      (struct.new_with_rtt $Float
+        (i32.const 256)
+        (local.get $2)
+        (global.get $rttFloat))))
+  ;; $_bal_convert_to_int
+  (func $_bal_convert_to_int (param $0 eqref) (result (ref $BoxedInt))
     (local $1 i32)
     (local $2 i64)
     (local.set $1
@@ -133,7 +136,10 @@
               (global.get $rttBoxedInt))))
         (throw $bad-conversion)))
     (return 
-      (local.get $2)))
+      (struct.new_with_rtt $BoxedInt
+        (i32.const 128)
+        (local.get $2)
+        (global.get $rttBoxedInt))))
   ;; $_bal_float_eq
   (func $_bal_float_eq (param $0 f64) (param $1 f64) (result i32)
     (local $2 i32)

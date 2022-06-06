@@ -102,7 +102,7 @@ function buildBranch(wasm:Module module, Scaffold scaffold, bir:BranchInsn insn,
 }
 
 function buildCondBranch(wasm:Module module, bir:CondBranchInsn insn) returns wasm:Expression {
-    return module.localGet(insn.operand.number);
+    return buildLoad(module, insn.operand);
 }
 
 function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) returns wasm:Expression {
@@ -142,12 +142,17 @@ function buildAssign(wasm:Module module, Scaffold scaffold, bir:AssignInsn insn)
 }
 
 function buildErrorConstruct(wasm:Module module, Scaffold scaffold, bir:ErrorConstructInsn insn) returns wasm:Expression {
-    return module.localSet(insn.result.number, module.structNew(ERROR_TYPE, [module.addConst({ i32: TYPE_ERROR }), buildString(module, scaffold, insn.operand)]));
+    return buildStore(module, insn.result, 
+                      module.structNew(ERROR_TYPE, 
+                                       [
+                                           module.addConst({ i32: TYPE_ERROR }), 
+                                           buildString(module, scaffold, insn.operand)
+                                       ]));
 }
 
 function buildPanic(wasm:Module module, Scaffold scaffold, bir:PanicInsn insn) returns wasm:Expression {
     scaffold.setPanicBlock();
-    wasm:Expression errSet = module.globalSet("bal$err", module.localGet(insn.operand.number));
+    wasm:Expression errSet = module.globalSet("bal$err", buildLoad(module, insn.operand));
     return module.block([errSet, module.br("normal-block")]);
 }
 

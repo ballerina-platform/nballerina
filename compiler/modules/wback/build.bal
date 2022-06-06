@@ -99,18 +99,15 @@ function buildTaggedFloat(wasm:Module module, wasm:Expression value) returns was
 }
 
 function buildUntagInt(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
-    var { name, returnType } = taggedToIntFunction;
-    return module.call(name, [tagged], returnType);
+    return buildRuntimeFunctionCall(module, taggedToIntFunction, [tagged]);
 }
 
 function buildUntagBoolean(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
-    var { name, returnType } = taggedToBooleanFunction;
-    return module.call(name, [tagged], returnType);
+    return buildRuntimeFunctionCall(module, taggedToBooleanFunction, [tagged]);
 }
 
 function buildUntagFloat(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
-    var { name, returnType } = taggedToFloatFunction;
-    return module.call(name, [tagged], returnType);
+    return buildRuntimeFunctionCall(module, taggedToFloatFunction, [tagged]);
 }
 
 function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, string 'type) returns wasm:Expression {
@@ -123,20 +120,13 @@ function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand op
         op = buildConstString(module, scaffold, operand.value);
     }
     else {
-        op = module.localGet((<bir:Register>operand).number);
+        op = buildLoad(module, operand);
     }
     wasm:Expression asData = module.refAs("ref.as_data", op);
     return module.refCast(asData, module.globalGet("rttString"));
 }
 
-function buildStringRef(wasm:Module module, wasm:Expression operand) returns wasm:Expression {
-    wasm:Expression asData = module.refAs("ref.as_data", operand);
-    wasm:Expression cast = module.refCast(asData, module.globalGet("rtt" + STRING_TYPE));
-    return module.structGet(STRING_TYPE, "val", cast);
-}
-
 function buildConstString(wasm:Module module, Scaffold scaffold, string value) returns wasm:Expression {
-    scaffold.addRuntimeModule(stringMod);
     int[] surrogate = buildSurrogateArray(value);
     string label = scaffold.setSection(value, surrogate);
     return module.globalGet(label);
@@ -163,7 +153,7 @@ function buildFloat(wasm:Module module, bir:FloatOperand operand) returns wasm:E
         return module.addConst({ f64: operand.value });
     }
     else {
-        return module.localGet(operand.number);
+        return buildLoad(module, operand);
     }
 }
 
@@ -191,9 +181,8 @@ function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression va
     panic error("unreached in buildUntagged");
 }
 
-function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
-    var { name, returnType } = getTypeFunction;
-    wasm:Expression taggedType = module.call(name, [tagged], returnType);
+function buildIsExactType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
+    wasm:Expression taggedType = buildRuntimeFunctionCall(module, getTypeFunction, [tagged]);
     wasm:Expression expectedType = module.addConst({ i32: ty });
     return  module.binary("i32.eq", taggedType, expectedType);
 }
@@ -201,7 +190,7 @@ function buildIsType(wasm:Module module, wasm:Expression tagged, int ty) returns
 function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand operand) returns [Repr, wasm:Expression] {
     if operand is bir:Register {
         Repr repr = scaffold.getRepr(operand);
-        wasm:Expression val = module.localGet(operand.number);
+        wasm:Expression val = buildLoad(module, operand);
         if repr.wasm is wasm:ComplexRefType {
             return [repr, module.refAs("ref.as_non_null", val)];
         }
@@ -233,7 +222,7 @@ function buildInt(wasm:Module module, bir:IntOperand operand) returns wasm:Expre
         return module.addConst({ i64: operand.value });
     }
     else {
-        return module.localGet(operand.number);
+        return buildLoad(module, operand);
     }
 }
 
@@ -274,4 +263,3 @@ function buildConvertRepr(wasm:Module module, Repr sourceRepr, wasm:Expression v
     }
     panic error("unimplemented conversion required");
 }
-

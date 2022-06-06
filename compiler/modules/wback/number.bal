@@ -28,12 +28,12 @@ final readonly & map<wasm:Op> floatArithmeticOps = {
 final RuntimeModule numberMod = "number";
 
 final RuntimeFunction convertToIntFunction = {
-    name: "convert_to_int",
+    name: "_bal_convert_to_int",
     returnType: "i64"
 };
 
 final RuntimeFunction convertToFloatFunction = {
-    name: "convert_to_float",
+    name: "_bal_convert_to_float",
     returnType: "f64"
 };
 
@@ -64,14 +64,10 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
 
 function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToIntInsn insn) returns wasm:Expression {
     var [repr, val] = buildReprValue(module, scaffold, insn.operand);
-    var { name, returnType } = convertToIntFunction;
     if repr.base == BASE_REPR_FLOAT {
-        return module.localSet(insn.result.number, module.unary("i64.trunc_f64_s", val));
+        return buildStore(module, insn.result, module.unary("i64.trunc_f64_s", val));
     }
-    else if repr.base == BASE_REPR_INT {
-        return module.localSet(insn.result.number, val);    
-    }
-    return module.localSet(insn.result.number, module.structNew(BOXED_INT_TYPE, [module.addConst({ i32: TYPE_INT }), module.call(name, [val], returnType)]));   
+    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, convertToIntFunction, [val]));
 }
 
 function buildNoPanicArithmeticBinary(wasm:Module module, bir:IntNoPanicArithmeticBinaryInsn insn) returns wasm:Expression {
@@ -145,16 +141,10 @@ function checkOverflow(wasm:Module module, wasm:Op op, wasm:Expression op1, wasm
 
 function buildConvertToFloat(wasm:Module module, Scaffold scaffold, bir:ConvertToFloatInsn insn) returns wasm:Expression { 
     var [repr, val] = buildReprValue(module, scaffold, insn.operand);
-    var { name, returnType } = convertToFloatFunction;
     if repr.base == BASE_REPR_INT {
-        return module.localSet(insn.result.number, module.unary("f64.convert_i64_s", val));
+        return buildStore(module, insn.result, module.unary("f64.convert_i64_s", val));
     }
-    else if repr.base == BASE_REPR_FLOAT {
-        return module.localSet(insn.result.number, module.call(name, [val], returnType));
-    }
-    else {
-        return module.localSet(insn.result.number, module.structNew(FLOAT_TYPE, [module.addConst({ i32: TYPE_FLOAT }), module.call(name, [val], returnType)]));
-    }
+    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, convertToFloatFunction, [val]));
 }
 
 function buildFloatArithmeticBinary(wasm:Module module, bir:FloatArithmeticBinaryInsn insn) returns wasm:Expression {
@@ -173,6 +163,5 @@ function buildFloatArithmeticBinary(wasm:Module module, bir:FloatArithmeticBinar
 
 function buildFloatNegate(wasm:Module module, bir:FloatNegateInsn insn) returns wasm:Expression {
     wasm:Expression operand = buildFloat(module, insn.operand);
-    wasm:Expression result = module.unary("f64.neg", operand);
-    return module.localSet(insn.result.number, result);
+    return buildStore(module, insn.result, module.unary("f64.neg", operand));
 }

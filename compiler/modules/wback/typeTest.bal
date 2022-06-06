@@ -22,12 +22,12 @@ function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn i
         return buildTypeCastValue(module, scaffold, val, module.localSet(insn.result.number, buildUntagFloat(module, val)), TYPE_FLOAT);
     }
     else {
-        return module.localSet(insn.result.number, val);
+        return buildStore(module, insn.result, val);
     }
 }
 
 function buildTypeCastValue(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, wasm:Expression converted, int ty) returns wasm:Expression {
-    return module.addIf(buildIsType(module, tagged, ty), converted, module.throw(BAD_CONVERSION_TAG));
+    return module.addIf(buildIsExactType(module, tagged, ty), converted, module.throw(BAD_CONVERSION_TAG));
 }
 
 function buildTypeBranch(wasm:Module module, Scaffold scaffold, bir:TypeBranchInsn insn) returns wasm:Expression {
@@ -44,28 +44,28 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
     else if baseRepr == BASE_REPR_INT {
         t:IntSubtypeConstraints? intConstraints = t:intSubtypeConstraints(semType);
         if intConstraints != () && intConstraints.all {
-            hasType = module.binary("i32.and", module.binary("i64.le_s", module.addConst({ i64 : intConstraints.min }), value),
-                module.binary("i64.ge_s", module.addConst({ i64 : intConstraints.max }), value));
+            wasm:Expression constraintMin = module.addConst({ i64 : intConstraints.min });
+            wasm:Expression constraintMax = module.addConst({ i64 : intConstraints.max });
+            hasType = module.binary("i32.and", 
+                                    module.binary("i64.le_s", constraintMin, value),
+                                    module.binary("i64.ge_s", constraintMax, value));
         }
         else {
-            hasType = module.binary("i64.eq", module.localGet(operand.number), module.addConst( { i64: 0 }));
+            hasType = module.binary("i64.eq", 
+                                    buildLoad(module, operand), 
+                                    module.addConst({ i64 : 0 }));
         }
     }
     else if baseRepr == BASE_REPR_FLOAT {
         t:FloatSubtype sub = <t:FloatSubtype>t:floatSubtype(semType);
         if sub.allowed {
             foreach float val in sub.values {
-                if hasType == () {
-                    hasType = module.binary("f64.eq", value, module.addConst({ f64: val }));
-                }
-                else {
-                    hasType = module.binary("i32.or", module.binary("f64.eq", module.addConst({ f64: val }), value), hasType);
-                }
+                wasm:Expression cond = module.binary("f64.eq", value, module.addConst({ f64: val }));
+                hasType = hasType != () ? module.binary("i32.or", cond, hasType) : cond;
             }
         }
     }    
     else if baseRepr == BASE_REPR_BOOLEAN {
-        BASE_REPR_BOOLEAN _ = baseRepr;
         t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(<t:ComplexSemType>semType);
         hasType = module.binary("i32.eq", value, module.addConst({ i32: sub.value ? 1 : 0 }));
     }
@@ -117,15 +117,11 @@ function singleValues(wasm:Module module, Scaffold scaffold, t:SemType semType, 
         match code {
             t:UT_STRING => {
                 t:StringSubtype sub = <t:StringSubtype>t:stringSubtype(subtype);
-                if !sub.char.allowed {
+                if !sub.char.allowed || !sub.nonChar.allowed{
                     return ();
                 }
                 foreach var ch in sub.char.values {
                     values.push(module.call("check_type_and_string_val", [operand, buildConstString(module, scaffold, ch)], "i32"));
-                }
-
-                if !sub.nonChar.allowed {
-                    return ();
                 }
                 foreach var str in sub.nonChar.values {
                     values.push(module.call("check_type_and_string_val", [operand, buildConstString(module, scaffold, str)], "i32"));
@@ -179,9 +175,9 @@ function getTypeString(TaggedRepr repr) returns string {
 function buildNarrowReg(wasm:Module module, Scaffold scaffold, bir:NarrowRegister register) returns wasm:Expression {
     var sourceReg = register.underlying;
     var sourceRepr = scaffold.getRepr(sourceReg);
-    var value = module.localGet(sourceReg.number);
+    var value = buildLoad(module, sourceReg);
     wasm:Expression narrowed = buildNarrowRepr(module, scaffold, sourceRepr, value, scaffold.getRepr(register));
-    return module.localSet(register.number, narrowed);
+    return buildStore(module, register, narrowed);
 }
 
 function buildNarrowRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
@@ -201,5 +197,9 @@ function buildTypeTest(wasm:Module module, Scaffold scaffold, bir:TypeTestInsn i
     if insn.negated {
         hasType = module.binary("i32.xor", module.addConst({ i32: 1 }), hasType);
     }
-    return module.localSet(insn.result.number, hasType);
+    return buildStore(module, insn.result, hasType);
+}
+
+function buildIsSubType(wasm:Module module, wasm:Expression super, wasm:Expression sub) returns wasm:Expression {
+    return module.binary("i32.eq", module.binary("i32.and", super, sub), super); 
 }

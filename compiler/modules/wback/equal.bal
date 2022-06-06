@@ -85,7 +85,7 @@ function reprIsString(Repr repr) returns boolean {
 
 function buildEqualTaggedBoolean(wasm:Module module, CmpEqOp op, wasm:Expression tagged, wasm:Expression untagged, bir:Register result) returns wasm:Expression {
     wasm:Op operation = op == "eq" ? "i32.eq" : "i32.ne";
-    wasm:Expression isBoolean = buildIsType(module, tagged, TYPE_BOOLEAN);
+    wasm:Expression isBoolean = buildIsExactType(module, tagged, TYPE_BOOLEAN);
     wasm:Expression trueBody = buildStore(module, result, module.binary(operation, untagged, buildUntagBoolean(module, tagged)));
     wasm:Expression falseBody = buildStore(module, result, module.addConst({ i32: op == "eq" ? 0 : 1}));
     return module.addIf(isBoolean, trueBody, falseBody);
@@ -93,14 +93,14 @@ function buildEqualTaggedBoolean(wasm:Module module, CmpEqOp op, wasm:Expression
 
 function buildEqualTaggedInt(wasm:Module module, CmpEqOp op, wasm:Expression tagged, wasm:Expression untagged, bir:Register result) returns wasm:Expression {
     wasm:Op operation = op == "eq" ? "i64.eq" : "i64.ne";
-    wasm:Expression isInt = buildIsType(module, tagged, TYPE_INT);
+    wasm:Expression isInt = buildIsExactType(module, tagged, TYPE_INT);
     wasm:Expression trueBody = buildStore(module, result, module.binary(operation, buildUntagInt(module, tagged), untagged));
     wasm:Expression falseBody = buildStore(module, result, module.addConst({ i32: op == "eq" ?  0 : 1 }));
     return module.addIf(isInt, trueBody, falseBody);
 }
 
 function buildEqualTaggedFloat(wasm:Module module, CmpEqOp op, boolean exact, wasm:Expression tagged, wasm:Expression untagged, bir:Register result) returns wasm:Expression {
-    wasm:Expression isFloat = buildIsType(module, tagged, TYPE_FLOAT);
+    wasm:Expression isFloat = buildIsExactType(module, tagged, TYPE_FLOAT);
     wasm:Expression trueBody = buildEqualFloat(module, op, exact, buildUntagFloat(module, tagged), untagged, result);
     wasm:Expression falseBody = buildStore(module, result, module.addConst({ i32: op == "eq" ? 0 : 1 }));
     return module.addIf(isFloat, trueBody, falseBody);

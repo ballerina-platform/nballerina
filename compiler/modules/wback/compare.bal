@@ -216,7 +216,7 @@ function buildBooleanCompareOp(bir:OrderOp op) returns wasm:Op {
 }
 
 function buildCompareTaggedBoolean(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    wasm:Expression isBoolean = buildIsType(module, lhs, TYPE_BOOLEAN);
+    wasm:Expression isBoolean = buildIsExactType(module, lhs, TYPE_BOOLEAN);
     wasm:Expression lhsUntagged = buildUntagBoolean(module, lhs);
     wasm:Expression trueBody = buildCompareNumeric(module, op, lhsUntagged, rhs, result);
     wasm:Expression falseBody = buildStore(module, result, module.addConst({ i32: 0 }));
@@ -224,7 +224,7 @@ function buildCompareTaggedBoolean(wasm:Module module, wasm:Op op, wasm:Expressi
 }
 
 function buildCompareTaggedInt(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    wasm:Expression isInt = buildIsType(module, lhs, TYPE_INT);
+    wasm:Expression isInt = buildIsExactType(module, lhs, TYPE_INT);
     wasm:Expression lhsUntagged = buildUntagInt(module, lhs);
     wasm:Expression trueBody = buildCompareNumeric(module, op, lhsUntagged, rhs, result);
     wasm:Expression falseBody = buildStore(module, result, module.addConst({ i32: 0 }));
@@ -232,7 +232,7 @@ function buildCompareTaggedInt(wasm:Module module, wasm:Op op, wasm:Expression l
 }
 
 function buildCompareTaggedFloat(wasm:Module module, wasm:Op op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    wasm:Expression isFloat = buildIsType(module, lhs, TYPE_FLOAT);
+    wasm:Expression isFloat = buildIsExactType(module, lhs, TYPE_FLOAT);
     wasm:Expression lhsUntagged = buildUntagFloat(module, lhs);
     wasm:Expression trueBody = buildCompareNumeric(module, op, lhsUntagged, rhs, result);
     wasm:Expression falseBody = buildStore(module, result, module.addConst({ i32: 0 }));
