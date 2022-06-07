@@ -251,7 +251,7 @@ class Scaffold {
         if curDefn != () {
             return curDefn;
         }
-        var [top, bottom] = lib:toDecimal128(val);
+        var [top, bottom] = lib:toDpd(val);
         DecimalDefn newDefn = [llvm:constInt("i64", top), llvm:constInt("i64", bottom)];
         self.mod.decimalDefns[str] = newDefn;
         return newDefn;
