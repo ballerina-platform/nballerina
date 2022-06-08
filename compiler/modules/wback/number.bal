@@ -65,7 +65,7 @@ final RuntimeFunction checkOverflowDivFunction = {
 final readonly & map<RuntimeFunction> overflowFunction = {
     "i64.add": checkOverflowAddFunction,
     "i64.sub": checkOverflowSubFunction,
-    "i64.mul": checkOverflowSubFunction,
+    "i64.mul": checkOverflowMulFunction,
     "i64.div_s": checkOverflowDivFunction
 };
 
