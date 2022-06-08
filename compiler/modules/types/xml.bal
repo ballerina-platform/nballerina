@@ -148,12 +148,12 @@ function xmlBddEmptyRo(Context cx, Bdd bdd) returns boolean {
 }
 
 function xmlFormulaIsEmptyRo(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    return hasTotalNegative(collectAllBits(pos), neg);
+    return hasTotalNegative(cx, collectAllBits(pos), neg);
 }
 
 function xmlFormulaIsEmptyRw(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
     int rwOnlyBits = collectAllBits(pos) & XML_PRIMITIVE_RW_MASK;
-    return hasTotalNegative(rwOnlyBits, neg);
+    return hasTotalNegative(cx, rwOnlyBits, neg);
 }
 
 function collectAllBits(Conjunction? con) returns int {
@@ -166,7 +166,7 @@ function collectAllBits(Conjunction? con) returns int {
     return allBits;
 }
 
-function hasTotalNegative(int allBits, Conjunction? con) returns boolean {
+function hasTotalNegative(Context cx, int allBits, Conjunction? con) returns boolean {
     if allBits == 0 {
         return true;
     }

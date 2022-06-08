@@ -145,5 +145,6 @@ function shallowCopyStrings(string[] v) returns string[] {
 }
 
 function notIsEmpty(Context cx, SubtypeData d) returns boolean {
+    cx.witness.remainingType(d);
     return false;
 }

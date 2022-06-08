@@ -9,6 +9,11 @@ public type TypeTest record {
     Identifier|TypeProjection right;
 };
 
+public type TypeTestWitness record {
+    *TypeTest;
+    string witness;
+};
+
 public type SubtypeTestOp "<" | "=" | "<>";
 
 public type Identifier string;
@@ -36,6 +41,21 @@ public function parseTypeTest(string str) returns TypeTest|error {
     
 }
 
+public function parseTypeTestWitness(string str) returns TypeTestWitness|error {
+    SourceFile file = createSourceFile([str], { filename: "<internal>" });
+    Tokenizer tok = new(file);
+    check tok.advance();
+    Identifier|TypeProjection left = check parseTypeProjection(tok);
+    Token? t = tok.current();
+    if t is "<" {
+        check tok.advance();
+        Identifier|TypeProjection right = check parseTypeProjection(tok);
+        string witness = check parseTypeWitness(tok);
+        return { op: "<", left, right, witness };
+    }
+    return parseError(tok);
+}
+
 function parseTypeProjection(Tokenizer tok) returns Identifier|TypeProjection|error {
     Identifier identifier = check tok.expectIdentifier();
     if tok.current() is "[" {
@@ -53,4 +73,32 @@ function parseTypeProjection(Tokenizer tok) returns Identifier|TypeProjection|er
         return { identifier, index};
     }
     return identifier;
+}
+
+function parseTypeWitness(Tokenizer tok) returns string|error {
+    check tok.expect("|");
+    string[] words = [];
+    while tok.curTok != () {
+        Token? curTok = tok.curTok;
+        check tok.advance();
+        if curTok != () {
+            match curTok {
+                [STRING_LITERAL, var _] => {
+                    // can't recover original string, so
+                    // lets just return a minimal expectation
+                    words.push("\"");
+                }
+                [DECIMAL_FP_NUMBER, var digits, var suffix] => {
+                    words.push(digits.toLowerAscii() + (suffix ?: ""));
+                }
+                [_, var str] => {
+                    words.push(str);
+                }
+                var str => {
+                    words.push(<string>str);
+                }
+            }
+        }
+    }
+    return " ".join(...words);
 }

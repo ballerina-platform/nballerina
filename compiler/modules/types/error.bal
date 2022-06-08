@@ -42,6 +42,7 @@ function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
             return res;
         }
     }
+    // todo: Need to handle witness handling for this scenario
     boolean isEmpty = bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty);
     m.isEmpty = isEmpty;
     return isEmpty;    

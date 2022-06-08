@@ -23,7 +23,7 @@ class VerifyContext {
     }
 
     function operandHasType(Operand operand, t:SemType t) returns boolean {
-        return operandHasType(self.tc, operand, t);
+        return operandHasType(self.tc, operand, t)[0];
     }
 
     function isSameType(t:SemType t1, t:SemType t2) returns boolean {

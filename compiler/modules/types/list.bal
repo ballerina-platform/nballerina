@@ -263,6 +263,7 @@ function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLength
 // `neg` represents N.
 function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
     if neg == () {
+        listCreateWitness(cx, indices, memberTypes, nRequired);
         return true;
     }
     else {
@@ -429,6 +430,11 @@ function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) retu
     }
     return rest;
 } 
+
+
+function listCreateWitness(Context cx, int[] indices, SemType[] memberTypes, int nRequired) {
+    
+}
 
 function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean {
     foreach var t in array.initial {

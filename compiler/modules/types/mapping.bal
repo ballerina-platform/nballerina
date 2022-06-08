@@ -192,6 +192,7 @@ function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? ne
 
 function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negList) returns boolean {
     if negList == () {
+        cx.witness.remainingType(pos.cloneWithType(MappingAtomicType));
         return true;
     }
     else {

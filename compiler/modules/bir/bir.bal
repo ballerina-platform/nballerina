@@ -383,8 +383,9 @@ public type BooleanOperand BooleanConstOperand|Register;
 public type StringOperand StringConstOperand|Register;
 public type FunctionOperand FunctionRef|Register;
 
-public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
-    return t:isSubtype(tc, operand.semType, semType);
+public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns [boolean, string] {
+    tc.witness.startRecording();
+    return [t:isSubtype(tc, operand.semType, semType), tc.witness.toString()];
 }
 
 # Perform a arithmetic operand on ints with two operands.

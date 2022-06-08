@@ -212,6 +212,8 @@ public class Context {
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
 
+    public final Witness witness = new;
+
     function init(Env env) {
         self.env = env;
     }
@@ -752,11 +754,16 @@ public function isNever(SemType t) returns boolean {
 
 public function isEmpty(Context cx, SemType t) returns boolean {
     if t is UniformTypeBitSet {
-        return t == 0;
+        boolean noBits = t == 0;
+        if !noBits {
+            cx.witness.allOfTypes(t);
+        }
+        return noBits;
     }
     else {
         if t.all != 0 {
             // includes all of one or more uniform types
+            cx.witness.allOfTypes(t.all);
             return false;
         }
         foreach var st in unpackComplexSemType(t) {

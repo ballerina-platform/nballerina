@@ -49,6 +49,15 @@ function testSemTypes(string path, string kind) returns error? {
 }
 
 @test:Config {
+    dataProvider: listSourcesWE
+}
+function testSemTypeWitness(string path, string kind) returns error? {
+    SubtypeTestCase res = check readSubtypeTests(path);
+    // todo: do we need to handle -we cases?
+    check testSemtypeWitness([{ lines : res[1], filename : res[0] }], res[2]);
+}
+
+@test:Config {
     dataProvider: listSourcesEU
 }
 function testCompileEU(string path, string kind) returns file:Error|io:Error? {
@@ -135,6 +144,8 @@ function listSourcesEU() returns TestSuiteCases|error => listSources("eu");
 
 function listSourcesTVE() returns TestSuiteCases|error => listSources("t");
 
+function listSourcesWE() returns TestSuiteCases|error => listSources("w");
+
 function listSources(string initialChars) returns TestSuiteCases|io:Error|file:Error {
     TestSuiteCases cases = {};
     // JBUG #32615 can't use from-in-from query syntax
@@ -217,6 +228,31 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             }
         }
     }
+}
+
+function testSemtypeWitness(front:SourcePart[] sources, string[] expected) returns error? {
+    var [env, m] = check front:typesFromString(sources);
+    var tc = t:typeContext(env);
+    foreach var item in expected {
+        s:TypeTestWitness test = check s:parseTypeTestWitness(item);
+        t:SemType left = resolveTestSemtype(tc, m, test.left);
+        t:SemType right = resolveTestSemtype(tc, m, test.right);
+        string lhsStr = test.left.toString();
+        string rhsStr = test.right.toString();
+        
+        tc.witness.startRecording();
+        boolean lsr = t:isSubtype(tc, left, right);
+        string witness = tc.witness.toString();
+        match test.op { 
+            "<" => {
+                test:assertEquals(lsr, false, string `${lhsStr} is not a proper subtype of ${rhsStr}`);
+            }
+            _ => {
+                test:assertFail(string `Invalid type relation: ${test.op}, only '<' is accepted`);
+            }
+        }
+        test:assertEquals(witness, test.witness);
+    }  
 }
 
 function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeProjection tn) returns t:SemType {
