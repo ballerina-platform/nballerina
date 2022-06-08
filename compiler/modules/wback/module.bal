@@ -1,7 +1,6 @@
 import ballerina/io;
 import ballerina/file;
 import wso2/nballerina.bir;
-import wso2/nballerina.types as t;
 import wso2/nballerina.print.wasm;
 import wso2/nballerina.comm.err;
 
@@ -42,82 +41,86 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         foreach int j in params.length() ..< code.registers.length() {
             locals.push(semTypeReprWasm(code.registers[j].semType));
         }
-        Repr retType = semTypeRepr(scaffold.returnType);
+        RetRepr retRepr = scaffold.getRetRepr();
         if scaffold.hasPanic {
             wasm:Expression[] normalBody = [body];
-            if retType is TaggedRepr && retType.subtype == t:NIL {
+            if retRepr is VoidRepr {
                 normalBody.push(module.br("outer-block"));
             }
             wasm:Expression normalBlock = module.block(normalBody, "$normal-block");
-            wasm:Expression message =  module.structGet(STRING_TYPE, "val", module.structGet(ERROR_TYPE, "val", buildCast(module, scaffold, module.globalGet("bal$err"), ERROR_TYPE)));
-            wasm:Expression panicBlock = module.block([module.throw("custom-exception", message)]);
+            wasm:Expression errWStr = module.structGet(ERROR_TYPE, "val", module.globalGet("bal$err"));
+            wasm:Expression message = module.structGet(STRING_TYPE, "val", errWStr);
+            wasm:Expression panicBlock = module.block([module.throw(CUSTOM_EXCEPTION_TAG, message)]);
             body = module.block([normalBlock, panicBlock], "$outer-block");
-            scaffold.addExceptionTag("custom-exception", "anyref");
+            scaffold.addExceptionTag(CUSTOM_EXCEPTION_TAG, "anyref");
         }
         if funcName == "main" {
             mainBody = body;
             mainLocals = locals;
         }
         else {
-            module.addFunction(funcName, params, retType is TaggedRepr && retType.subtype == t:NIL ? "None" : retType.wasm, locals, body);
+            module.addFunction(funcName, params, retRepr is Repr ? retRepr.wasm : "None", locals, body);
         }
         if functionDefns[i].symbol.isPublic {
             module.addFunctionExport(funcName, funcName);
         }
     }
     if mainBody != () {
-        wasm:Expression extendedBody = module.block([initStrings(module, context.segments), mainBody]);
+        wasm:Expression extendedBody = module.block([initStrings(module, context.segments, context.offset), mainBody]);
         module.addFunction("main", [], "None", mainLocals, extendedBody);
     }
-    wasm:Expression[] offsetExpr = [];
-    string[] strings = [];
-    foreach string key in context.segments.keys() {
-        StringRecord rec = <StringRecord>context.segments[key];
-        byte[] bytes = key.toBytes();
-        string[] strBytes = [];
-        foreach byte item in bytes {
-            string hex = item.toHexString();
-            strBytes.push(hex.length() == 2 ? hex : "0" + hex);
-        }
-        string byteArr = "\\".'join(...strBytes);
-        byteArr = byteArr.length() > 0 ? "\\" + byteArr : byteArr;
-        strings.push(byteArr);
-        offsetExpr.push(module.addConst({i32: rec.offset}));
-        module.addGlobal(rec.global, { base: STRING_TYPE, initial: "null" }, module.refNull("$" + STRING_TYPE));
-    }
-    int pages = (context.offset / 65536) + 1;
-    module.setMemory(pages, "memory", strings, offsetExpr, false);
     module.addFunctionImport("println", "console", "log", ["eqref"], "None");
-    module.addGlobal("bal$err", "eqref", module.refNull());
+    module.addGlobal("bal$err", { base: ERROR_TYPE, initial: "null" }, module.refNull(ERROR_TYPE));
     _ = check addRttFunctions(module, context.runtimeModules);
     return module.finish();
 }
 
-function initStrings(wasm:Module module, map<StringRecord> strings) returns wasm:Expression {
+
+function initStrings(wasm:Module module, map<StringRecord> records, int finalOffset) returns wasm:Expression {
     wasm:Expression[] body = [];
-    foreach StringRecord rec in strings {
+    wasm:Expression[] offsetExpr = [];
+    string[] byteStrs = [];
+    foreach string key in records.keys() {
+        var { offset, global, surrogate, length }  = records.get(key);
+        buildStringData(module, key, global, offset, offsetExpr, byteStrs);
         wasm:Expression jsString = buildRuntimeFunctionCall(module, createStringFunction, [
-                                                                                            module.addConst({ i32: rec.offset }), 
-                                                                                            module.addConst({i32: rec.length})
+                                                                                            module.addConst({ i32: offset }), 
+                                                                                            module.addConst({i32: length })
                                                                                           ]);
-        wasm:Expression defaultSurrogate = module.arrayNewDef("Surrogate", module.addConst({ i32: rec.surrogate.length() }));
+        wasm:Expression defaultSurrogate = module.arrayNewDef("Surrogate", module.addConst({ i32: surrogate.length() }));
         wasm:Expression defaultHash = module.addConst({ i32: -1 });
         wasm:Expression struct = module.structNew(STRING_TYPE, [
-                                                                module.addConst({ i32: TYPE_STRING}), 
+                                                                module.addConst({ i32: TYPE_STRING }), 
                                                                 jsString, 
                                                                 defaultSurrogate, 
                                                                 defaultHash
                                                                 ]);
-        body.push(module.globalSet(rec.global, struct));
-        wasm:Expression surrogate = module.structGet(STRING_TYPE, "surrogate", module.globalGet(rec.global));
-        foreach int i in 0 ..< rec.surrogate.length() {
+        body.push(module.globalSet(global, struct));
+        wasm:Expression surrogateArr = module.structGet(STRING_TYPE, "surrogate", module.globalGet(global));
+        foreach int i in 0 ..< surrogate.length() {
             body.push(module.arraySet("Surrogate", 
-                                      surrogate,      
+                                      surrogateArr,      
                                       module.addConst({ i32: i }), 
-                                      module.addConst({ i32: rec.surrogate[i] })));
+                                      module.addConst({ i32: surrogate[i] })));
         }
     }
+    int pages = (finalOffset / 65536) + 1;
+    module.setMemory(pages, "memory", byteStrs, offsetExpr, false);
     return module.block(body);
+}
+
+function buildStringData(wasm:Module module, string key, string global, int offset, wasm:Expression[] offsetExpr, string[] byteStrs) {
+    byte[] bytes = key.toBytes();
+    string[] hexes = [];
+    foreach byte item in bytes {
+        string hex = item.toHexString();
+        hexes.push(hex.length() == 2 ? hex : "0" + hex);
+    }
+    string byteStr = "\\".'join(...hexes);
+    byteStr = byteStr.length() > 0 ? "\\" + byteStr : byteStr;
+    byteStrs.push(byteStr);
+    offsetExpr.push(module.addConst({ i32: offset }));
+    module.addGlobal(global, { base: STRING_TYPE, initial: "null" }, module.refNull(STRING_TYPE));
 }
 
 function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns error? {

@@ -25,8 +25,8 @@ const RuntimeType FLOAT_TYPE = "Float";
 const RuntimeType ERROR_TYPE = "Error";
 
 public type ExceptionTag string;
-const ExceptionTag OVERFLOW_TAG = "overflow";
 const ExceptionTag BAD_CONVERSION_TAG = "bad-conversion";
+const ExceptionTag CUSTOM_EXCEPTION_TAG = "custom-exception";
 
 type RuntimeFunction readonly & record {|
     string name;

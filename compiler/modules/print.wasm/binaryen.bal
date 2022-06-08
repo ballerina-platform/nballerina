@@ -3,7 +3,7 @@ public type ComplexRefType record {
     string base;
     string? initial = ();
 };
-public type RefType "anyref"|"eqref"|"i31ref"|"any"|"externref"|ComplexRefType;
+public type RefType "anyref"|"eqref"|"i31ref"|"any"|"externref"|"data"|ComplexRefType;
 public type Type "None"|NumType|RefType;
 
 public type Op  "i32.add"|"i32.sub"|
@@ -371,7 +371,7 @@ public class Module {
     }
 
     public function refNull(string kind = "data") returns Expression {
-        return { tokens: appendBraces(["ref.null", kind]) };
+        return { tokens: appendBraces(["ref.null", kind is Type ? kind : "$" + kind]) };
     }
 
     public function rtt(string kind) returns Expression {

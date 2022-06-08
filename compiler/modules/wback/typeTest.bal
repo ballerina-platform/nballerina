@@ -148,7 +148,7 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                 subConditions.push(buildRuntimeFunctionCall(module, checkBooleanTypeAndValFunction, [operand, val]));
             }
             t:UT_NIL => {
-                wasm:Expression val = module.refNull("data");
+                wasm:Expression val = module.refNull();
                 subConditions.push(buildRuntimeFunctionCall(module, checkNilTypeAndValFunction, [operand, val]));
             }
             t:UT_LIST_RO => {

@@ -152,7 +152,7 @@ function buildErrorConstruct(wasm:Module module, Scaffold scaffold, bir:ErrorCon
 
 function buildPanic(wasm:Module module, Scaffold scaffold, bir:PanicInsn insn) returns wasm:Expression {
     scaffold.setPanicBlock();
-    wasm:Expression errSet = module.globalSet("bal$err", buildLoad(module, insn.operand));
+    wasm:Expression errSet = module.globalSet("bal$err", buildCast(module, scaffold, buildLoad(module, insn.operand), ERROR_TYPE));
     return module.block([errSet, module.br("normal-block")]);
 }
 

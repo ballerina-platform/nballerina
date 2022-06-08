@@ -34,7 +34,7 @@ type ListRepr record {|
 
 function listAtomicTypeToListRepr(wasm:Module module, Scaffold scaffold, t:ListAtomicType? atomic) returns ListRepr {
     t:SemType rest = t:ANY;
-    wasm:Expression default = module.refNull("data");
+    wasm:Expression default = module.refNull();
     if atomic != () && atomic.members.fixedLength == 0 {
         rest = atomic.rest;
         if rest == t:INT {
