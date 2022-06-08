@@ -34,21 +34,18 @@ type TaggedRepr readonly & record {|
 type BooleanRepr readonly & record {|
     BASE_REPR_BOOLEAN base = BASE_REPR_BOOLEAN;
     wasm:Type wasm = WASM_BOOLEAN;
-    t:UniformTypeBitSet bitSet = t:BOOLEAN; 
 |};
 
 // Maps int to i64
 type IntRepr readonly & record {|
     BASE_REPR_INT base = BASE_REPR_INT;
     wasm:Type wasm = WASM_INT;
-    t:UniformTypeBitSet bitSet = t:INT;
 |};
 
 // Maps float to f64
 type FloatRepr readonly & record {|
     BASE_REPR_FLOAT base = BASE_REPR_FLOAT;
     wasm:Type wasm = WASM_FLOAT;
-    t:UniformTypeBitSet bitSet = t:FLOAT; 
 |};
 
 type Repr BooleanRepr|IntRepr|FloatRepr|TaggedRepr;
@@ -145,6 +142,19 @@ class Scaffold {
     }
 
     function getTypeContext() returns t:Context => self.typeContext;
+
+    function getBlocks() returns bir:BasicBlock[] => self.blocks;
+    
+    function getRegions() returns bir:Region[] => self.regions;
+    
+    function setProcessedBlock(bir:Label label) {
+        self.processedBlocks.push(label);
+    }
+
+    function isBlockProcessed(bir:Label label) returns boolean {
+        return self.processedBlocks.indexOf(label) != () ? true : false;
+    }
+
 
 }
 

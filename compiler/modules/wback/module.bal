@@ -66,7 +66,7 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         }
     }
     if mainBody != () {
-        wasm:Expression extendedBody = module.block([addStringInit(module, context.segments), mainBody]);
+        wasm:Expression extendedBody = module.block([initStrings(module, context.segments), mainBody]);
         module.addFunction("main", [], "None", mainLocals, extendedBody);
     }
     wasm:Expression[] offsetExpr = [];
@@ -83,7 +83,7 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         byteArr = byteArr.length() > 0 ? "\\" + byteArr : byteArr;
         strings.push(byteArr);
         offsetExpr.push(module.addConst({i32: rec.offset}));
-        module.addGlobal(rec.global, "eqref", module.refNull());
+        module.addGlobal(rec.global, { base: STRING_TYPE, initial: "null" }, module.refNull("$" + STRING_TYPE));
     }
     int pages = (context.offset / 65536) + 1;
     module.setMemory(pages, "memory", strings, offsetExpr, false);
@@ -93,15 +93,28 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
     return module.finish();
 }
 
-function addStringInit(wasm:Module module, map<StringRecord> strings) returns wasm:Expression {
+function initStrings(wasm:Module module, map<StringRecord> strings) returns wasm:Expression {
     wasm:Expression[] body = [];
-    var { name, returnType } = createStringFunction; 
     foreach StringRecord rec in strings {
-        body.push(module.globalSet(rec.global, module.structNew(STRING_TYPE, [module.addConst({ i32: TYPE_STRING}), module.call(name, [module.addConst({ i32: rec.offset }), module.addConst({i32: rec.length})], returnType), module.arrayNewDef("Surrogate", module.addConst({ i32: rec.surrogate.length() })), module.addConst({ i32: -1 })])));
-        wasm:Expression asData = module.refAs("ref.as_data", module.globalGet(rec.global));
-        wasm:Expression castToStr = module.refCast(asData, module.globalGet("rtt" + STRING_TYPE));
+        wasm:Expression jsString = buildRuntimeFunctionCall(module, createStringFunction, [
+                                                                                            module.addConst({ i32: rec.offset }), 
+                                                                                            module.addConst({i32: rec.length})
+                                                                                          ]);
+        wasm:Expression defaultSurrogate = module.arrayNewDef("Surrogate", module.addConst({ i32: rec.surrogate.length() }));
+        wasm:Expression defaultHash = module.addConst({ i32: -1 });
+        wasm:Expression struct = module.structNew(STRING_TYPE, [
+                                                                module.addConst({ i32: TYPE_STRING}), 
+                                                                jsString, 
+                                                                defaultSurrogate, 
+                                                                defaultHash
+                                                                ]);
+        body.push(module.globalSet(rec.global, struct));
+        wasm:Expression surrogate = module.structGet(STRING_TYPE, "surrogate", module.globalGet(rec.global));
         foreach int i in 0 ..< rec.surrogate.length() {
-            body.push(module.arraySet("Surrogate", module.structGet(STRING_TYPE, "surrogate", castToStr), module.addConst({ i32: i }), module.addConst({ i32: rec.surrogate[i] })));
+            body.push(module.arraySet("Surrogate", 
+                                      surrogate,      
+                                      module.addConst({ i32: i }), 
+                                      module.addConst({ i32: rec.surrogate[i] })));
         }
     }
     return module.block(body);

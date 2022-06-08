@@ -97,8 +97,8 @@
           (ref.as_data 
             (local.get $0)) 
           (global.get $rttError))))) 
-  ;; $check_type_and_boolean_val
-  (func $check_type_and_boolean_val (param $0 eqref) (param $1 i32) (result i32)
+  ;; $_bal_check_type_and_boolean_val
+  (func $_bal_check_type_and_boolean_val (param $0 eqref) (param $1 i32) (result i32)
     (local $2 i32) 
     (local.set $2
       (i32.const 0)) 
@@ -115,8 +115,8 @@
           (i32.const 1))))
     (return 
       (local.get $2)))
-  ;; $check_type_and_nil_val
-  (func $check_type_and_nil_val (param $0 eqref) (param $1 eqref) (result i32)
+  ;; $_bal_check_type_and_nil_val
+  (func $_bal_check_type_and_nil_val (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32) 
     (local.set $2
       (i32.const 0)) 
@@ -130,8 +130,8 @@
         (i32.const 1)))
     (return 
       (local.get $2)))
-  ;; $check_type_and_list_atomic
-  (func $check_type_and_list_atomic (param $0 eqref) (param $1 i32) (result i32)
+  ;; $_bal_check_type_and_list_atomic
+  (func $_bal_check_type_and_list_atomic (param $0 eqref) (param $1 i32) (result i32)
     (local $2 (ref null $List))
     (local $3 i32)
     (local $4 i32)
@@ -166,8 +166,8 @@
             (i32.const 0))))
       (return 
         (i32.const 0))))
-  ;; $check_type_and_map_atomic
-  (func $check_type_and_map_atomic (param $0 eqref) (param $1 i32) (result i32)
+  ;; $_bal_check_type_and_map_atomic
+  (func $_bal_check_type_and_map_atomic (param $0 eqref) (param $1 i32) (result i32)
     (local $2 (ref null $Map))
     (local $3 i32)
     (local $4 i32)

@@ -110,8 +110,16 @@ function buildUntagFloat(wasm:Module module, wasm:Expression tagged) returns was
     return buildRuntimeFunctionCall(module, taggedToFloatFunction, [tagged]);
 }
 
-function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, string 'type) returns wasm:Expression {
-    return module.refCast(module.refAs("ref.as_data", tagged), module.globalGet("rtt" + 'type));
+function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, RuntimeType rtt) returns wasm:Expression {
+    return module.refCast(module.refAs("ref.as_data", tagged), module.globalGet("rtt" + rtt));
+}
+
+function mayBeCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, TaggedRepr repr) returns wasm:Expression {
+    wasm:Type wasmType = repr.wasm;
+    if wasmType is wasm:ComplexRefType {
+        return buildCast(module, scaffold, tagged, wasmType.base);
+    }
+    return tagged;
 }
 
 function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand operand) returns wasm:Expression {
@@ -158,27 +166,18 @@ function buildFloat(wasm:Module module, bir:FloatOperand operand) returns wasm:E
 }
 
 function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
-    match targetRepr.base {
-        BASE_REPR_INT => {
-            return buildUntagInt(module, value);
-        }
-        BASE_REPR_BOOLEAN => {
-            return buildUntagBoolean(module, value);
-        }
-        BASE_REPR_FLOAT => {
-            return buildUntagFloat(module, value);
-        }
-        BASE_REPR_TAGGED => {
-            string 'type = getTypeString(<TaggedRepr>targetRepr);
-            if 'type == "eqref" {
-                return value;
-            }
-            else {
-                return buildCast(module, scaffold, value, 'type);
-            }
-        }
+    if targetRepr is TaggedRepr {
+        return mayBeCast(module, scaffold, value, targetRepr);
     }
-    panic error("unreached in buildUntagged");
+    else if targetRepr is IntRepr {
+        return buildUntagInt(module, value);
+    }
+    else if targetRepr is FloatRepr {
+        return buildUntagFloat(module, value);
+    }
+    else {
+        return buildUntagBoolean(module, value);
+    }
 }
 
 function buildIsExactType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {

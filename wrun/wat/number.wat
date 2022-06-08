@@ -25,8 +25,8 @@
         (rtt.canon $Surrogate))
       (i32.const -1) 
       (global.get $rttString)))
-  ;; $check_type_and_int_val
-  (func $check_type_and_int_val (param $0 eqref) (param $1 i64) (result i32)
+  ;; $_bal_check_type_and_int_val
+  (func $_bal_check_type_and_int_val (param $0 eqref) (param $1 i64) (result i32)
     (local $2 i32) 
     (local $3 i32) 
     (local.set $2
@@ -48,8 +48,8 @@
           (local.get $1))))
     (return
       (local.get $2))) 
-  ;; $check_type_and_float_val
-  (func $check_type_and_float_val (param $0 eqref) (param $1 f64) (result i32)
+  ;; $_bal_check_type_and_float_val
+  (func $_bal_check_type_and_float_val (param $0 eqref) (param $1 f64) (result i32)
     (local $2 i32) 
     (local $3 i32) 
     (local.set $2

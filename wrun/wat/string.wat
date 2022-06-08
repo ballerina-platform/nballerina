@@ -178,8 +178,8 @@
             (global.get $rttList)))))
       (return 
         (local.get $1)))
-  ;; $check_type_and_string_val
-  (func $check_type_and_string_val (param $0 eqref) (param $1 eqref) (result i32)
+  ;; $_bal_check_type_and_string_val
+  (func $_bal_check_type_and_string_val (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32) 
     (local $3 i32) 
     (local.set $2

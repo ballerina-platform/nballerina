@@ -90,7 +90,7 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
             body.push(buildCondBranch(module, insn));
         }
     }
-    scaffold.processedBlocks.push(block.label);
+    scaffold.setProcessedBlock(block.label);
     return body;
 }
 
