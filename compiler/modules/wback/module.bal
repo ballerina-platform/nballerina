@@ -128,7 +128,7 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
         string absPath = check file:getAbsolutePath("");
         string mainDir = "nballerina";
         int index = <int>absPath.lastIndexOf(mainDir);
-        string path = absPath.substring(0, index + mainDir.length()) + "/wrun/wat/" + mod + ".wat";
+        string path = absPath.substring(0, index + mainDir.length()) + "/wrun/wat/" + mod;
         wasm:Wat[] wat = check io:fileReadLines(path);
         string? identifier = ();
         string[] content = [];

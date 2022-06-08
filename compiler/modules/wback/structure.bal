@@ -24,8 +24,8 @@ final RuntimeFunction mappingInitMemberFunction = {
 
 type RuntimeModule string;
 
-final RuntimeModule mapMod = "map";
-final RuntimeModule listMod = "list";
+final RuntimeModule mapMod = "map.wat";
+final RuntimeModule listMod = "list.wat";
 
 type ListRepr record {|
     t:SemType rest;

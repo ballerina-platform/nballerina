@@ -6,6 +6,7 @@
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
   ;; tag
   (tag $bad-conversion) 
+  (tag $overflow) 
   ;; import
   (import "string" "eq" (func $str_eq (param anyref) (param anyref) (result i32))) 
   (import "int" "hex" (func $int_to_hex (param i64) (result anyref))) 
@@ -13,6 +14,7 @@
   (global $rttAny (rtt 0 $Any) (rtt.canon $Any))
   (global $rttString (rtt 1 $String) (rtt.sub $String (global.get $rttAny)))
   ;; export
+  (export "overflow" (tag $overflow)) 
   (export "bad-conversion" (tag $bad-conversion)) 
   ;; toHexString
   (func $toHexString (param $0 i64) (result (ref $String)) 
@@ -737,5 +739,142 @@
         (i64.shl
           (local.get $6)
           (i64.const 63)))))
+  ;; $_bal_check_overflow_add
+  (func $_bal_check_overflow_add (param $0 i64) (param $1 i64)
+    (if 
+      (i32.and 
+        (i64.gt_s 
+          (local.get $0) 
+          (i64.const 0)) 
+        (i64.gt_s 
+          (local.get $1) 
+          (i64.const 0))) 
+      (if 
+        (i64.gt_s 
+          (local.get $0) 
+          (i64.sub 
+            (i64.const 9223372036854775807) 
+            (local.get $1))) 
+        (throw $overflow)) 
+      (if 
+        (i32.and 
+          (i64.lt_s 
+            (local.get $0) 
+            (i64.const 0)) 
+          (i64.lt_s 
+            (local.get $1) 
+            (i64.const 0))) 
+        (if 
+          (i64.lt_s 
+            (local.get $0) 
+            (i64.sub 
+              (i64.const -9223372036854775808) 
+              (local.get $1))) 
+          (throw $overflow)))))
+  ;; $_bal_check_overflow_sub
+  (func $_bal_check_overflow_sub (param $0 i64) (param $1 i64)
+    (if 
+      (i32.and 
+        (i64.ge_s 
+          (local.get $0) 
+          (i64.const 0)) 
+        (i64.lt_s 
+          (local.get $1) 
+          (i64.const 0))) 
+      (if 
+        (i64.gt_s 
+          (local.get $0) 
+          (i64.add 
+            (i64.const 9223372036854775807) 
+            (local.get $1))) 
+        (throw $overflow)) 
+      (if 
+        (i32.and 
+          (i64.lt_s 
+            (local.get $0) 
+            (i64.const 0)) 
+          (i64.gt_s 
+            (local.get $1) 
+            (i64.const 0))) 
+        (if 
+          (i64.lt_s 
+            (local.get $0) 
+            (i64.add 
+              (i64.const -9223372036854775808) 
+              (local.get $1))) 
+          (throw $overflow)))))  
+  ;; $_bal_check_overflow_mul
+  (func $_bal_check_overflow_mul (param $0 i64) (param $1 i64)
+    (if 
+      (i32.and 
+        (i64.gt_s 
+          (local.get $0) 
+          (i64.const 0)) 
+        (i64.gt_s 
+          (local.get $1) 
+          (i64.const 0))) 
+      (if 
+        (i64.gt_s 
+          (local.get $1) 
+          (i64.div_s 
+            (i64.const 9223372036854775807) 
+            (local.get $0))) 
+        (throw $overflow)) 
+      (if 
+        (i32.and 
+          (i64.lt_s 
+            (local.get $0) 
+            (i64.const 0)) 
+          (i64.lt_s 
+            (local.get $1) 
+            (i64.const 0))) 
+        (if 
+          (i64.lt_s 
+            (local.get $1) 
+            (i64.div_s 
+              (i64.const 9223372036854775807) 
+              (local.get $0))) 
+          (throw $overflow)) 
+        (if 
+          (i32.and 
+            (i64.lt_s 
+              (local.get $0) 
+              (i64.const -1)) 
+            (i64.gt_s 
+              (local.get $1) 
+              (i64.const 0))) 
+          (if 
+            (i64.gt_s 
+              (local.get $1) 
+              (i64.div_s 
+                (i64.const -9223372036854775808) 
+                (local.get $0))) 
+            (throw $overflow)) 
+          (if 
+            (i32.and 
+              (i64.gt_s 
+                (local.get $0) 
+                (i64.const 0)) 
+              (i64.lt_s 
+                (local.get $1) 
+                (i64.const 0))) 
+            (if 
+              (i64.lt_s 
+                (local.get $1) 
+                (i64.div_s 
+                  (i64.const -9223372036854775808) 
+                  (local.get $0))) 
+              (throw $overflow)))))))
+  ;; $_bal_check_overflow_div
+  (func $_bal_check_overflow_div (param $0 i64) (param $1 i64)      
+    (if 
+      (i32.and 
+        (i64.eq 
+          (i64.const -1) 
+          (local.get $1)) 
+        (i64.eq 
+          (i64.const -9223372036854775808) 
+          (local.get $0))) 
+      (throw $overflow)))
   ;; end
   ) 

@@ -83,8 +83,8 @@ final RuntimeFunction createStringFunction = {
     returnType: "eqref"
 };
 
-final RuntimeModule stringMod = "string";
-final RuntimeModule taggingMod = "tagging";
+final RuntimeModule stringMod = "string.wat";
+final RuntimeModule taggingMod = "tagging.wat";
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     return module.i31New(value);
