@@ -108,7 +108,7 @@ public class Module {
             signature.push(...appendBraces(["result", getTypeString(results)]));
         }
         foreach int i in 0..<varTypes.length() {
-            funcBody.push(...appendBraces(["local", "$" + (i + params.length()).toString(), getTypeString(varTypes[i])]));
+            funcBody.push(...appendBraces(["local", "$" + (i + params.length()).toString(), getTypeString(varTypes[i], true)]));
         }
         funcBody.push(...body.tokens);
         funcBody.push(")");
@@ -391,7 +391,7 @@ public class Module {
         return { tokens: appendBraces(inst) };
     }
 
-    public function setMemory(int initial, string exportName, string[] segments, Expression[] segmentOffsets, boolean shared) {
+    public function setMemory(int initial, string exportName, string[] segments, Expression[] segmentOffsets) {
         foreach int i in 0..<segments.length() {
             Token[] section = ["data"];
             section.push(...segmentOffsets[i].tokens);
@@ -464,11 +464,15 @@ public class Module {
 
 }
 
-function getTypeString(Type ty) returns string {
+function getTypeString(Type ty, boolean local = false) returns string {
     if ty is ComplexRefType {
         Token[] inst = ["ref"];
-        if ty.initial != () {
-            inst.push(<string>ty.initial);
+        string? initial = ty.initial;
+        if initial != () {
+            inst.push(initial);
+        }
+        else if local {
+            inst.push("null");
         }
         inst.push(ty.base is Type ? ty.base : "$" + ty.base);
         return (joinTokens(appendBraces(inst), 0)).trim();

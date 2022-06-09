@@ -6,6 +6,7 @@ const WASM_BOOLEAN = "i32";
 const WASM_INT = "i64";
 const WASM_FLOAT = "f64";
 const WASM_VOID = "None";
+const WASM_ANY = "eqref";
 
 enum UniformBaseRepr {
     BASE_REPR_INT,
@@ -57,30 +58,35 @@ type VoidRepr readonly & record {|
 
 type RetRepr Repr|VoidRepr;
 
+type RegionBlocks record {|
+    readonly bir:RegionIndex index;
+    bir:Label[] labels;
+|};
+
 class Scaffold {
     private wasm:Module module;
-    map<wasm:Expression[]> renderedRegion = {};
-    int[] processedBlocks = [];
     final bir:BasicBlock[] blocks;
     final bir:Region[] regions;
-    map<bir:Label[]> regionBlocks = {};
-    bir:FunctionDefn defn;
     private Repr[] reprs = [];
+    private bir:FunctionDefn defn;
     final t:SemType returnType;
     private final RetRepr retRepr;
-    private string[] exceptionTags = [];
-    private string[] addedExceptionTags = [];
-    bir:Label[] brBlockLabels = [];
-    bir:Label[] contBlockLabels = [];
-    bir:Label[] regionsWithBr = [];
     private Context context = {};
-    boolean hasPanic = false;
-    int funcExceptionTags = 0;
     private t:Context typeContext;
+    private map<wasm:Expression[]> renderedRegion = {};
+    private bir:Label[] processedBlocks = [];
+    private table<RegionBlocks> key(index) regionBlocks = table[];
+    private map<bir:RegionIndex> regionEntries = {};
+    private bir:Label[] breakBlocks = [];
+    private bir:Label[] regionsWithBreak = [];
+    private map<bir:RegionIndex> regionStepBlock = {};
+    private bir:Label[] stepBlocks = [];
+    private boolean hasPanic = false;
+    
     function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, Context context, t:Context typeContext) {
         self.module = module;
         self.blocks = code.blocks;
-        self.regions = code.regions.reverse();
+        self.regions = code.regions;
         self.defn = def;
         self.returnType = def.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
@@ -89,7 +95,7 @@ class Scaffold {
         self.context = context;
     }
 
-    public function initializeReprs(bir:Register[] registers) {
+    function initializeReprs(bir:Register[] registers) {
         Repr[] reprs = [];
         foreach bir:Register reg in registers {
             Repr repr = semTypeRepr(reg.semType);
@@ -98,33 +104,29 @@ class Scaffold {
         self.reprs = reprs;
     }
 
-    public function addExceptionTag(string tag, wasm:Type? kind = ()) {
+    function addExceptionTag(string tag, wasm:Type? kind = ()) {
         if self.context.exceptionTags.indexOf(tag) == () {
             self.module.addTag(tag, kind);
             self.module.addTagExport(tag, tag);
             self.context.exceptionTags.push(tag);
-            self.funcExceptionTags += 1;
         }
     }
 
-    public function getExceptionTags() returns int {
-        return self.funcExceptionTags;
-    }
-
-    public function setSection(string val, int[] surrogate) returns string {
+    function mayBeAddStringRecord(string val, int[] surrogate) returns string {
         StringRecord? rec = self.context.segments[val];
         if rec != () {
             return rec.global;
         }
-        rec = {
-            offset: self.context.offset,
-            global: "bal$str" + self.context.segments.keys().length().toString(),
-            length: val.toBytes().length(),
-            surrogate: surrogate
-        };
-        self.context.segments[val] = <StringRecord>rec; 
+        int numStrings = self.context.segments.keys().length();
+        StringRecord newRec = {
+                                offset: self.context.offset,
+                                global: "bal$str" + numStrings.toString(),
+                                length: val.toBytes().length(),
+                                surrogate: surrogate
+                              };
+        self.context.segments[val] = newRec; 
         self.context.offset += val.toBytes().length();
-        return (<StringRecord>rec).global.toString();
+        return newRec.global;
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
@@ -137,24 +139,77 @@ class Scaffold {
         } 
     }
 
-    function setPanicBlock() {
+    function setHasPanic() {
         self.hasPanic = true;
     }
 
-    function getTypeContext() returns t:Context => self.typeContext;
+    function getHasPanic() returns boolean {
+        return self.hasPanic;
+    }
 
-    function getBlocks() returns bir:BasicBlock[] => self.blocks;
-    
-    function getRegions() returns bir:Region[] => self.regions;
+    function getTypeContext() returns t:Context => self.typeContext;
     
     function setProcessedBlock(bir:Label label) {
         self.processedBlocks.push(label);
     }
 
-    function isBlockProcessed(bir:Label label) returns boolean {
-        return self.processedBlocks.indexOf(label) != () ? true : false;
+    function isBlockNotProcessed(bir:Label label) returns boolean {
+        return self.processedBlocks.indexOf(label) == ();
     }
 
+    function setStepBlock(bir:RegionIndex index, bir:Label label) {
+        self.regionStepBlock[index.toString()] = label;
+        self.stepBlocks.push(label);
+    }
+
+    function isStepBlock(bir:Label label) returns boolean {
+        return self.stepBlocks.indexOf(label) != ();
+    }
+
+    function getStepBlock(bir:RegionIndex index) returns bir:Label? {
+        return self.regionStepBlock[index.toString()];
+    }
+
+    function setBreakBlock(bir:RegionIndex index, bir:Label label) {
+        self.breakBlocks.push(label);
+        self.regionsWithBreak.push(index);
+    }
+
+    function regionHasBreak(bir:RegionIndex index) returns boolean {
+        return self.regionsWithBreak.indexOf(index) != ();
+    }
+
+    function blockHasBreak(bir:Label label) returns boolean {
+        return self.breakBlocks.indexOf(label) != ();
+    }
+
+    function setRegionBlocks(RegionBlocks rblocks) {
+        self.regionBlocks.add(rblocks);
+    }
+
+    function getRegionBlocks(bir:RegionIndex index) returns bir:Label[] {
+        return self.regionBlocks.get(index).labels;
+    }
+
+    function setRegionEntry(bir:RegionIndex index, bir:Label entry) {
+        self.regionEntries[entry.toString()] = index;
+    }
+    
+    function entryOfRegion(bir:Label label) returns bir:RegionIndex? {
+        return self.regionEntries[label.toString()];
+    }
+
+    function isRegionEntry(bir:Label label) returns boolean {
+        return self.regionEntries.hasKey(label.toString());
+    }
+
+    function setRenderedRegion(bir:RegionIndex index, wasm:Expression[] body) {
+        self.renderedRegion[index.toString()] = body;
+    }
+
+    function getRenderedRegion(bir:RegionIndex index) returns wasm:Expression[]? {
+        return self.renderedRegion[index.toString()];
+    }
 
 }
 
@@ -162,14 +217,14 @@ final IntRepr REPR_INT = { };
 final BooleanRepr REPR_BOOLEAN = { };
 final FloatRepr REPR_FLOAT = { };
 
-final TaggedRepr REPR_STRING = { wasm: "eqref", subtype: t:STRING };
-final TaggedRepr REPR_NIL = { wasm: "eqref", subtype: t:NIL };
-final TaggedRepr REPR_ANY = { wasm: "eqref" , subtype: t:ANY };
-final TaggedRepr REPR_LIST_RW = { subtype: t:LIST_RW, wasm: { base: "List", initial: "null" } };
-final TaggedRepr REPR_LIST = { subtype: t:LIST, wasm: { base: "List", initial: "null" } };
-final TaggedRepr REPR_MAPPING_RW = { subtype: t:MAPPING_RW, wasm: { base: "Map", initial: "null" } };
-final TaggedRepr REPR_MAPPING = { subtype: t:MAPPING, wasm: { base: "Map", initial: "null" } };
-final TaggedRepr REPR_ERROR = { subtype: t:ERROR, wasm: { base: "Error", initial: "null" } };
+final TaggedRepr REPR_STRING = { subtype: t:STRING, wasm: { base: STRING_TYPE } };
+final TaggedRepr REPR_NIL = { subtype: t:NIL, wasm: WASM_ANY  };
+final TaggedRepr REPR_ANY = { subtype: t:ANY, wasm: WASM_ANY  };
+final TaggedRepr REPR_LIST_RW = { subtype: t:LIST_RW, wasm: { base: LIST_TYPE } };
+final TaggedRepr REPR_LIST = { subtype: t:LIST, wasm: { base: LIST_TYPE } };
+final TaggedRepr REPR_MAPPING_RW = { subtype: t:MAPPING_RW, wasm: { base: MAP_TYPE } };
+final TaggedRepr REPR_MAPPING = { subtype: t:MAPPING, wasm: { base: MAP_TYPE } };
+final TaggedRepr REPR_ERROR = { subtype: t:ERROR, wasm: { base: ERROR_TYPE } };
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, wasm: WASM_VOID };
 
 final readonly & record {|
@@ -206,7 +261,7 @@ function semTypeRepr(t:SemType ty) returns Repr {
     int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:LIST|t:MAPPING|t:ERROR;
     int maximized = w | supported;
     if maximized == t:TOP || (w & supported) == w {
-        TaggedRepr repr = { base: BASE_REPR_TAGGED, subtype: w, wasm: "eqref" };
+        TaggedRepr repr = { base: BASE_REPR_TAGGED, subtype: w, wasm: WASM_ANY };
         return repr;
     }
     return REPR_NIL;

@@ -136,8 +136,8 @@ function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand op
 
 function buildConstString(wasm:Module module, Scaffold scaffold, string value) returns wasm:Expression {
     int[] surrogate = buildSurrogateArray(value);
-    string label = scaffold.setSection(value, surrogate);
-    return module.globalGet(label);
+    string label = scaffold.mayBeAddStringRecord(value, surrogate);
+    return module.refAs("ref.as_non_null", module.globalGet(label));
 }
 
 function buildRuntimeFunctionCall(wasm:Module module, RuntimeFunction rf, wasm:Expression[] args) returns wasm:Expression {
