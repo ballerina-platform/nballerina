@@ -13,7 +13,7 @@ type StringRecord record {
     int[] surrogate;
 };
 
-type Context record {
+type MetaData record {
     string[] exceptionTags = [];
     string[] globals = [];
     map<StringRecord> segments = {};
@@ -24,13 +24,13 @@ type Context record {
 function buildModule(bir:Module mod) returns string[]|BuildError {
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     wasm:Module module = new;
-    Context context = {};
+    MetaData metadata = {};
     wasm:Expression? mainBody = ();
     wasm:Type[] mainLocals = [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
-        Scaffold scaffold = new (module, code, functionDefns[i], context, mod.getTypeContext());
+        Scaffold scaffold = new (module, code, functionDefns[i], metadata, mod.getTypeContext());
         wasm:Expression body = buildFunctionBody(scaffold, module);
         string funcName = functionDefns[i].symbol.identifier;
         wasm:Type[] params = [];
@@ -66,12 +66,12 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         }
     }
     if mainBody != () {
-        wasm:Expression extendedBody = module.block([initStrings(module, context.segments, context.offset), mainBody]);
+        wasm:Expression extendedBody = module.block([initStrings(module, metadata.segments, metadata.offset), mainBody]);
         module.addFunction("main", [], "None", mainLocals, extendedBody);
     }
     module.addFunctionImport("println", "console", "log", ["eqref"], "None");
     module.addGlobal("bal$err", { base: ERROR_TYPE, initial: "null" }, module.refNull(ERROR_TYPE));
-    _ = check addRttFunctions(module, context.runtimeModules);
+    _ = check addRttFunctions(module, metadata.runtimeModules);
     return module.finish();
 }
 
@@ -127,11 +127,21 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
     map<wasm:Wat[]> sectionData = {};
     map<wasm:Wat[]> sectionIdentifiers = {};
     map<wasm:Wat[]> functions = {};
+    string absPath = check file:getAbsolutePath("");
+    string[] dirs = check file:splitPath(absPath);
+    string? baseDir = ();
+    foreach int i in 0..<dirs.length() {
+        int cur = flipIndex(i, dirs.length());
+        if dirs[cur].includes("nballerina") {
+            baseDir = dirs[cur];
+            break;
+        }
+    }
+    if baseDir != () {
+        int index = <int>absPath.lastIndexOf(baseDir);
+        string basePath = absPath.substring(0, index + baseDir.length() + 1);
     foreach RuntimeModule mod in rtModules.reverse() {
-        string absPath = check file:getAbsolutePath("");
-        string mainDir = "nballerina";
-        int index = <int>absPath.lastIndexOf(mainDir);
-        string path = absPath.substring(0, index + mainDir.length()) + "/wrun/wat/" + mod;
+            string path = check file:joinPath(basePath, "wrun", "wat", mod);
         wasm:Wat[] wat = check io:fileReadLines(path);
         string? identifier = ();
         string[] content = [];
@@ -181,11 +191,16 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
         }
     }
     foreach string key in sectionData.keys() {
-        module.addSection(<wasm:Section>key, <wasm:Wat[]>sectionData[key]);
+            module.addSection(<wasm:Section>key, sectionData.get(key));
     }
     foreach string key in functions.keys() {
-        module.setRttFuncs(<wasm:Wat[]>functions[key]);
+            module.setRttFuncs(functions.get(key));
     }
+    }
+    else {
+        panic error("invoke inside nballerina directory");
+    }
+    
 }
 
 function getSectionIdentifier(wasm:Wat line) returns string {
@@ -200,7 +215,7 @@ function getSectionIdentifier(wasm:Wat line) returns string {
         }
         return sub.substring(0, end);
     }
-    panic error("impossible");
+    panic error("section should have an identifier");
 }
 
 function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:Expression {

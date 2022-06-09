@@ -83,7 +83,7 @@ function buildListGet(wasm:Module module, Scaffold scaffold, bir:ListGetInsn ins
     if repr !is TaggedRepr {
         return buildStore(module, insn.result, buildUntagged(module, scaffold, call, repr));
     }
-    return buildStore(module, insn.result, call);
+    return buildStore(module, insn.result, mayBeCast(module, scaffold, call, repr));
 }
 
 function buildListSet(wasm:Module module, Scaffold scaffold, bir:ListSetInsn insn) returns wasm:Expression {
