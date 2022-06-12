@@ -116,8 +116,8 @@ function buildStringConcat(wasm:Module module, Scaffold scaffold, bir:StringConc
                                                      scaffold,
                                                      stringConcatFunction,
                                                      [
-                                                         buildString(module, scaffold, insn.operands[0]),
-                                                         buildString(module, scaffold, insn.operands[1])
+                                                        buildString(module, scaffold, insn.operands[0]),
+                                                        buildString(module, scaffold, insn.operands[1])
                                                      ]);
     return buildStore(module, insn.result, value);
 }
@@ -136,9 +136,7 @@ function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) ret
     wasm:Expression call = module.call(funcSymbol.identifier, args, retRepr.wasm);
     if funcSymbol is bir:ExternalSymbol {
         MetaData metaData = scaffold.getMetaData();
-        if metaData.rtFunctions.indexOf("$" + funcSymbol.identifier) == () {
-            metaData.rtFunctions.push("$" + funcSymbol.identifier);
-        }
+        mayBeAddRtFunction(metaData, "$" + funcSymbol.identifier);
     }
     return retRepr !is VoidRepr ? buildStore(module, insn.result, call) : call;
 }
@@ -153,8 +151,8 @@ function buildErrorConstruct(wasm:Module module, Scaffold scaffold, bir:ErrorCon
     return buildStore(module, insn.result, 
                       module.structNew(ERROR_TYPE, 
                                        [
-                                           module.addConst({ i32: TYPE_ERROR }), 
-                                           buildString(module, scaffold, insn.operand)
+                                            module.addConst({ i32: TYPE_ERROR }), 
+                                            buildString(module, scaffold, insn.operand)
                                        ]));
 }
 

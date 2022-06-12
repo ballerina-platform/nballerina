@@ -284,17 +284,17 @@ function buildGlobalString(wasm:Module module, Scaffold scaffold, string val, st
     string byteStr = buildStringData(module, val, global);
     wasm:Expression offsetExpr = module.addConst({ i32: offset });
     wasm:Expression jsString = buildRuntimeFunctionCall(module, scaffold, createStringFunction, [
-                                                                                        module.addConst({ i32: offset }), 
-                                                                                        module.addConst({i32: length })
-                                                                                        ]);
+                                                                                                    module.addConst({ i32: offset }), 
+                                                                                                    module.addConst({i32: length })
+                                                                                                ]);
     wasm:Expression defaultSurrogate = module.arrayNewDef("Surrogate", module.addConst({ i32: surrogate.length() }));
     wasm:Expression defaultHash = module.addConst({ i32: -1 });
     wasm:Expression struct = module.structNew(STRING_TYPE, [
-                                                            module.addConst({ i32: TYPE_STRING }), 
-                                                            jsString, 
-                                                            defaultSurrogate, 
-                                                            defaultHash
-                                                            ]);
+                                                                module.addConst({ i32: TYPE_STRING }), 
+                                                                jsString, 
+                                                                defaultSurrogate, 
+                                                                defaultHash
+                                                           ]);
     body.push(module.globalSet(global, struct));
     wasm:Expression surrogateArr = module.structGet(STRING_TYPE, "surrogate", module.globalGet(global));
     foreach int i in 0 ..< surrogate.length() {

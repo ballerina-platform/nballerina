@@ -202,8 +202,8 @@ function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns Ru
 function buildCompareStore(wasm:Module module, Scaffold scaffold, int expected, wasm:Expression compareResult, bir:Register reg) returns wasm:Expression {
     wasm:Expression transformResult = buildRuntimeFunctionCall(module, scaffold, transformCompareResultFunction, 
                                                                [
-                                                                   module.addConst({ i32: expected}), 
-                                                                   compareResult
+                                                                    module.addConst({ i32: expected}), 
+                                                                    compareResult
                                                                ]);
     return buildStore(module, reg, transformResult);
 }
