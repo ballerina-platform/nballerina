@@ -275,7 +275,7 @@ public class Module {
 
     // Corresponds to LLVMCreateDIBuilder
     public function createDIBuilder() returns DIBuilder {
-        DIBuilder dIBuilder = new(self);
+        DIBuilder dIBuilder = new(self, self.context);
         return dIBuilder;
     }
 
@@ -337,7 +337,15 @@ public class Module {
         }
     }
 
-    private function addIntrinsic(IntrinsicFunctionName name, FunctionType fnType, EnumAttribute[] attrs) returns FunctionDecl {
+    function addDebugIntrinsic(DebugIntrinsicName name) {
+        boolean fnExisting = self.globals[name] != ();
+        if !fnExisting {
+            _ = self.addIntrinsic(name, { returnType: "void", paramTypes: ["metadata", "metadata", "metadata"]},
+                                  ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
+        }
+    }
+
+    private function addIntrinsic(IntrinsicFunctionName|DebugIntrinsicName name, FunctionType fnType, EnumAttribute[] attrs) returns FunctionDecl {
         FunctionDecl fn = new(self.context, "llvm." + name, fnType);
         foreach var attr in attrs {
             fn.addEnumAttribute(attr);
@@ -823,9 +831,11 @@ final readonly & map<string> moduleFlagBehaviorToString = {
 # Corresponds to LLVMDIBuilderRef
 public class DIBuilder {
     Module m;
+    Context context;
     Metadata? compileUnit = ();
-    function init(Module m) {
+    function init(Module m, Context context) {
         self.m = m;
+        self.context = context;
     }
 
     // Corresponds to LLVMDIBuilderCreateCompileUnit
@@ -857,6 +867,86 @@ public class DIBuilder {
                          "\"", ",", "directory", ":", "\"", directory, "\"", ")");
         return metadata;
     }
+
+    // Corresponds to LLVMDIBuilderCreatePointerType
+    public function createPointerType(*PointerTypeMetdataProperties props) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] body = [metadata.ref(), "=", "!", "DIDerivedType", "(", "tag", ":", "DW_TAG_pointer_type"];
+        string? name = props.name;
+        if name is string {
+            body.push(",", "name", ":", "\"", name, "\"");
+        }
+        body.push(",", "baseType", ":", props.pointeeTy.ref(), ",", "size", ":", props.sizeInBits.toString());
+        Alignment? alignInBits = props.alignInBits;
+        if alignInBits is Alignment {
+            body.push(",", "align", ":", alignInBits.toString());
+        }
+        if props.addressSpace != 0 {
+            body.push(",", "dwarfAddressSpace", ":", props.addressSpace.toString());
+        }
+        body.push(")");
+        metadata.addLine(...body);
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateTypedef
+    public function createTypedef(Metadata ty, string name, Metadata file, int lineNo, Metadata scope, Alignment? alignInBits = ()) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] body = [metadata.ref(), "=", "!", "DIDerivedType", "(", "tag", ":", "DW_TAG_typedef", ",", "name", ":", "\"", name, "\"",
+                         ",", "scope", ":", scope.ref(), ",", "file", ":", file.ref()];
+        if lineNo != 0 {
+            body.push(",", "line", ":", lineNo.toString());
+        }
+        body.push(",", "baseType", ":", ty.ref());
+        if alignInBits is Alignment {
+            body.push(",", "align", ":", alignInBits.toString());
+        }
+        body.push(")");
+        metadata.addLine(...body);
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateBasicType
+    public function createBasicType(*BasicTypeMetadataProperties props) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string encodingToString = "DW_ATE_" + props.encoding;
+        metadata.addLine(metadata.ref(), "=", "!", "DIBasicType", "(", "name", ":", "\"", props.name, "\"",
+                         ",", "size", ":", props.sizeInBits.toString(), ",", "encoding", ":", encodingToString, ")");
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateAutoVariable
+    public function createAutoVariable(*VariableMetadataProperties props) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] words = [];
+        words.push(metadata.ref(), "=", "!", "DILocalVariable", "(", "name", ":", "\"", props.name, "\"", ",",
+                   "scope", ":", props.scope.ref(), ",", "file", ":", props.file.ref(), ",", "line", ":", props.lineNo.toString(), ",",
+                   "type", ":", props.ty.ref());
+        int? align = props.alignInBits;
+        if align != () {
+            words.push(",", "align", ":", align.toString());
+        }
+        words.push(")");
+        metadata.addLine(...words);
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderInsertDbgValueAtEnd
+    public function insertDbgValueAtEnd(*ValueMetadataProperties props) {
+        self.m.addDebugIntrinsic("dbg.value");
+        (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.value", "(", "metadata", typeToString(props.value.ty, self.context),
+                                    props.value.operand, ",", "metadata", props.varInfo.ref(), ",", "metadata", props.expr.ref(), ")"];
+        addInsnWithDbLocation(props.block, words, props.debugLoc);
+    }
+
+    // Corresponds to LLVMDIBuilderInsertDeclareAtEnd
+    public function insertDeclareAtEnd(*ValueMetadataProperties props) {
+        self.m.addDebugIntrinsic("dbg.declare");
+        (string|Unnamed)[] words = ["call", "void", "@llvm.dbg.declare", "(", "metadata", typeToString(props.value.ty, self.context),
+                                    props.value.operand, ",", "metadata", props.varInfo.ref(), ",", "metadata", props.expr.ref(), ")"];
+        addInsnWithDbLocation(props.block, words, props.debugLoc);
+    }
+
 
     // Corresponds to LLVMDIBuilderCreateFunction
     public function createFunction(*FunctionMetadataProperties props) returns Metadata {
@@ -912,6 +1002,31 @@ public class DIBuilder {
         return metadata;
     }
 
+    // Corresponds to LLVMDIBuilderCreateExpression
+    public function createExpression(int[] addr) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        if addr.length() != 0 {
+            panic error("Addr not implemented");
+        }
+        metadata.addLine(metadata.ref(), "=", "!", "DIExpression", "(", ")");
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateLexicalBlock
+    public function createLexicalBlock(Metadata scope, Metadata file, int line, int column) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] words = [metadata.ref(), "=", "distinct", "!", "DILexicalBlock", "(", "scope", ":", scope.ref(), ",", "file", ":", file.ref()];
+        if line != 0 {
+            words.push(",", "line", ":", line.toString());
+        }
+        if column != 0 {
+            words.push(",", "column", ":", column.toString());
+        }
+        words.push(")");
+        metadata.addLine(...words);
+        return metadata;
+    }
+
     public function createSubroutineType(Metadata? file, Metadata[] parameterTypes=[], DIFlag flag="zero") returns Metadata {
         Metadata metadata = self.m.addMetadata();
         if parameterTypes.length() != 0 {
@@ -922,7 +1037,7 @@ public class DIBuilder {
         return metadata;
     }
 
-    public function createDebugLocation(Context context, int line, int column, Metadata? scope, Metadata? inlinedAt=()) returns Metadata {
+    public function createDebugLocation(int line, int column, Metadata? scope, Metadata? inlinedAt=()) returns Metadata {
         Metadata metadata = self.m.addMetadata();
         string[] words = [metadata.ref(), "=", "!", "DILocation", "("];
         words.push("line", ":", line.toString());

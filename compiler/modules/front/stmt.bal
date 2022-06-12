@@ -333,24 +333,15 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
     bir:BasicBlock? curBlock = bb;
     // Similar to env.bindings, but only contains the bindings of variables defined outside of current scope
     if scope is s:IfElseStmt {
-        cx.pushScope(scope.startPos, scope.endPos);
         StmtEffect effect = check codeGenIfElseStmt(cx, bb, env, scope);
         curBlock = effect.block;
         applyStmtEffect(env, effect);
-        cx.popScope();
     }
     else {
         foreach var stmt in scope.stmts {
-            boolean isScopedStmt = stmt is ScopedStmt;
-            if isScopedStmt {
-                cx.pushScope(stmt.startPos, stmt.endPos);
-            }
             StmtEffect effect = check codeGenStmt(cx, curBlock, env, stmt);
             curBlock = effect.block;
             applyStmtEffect(env, effect);
-            if isScopedStmt {
-                cx.popScope();
-            }
         }
     }
     check unusedLocalVariables(cx, env, initialEnv.bindings);
@@ -384,17 +375,11 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, 
     if curBlock == () {
         return cx.semanticErr("unreachable code", s:range(stmt));
     }
+    else if stmt is ScopedStmt {
+        return codeGenScopedStmt(cx, curBlock, env, stmt);
+    }
     else if stmt is s:IfElseStmt {
         return codeGenIfElseStmt(cx, curBlock, env, stmt);
-    }
-    else if stmt is s:MatchStmt {
-        return codeGenMatchStmt(cx, curBlock, env, stmt);
-    }
-    else if stmt is s:WhileStmt {
-        return codeGenWhileStmt(cx, curBlock, env, stmt);
-    }
-    else if stmt is s:ForeachStmt {
-        return codeGenForeachStmt(cx, curBlock, env, stmt);
     }
     else if stmt is s:BreakContinueStmt {
         return codeGenBreakContinueStmt(cx, curBlock, env, stmt);
@@ -417,6 +402,22 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, Environment env, 
     else {
         return codeGenCallStmt(cx, curBlock, env, stmt);
     }
+}
+
+function codeGenScopedStmt(StmtContext cx, bir:BasicBlock curBlock, Environment env, ScopedStmt stmt) returns CodeGenError|StmtEffect {
+    StmtEffect|CodeGenError effect;
+    cx.pushScope(stmt.startPos, stmt.endPos);
+    if stmt is s:MatchStmt {
+        effect = codeGenMatchStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:WhileStmt {
+        effect = codeGenWhileStmt(cx, curBlock, env, stmt);
+    }
+    else {
+        effect = codeGenForeachStmt(cx, curBlock, env, stmt);
+    }
+    cx.popScope();
+    return effect;
 }
 
 function applyStmtEffect(Environment env, StmtEffect effect) {

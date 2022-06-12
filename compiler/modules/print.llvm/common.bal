@@ -47,7 +47,9 @@ public function structType(Type[] elementTypes) returns StructType {
     return { elementTypes: elementTypes.cloneReadOnly() };
 }
 
-public type Type IntType|FloatType|PointerType|StructType|ArrayType|FunctionType;
+// Corresponds to LLVMMetadataRef
+public type MetadataType "metadata";
+public type Type IntType|FloatType|PointerType|StructType|ArrayType|FunctionType|MetadataType;
 
 // A RetType is valid only as the return type of a function
 public type RetType Type|"void";
@@ -90,6 +92,7 @@ public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sl
 public type FloatPredicate "false"|"oeq"|"ogt"|"oge"|"olt"|"ole"|"one"|"ord"|"ueq"|"ugt"|"uge"|"ult"|"ule"|"une"|"uno"|"true";
 public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
 public type GeneralIntrinsicName "ptrmask.p1i8.i64";
+type DebugIntrinsicName "dbg.value"|"dbg.declare";
 
 public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsicName;
 
@@ -148,4 +151,39 @@ public type FunctionMetadataProperties record {|
     int scopeLine;
     DIFlag flag = "zero";
     boolean isOptimized = false;
+|};
+
+// Corresponds to LLVMDWARFTypeEncoding
+public type DwarfTypeEncoding "boolean"|"float"|"signed"|"signed_char";
+public type BasicTypeMetadataProperties record {|
+    string name;
+    int sizeInBits;
+    DwarfTypeEncoding encoding;
+    DIFlag flag = "zero";
+|};
+
+public type VariableMetadataProperties record {|
+    Metadata scope;
+    string name;
+    Metadata file;
+    int lineNo;
+    Metadata ty;
+    DIFlag flag = "zero";
+    int? alignInBits=();
+|};
+
+public type ValueMetadataProperties record {|
+    Value value;
+    Metadata varInfo;
+    Metadata expr;
+    Metadata debugLoc;
+    BasicBlock block;
+|};
+
+public type PointerTypeMetdataProperties record {|
+    Metadata pointeeTy;
+    int sizeInBits;
+    Alignment? alignInBits = ();
+    int addressSpace = 0;
+    string? name = ();
 |};

@@ -12,7 +12,7 @@ function dIBuilder() returns Module {
     m.addModuleFlag("warning", ["Dwarf Version", 2]);
     Metadata functionTy = dIBuilder.createSubroutineType(fileData);
     Metadata functionData = dIBuilder.createFunction(scope=fileData, name="test", linkageName="test", file=fileData, lineNo=0, ty=functionTy, scopeLine=0);
-    Metadata loc = dIBuilder.createDebugLocation(context, 1, 2, functionData);
+    Metadata loc = dIBuilder.createDebugLocation(1, 2, functionData);
 
     FunctionDefn testFn = m.addFunctionDefn("test", {returnType: "void", paramTypes: []});
     testFn.setSubprogram(functionData);

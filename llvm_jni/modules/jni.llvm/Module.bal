@@ -46,7 +46,7 @@ public distinct class Module {
     }
 
     public function createDIBuilder() returns DIBuilder {
-        DIBuilder dBuilder = new(self);
+        DIBuilder dBuilder = new(self, self.context);
         self.diBuilder = dBuilder;
         return dBuilder;
     }

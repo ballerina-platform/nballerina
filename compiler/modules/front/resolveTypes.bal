@@ -26,16 +26,20 @@ function createTypeMap(ModuleSymbols mod) returns map<t:SemType> {
 
 function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
     foreach var defn in mod.defns {
-        if defn is s:TypeDefn {
-            _ = check resolveTypeDefn(mod, defn, 0);
-        }
-        else if defn is s:ConstDefn {
-            _ = check resolveConstDefn(mod, defn);
-        }
-        else {
-            // it's a FunctionDefn
-            defn.signature = check resolveFunctionSignature(mod, defn);
-        }
+        check resolveDefn(mod, defn);
+    }
+}
+
+function resolveDefn(ModuleSymbols mod, s:ModuleLevelDefn defn) returns ResolveTypeError? {
+    if defn is s:TypeDefn {
+        _ = check resolveTypeDefn(mod, defn, 0);
+    }
+    else if defn is s:ConstDefn {
+        _ = check resolveConstDefn(mod, defn);
+    }
+    else {
+        // it's a FunctionDefn
+        defn.signature = check resolveFunctionSignature(mod, defn);
     }
 }
 
