@@ -54,7 +54,7 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
             body.push(buildCall(module, scaffold, insn));
         }
         else if insn is bir:FloatArithmeticBinaryInsn {
-            body.push(buildFloatArithmeticBinary(module, insn));
+            body.push(buildFloatArithmeticBinary(module, scaffold, insn));
         }
         else if insn is bir:FloatNegateInsn {
             body.push(buildFloatNegate(module, insn));
@@ -113,6 +113,7 @@ function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) retur
 
 function buildStringConcat(wasm:Module module, Scaffold scaffold, bir:StringConcatInsn insn) returns wasm:Expression {
     wasm:Expression value = buildRuntimeFunctionCall(module,
+                                                     scaffold.getMetaData(),
                                                      stringConcatFunction,
                                                      [
                                                          buildString(module, scaffold, insn.operands[0]),
@@ -131,7 +132,14 @@ function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) ret
         args.push(buildWideRepr(module, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]));
     }
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
-    wasm:Expression call = module.call(ref.symbol.identifier, args, retRepr.wasm);
+    bir:Symbol funcSymbol = ref.symbol;
+    wasm:Expression call = module.call(funcSymbol.identifier, args, retRepr.wasm);
+    if funcSymbol is bir:ExternalSymbol {
+        MetaData metaData = scaffold.getMetaData();
+        if metaData.rtFunctions.indexOf("$" + funcSymbol.identifier) == () {
+            metaData.rtFunctions.push("$" + funcSymbol.identifier);
+        }
+    }
     return retRepr !is VoidRepr ? buildStore(module, insn.result, call) : call;
 }
 

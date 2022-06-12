@@ -71,7 +71,7 @@ class Scaffold {
     private bir:FunctionDefn defn;
     final t:SemType returnType;
     private final RetRepr retRepr;
-    private MetaData metadata = {};
+    private MetaData metaData = {};
     private t:Context typeContext;
     private map<wasm:Expression[]> renderedRegion = {};
     private bir:Label[] processedBlocks = [];
@@ -83,7 +83,7 @@ class Scaffold {
     private bir:Label[] stepBlocks = [];
     private boolean hasPanic = false;
     
-    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, MetaData metadata, t:Context typeContext) {
+    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, MetaData metaData, t:Context typeContext) {
         self.module = module;
         self.blocks = code.blocks;
         self.regions = code.regions;
@@ -92,7 +92,7 @@ class Scaffold {
         self.retRepr = semTypeRetRepr(self.returnType);
         self.typeContext = typeContext;
         self.initializeReprs(code.registers);
-        self.metadata = metadata;
+        self.metaData = metaData;
     }
 
     function initializeReprs(bir:Register[] registers) {
@@ -105,39 +105,33 @@ class Scaffold {
     }
 
     function addExceptionTag(string tag, wasm:Type? kind = ()) {
-        if self.metadata.exceptionTags.indexOf(tag) == () {
+        if self.metaData.exceptionTags.indexOf(tag) == () {
             self.module.addTag(tag, kind);
             self.module.addTagExport(tag, tag);
-            self.metadata.exceptionTags.push(tag);
+            self.metaData.exceptionTags.push(tag);
         }
     }
 
     function mayBeAddStringRecord(string val, int[] surrogate) returns string {
-        StringRecord? rec = self.metadata.segments[val];
+        StringRecord? rec = self.metaData.segments[val];
         if rec != () {
             return rec.global;
         }
-        int numStrings = self.metadata.segments.keys().length();
+        int numStrings = self.metaData.segments.keys().length();
         StringRecord newRec = {
-                                offset: self.metadata.offset,
+                                offset: self.metaData.offset,
                                 global: "bal$str" + numStrings.toString(),
                                 length: val.toBytes().length(),
                                 surrogate: surrogate
                               };
-        self.metadata.segments[val] = newRec; 
-        self.metadata.offset += val.toBytes().length();
+        self.metaData.segments[val] = newRec; 
+        self.metaData.offset += val.toBytes().length();
         return newRec.global;
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
 
     function getRetRepr() returns RetRepr => self.retRepr;
-
-    function addRuntimeModule(RuntimeModule module) {
-        if self.metadata.runtimeModules.indexOf(module) == () {
-            self.metadata.runtimeModules.push(module);
-        } 
-    }
 
     function setHasPanic() {
         self.hasPanic = true;
@@ -151,6 +145,10 @@ class Scaffold {
     
     function setProcessedBlock(bir:Label label) {
         self.processedBlocks.push(label);
+    }
+
+    function getMetaData() returns MetaData {
+        return self.metaData;
     }
 
     function isBlockNotProcessed(bir:Label label) returns boolean {

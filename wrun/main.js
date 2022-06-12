@@ -63,7 +63,7 @@ const intImport = {
 
 const ioImport = {
   log: (arg) => {
-    console.log(getValue(WasmModule.arr_get(arg, 0)));
+    console.log(getValue(WasmModule._bal_list_get(arg, 0)));
   }
 };
 
@@ -81,23 +81,23 @@ WebAssembly.instantiate(wasmBuffer, importObject).then(obj => {
 });
 
 const getValue = (ref, parent = null) => {
-  let type = parent == null ? WasmModule.get_type(ref) : WasmModule.get_type_children(parent, ref);
+  let type = parent == null ? WasmModule._bal_get_type(ref) : WasmModule._bal_get_type_children(parent, ref);
   let result = null;
   switch (type) {
     case TYPE_NIL:
       result = parent == null ? "" : "null";
       break;
     case TYPE_BOOLEAN:
-      result = WasmModule.tagged_to_boolean(ref).toString() === "1" ? "true" : "false";
+      result = WasmModule._bal_tagged_to_boolean(ref).toString() === "1" ? "true" : "false";
       break;
     case SELF_REFERENCE:
       result = "...";
       break;
     case TYPE_INT:
-      result = WasmModule.tagged_to_int(ref).toString();
+      result = WasmModule._bal_tagged_to_int(ref).toString();
       break;
     case TYPE_FLOAT:
-      result = WasmModule.tagged_to_float(ref);
+      result = WasmModule._bal_tagged_to_float(ref);
       if ((1 / result) == -Infinity) {
         result = "-0.0";
       }
@@ -106,14 +106,14 @@ const getValue = (ref, parent = null) => {
       }
       break;
     case TYPE_STRING:
-      result = WasmModule.get_string(ref);
+      result = WasmModule._bal_get_string(ref);
       if (parent != null) result = JSON.stringify(result)
       break;
     case TYPE_LIST:
-      let length = WasmModule.arr_len(ref);
+      let length = WasmModule._bal_list_length(ref);
       let elements = []
       for (let index = 0; index < length; index++) {
-        let element = getValue(WasmModule.arr_get(ref, index), ref);
+        let element = getValue(WasmModule._bal_list_get(ref, index), ref);
         elements.push(element);
       }
       result = "[" + elements.join(",") + "]"
@@ -123,14 +123,14 @@ const getValue = (ref, parent = null) => {
       let keys = WasmModule._bal_map_get_keys(ref)
       let len = WasmModule._bal_mapping_num_keys(keys)
       for (let index = 0; index < len; index++) {
-        let key = WasmModule.get_string(WasmModule._bal_mapping_get_key(keys, index));
+        let key = WasmModule._bal_get_string(WasmModule._bal_mapping_get_key(keys, index));
         let val = getValue(WasmModule._bal_mapping_get(ref, WasmModule._bal_mapping_get_key(keys, index)), ref);
         pairs.push(`"${key}":${val}`)
       }
       result = "{" + pairs.join(",") + "}";
       break;
       case TYPE_ERROR:
-        return "error(\"" +WasmModule.get_error(ref) + "\")";
+        return "error(\"" +WasmModule._bal_get_error(ref) + "\")";
   }
   return result;
 }

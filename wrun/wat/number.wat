@@ -1,32 +1,10 @@
 (module 
-  ;; type
-  (type $arrayCompFunc (func (param eqref eqref) (result i32)))
-  (type $Any (struct (field $type i32)))
-  (type $Surrogate (array (mut i32))) 
-  (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
   ;; tag
   (tag $bad-conversion) 
   (tag $overflow) 
-  ;; import
-  (import "string" "eq" (func $str_eq (param anyref) (param anyref) (result i32))) 
-  (import "int" "hex" (func $int_to_hex (param i64) (result anyref))) 
-  ;; global
-  (global $rttAny (rtt 0 $Any) (rtt.canon $Any))
-  (global $rttString (rtt 1 $String) (rtt.sub $String (global.get $rttAny)))
   ;; export
   (export "overflow" (tag $overflow)) 
   (export "bad-conversion" (tag $bad-conversion)) 
-  ;; toHexString
-  (func $toHexString (param $0 i64) (result (ref $String)) 
-    (struct.new_with_rtt $String 
-      (i32.const 1024)
-      (call $int_to_hex 
-        (local.get $0)) 
-      (array.new_default_with_rtt $Surrogate 
-        (i32.const 0) 
-        (rtt.canon $Surrogate))
-      (i32.const -1) 
-      (global.get $rttString)))
   ;; $_bal_check_type_and_int_val
   (func $_bal_check_type_and_int_val (param $0 eqref) (param $1 i64) (result i32)
     (local $2 i32) 
@@ -34,7 +12,7 @@
     (local.set $2
       (i32.const 0)) 
     (local.set $3
-      (call $get_type
+      (call $_bal_get_type
         (local.get $0))) 
     (if 
       (i32.eq
@@ -57,14 +35,14 @@
     (local.set $2
       (i32.const 0)) 
     (local.set $3
-      (call $get_type
+      (call $_bal_get_type
         (local.get $0))) 
     (if 
       (i32.eq
         (local.get $3)
         (i32.const 256))
       (local.set $2
-        (f64.eq
+        (call $_bal_float_eq
           (struct.get $Float $val
             (ref.cast
               (ref.as_data  
@@ -78,7 +56,7 @@
     (local $1 i32)
     (local $2 f64)
     (local.set $1
-      (call $get_type
+      (call $_bal_get_type
         (local.get $0)))
     (if 
       (i32.eq
@@ -112,7 +90,7 @@
     (local $1 i32)
     (local $2 i64)
     (local.set $1
-      (call $get_type
+      (call $_bal_get_type
         (local.get $0)))
     (if 
       (i32.eq
@@ -142,347 +120,6 @@
         (i32.const 128)
         (local.get $2)
         (global.get $rttBoxedInt))))
-  ;; $_bal_float_eq
-  (func $_bal_float_eq (param $0 f64) (param $1 f64) (result i32)
-    (local $2 i32)
-    (local $3 i32)
-    (block
-      (local.set $2
-        (f64.ne
-          (local.get $0)
-          (local.get $0)))
-      (local.set $3
-        (f64.ne
-          (local.get $1)
-          (local.get $1)))
-      (if
-        (i32.and
-          (local.get $2)
-          (local.get $3))
-        (return
-          (i32.const 1))
-        (return
-          (f64.eq
-            (local.get $0)
-            (local.get $1))))))
-  ;; $_bal_float_exact_eq
-  (func $_bal_float_exact_eq (param $0 f64) (param $1 f64)  (result i32)
-    (return 
-      (i64.eq
-        (i64.reinterpret_f64
-          (local.get $0))
-        (i64.reinterpret_f64
-          (local.get $1)))))
-  ;; opt_null_check
-  (func $opt_null_check (param $0 eqref) (param $1 eqref) (result i32)
-    (local $2 i32)
-    (local $3 i32)
-    (local.set $2
-      (ref.is_null
-        (local.get $0)))
-    (local.set $3
-      (ref.is_null
-        (local.get $1)))
-    (if
-      (i32.and
-        (local.get $2)
-        (local.get $3))
-      (return 
-        (i32.const 1))
-      (return 
-        (i32.const -1))))
-  ;; $_bal_opt_int_compare
-  (func $_bal_opt_int_compare (param $0 eqref) (param $1 eqref) (result i32)
-    (local $2 i32)
-    (local $3 i32)
-    (local.set $2
-      (ref.is_null
-        (local.get $0)))
-    (local.set $3
-      (ref.is_null
-        (local.get $1)))
-    (if
-      (i32.or
-        (local.get $2)
-        (local.get $3))
-      (return 
-        (call $opt_null_check
-          (local.get $0)
-          (local.get $1)))
-      (return       
-        (call $int_compare
-          (struct.get $BoxedInt $val
-            (ref.cast
-              (ref.as_data
-                (local.get $0))
-              (global.get $rttBoxedInt)))
-          (struct.get $BoxedInt $val
-            (ref.cast
-              (ref.as_data
-                (local.get $1))
-              (global.get $rttBoxedInt)))))))
-  ;; $_bal_opt_float_compare
-  (func $_bal_opt_float_compare (param $0 eqref) (param $1 eqref) (result i32)
-    (local $2 i32)
-    (local $3 i32)
-    (local.set $2
-      (ref.is_null
-        (local.get $0)))
-    (local.set $3
-      (ref.is_null
-        (local.get $1)))
-    (if
-      (i32.or
-        (local.get $2)
-        (local.get $3))
-      (return 
-        (call $opt_null_check
-          (local.get $0)
-          (local.get $1)))
-      (return 
-        (call $float_compare
-          (struct.get $Float $val
-            (ref.cast
-              (ref.as_data
-                (local.get $0))
-              (global.get $rttFloat)))
-          (struct.get $Float $val
-            (ref.cast
-              (ref.as_data
-                (local.get $1))
-              (global.get $rttFloat)))))))
-  ;; $_bal_opt_string_compare
-  (func $_bal_opt_string_compare (param $0 eqref) (param $1 eqref) (result i32)
-    (local $3 i32)
-    (local $4 i32)
-    (local $5 anyref)
-    (local $6 anyref)
-    (local.set $3
-      (ref.is_null
-        (local.get $0)))
-    (local.set $4
-      (ref.is_null
-        (local.get $1)))
-    (if
-      (i32.or
-        (local.get $3)
-        (local.get $4))
-      (return 
-        (call $opt_null_check
-          (local.get $0)
-          (local.get $1)))       
-      (return
-        (call $string_compare
-          (local.get $0)
-          (local.get $1)))))
-  ;; $_bal_opt_boolean_compare
-  (func $_bal_opt_boolean_compare (param $0 eqref) (param $1 eqref) (result i32)
-    (local $2 i32)
-    (local $3 i32)
-    (local.set $2
-      (ref.is_null
-        (local.get $0)))
-    (local.set $3
-      (ref.is_null
-        (local.get $1)))
-    (if
-      (i32.or
-        (local.get $2)
-        (local.get $3))
-      (return 
-        (call $opt_null_check
-          (local.get $0)
-          (local.get $1)))
-      (return 
-        (call $boolean_compare
-          (i31.get_u
-            (ref.as_i31
-              (local.get $0)))
-          (i31.get_u
-            (ref.as_i31
-              (local.get $1)))))))
-  ;; $_bal_transform_compare_result
-  (func $_bal_transform_compare_result (param $0 i32) (param $1 i32) (result i32)
-    (if
-      (i32.eq
-        (local.get $1)
-        (i32.const -1))
-      (return 
-        (i32.const 0))
-      (if
-        (i32.rem_u
-          (local.get $0)
-          (i32.const 2))
-        (if
-          (i32.eq 
-            (local.get $0)
-            (i32.const 1))
-          (return 
-            (i32.or
-              (i32.eq
-                (local.get $1)
-                (i32.const 0))
-              (i32.eq
-                (local.get $1)
-                (i32.const 1))))
-          (return 
-            (i32.or
-              (i32.eq
-                (local.get $1)
-                (i32.const 1))
-              (i32.eq
-                (local.get $1)
-                (i32.const 2)))))
-        (return
-          (i32.eq
-            (local.get $0)
-            (local.get $1))))))
-  ;; $int_compare                  
-  (func $int_compare (param $0 i64) (param $1 i64) (result i32)
-    (if
-      (i64.lt_s
-        (local.get $0)
-        (local.get $1))
-      (return 
-        (i32.const 0))
-      (if
-        (i64.gt_s
-          (local.get $0)
-          (local.get $1))
-        (return 
-          (i32.const 2))
-        (return
-          (i32.const 1)))))
-  ;; $float_compare                  
-  (func $float_compare (param $0 f64) (param $1 f64) (result i32)
-    (if
-      (f64.lt
-        (local.get $0)
-        (local.get $1))
-      (return 
-        (i32.const 0))
-      (if
-        (f64.gt
-          (local.get $0)
-          (local.get $1))
-        (return 
-          (i32.const 2))
-        (return 
-          (i32.const 1)))))
-  ;; $boolean_compare
-  (func $boolean_compare (param $0 i32) (param $1 i32) (result i32)
-    (if
-      (i32.lt_u
-        (local.get $0)
-        (local.get $1))
-      (return 
-        (i32.const 0))
-      (if
-        (i32.gt_u
-          (local.get $0)
-          (local.get $1))
-        (return 
-          (i32.const 2))
-        (return 
-          (i32.const 1)))))
-  ;; $_bal_array_int_compare
-  (func $_bal_array_int_compare (param $0 eqref) (param $1 eqref) (result i32)
-    (return 
-      (call $array_compare 
-        (local.get $0)
-        (local.get $1)
-        (ref.func $_bal_opt_int_compare))))
-  ;; $_bal_array_float_compare
-  (func $_bal_array_float_compare (param $0 eqref) (param $1 eqref) (result i32)
-    (return 
-      (call $array_compare 
-        (local.get $0)
-        (local.get $1)
-        (ref.func $_bal_opt_float_compare))))
-  ;; $_bal_array_string_compare
-  (func $_bal_array_string_compare (param $0 eqref) (param $1 eqref) (result i32)
-    (return 
-      (call $array_compare 
-        (local.get $0)
-        (local.get $1)
-        (ref.func $_bal_opt_string_compare))))
-  ;; $_bal_array_boolean_compare
-  (func $_bal_array_boolean_compare (param $0 eqref) (param $1 eqref) (result i32)
-    (return 
-      (call $array_compare 
-        (local.get $0)
-        (local.get $1)
-        (ref.func $_bal_opt_boolean_compare))))
-  ;; $array_compare
-  (func $array_compare (param $0 eqref) (param $1 eqref) (param $2 (ref $arrayCompFunc)) (result i32)
-    (local $3 (ref null $List))
-    (local $4 (ref null $List))
-    (local $5 i64)
-    (local $6 i64)
-    (local $7 i64)
-    (local $8 i64)
-    (local $9 i32)
-    (local.set $3
-      (ref.cast
-        (ref.as_data
-          (local.get $0))
-        (global.get $rttList)))
-    (local.set $4
-      (ref.cast
-        (ref.as_data
-          (local.get $1))
-        (global.get $rttList)))
-    (local.set $5
-      (struct.get $List $len
-        (local.get $3)))
-    (local.set $6
-      (struct.get $List $len
-        (local.get $4)))
-    (if
-      (i64.le_u
-        (local.get $5)
-        (local.get $6))
-      (local.set $7
-        (local.get $5))
-      (local.set $7
-        (local.get $6)))
-    (local.set $8
-      (i64.const 0))
-    (loop $loop$cont
-      (if 
-        (i64.lt_u
-          (local.get $8)
-          (local.get $7))
-        (block
-          (local.set $9
-            (call_ref
-              (call $arr_get_cast
-                (ref.as_non_null
-                  (local.get $3))
-                (i32.wrap_i64
-                  (local.get $8)))
-              (call $arr_get_cast
-                (ref.as_non_null
-                  (local.get $4))
-                (i32.wrap_i64
-                  (local.get $8)))
-              (local.get $2)))
-          (if 
-            (i32.eq
-              (local.get $9)
-              (i32.const 1))
-            (block
-              (local.set $8
-                (i64.add
-                  (local.get $8)
-                  (i64.const 1)))
-              (br $loop$cont))
-            (return 
-              (local.get $9))))))
-    (return 
-      (call $int_compare
-        (local.get $5)
-        (local.get $6))))
   ;; $_bal_float_rem
   (func $_bal_float_rem (param $0 f64) (param $1 f64) (result f64)
     (local $2 i64) 
@@ -739,6 +376,29 @@
         (i64.shl
           (local.get $6)
           (i64.const 63)))))
+  ;; $_bal_float_eq
+  (func $_bal_float_eq (param $0 f64) (param $1 f64) (result i32)
+    (local $2 i32)
+    (local $3 i32)
+    (block
+      (local.set $2
+        (f64.ne
+          (local.get $0)
+          (local.get $0)))
+      (local.set $3
+        (f64.ne
+          (local.get $1)
+          (local.get $1)))
+      (if
+        (i32.and
+          (local.get $2)
+          (local.get $3))
+        (return
+          (i32.const 1))
+        (return
+          (f64.eq
+            (local.get $0)
+            (local.get $1))))))
   ;; $_bal_check_overflow_add
   (func $_bal_check_overflow_add (param $0 i64) (param $1 i64)
     (if 

@@ -25,41 +25,46 @@ final readonly & map<wasm:Op> floatArithmeticOps = {
     "/": "f64.div"
 };
 
-final RuntimeModule numberMod = "number.wat";
-
 final RuntimeFunction convertToIntFunction = {
     name: "_bal_convert_to_int",
-    returnType: "i64"
+    returnType: "i64",
+    rtModule: numberMod
 };
 
 final RuntimeFunction convertToFloatFunction = {
     name: "_bal_convert_to_float",
-    returnType: "f64"
+    returnType: "f64",
+    rtModule: numberMod
 };
 
 final RuntimeFunction floatModulusFunction = {
     name: "_bal_float_rem",
-    returnType: "f64"
+    returnType: "f64",
+    rtModule: numberMod
 };
 
 final RuntimeFunction checkOverflowAddFunction = {
     name: "_bal_check_overflow_add",
-    returnType: "None"
+    returnType: "None",
+    rtModule: numberMod
 };
 
 final RuntimeFunction checkOverflowSubFunction = {
     name: "_bal_check_overflow_sub",
-    returnType: "None"
+    returnType: "None",
+    rtModule: numberMod
 };
 
 final RuntimeFunction checkOverflowMulFunction = {
     name: "_bal_check_overflow_mul",
-    returnType: "None"
+    returnType: "None",
+    rtModule: numberMod
 };
 
 final RuntimeFunction checkOverflowDivFunction = {
     name: "_bal_check_overflow_div",
-    returnType: "None"
+    returnType: "None",
+    rtModule: numberMod
 };
 
 final readonly & map<RuntimeFunction> overflowFunction = {
@@ -83,7 +88,7 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
     wasm:Expression operation = buildStore(module, insn.result, module.binary(op, lhs, rhs));
     RuntimeFunction? overflowFunc = overflowFunction[op];
     if overflowFunc != () {
-        wasm:Expression overflowCheck = buildRuntimeFunctionCall(module, overflowFunc, [lhs, rhs]);
+        wasm:Expression overflowCheck = buildRuntimeFunctionCall(module, scaffold.getMetaData(), overflowFunc, [lhs, rhs]);
         return module.block([overflowCheck, operation]);
     }
     return operation;
@@ -94,7 +99,7 @@ function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToI
     if repr.base == BASE_REPR_FLOAT {
         return buildStore(module, insn.result, module.unary("i64.trunc_f64_s", val));
     }
-    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, convertToIntFunction, [val]));
+    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold.getMetaData(), convertToIntFunction, [val]));
 }
 
 function buildNoPanicArithmeticBinary(wasm:Module module, bir:IntNoPanicArithmeticBinaryInsn insn) returns wasm:Expression {
@@ -109,15 +114,15 @@ function buildConvertToFloat(wasm:Module module, Scaffold scaffold, bir:ConvertT
     if repr.base == BASE_REPR_INT {
         return buildStore(module, insn.result, module.unary("f64.convert_i64_s", val));
     }
-    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, convertToFloatFunction, [val]));
+    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold.getMetaData(), convertToFloatFunction, [val]));
 }
 
-function buildFloatArithmeticBinary(wasm:Module module, bir:FloatArithmeticBinaryInsn insn) returns wasm:Expression {
+function buildFloatArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:FloatArithmeticBinaryInsn insn) returns wasm:Expression {
     wasm:Expression lhs = buildFloat(module, insn.operands[0]);
     wasm:Expression rhs = buildFloat(module, insn.operands[1]);
     wasm:Expression result;
     if insn.op == "%" {
-        result = buildRuntimeFunctionCall(module, floatModulusFunction, [lhs, rhs]);
+        result = buildRuntimeFunctionCall(module, scaffold.getMetaData(), floatModulusFunction, [lhs, rhs]);
     }
     else {
         wasm:Op op = floatArithmeticOps.get(insn.op);

@@ -25,66 +25,72 @@ const RuntimeType FLOAT_TYPE = "Float";
 const RuntimeType ERROR_TYPE = "Error";
 
 public type ExceptionTag string;
+public type HelperRuntimeFunction string|RuntimeFunction;
 const ExceptionTag BAD_CONVERSION_TAG = "bad-conversion";
 const ExceptionTag CUSTOM_EXCEPTION_TAG = "custom-exception";
+
+type RuntimeModule readonly & record {|
+    string file;
+    int priority;
+|};
+
+final RuntimeModule commonMod = {
+    file: "common.wat",
+    priority: 0
+};
+
+final RuntimeModule stringMod = {
+    file: "string.wat",
+    priority: 4
+};
 
 type RuntimeFunction readonly & record {|
     string name;
     wasm:Type returnType;
+    RuntimeModule rtModule;
 |};
 
 final RuntimeFunction taggedToIntFunction = {
-    name: "tagged_to_int",
-    returnType: "i64"
+    name: "_bal_tagged_to_int",
+    returnType: "i64",
+    rtModule: commonMod
 };
 
 final RuntimeFunction taggedToBooleanFunction = {
-    name: "tagged_to_boolean",
-    returnType: "i32"
+    name: "_bal_tagged_to_boolean",
+    returnType: "i32",
+    rtModule: commonMod
 };
 
 final RuntimeFunction taggedToFloatFunction = {
-    name: "tagged_to_float",
-    returnType: "f64"
+    name: "_bal_tagged_to_float",
+    returnType: "f64",
+    rtModule: commonMod
 };
 
 final RuntimeFunction getTypeFunction = {
-    name: "get_type",
-    returnType: "i32"
-};
-
-final RuntimeFunction arrCreateFunction = {
-    name: "arr_create",
-    returnType: { base: LIST_TYPE }
-};
-
-final RuntimeFunction arrGetFunction = {
-    name: "arr_get",
-    returnType: "eqref"
-};
-
-final RuntimeFunction arrSetFunction = {
-    name: "arr_set",
-    returnType: "None"
+    name: "_bal_get_type",
+    returnType: "i32",
+    rtModule: commonMod
 };
 
 final RuntimeFunction stringCompFunction = {
-    name: "string_compare",
-    returnType: "i32"
+    name: "_bal_string_compare",
+    returnType: "i32",
+    rtModule: stringMod
 };
 
 final RuntimeFunction stringConcatFunction = {
-    name: "w_str_concat",
-    returnType: { base: STRING_TYPE }
+    name: "_bal_string_concat",
+    returnType: { base: STRING_TYPE },
+    rtModule: stringMod
 };
 
 final RuntimeFunction createStringFunction = {
-    name: "str_create",
-    returnType: "eqref"
+    name: "_js_string_create",
+    returnType: "eqref",
+    rtModule: stringMod
 };
-
-final RuntimeModule stringMod = "string.wat";
-final RuntimeModule taggingMod = "tagging.wat";
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     return module.i31New(value);
@@ -98,16 +104,16 @@ function buildTaggedFloat(wasm:Module module, wasm:Expression value) returns was
     return module.structNew(FLOAT_TYPE, [module.addConst({ i32: TYPE_FLOAT }), value]);
 }
 
-function buildUntagInt(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
-    return buildRuntimeFunctionCall(module, taggedToIntFunction, [tagged]);
+function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
+    return buildRuntimeFunctionCall(module, scaffold.getMetaData(), taggedToIntFunction, [tagged]);
 }
 
-function buildUntagBoolean(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
-    return buildRuntimeFunctionCall(module, taggedToBooleanFunction, [tagged]);
+function buildUntagBoolean(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
+    return buildRuntimeFunctionCall(module, scaffold.getMetaData(), taggedToBooleanFunction, [tagged]);
 }
 
-function buildUntagFloat(wasm:Module module, wasm:Expression tagged) returns wasm:Expression {
-    return buildRuntimeFunctionCall(module, taggedToFloatFunction, [tagged]);
+function buildUntagFloat(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
+    return buildRuntimeFunctionCall(module, scaffold.getMetaData(), taggedToFloatFunction, [tagged]);
 }
 
 function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, RuntimeType rtt) returns wasm:Expression {
@@ -140,8 +146,12 @@ function buildConstString(wasm:Module module, Scaffold scaffold, string value) r
     return module.refAs("ref.as_non_null", module.globalGet(label));
 }
 
-function buildRuntimeFunctionCall(wasm:Module module, RuntimeFunction rf, wasm:Expression[] args) returns wasm:Expression {
-    var { name, returnType } = rf;
+function buildRuntimeFunctionCall(wasm:Module module, MetaData metaData, RuntimeFunction rf, wasm:Expression[] args) returns wasm:Expression {
+    var { name, returnType, rtModule } = rf;
+    if metaData.rtFunctions.indexOf("$" + name) == () {
+        metaData.rtFunctions.push("$" + name);
+    }
+    metaData.rtModules[rtModule.priority] = rtModule;
     return module.call(name, args, returnType);
 }
 
@@ -170,18 +180,18 @@ function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression va
         return mayBeCast(module, scaffold, value, targetRepr);
     }
     else if targetRepr is IntRepr {
-        return buildUntagInt(module, value);
+        return buildUntagInt(module, scaffold, value);
     }
     else if targetRepr is FloatRepr {
-        return buildUntagFloat(module, value);
+        return buildUntagFloat(module, scaffold, value);
     }
     else {
-        return buildUntagBoolean(module, value);
+        return buildUntagBoolean(module, scaffold, value);
     }
 }
 
-function buildIsExactType(wasm:Module module, wasm:Expression tagged, int ty) returns wasm:Expression {
-    wasm:Expression taggedType = buildRuntimeFunctionCall(module, getTypeFunction, [tagged]);
+function buildIsExactType(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, int ty) returns wasm:Expression {
+    wasm:Expression taggedType = buildRuntimeFunctionCall(module, scaffold.getMetaData(), getTypeFunction, [tagged]);
     wasm:Expression expectedType = module.addConst({ i32: ty });
     return  module.binary("i32.eq", taggedType, expectedType);
 }

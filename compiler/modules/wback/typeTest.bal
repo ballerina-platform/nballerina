@@ -2,46 +2,58 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.wasm;
 
+final RuntimeModule numberMod = {
+    file: "number.wat",
+    priority: 3
+};
+
 final RuntimeFunction checkStringTypeAndValFunction = {
     name: "_bal_check_type_and_string_val",
-    returnType: "i32"
+    returnType: "i32",
+    rtModule: stringMod
 };
 
 final RuntimeFunction checkIntTypeAndValFunction = {
     name: "_bal_check_type_and_int_val",
-    returnType: "i32"
+    returnType: "i32",
+    rtModule: numberMod
 };
 
 final RuntimeFunction checkFloatTypeAndValFunction = {
     name: "_bal_check_type_and_float_val",
-    returnType: "i32"
+    returnType: "i32",
+    rtModule: numberMod
 };
 
 final RuntimeFunction checkBooleanTypeAndValFunction = {
     name: "_bal_check_type_and_boolean_val",
-    returnType: "i32"
+    returnType: "i32",
+    rtModule: commonMod
 };
 
 final RuntimeFunction checkNilTypeAndValFunction = {
     name: "_bal_check_type_and_nil_val",
-    returnType: "i32"
+    returnType: "i32",
+    rtModule: commonMod
 };
 
 final RuntimeFunction checkListTypeAndAtomicFunction = {
     name: "_bal_check_type_and_list_atomic",
-    returnType: "i32"
+    returnType: "i32",
+    rtModule: listMod
 };
 
 final RuntimeFunction checkMapTypeAndAtomicFunction = {
     name: "_bal_check_type_and_map_atomic",
-    returnType: "i32"
+    returnType: "i32",
+    rtModule: mapMod
 };
 
 function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn insn) returns wasm:Expression {
     var [_, val] = buildReprValue(module, scaffold, insn.operand);
     t:SemType semType = insn.semType;
     Repr repr = semTypeRepr(semType);
-    wasm:Expression sourceTy = buildRuntimeFunctionCall(module, getTypeFunction, [val]);
+    wasm:Expression sourceTy = buildRuntimeFunctionCall(module, scaffold.getMetaData(), getTypeFunction, [val]);
     wasm:Expression targetTy = module.addConst({ i32: t:widenToUniformTypes(semType) });
     return module.addIf(buildIsSubType(module, sourceTy, targetTy), 
                         buildStore(module, insn.result, buildUntagged(module, scaffold, val, repr)), 
@@ -100,7 +112,7 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
 }
 
 function buildHasTagInSet(wasm:Module module, Scaffold scaffold, t:SemType semType, wasm:Expression operand, t:UniformTypeBitSet bitSet) returns wasm:Expression {
-    return buildIsSubType(module, buildRuntimeFunctionCall(module, getTypeFunction, [operand]), module.addConst({ i32: bitSet }));
+    return buildIsSubType(module, buildRuntimeFunctionCall(module, scaffold.getMetaData(), getTypeFunction, [operand]), module.addConst({ i32: bitSet }));
 }
 
 function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType semType, wasm:Expression operand) returns wasm:Expression? {
@@ -121,7 +133,7 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                 strs.push(...sub.nonChar.values);
                 foreach var str in strs {
                     wasm:Expression val = buildConstString(module, scaffold, str);
-                    subConditions.push(buildRuntimeFunctionCall(module, checkStringTypeAndValFunction, [operand, val]));
+                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getMetaData(), checkStringTypeAndValFunction, [operand, val]));
                 }
             }
             t:UT_INT => {
@@ -129,7 +141,7 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                 foreach var range in sub {
                     foreach var i in range.min...range.max {
                         wasm:Expression val = module.addConst({ i64: i });
-                        subConditions.push(buildRuntimeFunctionCall(module, checkIntTypeAndValFunction, [operand, val]));
+                        subConditions.push(buildRuntimeFunctionCall(module, scaffold.getMetaData(), checkIntTypeAndValFunction, [operand, val]));
                     }
                 }
             }
@@ -138,25 +150,25 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                 if sub.allowed {
                     foreach float flt in sub.values {
                         wasm:Expression val = module.addConst({ f64: flt });
-                        subConditions.push(buildRuntimeFunctionCall(module, checkFloatTypeAndValFunction, [operand, val]));
+                        subConditions.push(buildRuntimeFunctionCall(module, scaffold.getMetaData(), checkFloatTypeAndValFunction, [operand, val]));
                     }
                 }
             }
             t:UT_BOOLEAN => {
                 t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(subtype);
                 wasm:Expression val = module.addConst({ i32: sub.value ? 1 : 0 });
-                subConditions.push(buildRuntimeFunctionCall(module, checkBooleanTypeAndValFunction, [operand, val]));
+                subConditions.push(buildRuntimeFunctionCall(module, scaffold.getMetaData(), checkBooleanTypeAndValFunction, [operand, val]));
             }
             t:UT_NIL => {
                 wasm:Expression val = module.refNull();
-                subConditions.push(buildRuntimeFunctionCall(module, checkNilTypeAndValFunction, [operand, val]));
+                subConditions.push(buildRuntimeFunctionCall(module, scaffold.getMetaData(), checkNilTypeAndValFunction, [operand, val]));
             }
             t:UT_LIST_RO => {
                 var atomic = t:listAtomicTypeRw(scaffold.getTypeContext(), semType);
                 if atomic != () {
                     t:SemType? ty = t:listAtomicSimpleArrayMemberType(atomic);
                     if ty != () {
-                        subConditions.push(buildRuntimeFunctionCall(module, checkListTypeAndAtomicFunction, [operand, module.addConst({ i32: <int>ty })]));
+                        subConditions.push(buildRuntimeFunctionCall(module, scaffold.getMetaData(), checkListTypeAndAtomicFunction, [operand, module.addConst({ i32: <int>ty })]));
         }
     }
         }
@@ -164,7 +176,7 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                 t:MappingAtomicType? atomic = t:mappingAtomicTypeRw(scaffold.getTypeContext(), semType);
                 if atomic != () {
                     t:SemType ty = atomic.rest;
-                    subConditions.push(buildRuntimeFunctionCall(module, checkMapTypeAndAtomicFunction, [operand, module.addConst({ i32: <int>ty })]));
+                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getMetaData(), checkMapTypeAndAtomicFunction, [operand, module.addConst({ i32: <int>ty })]));
         }
             }
         }

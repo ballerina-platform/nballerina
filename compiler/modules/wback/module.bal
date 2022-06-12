@@ -18,19 +18,20 @@ type MetaData record {
     string[] globals = [];
     map<StringRecord> segments = {};
     int offset = 0;
-    RuntimeModule[] runtimeModules = [taggingMod, listMod, numberMod, stringMod, mapMod];
+    RuntimeModule?[] rtModules = [commonMod];
+    string[] rtFunctions = [];
 };
 
 function buildModule(bir:Module mod) returns string[]|BuildError {
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     wasm:Module module = new;
-    MetaData metadata = {};
+    MetaData metaData = {};
     wasm:Expression? mainBody = ();
     wasm:Type[] mainLocals = [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
-        Scaffold scaffold = new (module, code, functionDefns[i], metadata, mod.getTypeContext());
+        Scaffold scaffold = new (module, code, functionDefns[i], metaData, mod.getTypeContext());
         wasm:Expression body = buildFunctionBody(scaffold, module);
         string funcName = functionDefns[i].symbol.identifier;
         wasm:Type[] params = [];
@@ -66,24 +67,24 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
         }
     }
     if mainBody != () {
-        wasm:Expression extendedBody = module.block([initStrings(module, metadata.segments, metadata.offset), mainBody]);
+        wasm:Expression extendedBody = module.block([initStrings(module, metaData), mainBody]);
         module.addFunction("main", [], "None", mainLocals, extendedBody);
     }
-    module.addFunctionImport("println", "console", "log", ["eqref"], "None");
     module.addGlobal("bal$err", { base: ERROR_TYPE, initial: "null" }, module.refNull(ERROR_TYPE));
-    _ = check addRttFunctions(module, metadata.runtimeModules);
+    _ = check addRttFunctions(module, metaData);
     return module.finish();
 }
 
 
-function initStrings(wasm:Module module, map<StringRecord> records, int finalOffset) returns wasm:Expression {
+function initStrings(wasm:Module module, MetaData metaData) returns wasm:Expression {
+    var { segments: records, offset: finalOffset } = metaData;
     wasm:Expression[] body = [];
     wasm:Expression[] offsetExpr = [];
     string[] byteStrs = [];
     foreach string key in records.keys() {
         var { offset, global, surrogate, length }  = records.get(key);
         buildStringData(module, key, global, offset, offsetExpr, byteStrs);
-        wasm:Expression jsString = buildRuntimeFunctionCall(module, createStringFunction, [
+        wasm:Expression jsString = buildRuntimeFunctionCall(module, metaData, createStringFunction, [
                                                                                             module.addConst({ i32: offset }), 
                                                                                             module.addConst({i32: length })
                                                                                           ]);
@@ -123,12 +124,19 @@ function buildStringData(wasm:Module module, string key, string global, int offs
     module.addGlobal(global, { base: STRING_TYPE, initial: "null" }, module.refNull(STRING_TYPE));
 }
 
-function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns error? {
+function addRttFunctions(wasm:Module module, MetaData metaData) returns error? {
+    var { rtModules, rtFunctions } = metaData;
     map<wasm:Wat[]> sectionData = {};
     map<wasm:Wat[]> sectionIdentifiers = {};
     map<wasm:Wat[]> functions = {};
     string absPath = check file:getAbsolutePath("");
     string[] dirs = check file:splitPath(absPath);
+    RuntimeModule[] filtered = [];
+    foreach RuntimeModule? mod in rtModules {
+        if mod != () {
+            filtered.push(mod);
+        }
+    }
     string? baseDir = ();
     foreach int i in 0..<dirs.length() {
         int cur = flipIndex(i, dirs.length());
@@ -140,8 +148,8 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
     if baseDir != () {
         int index = <int>absPath.lastIndexOf(baseDir);
         string basePath = absPath.substring(0, index + baseDir.length() + 1);
-    foreach RuntimeModule mod in rtModules.reverse() {
-            string path = check file:joinPath(basePath, "wrun", "wat", mod);
+    foreach RuntimeModule mod in filtered {
+        string path = check file:joinPath(basePath, "wrun", "wat", mod.file);
         wasm:Wat[] wat = check io:fileReadLines(path);
         string? identifier = ();
         string[] content = [];
@@ -157,8 +165,16 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
                     else {
                         sectionData[identifier] = content;
                     }
+                    if identifier is "export" {
+                        foreach wasm:Wat item in content {
+                            string iden = getIdentifier(item);
+                            if rtFunctions.indexOf(iden) == () {
+                                rtFunctions.push(iden);    
+                            }
+                        }
+                    }
                 }
-                else if identifier != () {
+                else if identifier != () && (rtFunctions.indexOf(identifier) != ()) {
                     functions[identifier] = content;
                 }
                 identifier = trimmed.substring(3);
@@ -169,7 +185,7 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
             }
             else if identifier is wasm:Section {
                 wasm:Wat[]? identifiers = sectionIdentifiers[identifier];
-                string iden = getSectionIdentifier(line);
+                string iden = getIdentifier(line);
                 if identifiers != () {
                     if identifiers.indexOf(iden) == () {
                         identifiers.push(iden);
@@ -182,9 +198,8 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
                 }
             }
             else if identifier != () {
-                if content.length() == 0 && functions.hasKey(identifier) {
-                    identifier = ();
-                    continue;
+                if rtFunctions.indexOf(identifier) != () {
+                    mayBeAddFunction(line, rtFunctions);
                 }
                 content.push(line);
             }
@@ -203,19 +218,34 @@ function addRttFunctions(wasm:Module module, RuntimeModule[] rtModules) returns 
     
 }
 
-function getSectionIdentifier(wasm:Wat line) returns string {
-    int? index = line.indexOf("$");
-    if index != () {
-        string sub = line.substring(index);
-        int nextCloseParenthesis = <int>sub.indexOf(")");
-        int? nextSpace = sub.indexOf(" ");
-        int end = nextCloseParenthesis;
-        if nextSpace != () {
-            end = nextCloseParenthesis > nextSpace ? nextSpace : nextCloseParenthesis;
+function mayBeAddFunction(wasm:Wat line, string[] rtFunctions) {
+    if line.includes("(call ") || line.includes("(ref.func ") {
+        string identifier = getIdentifier(line);
+        if rtFunctions.indexOf(identifier) == () {
+            rtFunctions.push(identifier);
         }
-        return sub.substring(0, end);
     }
-    panic error("section should have an identifier");
+}
+
+function getIdentifier(wasm:Wat line) returns string {
+    int index = <int>line.indexOf("$");
+    string sub = line.substring(index);
+    int? nextCloseParenthesis = sub.indexOf(")");
+    int? nextSpace = sub.indexOf(" ");
+    int end; 
+    if nextSpace != () && nextCloseParenthesis != () {
+        end = nextSpace > nextCloseParenthesis ? nextCloseParenthesis : nextSpace;
+    }
+    else if nextSpace != () {
+        end = nextSpace;
+    }
+    else if nextCloseParenthesis != () {
+        end = nextCloseParenthesis;
+    }
+    else {
+        end = sub.length();
+    }
+    return sub.substring(0, end);
 }
 
 function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:Expression {
