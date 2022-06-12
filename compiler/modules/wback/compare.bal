@@ -139,14 +139,14 @@ function buildCompare(wasm:Module module, Scaffold scaffold, bir:CompareInsn ins
                 t:SemType rhsType = rhs.semType; 
                 RuntimeFunction compareFunc = getArrayCompareFunction(tc, [lhsType, rhsType]);
                 return buildCompareStore(module, scaffold, opCode, 
-                                         buildRuntimeFunctionCall(module, scaffold.getMetaData(), compareFunc, [lhsValue, rhsValue]), 
+                                         buildRuntimeFunctionCall(module, scaffold, compareFunc, [lhsValue, rhsValue]), 
                                          insn.result);
             }
             else {
                 var orderTypeMinusNilCode = <t:UniformTypeCode>t:uniformTypeCode(orderTypeMinusNil);
                 RuntimeFunction compareFunc = compareFunctions.get(orderTypeMinusNilCode).optCompareFunction;
                 return buildCompareStore(module, scaffold, opCode,
-                                         buildRuntimeFunctionCall(module, scaffold.getMetaData(), compareFunc, [lhsValue, rhsValue]),
+                                         buildRuntimeFunctionCall(module, scaffold, compareFunc, [lhsValue, rhsValue]),
                                          insn.result);
             }
         }
@@ -200,7 +200,7 @@ function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns Ru
 }
 
 function buildCompareStore(wasm:Module module, Scaffold scaffold, int expected, wasm:Expression compareResult, bir:Register reg) returns wasm:Expression {
-    wasm:Expression transformResult = buildRuntimeFunctionCall(module, scaffold.getMetaData(), transformCompareResultFunction, 
+    wasm:Expression transformResult = buildRuntimeFunctionCall(module, scaffold, transformCompareResultFunction, 
                                                                [
                                                                    module.addConst({ i32: expected}), 
                                                                    compareResult
@@ -213,7 +213,7 @@ function buildCompareNumeric(wasm:Module module, wasm:Op op, wasm:Expression lhs
 }
 
 function buildCompareString(wasm:Module module, Scaffold scaffold, int op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    wasm:Expression value = buildRuntimeFunctionCall(module, scaffold.getMetaData(), stringCompFunction, [lhs, rhs]);
+    wasm:Expression value = buildRuntimeFunctionCall(module, scaffold, stringCompFunction, [lhs, rhs]);
     return buildCompareStore(module, scaffold, op, value, result);
 }
 

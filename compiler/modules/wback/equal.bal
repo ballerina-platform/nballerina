@@ -118,7 +118,7 @@ function buildEqualTaggedFloat(wasm:Module module, Scaffold scaffold, CmpEqOp op
 
 function buildEqualFloat(wasm:Module module, Scaffold scaffold, CmpEqOp op, boolean exact, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
     RuntimeFunction func = exact ? floatExactEqFunction : floatEqFunction;
-    wasm:Expression eq =  buildRuntimeFunctionCall(module, scaffold.getMetaData(), func, [lhs, rhs]);
+    wasm:Expression eq =  buildRuntimeFunctionCall(module, scaffold, func, [lhs, rhs]);
     if op != "eq" {
         eq = module.binary("i32.xor", eq, module.addConst({ i32: 1 }));
     }
@@ -127,7 +127,7 @@ function buildEqualFloat(wasm:Module module, Scaffold scaffold, CmpEqOp op, bool
 
 function buildEqualStringString(wasm:Module module, Scaffold scaffold, CmpEqOp op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
     RuntimeFunction func = stringEqFunction;
-    wasm:Expression eq =  buildRuntimeFunctionCall(module, scaffold.getMetaData(), func, [lhs, rhs]);
+    wasm:Expression eq =  buildRuntimeFunctionCall(module, scaffold, func, [lhs, rhs]);
     if op != "eq" {
         eq = module.binary("i32.xor", eq, module.addConst({ i32: 1 }));
     }
@@ -136,7 +136,7 @@ function buildEqualStringString(wasm:Module module, Scaffold scaffold, CmpEqOp o
 
 function buildEqualTaggedTagged(wasm:Module module, Scaffold scaffold, boolean exact, CmpEqOp op, wasm:Expression rhs, wasm:Expression lhs, bir:Register result) returns wasm:Expression {
     RuntimeFunction func = exact ? exactEqFunction : eqFunction;
-    wasm:Expression eq =  buildRuntimeFunctionCall(module, scaffold.getMetaData(), func, [lhs, rhs]);
+    wasm:Expression eq =  buildRuntimeFunctionCall(module, scaffold, func, [lhs, rhs]);
     if op != "eq" {
         eq = module.binary("i32.xor", module.addConst({ i32: 1 }), eq);
     }

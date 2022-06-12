@@ -105,15 +105,15 @@ function buildTaggedFloat(wasm:Module module, wasm:Expression value) returns was
 }
 
 function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
-    return buildRuntimeFunctionCall(module, scaffold.getMetaData(), taggedToIntFunction, [tagged]);
+    return buildRuntimeFunctionCall(module, scaffold, taggedToIntFunction, [tagged]);
 }
 
 function buildUntagBoolean(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
-    return buildRuntimeFunctionCall(module, scaffold.getMetaData(), taggedToBooleanFunction, [tagged]);
+    return buildRuntimeFunctionCall(module, scaffold, taggedToBooleanFunction, [tagged]);
 }
 
 function buildUntagFloat(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
-    return buildRuntimeFunctionCall(module, scaffold.getMetaData(), taggedToFloatFunction, [tagged]);
+    return buildRuntimeFunctionCall(module, scaffold, taggedToFloatFunction, [tagged]);
 }
 
 function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, RuntimeType rtt) returns wasm:Expression {
@@ -146,13 +146,19 @@ function buildConstString(wasm:Module module, Scaffold scaffold, string value) r
     return module.refAs("ref.as_non_null", module.globalGet(label));
 }
 
-function buildRuntimeFunctionCall(wasm:Module module, MetaData metaData, RuntimeFunction rf, wasm:Expression[] args) returns wasm:Expression {
+function buildRuntimeFunctionCall(wasm:Module module, Scaffold scaffold, RuntimeFunction rf, wasm:Expression[] args) returns wasm:Expression {
     var { name, returnType, rtModule } = rf;
-    if metaData.rtFunctions.indexOf("$" + name) == () {
-        metaData.rtFunctions.push("$" + name);
-    }
+    MetaData metaData = scaffold.getMetaData();
+    mayBeAddRtFunction(metaData, "$" + name);
     metaData.rtModules[rtModule.priority] = rtModule;
     return module.call(name, args, returnType);
+}
+
+function mayBeAddRtFunction(MetaData metaData, string name) {
+    var { rtFunctions } = metaData;
+    if rtFunctions.indexOf(name) == () {
+        rtFunctions.push(name);
+    }
 }
 
 function buildSurrogateArray(string val) returns int[] {
@@ -191,7 +197,7 @@ function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression va
 }
 
 function buildIsExactType(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, int ty) returns wasm:Expression {
-    wasm:Expression taggedType = buildRuntimeFunctionCall(module, scaffold.getMetaData(), getTypeFunction, [tagged]);
+    wasm:Expression taggedType = buildRuntimeFunctionCall(module, scaffold, getTypeFunction, [tagged]);
     wasm:Expression expectedType = module.addConst({ i32: ty });
     return  module.binary("i32.eq", taggedType, expectedType);
 }
@@ -271,4 +277,45 @@ function buildConvertRepr(wasm:Module module, Repr sourceRepr, wasm:Expression v
         }
     }
     panic error("unimplemented conversion required");
+}
+
+function buildGlobalString(wasm:Module module, Scaffold scaffold, string val, string global, int[] surrogate, int offset, int length) returns StringRecord {
+    wasm:Expression[] body = [];
+    string byteStr = buildStringData(module, val, global);
+    wasm:Expression offsetExpr = module.addConst({ i32: offset });
+    wasm:Expression jsString = buildRuntimeFunctionCall(module, scaffold, createStringFunction, [
+                                                                                        module.addConst({ i32: offset }), 
+                                                                                        module.addConst({i32: length })
+                                                                                        ]);
+    wasm:Expression defaultSurrogate = module.arrayNewDef("Surrogate", module.addConst({ i32: surrogate.length() }));
+    wasm:Expression defaultHash = module.addConst({ i32: -1 });
+    wasm:Expression struct = module.structNew(STRING_TYPE, [
+                                                            module.addConst({ i32: TYPE_STRING }), 
+                                                            jsString, 
+                                                            defaultSurrogate, 
+                                                            defaultHash
+                                                            ]);
+    body.push(module.globalSet(global, struct));
+    wasm:Expression surrogateArr = module.structGet(STRING_TYPE, "surrogate", module.globalGet(global));
+    foreach int i in 0 ..< surrogate.length() {
+        body.push(module.arraySet("Surrogate", 
+                                  surrogateArr,      
+                                  module.addConst({ i32: i }), 
+                                  module.addConst({ i32: surrogate[i] })));
+    }
+    return { global, body, byteStr, offsetExpr };
+}
+
+
+function buildStringData(wasm:Module module, string val, string global) returns string {
+    byte[] bytes = val.toBytes();
+    string[] hexes = [];
+    foreach byte item in bytes {
+        string hex = item.toHexString();
+        hexes.push(hex.length() == 2 ? hex : "0" + hex);
+    }
+    string byteStr = "\\".'join(...hexes);
+    byteStr = byteStr.length() > 0 ? "\\" + byteStr : byteStr;
+    module.addGlobal(global, { base: STRING_TYPE, initial: "null" }, module.refNull(STRING_TYPE));
+    return byteStr;
 }

@@ -113,20 +113,18 @@ class Scaffold {
     }
 
     function mayBeAddStringRecord(string val, int[] surrogate) returns string {
-        StringRecord? rec = self.metaData.segments[val];
+        var { segments, offset } = self.metaData;
+        StringRecord? rec = segments[val];
         if rec != () {
             return rec.global;
         }
         int numStrings = self.metaData.segments.keys().length();
-        StringRecord newRec = {
-                                offset: self.metaData.offset,
-                                global: "bal$str" + numStrings.toString(),
-                                length: val.toBytes().length(),
-                                surrogate: surrogate
-                              };
+        string global = "bal$str" + numStrings.toString();
+        int length = val.toBytes().length();
+        StringRecord newRec = buildGlobalString(self.module, self, val, global, surrogate, offset, length);
         self.metaData.segments[val] = newRec; 
-        self.metaData.offset += val.toBytes().length();
-        return newRec.global;
+        self.metaData.offset += length;
+        return global;
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];

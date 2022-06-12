@@ -7,10 +7,10 @@ import wso2/nballerina.comm.err;
 type BuildError err:Semantic|err:Unimplemented|err:Internal|io:Error|error;
 
 type StringRecord record {
-    int offset;
     string global;
-    int length;
-    int[] surrogate;
+    wasm:Expression[] body;
+    wasm:Expression offsetExpr;
+    string byteStr;
 };
 
 type MetaData record {
@@ -77,51 +77,18 @@ function buildModule(bir:Module mod) returns string[]|BuildError {
 
 
 function initStrings(wasm:Module module, MetaData metaData) returns wasm:Expression {
-    var { segments: records, offset: finalOffset } = metaData;
+    var { offset, segments } = metaData;
     wasm:Expression[] body = [];
-    wasm:Expression[] offsetExpr = [];
+    wasm:Expression[] offsetExprs = [];
     string[] byteStrs = [];
-    foreach string key in records.keys() {
-        var { offset, global, surrogate, length }  = records.get(key);
-        buildStringData(module, key, global, offset, offsetExpr, byteStrs);
-        wasm:Expression jsString = buildRuntimeFunctionCall(module, metaData, createStringFunction, [
-                                                                                            module.addConst({ i32: offset }), 
-                                                                                            module.addConst({i32: length })
-                                                                                          ]);
-        wasm:Expression defaultSurrogate = module.arrayNewDef("Surrogate", module.addConst({ i32: surrogate.length() }));
-        wasm:Expression defaultHash = module.addConst({ i32: -1 });
-        wasm:Expression struct = module.structNew(STRING_TYPE, [
-                                                                module.addConst({ i32: TYPE_STRING }), 
-                                                                jsString, 
-                                                                defaultSurrogate, 
-                                                                defaultHash
-                                                                ]);
-        body.push(module.globalSet(global, struct));
-        wasm:Expression surrogateArr = module.structGet(STRING_TYPE, "surrogate", module.globalGet(global));
-        foreach int i in 0 ..< surrogate.length() {
-            body.push(module.arraySet("Surrogate", 
-                                      surrogateArr,      
-                                      module.addConst({ i32: i }), 
-                                      module.addConst({ i32: surrogate[i] })));
-        }
+    foreach StringRecord rec in segments {
+        body.push(...rec.body);
+        offsetExprs.push(rec.offsetExpr);
+        byteStrs.push(rec.byteStr);
     }
-    int pages = (finalOffset / 65536) + 1;
-    module.setMemory(pages, "memory", byteStrs, offsetExpr);
+    int pages = (offset / 65536) + 1;
+    module.setMemory(pages, "memory", byteStrs, offsetExprs);
     return module.block(body);
-}
-
-function buildStringData(wasm:Module module, string key, string global, int offset, wasm:Expression[] offsetExpr, string[] byteStrs) {
-    byte[] bytes = key.toBytes();
-    string[] hexes = [];
-    foreach byte item in bytes {
-        string hex = item.toHexString();
-        hexes.push(hex.length() == 2 ? hex : "0" + hex);
-    }
-    string byteStr = "\\".'join(...hexes);
-    byteStr = byteStr.length() > 0 ? "\\" + byteStr : byteStr;
-    byteStrs.push(byteStr);
-    offsetExpr.push(module.addConst({ i32: offset }));
-    module.addGlobal(global, { base: STRING_TYPE, initial: "null" }, module.refNull(STRING_TYPE));
 }
 
 function addRttFunctions(wasm:Module module, MetaData metaData) returns error? {
@@ -167,10 +134,8 @@ function addRttFunctions(wasm:Module module, MetaData metaData) returns error? {
                     }
                     if identifier is "export" {
                         foreach wasm:Wat item in content {
-                            string iden = getIdentifier(item);
-                            if rtFunctions.indexOf(iden) == () {
-                                rtFunctions.push(iden);    
-                            }
+                            string exp = getIdentifier(item);
+                            mayBeAddRtFunction(metaData, exp);
                         }
                     }
                 }
@@ -199,7 +164,7 @@ function addRttFunctions(wasm:Module module, MetaData metaData) returns error? {
             }
             else if identifier != () {
                 if rtFunctions.indexOf(identifier) != () {
-                    mayBeAddFunction(line, rtFunctions);
+                    mayBeAddFunction(metaData, line, rtFunctions);
                 }
                 content.push(line);
             }
@@ -218,12 +183,10 @@ function addRttFunctions(wasm:Module module, MetaData metaData) returns error? {
     
 }
 
-function mayBeAddFunction(wasm:Wat line, string[] rtFunctions) {
+function mayBeAddFunction(MetaData metaData, wasm:Wat line, string[] rtFunctions) {
     if line.includes("(call ") || line.includes("(ref.func ") {
         string identifier = getIdentifier(line);
-        if rtFunctions.indexOf(identifier) == () {
-            rtFunctions.push(identifier);
-        }
+        mayBeAddRtFunction(metaData, identifier);
     }
 }
 

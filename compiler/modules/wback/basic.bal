@@ -113,7 +113,7 @@ function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) retur
 
 function buildStringConcat(wasm:Module module, Scaffold scaffold, bir:StringConcatInsn insn) returns wasm:Expression {
     wasm:Expression value = buildRuntimeFunctionCall(module,
-                                                     scaffold.getMetaData(),
+                                                     scaffold,
                                                      stringConcatFunction,
                                                      [
                                                          buildString(module, scaffold, insn.operands[0]),
