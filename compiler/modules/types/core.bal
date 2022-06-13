@@ -212,8 +212,6 @@ public class Context {
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
 
-    public final Witness witness = new;
-
     function init(Env env) {
         self.env = env;
     }
@@ -250,6 +248,7 @@ type UniformSubtype [UniformTypeCode, ProperSubtypeData];
 type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
 type UnaryOp function(SubtypeData t) returns SubtypeData;
 type UnaryTypeCheckOp function(Context cx, SubtypeData t) returns boolean;
+type UnaryTypeCheckWitnessOp function(Context cx, SubtypeData t, Witness w) returns boolean;
 
 function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
     panic error("binary operation should not be called");
@@ -263,12 +262,17 @@ function unaryTypeCheckOpPanic(Context cx, SubtypeData t) returns boolean {
     panic error("unary boolean operation should not be called");
 }
 
+function unaryTypeCheckOpWitnessPanic(Context cx, SubtypeData t, Witness w) returns boolean {
+    panic error("unary boolean operation should not be called");
+}
+
 type UniformTypeOps readonly & record {|
     BinOp union = binOpPanic;
     BinOp intersect = binOpPanic;
     BinOp diff = binOpPanic;
     UnaryOp complement = unaryOpPanic;
     UnaryTypeCheckOp isEmpty = unaryTypeCheckOpPanic;
+    UnaryTypeCheckWitnessOp isEmptyWitness = unaryTypeCheckOpWitnessPanic;
 |};
 
 final readonly & (UniformSubtype[]) EMPTY_SUBTYPES = [];
@@ -754,16 +758,11 @@ public function isNever(SemType t) returns boolean {
 
 public function isEmpty(Context cx, SemType t) returns boolean {
     if t is UniformTypeBitSet {
-        boolean noBits = t == 0;
-        if !noBits {
-            cx.witness.allOfTypes(t);
-        }
-        return noBits;
+        return t == 0;
     }
     else {
         if t.all != 0 {
             // includes all of one or more uniform types
-            cx.witness.allOfTypes(t.all);
             return false;
         }
         foreach var st in unpackComplexSemType(t) {
@@ -776,9 +775,38 @@ public function isEmpty(Context cx, SemType t) returns boolean {
         return true;
     }
 }
+
+public function isEmptyWitness(Context cx, SemType t, Witness w) returns boolean {
+    if t is UniformTypeBitSet {
+        boolean noBits = t == 0;
+        if !noBits {
+            w.allOfTypes(t);
+        }
+        return noBits;
+    }
+    else {
+        if t.all != 0 {
+            // includes all of one or more uniform types
+            w.allOfTypes(t.all);
+            return false;
+        }
+        foreach var st in unpackComplexSemType(t) {
+            var [code, data] = st;
+            var isEmpty = ops[code].isEmptyWitness;
+            if !isEmpty(cx, data, w) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
     
 public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean { 
     return isEmpty(cx, diff(t1, t2));
+}
+
+public function isSubtypeWitness(Context cx, SemType t1, SemType t2, Witness w) returns boolean { 
+    return isEmptyWitness(cx, diff(t1, t2), w);
 }
 
 public function includesSome(SemType t1, SemType t2) returns boolean {

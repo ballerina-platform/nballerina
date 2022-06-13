@@ -240,9 +240,9 @@ function testSemtypeWitness(front:SourcePart[] sources, string[] expected) retur
         string lhsStr = test.left.toString();
         string rhsStr = test.right.toString();
         
-        tc.witness.startRecording();
-        boolean lsr = t:isSubtype(tc, left, right);
-        string witness = tc.witness.toString();
+        t:Witness w = new();
+        boolean lsr = t:isSubtypeWitness(tc, left, right, w);
+        string witness = w.toString();
         match test.op { 
             "<" => {
                 test:assertEquals(lsr, false, string `${lhsStr} is not a proper subtype of ${rhsStr}`);
