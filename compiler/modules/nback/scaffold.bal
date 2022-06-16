@@ -430,6 +430,20 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
                                       [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
 }
 
+function addDecimalDefn(llvm:Context context, llvm:Module mod, int defnIndex, decimal val) returns llvm:ConstPointerValue {
+    var[lestSignificantVal, mostSignificantVal] = lib:toLeDpd(val);
+    llvm:ConstValue lestSignificant = llvm:constInt("i64", lestSignificantVal);
+    llvm:ConstValue mostSignificant = llvm:constInt("i64", mostSignificantVal);
+    llvm:ConstPointerValue ptr = mod.addGlobal(llvm:arrayType("i64", 2),
+                                               decimalDefnSymbol(defnIndex),
+                                               initializer = context.constArray("i64", [lestSignificant, mostSignificant]),
+                                               align = 8,
+                                               isConstant = true,
+                                               unnamedAddr = true,
+                                               linkage = "internal");
+    return context.constBitCast(ptr, LLVM_DECIMAL_CONST);
+}
+
 function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolean {
     return nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7);
 }
