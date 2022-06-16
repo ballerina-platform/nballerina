@@ -251,8 +251,8 @@ class Scaffold {
         if curDefn != () {
             return curDefn;
         }
-        var [top, bottom] = lib:toDpd(val);
-        DecimalDefn newDefn = [llvm:constInt("i64", top), llvm:constInt("i64", bottom)];
+        var [lestSignificant, mostSignificant] = lib:toLeDpd(val);
+        DecimalDefn newDefn = [llvm:constInt("i64", lestSignificant), llvm:constInt("i64", mostSignificant)];
         self.mod.decimalDefns[str] = newDefn;
         return newDefn;
     }

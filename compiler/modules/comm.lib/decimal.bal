@@ -1,4 +1,4 @@
-public function toDpd(decimal val) returns [int, int] {
+public function toLeDpd(decimal val) returns int[2] {
     string stringRep = val.toString();
     // this assumes toString generates a valid string representation ["+"|"-"]d+["."d+]["E"("+"|"-")d+]
     int sign = stringRep[0] == "-" ? (1 << 63) : 0;
@@ -26,9 +26,9 @@ public function toDpd(decimal val) returns [int, int] {
         significandBcd = paddedSignificant;
     }
     int:Unsigned16[] dpds = from int index in  0 ... 10 select bcd3ToDeclet(significandBcd, (index * 3) + 1);
-    int bottom = sign | dpdCombinationBits(exponent, significandBcd) | (dpds[0] << 36) | (dpds[1] << 26) | (dpds[2] << 16) | (dpds[3] << 6) | (dpds[4] >> 4);
-    int top = (dpds[4] & 0xf) << 60 | (dpds[5] << 50) | (dpds[6] << 40) | (dpds[7] << 30) | (dpds[8] << 20) | (dpds[9] << 10) | dpds[10];
-    return [top, bottom];
+    int mostSignificant = sign | dpdCombinationBits(exponent, significandBcd) | (dpds[0] << 36) | (dpds[1] << 26) | (dpds[2] << 16) | (dpds[3] << 6) | (dpds[4] >> 4);
+    int lestSignificant = (dpds[4] & 0xf) << 60 | (dpds[5] << 50) | (dpds[6] << 40) | (dpds[7] << 30) | (dpds[8] << 20) | (dpds[9] << 10) | dpds[10];
+    return [lestSignificant, mostSignificant];
 }
 
 // Takes 3 consecutive decimal numbers [0-9] (starting from starting index) in the significandBcd and encode them to a 10-bit declet

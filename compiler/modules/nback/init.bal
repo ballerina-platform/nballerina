@@ -613,12 +613,12 @@ function getInitString(InitModuleContext cx, string str) returns llvm:ConstPoint
 
 // This is relatively uncommon and LLVM will eliminate duplicates for us.
 function getInitDecimal(InitModuleContext cx, decimal d) returns llvm:ConstPointerValue {
-    var[topVal, bottomVal] = lib:toDpd(d);
-    llvm:ConstValue top = llvm:constInt("i64", topVal);
-    llvm:ConstValue bottom = llvm:constInt("i64", bottomVal);
+    var[lestSignificantVal, mostSignificantVal] = lib:toLeDpd(d);
+    llvm:ConstValue lestSignificant = llvm:constInt("i64", lestSignificantVal);
+    llvm:ConstValue mostSignificant = llvm:constInt("i64", mostSignificantVal);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llvm:arrayType("i64", 2),
                                                     decimalDefnSymbol(cx.decimalCount),
-                                                    initializer = cx.llContext.constArray("i64", [top, bottom]),
+                                                    initializer = cx.llContext.constArray("i64", [lestSignificant, mostSignificant]),
                                                     align = 8,
                                                     isConstant = true,
                                                     unnamedAddr = true,
