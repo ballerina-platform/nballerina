@@ -248,14 +248,6 @@ IntWithOverflow _bal_decimal_to_int(TaggedPtr tp) {
     return res;
 }
 
-TaggedPtr _bal_decimal_const(uint64_t top, uint64_t bottom) {
-    DecimalPtr dp = _bal_alloc(sizeof(decQuad));
-    uint64_t *ptr = (uint64_t*)dp;
-    ptr[0] = top;
-    ptr[1] = bottom;
-    return ptrAddFlags(dp, (uint64_t)TAG_DECIMAL << TAG_SHIFT);
-}
-
 bool _bal_decimal_subtype_contains(UniformSubtypePtr stp, TaggedPtr tp) {
     DecimalSubtypePtr dstp = (DecimalSubtypePtr)stp;
     return decimalListContains(dstp->decimals, dstp->decimals + dstp->nDecimals, taggedToDecQuad(tp));

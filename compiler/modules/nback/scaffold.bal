@@ -99,7 +99,7 @@ const STRING_VARIANT_LARGE = 1;
 type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT_SMALL|;
 
 type StringDefn llvm:ConstPointerValue;
-type DecimalDefn [llvm:ConstValue, llvm:ConstValue];
+type DecimalDefn llvm:ConstPointerValue;
 
 type Module record {|
     llvm:Context llContext;
@@ -251,8 +251,7 @@ class Scaffold {
         if curDefn != () {
             return curDefn;
         }
-        var [lestSignificant, mostSignificant] = lib:toLeDpd(val);
-        DecimalDefn newDefn = [llvm:constInt("i64", lestSignificant), llvm:constInt("i64", mostSignificant)];
+        DecimalDefn newDefn = addDecimalDefn(self.mod.llContext, self.mod.llMod, self.mod.decimalDefns.length(), val);
         self.mod.decimalDefns[str] = newDefn;
         return newDefn;
     }
