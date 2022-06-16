@@ -4,7 +4,6 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 
 // JBUG runtime InherentTypeViolation if initializer used without cloneReadOnly
-final readonly & Environment constEnvironment = (<Environment>{ bindings: () }).cloneReadOnly();
 final readonly & bir:BasicBlock constBasicBlock = (<bir:BasicBlock>{ label: 0 }).cloneReadOnly();
 final readonly & bir:FunctionCode constCode = (<bir:FunctionCode>{}).cloneReadOnly();
 
@@ -47,7 +46,7 @@ function resolvedConstHasType(s:ResolvedConst resolvedConst, t:SemType? expected
 }
 
 function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, t:SemType? expectedType) returns s:ResolvedConst|ResolveTypeError {
-    ExprContext cx = new ExprContext(mod, defn, constCode, constEnvironment, ());
+    ExprContext cx = new ExprContext(mod, defn, constCode, (), ());
     var { result } = check codeGenExpr(cx, constBasicBlock, expectedType, expr);
     bir:ConstOperand operand = <bir:ConstOperand>result;
     t:SemType semType = operand.semType;
