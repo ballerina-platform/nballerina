@@ -25,16 +25,15 @@ public function toLeDpd(decimal val) returns int[2] {
         paddedSignificant.push(...significandBcd);
         significandBcd = paddedSignificant;
     }
-    int:Unsigned16[] dpds = from int index in  0 ... 10 select bcd3ToDeclet(significandBcd, (index * 3) + 1);
+    int:Unsigned16[] dpds = from int index in  0 ... 10 let int startingIndex = (index * 3) + 1 select bcd3ToDeclet(significandBcd.slice(startingIndex, startingIndex + 3));
     int mostSignificant = sign | dpdCombinationBits(exponent, significandBcd) | (dpds[0] << 36) | (dpds[1] << 26) | (dpds[2] << 16) | (dpds[3] << 6) | (dpds[4] >> 4);
     int lestSignificant = (dpds[4] & 0xf) << 60 | (dpds[5] << 50) | (dpds[6] << 40) | (dpds[7] << 30) | (dpds[8] << 20) | (dpds[9] << 10) | dpds[10];
     return [lestSignificant, mostSignificant];
 }
 
-// Takes 3 consecutive decimal numbers [0-9] (starting from starting index) in the significandBcd and encode them to a 10-bit declet
-// This assumes significandBcd contains 34 numbers (padded with 0)
-function bcd3ToDeclet(byte[] significandBcd, int startingIndex) returns int:Unsigned16 {
-    byte[] bcds = from int index in startingIndex ..< startingIndex + 3 select significandBcd[index]; // bits: [Xabc, Ydef, Zghi]
+// Takes 3 consecutive decimal numbers [0-9] and encode them to a 10-bit declet
+// bcds: [Xabc, Ydef, Zghi]
+function bcd3ToDeclet(byte[] bcds) returns int:Unsigned16 {
     boolean[] isSmall = from byte bcd in bcds select bcd < 8;
     int encoding = ((bcds[0] & 1) << 7) | ((bcds[1] & 1) << 4) | (bcds[2] & 1); // these bit positions are constant in all encodings
     // checked in the order of most common to least common
@@ -52,7 +51,7 @@ function bcd3ToDeclet(byte[] significandBcd, int startingIndex) returns int:Unsi
         else if isSmall[1] && isSmall[2] {
             encoding |= (gh << 8) | (de << 5) | 4;
         }
-        else{
+        else {
             // at least 2 large
             encoding |= 14; // 111_
             if isSmall[0] {
