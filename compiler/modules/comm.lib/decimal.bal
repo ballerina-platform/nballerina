@@ -11,13 +11,26 @@ public function toLeDpd(decimal val) returns int[2] {
         exponent -= (sLast - dot);
     }
     byte[] significandBcd = from int i in sFirst ... sLast where i != dot select <byte>checkpanic int:fromString(stringRep[i]);
+    if significandBcd.length() > 34 && significandBcd[0] == 0 {
+        int leading_zeros = 0;
+        foreach int i in 0 ..< significandBcd.length() {
+            if significandBcd[i] == 0 {
+                leading_zeros += 1;
+            }
+            else {
+                break;
+            }
+        }
+        exponent -= leading_zeros;
+        significandBcd = significandBcd.slice(leading_zeros);
+    }
     while exponent - 6111 > 0 {
         // exponent is too large for exponent field
         significandBcd.push(0);
         exponent -= 1;
     }
     if significandBcd.length() > 34 {
-        panic error("overflowing significand"); // this should not happen since we are starting from a decimal
+        panic error("overflowing significand" + stringRep); // this should not happen since we are starting from a decimal
     }
     int paddingLen = 34 - significandBcd.length();
     if paddingLen > 0 {
@@ -34,6 +47,9 @@ public function toLeDpd(decimal val) returns int[2] {
 // Takes 3 consecutive decimal numbers [0-9] and encode them to a 10-bit declet
 // bcds: [Xabc, Ydef, Zghi]
 function bcd3ToDeclet(byte[] bcds) returns int:Unsigned16 {
+    if bcds.length() != 3 {
+        panic error("expect 3 consecutive decimal numbers");
+    }
     boolean[] isSmall = from byte bcd in bcds select bcd < 8;
     int encoding = ((bcds[0] & 1) << 7) | ((bcds[1] & 1) << 4) | (bcds[2] & 1); // these bit positions are constant in all encodings
     // checked in the order of most common to least common
