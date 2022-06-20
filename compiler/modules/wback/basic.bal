@@ -133,11 +133,16 @@ function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) ret
     }
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
     bir:Symbol funcSymbol = ref.symbol;
-    wasm:Expression call = module.call(funcSymbol.identifier, args, retRepr.wasm);
+    string mangledName;
     if funcSymbol is bir:ExternalSymbol {
+        mangledName = mangleExternalSymbol(funcSymbol);
         Component component = scaffold.getComponent();
-        component.mayBeAddRtFunction("$" + funcSymbol.identifier);
+        component.mayBeAddRtFunction("$" + mangledName);
     }
+    else {
+        mangledName = mangleInternalSymbol(scaffold.modId, funcSymbol);
+    }
+    wasm:Expression call = module.call(mangledName, args, retRepr.wasm);
     return retRepr !is VoidRepr ? buildStore(module, insn.result, call) : call;
 }
 

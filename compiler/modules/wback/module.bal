@@ -13,15 +13,18 @@ type StringRecord record {
     string byteStr;
 };
 
-public function buildModule(bir:Module mod, Component? wComp) returns Component|BuildError {
-    bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
+public function buildModule(bir:Module birMod, Component? wComp, boolean isDefault) returns Component|BuildError {
+    bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
+    bir:ModuleId modId = birMod.getId();
     Component component = wComp != () ? wComp : new;
     wasm:Module module = component.module;
     foreach int i in 0 ..< functionDefns.length() {
-        bir:FunctionCode code = check mod.generateFunctionCode(i);
-        check bir:verifyFunctionCode(mod, functionDefns[i], code);
-        Scaffold scaffold = new (module, code, functionDefns[i], component, mod.getTypeContext());
+        bir:FunctionCode code = check birMod.generateFunctionCode(i);
+        check bir:verifyFunctionCode(birMod, functionDefns[i], code);
+        Scaffold scaffold = new (module, code, functionDefns[i], component, birMod);
         wasm:Expression body = buildFunctionBody(scaffold, module);
+        bir:InternalSymbol symbol = functionDefns[i].symbol;
+        string mangledName = mangleInternalSymbol(modId, symbol);
         string funcName = functionDefns[i].symbol.identifier;
         wasm:Type[] params = [];
         wasm:Type[] locals = [];
@@ -44,14 +47,14 @@ public function buildModule(bir:Module mod, Component? wComp) returns Component|
             body = module.block([normalBlock, panicBlock], "$outer-block");
             scaffold.addExceptionTag(CUSTOM_EXCEPTION_TAG, "anyref");
         }
-        if funcName == "main" {
-            component.setMainFunction(body, locals);
+        if funcName == "main" && isDefault {
+            component.setMainFunction(mangledName, body, locals);
         }
         else {
-            module.addFunction(funcName, params, retRepr is Repr ? retRepr.wasm : "None", locals, body);
+            module.addFunction(mangledName, params, retRepr is Repr ? retRepr.wasm : "None", locals, body);
         }
         if functionDefns[i].symbol.isPublic {
-            module.addFunctionExport(funcName, funcName);
+            module.addFunctionExport(mangledName, isDefault && funcName == "main" ?  funcName : mangledName);
         }
     }
     return component;

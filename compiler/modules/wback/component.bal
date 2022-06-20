@@ -12,6 +12,7 @@ public class Component {
     private string[] rtFunctions = [];
     private wasm:Expression? mainBody = ();
     private wasm:Type[] mainLocals = [];
+    private string? mainMangledName = ();
 
     function init() {
         self.module = new;
@@ -62,16 +63,18 @@ public class Component {
         module.addGlobal("bal$err", { base: ERROR_TYPE, initial: "null" }, module.refNull(ERROR_TYPE));
         check addRttFunctions(module, self);
         wasm:Expression? mainBody = self.mainBody;
-        if mainBody != () {
+        string? mainMangledName = self.mainMangledName;
+        if mainBody != () && mainMangledName != (){
             wasm:Expression extendedBody = self.module.block([initStrings(module, self.segments, self.offset), mainBody]);
-            module.addFunction("main", [], "None", self.mainLocals, extendedBody);
+            module.addFunction(mainMangledName, [], "None", self.mainLocals, extendedBody);
         }
         return module.finish();
     }
 
-    function setMainFunction(wasm:Expression body, wasm:Type[] locals) {
+    function setMainFunction(string mainMangledName, wasm:Expression body, wasm:Type[] locals) {
         self.mainBody = body;
         self.mainLocals = locals;
+        self.mainMangledName = mainMangledName;
     }
 
 }

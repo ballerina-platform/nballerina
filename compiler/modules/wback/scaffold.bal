@@ -82,15 +82,17 @@ class Scaffold {
     private map<bir:RegionIndex> regionStepBlock = {};
     private bir:Label[] stepBlocks = [];
     private boolean hasPanic = false;
+    final bir:ModuleId modId;
     
-    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, Component component, t:Context typeContext) {
+    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, Component component, bir:Module birMod) {
         self.module = module;
         self.blocks = code.blocks;
         self.regions = code.regions;
         self.defn = def;
         self.returnType = def.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
-        self.typeContext = typeContext;
+        self.typeContext = birMod.getTypeContext();
+        self.modId = birMod.getId();
         self.component = component;
         self.initializeReprs(code.registers);
     }

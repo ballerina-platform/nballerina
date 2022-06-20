@@ -39,7 +39,8 @@ class CompileContext {
     }
 
     function buildWatModule(bir:ModuleId id, bir:Module birMod) returns wback:Component|CompileError {
-        wback:Component component = check wback:buildModule(birMod, self.component);
+        boolean isDefault = id == DEFAULT_ROOT_MODULE_ID;
+        wback:Component component = check wback:buildModule(birMod, self.component, isDefault);
         self.component = component;
         return component;
     }
@@ -82,7 +83,7 @@ class CompileContext {
 
 // basename is filename without extension
 function compileBalFile(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
-    boolean outWat = <boolean>outOptions.get("outWat");
+    boolean outWat = outOptions.hasKey("outWat") ? <boolean>outOptions.get("outWat") : false;
     CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions, outWat);
     front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
     check mod.validMain();
