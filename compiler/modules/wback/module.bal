@@ -53,8 +53,8 @@ public function buildModule(bir:Module birMod, Component? wComp, boolean isDefau
         else {
             module.addFunction(mangledName, params, retRepr is Repr ? retRepr.wasm : "None", locals, body);
         }
-        if functionDefns[i].symbol.isPublic {
-            module.addFunctionExport(mangledName, isDefault && funcName == "main" ?  funcName : mangledName);
+        if functionDefns[i].symbol.isPublic && isDefault {
+            module.addFunctionExport(mangledName, funcName);
         }
     }
     return component;
