@@ -85,7 +85,7 @@ function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConst
     t:SemType listType = insn.result.semType;
     var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.getTypeContext(), listType);
     var { rest, default } = listAtomicTypeToListRepr(module, scaffold, atomic);
-    wasm:Expression list = buildRuntimeFunctionCall(module, scaffold, listCreateFunction, [
+    wasm:Expression list = buildRuntimeFunctionCall(module, scaffold.getComponent(), listCreateFunction, [
                                                                                 module.addConst({ i64: length }), 
                                                                                 default, 
                                                                                 module.addConst({ i32: <int>rest })
@@ -96,7 +96,7 @@ function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConst
     foreach int i in 0 ..< length {
         wasm:Expression val = buildWideRepr(module, scaffold, insn.operands[i], REPR_ANY, insn.result.semType);
         wasm:Expression index = module.addConst({ i64: i });
-        wasm:Expression setVal = buildRuntimeFunctionCall(module, scaffold, listSetFunction, [loadList, val, index]);
+        wasm:Expression setVal = buildRuntimeFunctionCall(module, scaffold.getComponent(), listSetFunction, [loadList, val, index]);
         children.push(setVal);
     }
     return module.block(children);
@@ -105,7 +105,7 @@ function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConst
 function buildListGet(wasm:Module module, Scaffold scaffold, bir:ListGetInsn insn) returns wasm:Expression {
     wasm:Expression listOperand = buildLoad(module, insn.operands[0]);
     wasm:Expression indexOperand = module.unary("i32.wrap_i64", buildRepr(module, scaffold, insn.operands[1], REPR_INT));
-    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold, listGetFunction, [listOperand, indexOperand]);
+    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), listGetFunction, [listOperand, indexOperand]);
     Repr repr = semTypeRepr(insn.result.semType);
     if repr !is TaggedRepr {
         return buildStore(module, insn.result, buildUntagged(module, scaffold, call, repr));
@@ -117,13 +117,13 @@ function buildListSet(wasm:Module module, Scaffold scaffold, bir:ListSetInsn ins
     wasm:Expression listOperand = buildRepr(module, scaffold, insn.operands[0], REPR_LIST);
     wasm:Expression indexOperand = buildRepr(module, scaffold, insn.operands[1], REPR_INT);
     wasm:Expression newMemberOperand = buildRepr(module, scaffold, insn.operands[2], REPR_ANY);
-    return buildRuntimeFunctionCall(module, scaffold, listSetFunction, [listOperand, newMemberOperand, indexOperand]);
+    return buildRuntimeFunctionCall(module, scaffold.getComponent(), listSetFunction, [listOperand, newMemberOperand, indexOperand]);
 }
 
 function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:MappingConstructInsn insn) returns wasm:Expression {
     int length = insn.fieldNames.length();
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(scaffold.getTypeContext(), insn.result.semType);  
-    wasm:Expression mapping = buildRuntimeFunctionCall(module, scaffold, mappingConstructFunction, [
+    wasm:Expression mapping = buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingConstructFunction, [
                                                                                             module.addConst({ i32: length }), 
                                                                                             module.addConst({ i32: <int>mat.rest })
                                                                                          ]);
@@ -133,7 +133,7 @@ function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:Mappin
     foreach int i in 0..< length {
         wasm:Expression key = buildConstString(module, scaffold, insn.fieldNames[i]);
         wasm:Expression val = buildRepr(module, scaffold, insn.operands[i], REPR_ANY);
-        children.push(buildRuntimeFunctionCall(module, scaffold, mappingInitMemberFunction, [loadMap, key, val]));
+        children.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingInitMemberFunction, [loadMap, key, val]));
     }
     return module.block(children);
 }
@@ -141,12 +141,12 @@ function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:Mappin
 function buildMappingGet(wasm:Module module, Scaffold scaffold, bir:MappingGetInsn insn) returns wasm:Expression {
     wasm:Expression mapping = module.refAs("ref.as_non_null", buildLoad(module, insn.operands[0]));
     wasm:Expression key = buildString(module, scaffold, insn.operands[1]);
-    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold, mappingGetFunction, [mapping, key]));
+    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingGetFunction, [mapping, key]));
 }
 
 function buildMappingSet(wasm:Module module, Scaffold scaffold, bir:MappingSetInsn insn) returns wasm:Expression {
     wasm:Expression mapping = module.refAs("ref.as_non_null", buildLoad(module, insn.operands[0]));
     wasm:Expression key = buildString(module, scaffold, insn.operands[1]);    
     wasm:Expression val = buildRepr(module, scaffold, insn.operands[2], REPR_ANY);
-    return buildRuntimeFunctionCall(module, scaffold, mappingSetFunction, [mapping, key, val]);
+    return buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingSetFunction, [mapping, key, val]);
 }

@@ -88,7 +88,7 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
     wasm:Expression operation = buildStore(module, insn.result, module.binary(op, lhs, rhs));
     RuntimeFunction? overflowFunc = overflowFunction[op];
     if overflowFunc != () {
-        wasm:Expression overflowCheck = buildRuntimeFunctionCall(module, scaffold, overflowFunc, [lhs, rhs]);
+        wasm:Expression overflowCheck = buildRuntimeFunctionCall(module, scaffold.getComponent(), overflowFunc, [lhs, rhs]);
         return module.block([overflowCheck, operation]);
     }
     return operation;
@@ -99,7 +99,7 @@ function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToI
     if repr.base == BASE_REPR_FLOAT {
         return buildStore(module, insn.result, module.unary("i64.trunc_f64_s", val));
     }
-    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold, convertToIntFunction, [val]));
+    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold.getComponent(), convertToIntFunction, [val]));
 }
 
 function buildNoPanicArithmeticBinary(wasm:Module module, bir:IntNoPanicArithmeticBinaryInsn insn) returns wasm:Expression {
@@ -114,7 +114,7 @@ function buildConvertToFloat(wasm:Module module, Scaffold scaffold, bir:ConvertT
     if repr.base == BASE_REPR_INT {
         return buildStore(module, insn.result, module.unary("f64.convert_i64_s", val));
     }
-    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold, convertToFloatFunction, [val]));
+    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold.getComponent(), convertToFloatFunction, [val]));
 }
 
 function buildFloatArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:FloatArithmeticBinaryInsn insn) returns wasm:Expression {
@@ -122,7 +122,7 @@ function buildFloatArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:F
     wasm:Expression rhs = buildFloat(module, insn.operands[1]);
     wasm:Expression result;
     if insn.op == "%" {
-        result = buildRuntimeFunctionCall(module, scaffold, floatModulusFunction, [lhs, rhs]);
+        result = buildRuntimeFunctionCall(module, scaffold.getComponent(), floatModulusFunction, [lhs, rhs]);
     }
     else {
         wasm:Op op = floatArithmeticOps.get(insn.op);

@@ -71,7 +71,7 @@ class Scaffold {
     private bir:FunctionDefn defn;
     final t:SemType returnType;
     private final RetRepr retRepr;
-    private MetaData metaData = {};
+    private Component component;
     private t:Context typeContext;
     private map<wasm:Expression[]> renderedRegion = {};
     private bir:Label[] processedBlocks = [];
@@ -83,7 +83,7 @@ class Scaffold {
     private bir:Label[] stepBlocks = [];
     private boolean hasPanic = false;
     
-    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, MetaData metaData, t:Context typeContext) {
+    function init(wasm:Module module, bir:FunctionCode code, bir:FunctionDefn def, Component component, t:Context typeContext) {
         self.module = module;
         self.blocks = code.blocks;
         self.regions = code.regions;
@@ -91,8 +91,8 @@ class Scaffold {
         self.returnType = def.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
         self.typeContext = typeContext;
+        self.component = component;
         self.initializeReprs(code.registers);
-        self.metaData = metaData;
     }
 
     function initializeReprs(bir:Register[] registers) {
@@ -104,27 +104,12 @@ class Scaffold {
         self.reprs = reprs;
     }
 
-    function addExceptionTag(string tag, wasm:Type? kind = ()) {
-        if self.metaData.exceptionTags.indexOf(tag) == () {
-            self.module.addTag(tag, kind);
-            self.module.addTagExport(tag, tag);
-            self.metaData.exceptionTags.push(tag);
-        }
+    function addExceptionTag(ExceptionTag tag, wasm:Type? kind = ()) {
+        self.component.addExceptionTag(tag, kind);
     }
 
     function mayBeAddStringRecord(string val, int[] surrogate) returns string {
-        var { segments, offset } = self.metaData;
-        StringRecord? rec = segments[val];
-        if rec != () {
-            return rec.global;
-        }
-        int numStrings = self.metaData.segments.keys().length();
-        string global = "bal$str" + numStrings.toString();
-        int length = val.toBytes().length();
-        StringRecord newRec = buildGlobalString(self.module, self, val, global, surrogate, offset, length);
-        self.metaData.segments[val] = newRec; 
-        self.metaData.offset += length;
-        return global;
+        return self.component.mayBeAddStringRecord(val, surrogate);
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
@@ -145,8 +130,8 @@ class Scaffold {
         self.processedBlocks.push(label);
     }
 
-    function getMetaData() returns MetaData {
-        return self.metaData;
+    function getComponent() returns Component {
+        return self.component;
     }
 
     function isBlockNotProcessed(bir:Label label) returns boolean {

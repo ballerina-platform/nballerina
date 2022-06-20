@@ -6,7 +6,7 @@ import wso2/nballerina.comm.diagnostic as d;
 import ballerina/io;
 import ballerina/file;
 
-type CompileError err:Diagnostic|io:Error|file:Error;
+type CompileError err:Diagnostic|io:Error|file:Error|io:Error;
 
 public type Options record {
     boolean testJsonTypes = false;
@@ -61,12 +61,7 @@ public function main(string[] filenames, *Options opts) returns error? {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
             CompileError? err = ();
-            if opts.outWat {
-                err = compileBalFileToWat(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
-            }
-            else {
-                err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
-            }
+            err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
             if err is err:Internal {
                 panic error(d:toString(err.detail()), err);
             }

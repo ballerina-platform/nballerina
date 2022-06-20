@@ -105,15 +105,15 @@ function buildTaggedFloat(wasm:Module module, wasm:Expression value) returns was
 }
 
 function buildUntagInt(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
-    return buildRuntimeFunctionCall(module, scaffold, taggedToIntFunction, [tagged]);
+    return buildRuntimeFunctionCall(module, scaffold.getComponent(), taggedToIntFunction, [tagged]);
 }
 
 function buildUntagBoolean(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
-    return buildRuntimeFunctionCall(module, scaffold, taggedToBooleanFunction, [tagged]);
+    return buildRuntimeFunctionCall(module, scaffold.getComponent(), taggedToBooleanFunction, [tagged]);
 }
 
 function buildUntagFloat(wasm:Module module, Scaffold scaffold, wasm:Expression tagged) returns wasm:Expression {
-    return buildRuntimeFunctionCall(module, scaffold, taggedToFloatFunction, [tagged]);
+    return buildRuntimeFunctionCall(module, scaffold.getComponent(), taggedToFloatFunction, [tagged]);
 }
 
 function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, RuntimeType rtt) returns wasm:Expression {
@@ -146,16 +146,14 @@ function buildConstString(wasm:Module module, Scaffold scaffold, string value) r
     return module.refAs("ref.as_non_null", module.globalGet(label));
 }
 
-function buildRuntimeFunctionCall(wasm:Module module, Scaffold scaffold, RuntimeFunction rf, wasm:Expression[] args) returns wasm:Expression {
+function buildRuntimeFunctionCall(wasm:Module module, Component component, RuntimeFunction rf, wasm:Expression[] args) returns wasm:Expression {
     var { name, returnType, rtModule } = rf;
-    MetaData metaData = scaffold.getMetaData();
-    mayBeAddRtFunction(metaData, "$" + name);
-    metaData.rtModules[rtModule.priority] = rtModule;
+    component.mayBeAddRtFunction("$" + name);
+    component.addRtModule(rtModule);
     return module.call(name, args, returnType);
 }
 
-function mayBeAddRtFunction(MetaData metaData, string name) {
-    var { rtFunctions } = metaData;
+function mayBeAddRtFunction(string[] rtFunctions, string name) {
     if rtFunctions.indexOf(name) == () {
         rtFunctions.push(name);
     }
@@ -197,7 +195,7 @@ function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression va
 }
 
 function buildIsExactType(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, int ty) returns wasm:Expression {
-    wasm:Expression taggedType = buildRuntimeFunctionCall(module, scaffold, getTypeFunction, [tagged]);
+    wasm:Expression taggedType = buildRuntimeFunctionCall(module, scaffold.getComponent(), getTypeFunction, [tagged]);
     wasm:Expression expectedType = module.addConst({ i32: ty });
     return  module.binary("i32.eq", taggedType, expectedType);
 }
@@ -279,11 +277,11 @@ function buildConvertRepr(wasm:Module module, Repr sourceRepr, wasm:Expression v
     panic error("unimplemented conversion required");
 }
 
-function buildGlobalString(wasm:Module module, Scaffold scaffold, string val, string global, int[] surrogate, int offset, int length) returns StringRecord {
+function buildGlobalString(wasm:Module module, Component component, string val, string global, int[] surrogate, int offset, int length) returns StringRecord {
     wasm:Expression[] body = [];
     string byteStr = buildStringData(module, val, global);
     wasm:Expression offsetExpr = module.addConst({ i32: offset });
-    wasm:Expression jsString = buildRuntimeFunctionCall(module, scaffold, createStringFunction, [
+    wasm:Expression jsString = buildRuntimeFunctionCall(module, component, createStringFunction, [
                                                                                                     module.addConst({ i32: offset }), 
                                                                                                     module.addConst({i32: length })
                                                                                                 ]);

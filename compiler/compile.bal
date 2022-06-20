@@ -3,7 +3,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
 import wso2/nballerina.wback;
-
 import ballerina/file;
 import ballerina/io;
 
@@ -23,26 +22,26 @@ class CompileContext {
     private final nback:Options nbackOptions;
     private final string? outputBasename;
     private final nback:ProgramModule[] programModules = [];
-
-
+    private wback:Component? component = ();
+    final boolean isWasm;
     final t:Env env = new;
     final string basename;
     final OutputOptions outputOptions;
 
     final table<Job> key(id) jobs = table [];
 
-    function init(string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) {
+    function init(string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions, boolean isWasm) {
         self.basename = basename;
         self.outputBasename = outputBasename;
         self.outputOptions = outOptions;
         self.nbackOptions = nbackOptions;
+        self.isWasm = isWasm;
     }
 
-    function buildWatModule(bir:ModuleId id, bir:Module birMod, string? outFilename) {
-        io:Error? err = wback:compileModule(birMod, outFilename);
-        if err != () {
-            io:println(err);
-        }
+    function buildWatModule(bir:ModuleId id, bir:Module birMod) returns wback:Component|CompileError {
+        wback:Component component = check wback:buildModule(birMod, self.component);
+        self.component = component;
+        return component;
     }
 
     function buildLLVMModule(bir:ModuleId id, bir:Module birMod) returns LlvmModule|CompileError {
@@ -67,13 +66,13 @@ class CompileContext {
         }
     }
 
-    function outputFilename(string suffix = "", boolean wat = false) returns string? {
+    function outputFilename(string suffix = "") returns string? {
         string? basename = self.outputBasename;
         if basename == () {
             return ();
         }
         else {
-            if wat {
+            if self.isWasm {
                 return basename + suffix + WAT_OUTPUT_EXTENSION;
             }
             return basename + suffix + OUTPUT_EXTENSION;
@@ -83,40 +82,38 @@ class CompileContext {
 
 // basename is filename without extension
 function compileBalFile(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
-    CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions);
-    front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename(), false);
+    boolean outWat = <boolean>outOptions.get("outWat");
+    CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions, outWat);
+    front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
     check mod.validMain();
-    check generateInitModule(cx, mod);
+    if !outWat {
+        check generateInitModule(cx, mod);
+    }
 }
 
-function compileBalFileToWat(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
-    CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions);
-    _ = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename("", true), true);
-}
-
-function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename, boolean wat) returns front:ResolvedModule|CompileError {
+function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename) returns front:ResolvedModule|CompileError {
     front:ScannedModule scanned = check front:scanModule(sourceParts, id);
     // Fallowing doesn't properly pass the error back to the calling function if we get an error the import
     // ResolvedImport[] resolvedImports = from var mod in scanned.getImports() select check resolveImport(cx, mod);
     ResolvedImport[] resolvedImports = [];
-    if !wat {
-        foreach var mod in scanned.getImports() {
-            ResolvedImport ri = check resolveImport(cx, mod);
-            resolvedImports.push(ri);
-        }
+    foreach var mod in scanned.getImports() {
+        ResolvedImport ri = check resolveImport(cx, mod);
+        resolvedImports.push(ri);
     }
     front:ResolvedModule mod = check front:resolveModule(scanned, cx.env, resolvedImports);
-    if wat {
-        cx.buildWatModule(id, mod, outFilename);
-        return mod;
+    if cx.isWasm {
+        wback:Component component = check cx.buildWatModule(id, mod);
+        if outFilename != () {
+            check outputWatModule(component, outFilename);
+        }
     }
     else {
         LlvmModule llMod = check cx.buildLLVMModule(id, mod);
         if outFilename != () {
             check outputModule(llMod, outFilename, cx.outputOptions);
         }
-        return mod;
     }
+    return mod;
 }
 
 
@@ -150,7 +147,7 @@ function processImport(CompileContext cx, bir:ModuleId id) returns CompileError|
     if parts.length() == 0 {
         return "no module parts found";
     }
-    front:ResolvedModule mod = check processModule(cx, id, parts, cx.outputFilename("." + subModuleSuffix(id)), false);
+    front:ResolvedModule mod = check processModule(cx, id, parts, cx.isWasm ? () : cx.outputFilename("." + subModuleSuffix(id)));
     return mod.getExports();
 }
 

@@ -113,7 +113,7 @@ function buildRet(wasm:Module module, Scaffold scaffold, bir:RetInsn insn) retur
 
 function buildStringConcat(wasm:Module module, Scaffold scaffold, bir:StringConcatInsn insn) returns wasm:Expression {
     wasm:Expression value = buildRuntimeFunctionCall(module,
-                                                     scaffold,
+                                                     scaffold.getComponent(),
                                                      stringConcatFunction,
                                                      [
                                                         buildString(module, scaffold, insn.operands[0]),
@@ -135,8 +135,8 @@ function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) ret
     bir:Symbol funcSymbol = ref.symbol;
     wasm:Expression call = module.call(funcSymbol.identifier, args, retRepr.wasm);
     if funcSymbol is bir:ExternalSymbol {
-        MetaData metaData = scaffold.getMetaData();
-        mayBeAddRtFunction(metaData, "$" + funcSymbol.identifier);
+        Component component = scaffold.getComponent();
+        component.mayBeAddRtFunction("$" + funcSymbol.identifier);
     }
     return retRepr !is VoidRepr ? buildStore(module, insn.result, call) : call;
 }

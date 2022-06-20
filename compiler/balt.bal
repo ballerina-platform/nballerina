@@ -38,7 +38,7 @@ function compileBaltFile(string filename, string basename, string outDir, nback:
         string initFilename = check file:joinPath(outDir, outBasename) + "._init" + OUTPUT_EXTENSION;
         string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
         string[] lines = t.content;
-        CompileContext cx = new(basename, check file:joinPath(outDir, outBasename), nbackOptions, options);
+        CompileContext cx = new(basename, check file:joinPath(outDir, outBasename), nbackOptions, options, false);
         CompileError? err = compileAndOutputModule(cx, DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename, initFilename);
         if t.header.Test\-Case is "panic" && err != () {
             continue;
@@ -59,7 +59,7 @@ function compileBaltFile(string filename, string basename, string outDir, nback:
 }
 
 function compileAndOutputModule(CompileContext cx, bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename, string? initFilename) returns CompileError? {
-    front:ResolvedModule mod = check processModule(cx, modId, sources, <string>cx.outputFilename(), false);
+    front:ResolvedModule mod = check processModule(cx, modId, sources, <string>cx.outputFilename());
     check mod.validMain();
     check generateInitModule(cx, mod);
 }
