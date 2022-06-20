@@ -255,10 +255,6 @@ bool _bal_decimal_subtype_contains(UniformSubtypePtr stp, TaggedPtr tp) {
 
 // Do binary search for tp
 // Approximately the same code as tidListContains
-// The decimal constants are currently stored as ASCII strings,
-// which means we have to convert each before we compare it.
-// (Obviously far from optimal: the compiler should convert decimal constants into the IEEE binary128
-// format used by decNumber. This will be easier if we can self-host since we can link to decNumber.)
 static bool decimalListContains(const DecimalConstPtr *start, const DecimalConstPtr *end, const decQuad *dq) {
     // Lower bound inclusive; upper bound is exclusive
     // Invariant: if there is a member in the list == to dq, then its address p 
@@ -267,7 +263,7 @@ static bool decimalListContains(const DecimalConstPtr *start, const DecimalConst
     initContext(&cx);
     while (start < end) {
         const DecimalConstPtr *mid = start + (end - start)/2;
-        decQuad midVal = (**mid);
+        decQuad midVal = **mid;
         decQuad cmp;
         decQuadCompare(&cmp, dq, &midVal, &cx);
         enum decClass cmpClass = decQuadClass(&cmp);
