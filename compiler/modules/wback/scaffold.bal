@@ -110,8 +110,8 @@ class Scaffold {
         self.component.addExceptionTag(tag, kind);
     }
 
-    function mayBeAddStringRecord(string val, int[] surrogate) returns string {
-        return self.component.mayBeAddStringRecord(val, surrogate);
+    function maybeAddStringRecord(string val, int[] surrogate) returns string {
+        return self.component.maybeAddStringRecord(val, surrogate);
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];

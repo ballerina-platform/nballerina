@@ -137,7 +137,7 @@ function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) ret
     if funcSymbol is bir:ExternalSymbol {
         mangledName = mangleExternalSymbol(funcSymbol);
         Component component = scaffold.getComponent();
-        component.mayBeAddRtFunction("$" + mangledName);
+        component.maybeAddRtFunction("$" + mangledName);
     }
     else {
         mangledName = mangleInternalSymbol(scaffold.modId, funcSymbol);

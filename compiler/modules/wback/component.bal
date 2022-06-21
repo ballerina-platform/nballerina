@@ -26,7 +26,7 @@ public class Component {
         }
     }
 
-    function mayBeAddStringRecord(string val, int[] surrogate) returns string {
+    function maybeAddStringRecord(string val, int[] surrogate) returns string {
         StringRecord? rec = self.segments[val];
         if rec != () {
             return rec.global;
@@ -40,7 +40,7 @@ public class Component {
         return global;
     }
 
-    function mayBeAddRtFunction(string name) {
+    function maybeAddRtFunction(string name) {
         if self.rtFunctions.indexOf(name) == () {
             self.rtFunctions.push(name);
         }
@@ -138,7 +138,7 @@ function addRttFunctions(wasm:Module module, Component component) returns io:Err
                         if identifier is "export" {
                             foreach wasm:Wat item in content {
                                 string exp = getIdentifier(item);
-                                component.mayBeAddRtFunction(exp);
+                                component.maybeAddRtFunction(exp);
                             }
                         }
                     }
@@ -167,7 +167,7 @@ function addRttFunctions(wasm:Module module, Component component) returns io:Err
                 }
                 else if identifier != () {
                     if rtFunctions.indexOf(identifier) != () {
-                        mayBeAddFunction(component, line, rtFunctions);
+                        maybeAddFunction(component, line, rtFunctions);
                     }
                     content.push(line);
                 }
@@ -186,10 +186,10 @@ function addRttFunctions(wasm:Module module, Component component) returns io:Err
     
 }
 
-function mayBeAddFunction(Component component, wasm:Wat line, string[] rtFunctions) {
+function maybeAddFunction(Component component, wasm:Wat line, string[] rtFunctions) {
     if line.includes("(call ") || line.includes("(ref.func ") {
         string identifier = getIdentifier(line);
-        component.mayBeAddRtFunction(identifier);
+        component.maybeAddRtFunction(identifier);
     }
 }
 

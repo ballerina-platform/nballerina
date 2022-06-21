@@ -18,24 +18,34 @@ type Job record {|
     ProcessedImport|JOB_IN_PROGRESS? result;
 |};
 
+enum Backend {
+   LLVM,
+   WASM
+}
+
+final readonly & map<string> outputExtension = {
+    LLVM: LLVM_OUTPUT_EXTENSION,
+    WASM: WAT_OUTPUT_EXTENSION
+};
+
 class CompileContext {
     private final nback:Options nbackOptions;
     private final string? outputBasename;
     private final nback:ProgramModule[] programModules = [];
     private wback:Component? component = ();
-    final boolean isWasm;
+    final Backend backend;
     final t:Env env = new;
     final string basename;
     final OutputOptions outputOptions;
 
     final table<Job> key(id) jobs = table [];
 
-    function init(string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions, boolean isWasm) {
+    function init(string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions, Backend backend) {
         self.basename = basename;
         self.outputBasename = outputBasename;
         self.outputOptions = outOptions;
         self.nbackOptions = nbackOptions;
-        self.isWasm = isWasm;
+        self.backend = backend;
     }
 
     function buildWatModule(bir:ModuleId id, bir:Module birMod) returns wback:Component|CompileError {
@@ -73,21 +83,18 @@ class CompileContext {
             return ();
         }
         else {
-            if self.isWasm {
-                return basename + suffix + WAT_OUTPUT_EXTENSION;
-            }
-            return basename + suffix + OUTPUT_EXTENSION;
+            return basename + suffix + outputExtension.get(self.backend);
         }
     }
 }
 
 // basename is filename without extension
 function compileBalFile(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
-    boolean outWat = outOptions.hasKey("outWat") ? <boolean>outOptions.get("outWat") : false;
-    CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions, outWat);
+    Backend backend = outOptions.hasKey("outWat") ? WASM : LLVM;
+    CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions, backend);
     front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
     check mod.validMain();
-    if !outWat {
+    if backend == LLVM {
         check generateInitModule(cx, mod);
     }
 }
@@ -102,7 +109,7 @@ function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] so
         resolvedImports.push(ri);
     }
     front:ResolvedModule mod = check front:resolveModule(scanned, cx.env, resolvedImports);
-    if cx.isWasm {
+    if cx.backend == WASM {
         wback:Component component = check cx.buildWatModule(id, mod);
         if outFilename != () {
             check outputWatModule(component, outFilename);
@@ -148,7 +155,7 @@ function processImport(CompileContext cx, bir:ModuleId id) returns CompileError|
     if parts.length() == 0 {
         return "no module parts found";
     }
-    front:ResolvedModule mod = check processModule(cx, id, parts, cx.isWasm ? () : cx.outputFilename("." + subModuleSuffix(id)));
+    front:ResolvedModule mod = check processModule(cx, id, parts, cx.backend == LLVM ? cx.outputFilename("." + subModuleSuffix(id)) : ());
     return mod.getExports();
 }
 

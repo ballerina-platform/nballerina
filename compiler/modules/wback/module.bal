@@ -169,11 +169,11 @@ function preProcessRegions(Scaffold scaffold) {
             }
             bir:Insn lastInsn = getLastInsn(blocks[cur]);
             if lastInsn is bir:CondBranchInsn|bir:TypeBranchInsn {
-                mayBePush([lastInsn.ifTrue, lastInsn.ifFalse], queue, processedQ, exit);
+                maybePush([lastInsn.ifTrue, lastInsn.ifFalse], queue, processedQ, exit);
             }
             else if lastInsn is bir:BranchInsn {
                 bir:Label dest = lastInsn.dest;
-                mayBePush([dest], queue, processedQ, exit);
+                maybePush([dest], queue, processedQ, exit);
                 if kind == bir:REGION_LOOP {
                     if dest == entry {
                         bir:Label? loopBody = getLoopBodyBlockLabel(blocks[entry]);
@@ -213,7 +213,7 @@ function isForLoop(bir:Label entry, bir:Label? firstBodyLabel) returns boolean {
     return firstBodyLabel != entry + 1;
 }
 
-function mayBePush(bir:Label[] labels, bir:Label[] queue, bir:Label[] processedQ, bir:Label? exit) {
+function maybePush(bir:Label[] labels, bir:Label[] queue, bir:Label[] processedQ, bir:Label? exit) {
     foreach bir:Label label in labels {
         if processedQ.indexOf(label) == () && queue.indexOf(label) == () && label != exit {
             queue.push(label);
