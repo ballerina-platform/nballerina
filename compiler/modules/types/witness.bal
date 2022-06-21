@@ -1,45 +1,97 @@
-import ballerina/io;
 import wso2/nballerina.comm.lib;
 
+public type WitnessableSubtype MappingAtomicType|StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype;
 
-type WitnessableSubtype MappingAtomicType|SubtypeData;
+public type WitnessValue WrappedSingleValue|string|map<WitnessValue>?;
 
-// todo: witness generation should be moved to each file of the subtype and probably be part of the function v-table.
+final readonly & [int, WrappedSingleValue|string][] uniformTypeSample = [
+    [NEVER, "never"],
+    [NIL, "()"],
+    [BOOLEAN, { value: true }],
+    [INT, { value: 42 }],
+    [FLOAT, { value: 2.5f }],
+    [DECIMAL, { value: 3.5d }],
+    [STRING, { value: "non empty string" }],
+    [ERROR, "error"],
+    [LIST, "list"],
+    [LIST_RO, "list"],
+    [LIST_RW, "list"],
+    [MAPPING, "map"],
+    [MAPPING_RO, "map"],
+    [MAPPING_RW, "map"],
+    [TABLE, "table"],
+    [TABLE_RO, "table"],
+    [TABLE_RW, "table"],
+    [FUNCTION, "function"],
+    [TYPEDESC, "typedesc"],
+    [HANDLE, "handle"],
+    [XML, "xml"]
+];
+
+function foo() {
+    int i = 0;
+}
 
 public class Witness {
-    private final UniformTypeBitSet[] bits = [];
-    private final WitnessableSubtype[] subtypes = [];
+    private WitnessValue witness;
+    private Context cx;
+
+    public function init(Context cx) {
+        self.cx = cx;
+        self.witness = ();
+    }
 
     public function remainingType(WitnessableSubtype|error subtypeData) {
-        if subtypeData !is error {
-            self.subtypes.push(subtypeData);
-            io:println(subtypeData);
+        if self.witness == () && subtypeData !is error {
+            self.witness = subtypeToWitnessValue(self.cx, subtypeData);
         }
     }
 
     public function allOfTypes(UniformTypeBitSet all) {
-        self.bits.push(all);
-        io:println("all of type: 0x" + all.toHexString());
+        self.witness = uniformTypesToWitnessValue(all);
     }
 
-    public function toString() returns string {
-        string[] types = [];
-        foreach var bitset in self.bits {
-             types.push(uniformTypesToString(bitset));
+    public function get() returns WitnessValue => self.witness;
+}
+
+function uniformTypesToWitnessValue(UniformTypeBitSet bitset) returns WrappedSingleValue|string? {
+    foreach var [ut, sample] in uniformTypeSample {
+        if (ut & bitset) != 0 {
+            return sample;
         }
-        if types.length() > 0 {
-            return "|".join(...types);
+    }
+    return ();
+}
+
+function semTypeToWitnessValue(Context cx, SemType t) returns WitnessValue {
+    if t is UniformTypeBitSet {
+        return uniformTypesToWitnessValue(t);
+    }
+    else {
+        if t.all != 0 {
+            return uniformTypesToWitnessValue(t.all);
         }
-        foreach var subtype in self.subtypes {
-            types.push(subtypeToString(subtype));
+        foreach var [code, _] in uniformTypeSample {
+            if (code & t.some) != 0 {
+                SubtypeData subtypeData = getComplexSubtypeData(t, <UniformTypeCode>code);
+                if subtypeData is WitnessableSubtype {
+                    return subtypeToWitnessValue(cx, subtypeData);
+                }
+                else if subtypeData is BddNode {
+                    return "[Bdd witness not supported]";
+                }
+                else {
+                    return "[Unsupported witness shape]";
+                }
+            }
         }
-        return "|".join(...types);
+        return ();
     }
 }
 
-function subtypeToString(WitnessableSubtype subtype) returns string {
+function subtypeToWitnessValue(Context cx, WitnessableSubtype subtype) returns WitnessValue {
     if subtype is MappingAtomicType {
-        return createMappingWitness(subtype);
+        return createMappingWitness(cx, subtype);
     }
     else if subtype is StringSubtype {
         return createStringWitness(subtype);
@@ -47,33 +99,33 @@ function subtypeToString(WitnessableSubtype subtype) returns string {
     else if subtype is DecimalSubtype {
         return createDecimalWitness(subtype);
     }
-    else if subtype is FloatSubtype {
+    else if subtype is FloatSubtype { 
         return createFloatWitness(subtype);
-    }
-    else if subtype is IntSubtype {
-        return createIntWitness(subtype);
     }
     else if subtype is BooleanSubtype {
         return createBooleanWitness(subtype);
     }
-    else if subtype is XmlSubtype {
-        return createXmlWitness(subtype);
+    else {
+        return createIntWitness(subtype);
     }
-    else if subtype is RwTableSubtype {
-        return createTableWitness(subtype);
-    }
-    return "";
 }
 
-function createMappingWitness(MappingAtomicType subtype) returns string {
-    return "";
+function createMappingWitness(Context cx, MappingAtomicType subtype) returns WitnessValue {
+    map<WitnessValue> witness = {};
+    foreach int i in 0 ..< subtype.names.length() {
+        witness[subtype.names[i]] = semTypeToWitnessValue(cx, subtype.types[i]);
+    }
+    if !isNever(subtype.rest) {
+        witness["..."] = semTypeToWitnessValue(cx, subtype.rest);
+    }
+    return witness;
 }
 
-function createStringWitness(StringSubtype subtype) returns string {
+function createStringWitness(StringSubtype subtype) returns WrappedSingleValue {
     var { char, nonChar } = subtype;
     if nonChar.allowed {
         if nonChar.values.length() > 0 {
-            return nonChar.values[0];
+            return { value: nonChar.values[0] };
         }
     }
     else {
@@ -81,36 +133,36 @@ function createStringWitness(StringSubtype subtype) returns string {
     }
     if char.allowed {
         if char.values.length() > 0 {
-            return char.values[0];
+            return { value: char.values[0] };
         }
     }
     else {
         return createRandomStringWitness(1, char.values);
     }
-    return "";
+    panic error("not implemented!");
 }
 
-function createRandomStringWitness(int len, string[] exclude) returns string {
+function createRandomStringWitness(int len, string[] exclude) returns WrappedSingleValue {
     lib:Random random = new(11);
     while true {
-        string s = random.randomStringValue(len);
-        if exclude.indexOf(s) == () {
-            return s;
+        string value = random.randomStringValue(len);
+        if exclude.indexOf(value) == () {
+            return { value };
         }
     }
 }
 
-function createDecimalWitness(DecimalSubtype subtype) returns string {
+function createDecimalWitness(DecimalSubtype subtype) returns WrappedSingleValue {
     if subtype.allowed {
-        return subtype.values[0].toString();
+        return { value: subtype.values[0] };
     }
     else {
         lib:Random random = new(11);
         while true {
             do {
-                decimal d = check decimal:fromString(string `${random.next()}.${random.next()}`);
-                if subtype.values.indexOf(d) == () {
-                    return d.toString() + "d";
+                decimal value = check decimal:fromString(string `${random.next()}.${random.next()}`);
+                if subtype.values.indexOf(value) == () {
+                    return { value };
                 }
             } on fail error e {
                 // ignore the error and re iterate the while loop.
@@ -120,17 +172,17 @@ function createDecimalWitness(DecimalSubtype subtype) returns string {
     }
 }
 
-function createFloatWitness(FloatSubtype subtype) returns string {
+function createFloatWitness(FloatSubtype subtype) returns WrappedSingleValue {
     if subtype.allowed {
-        return subtype.values[0].toString();
+        return { value: subtype.values[0] };
     }
     else {
         lib:Random random = new(11);
         while true {
             do {
-                float f = check float:fromString(string `${random.next()}.${random.next()}`);
-                if subtype.values.indexOf(f) == () {
-                    return f.toString() + "d";
+                float value = check float:fromString(string `${random.next()}.${random.next()}`);
+                if subtype.values.indexOf(value) == () {
+                    return { value };
                 }
             } on fail error e {
                 // ignore the error and re iterate the while loop.
@@ -140,60 +192,11 @@ function createFloatWitness(FloatSubtype subtype) returns string {
     }
 }
 
-function createIntWitness(IntSubtype subtype) returns string {
-    return subtype[0].min.toString();
+function createIntWitness(IntSubtype subtype) returns WrappedSingleValue {
+    return { value: subtype[0].min };
 }
 
-function createBooleanWitness(BooleanSubtype subtype) returns string {
-    return subtype.value.toString();
+function createBooleanWitness(BooleanSubtype subtype) returns WrappedSingleValue {
+    return { value: subtype.value };
 }
 
-function createXmlWitness(XmlSubtype subtype) returns string {
-    return "";
-}
-
-function createTableWitness(RwTableSubtype subtype) returns string {
-    return "";
-}
-
-final readonly & [int, string][] uniformTypeNames = [
-    [NEVER, "never"],
-    [NIL, "nil"],
-    [BOOLEAN, "boolean"],
-    [INT, "int"],
-    [FLOAT, "float"],
-    [DECIMAL, "decimal"],
-    [STRING, "string"],
-    [ERROR, "error"],
-    [LIST, "list"],
-    [LIST_RO, "readonly & list"],
-    [LIST_RW, "!readonly & list"],
-    [MAPPING, "map"],
-    [MAPPING_RO, "readonly & map"],
-    [MAPPING_RW, "!readonly & map"],
-    [TABLE, "table"],
-    [TABLE_RO, "readonly & table"],
-    [TABLE_RW, "!readonly & table"],
-    [FUNCTION, "function"],
-    [TYPEDESC, "typedesc"],
-    [HANDLE, "handle"],
-    [XML, "xml"]
-];
-
-function uniformTypesToString(UniformTypeBitSet bitset) returns string {
-    string[] names = [];
-    int skipCount = 0;
-    foreach var [ut, name] in uniformTypeNames {
-        if skipCount > 0 {
-            skipCount -= 1;
-            continue;
-        }
-        if (ut & bitset) != 0 {
-            names.push(name);
-        }
-        if (ut & LIST) == LIST || (ut & MAPPING) == MAPPING || (ut & TABLE) == TABLE {
-            skipCount = 2;
-        }
-    }
-    return "|".join(...names);
-}

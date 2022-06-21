@@ -167,6 +167,7 @@ public isolated class Env {
 public type BddMemo record {|
     readonly Bdd bdd;
     boolean? isEmpty = ();
+    WitnessValue? witness = ();
 |};
 
 type BddMemoTable table<BddMemo> key(bdd);

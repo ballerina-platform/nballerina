@@ -1,6 +1,7 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
+import wso2/nballerina.front.'type.witness as w;
 
 public type SemType t:SemType;
 public type Position d:Position;
@@ -384,8 +385,8 @@ public type StringOperand StringConstOperand|Register;
 public type FunctionOperand FunctionRef|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns [boolean, string] {
-    t:Witness witness = new();
-    return [t:isSubtypeWitness(tc, operand.semType, semType, witness), witness.toString()];
+    t:Witness witness = new(tc);
+    return [t:isSubtypeWitness(tc, operand.semType, semType, witness), w:typeWitnessToString(witness)];
 }
 
 # Perform a arithmetic operand on ints with two operands.

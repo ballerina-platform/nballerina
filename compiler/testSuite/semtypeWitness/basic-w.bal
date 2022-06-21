@@ -1,3 +1,7 @@
 type I int;
-// @type I < S | 0
-type S string;
+
+type M1 map<float>;
+
+// @type M < M1  | 0
+type M map<string>;
+

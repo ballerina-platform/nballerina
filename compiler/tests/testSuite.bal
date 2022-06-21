@@ -4,6 +4,7 @@ import wso2/nballerina.front;
 import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
+import wso2/nballerina.front.'type.witness as w;
 
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
@@ -240,9 +241,9 @@ function testSemtypeWitness(front:SourcePart[] sources, string[] expected) retur
         string lhsStr = test.left.toString();
         string rhsStr = test.right.toString();
         
-        t:Witness w = new();
+        t:Witness w = new(tc);
         boolean lsr = t:isSubtypeWitness(tc, left, right, w);
-        string witness = w.toString();
+        string witness = w:typeWitnessToString(w);
         match test.op { 
             "<" => {
                 test:assertEquals(lsr, false, string `${lhsStr} is not a proper subtype of ${rhsStr}`);
