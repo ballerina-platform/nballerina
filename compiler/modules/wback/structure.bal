@@ -48,6 +48,12 @@ final RuntimeFunction mappingSetFunction = {
     rtModule: mapMod
 };
 
+final RuntimeFunction mappingIndexedSetFunction = {
+    name: "_bal_mapping_indexed_set",
+    returnType: "None",
+    rtModule: mapMod
+};
+
 final RuntimeFunction mappingGetFunction = {
     name: "_bal_mapping_get",
     returnType: "eqref",
@@ -123,9 +129,10 @@ function buildListSet(wasm:Module module, Scaffold scaffold, bir:ListSetInsn ins
 function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:MappingConstructInsn insn) returns wasm:Expression {
     int length = insn.fieldNames.length();
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(scaffold.getTypeContext(), insn.result.semType);  
+    wasm:Expression inherentType = scaffold.getUsedMapAtomicType(mat);
     wasm:Expression mapping = buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingConstructFunction, [
                                                                                             module.addConst({ i32: length }), 
-                                                                                            module.addConst({ i32: <int>mat.rest })
+                                                                                            inherentType
                                                                                          ]);
     wasm:Expression mapSet = buildStore(module, insn.result, mapping);
     wasm:Expression[] children = [mapSet];
@@ -141,12 +148,40 @@ function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:Mappin
 function buildMappingGet(wasm:Module module, Scaffold scaffold, bir:MappingGetInsn insn) returns wasm:Expression {
     wasm:Expression mapping = module.refAs("ref.as_non_null", buildLoad(module, insn.operands[0]));
     wasm:Expression key = buildString(module, scaffold, insn.operands[1]);
-    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingGetFunction, [mapping, key]));
+    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingGetFunction, [mapping, key]);
+    Repr repr = semTypeRepr(insn.result.semType);
+    if repr !is TaggedRepr {
+        return buildStore(module, insn.result, buildUntagged(module, scaffold, call, repr));
+    }
+    return buildStore(module, insn.result, mayBeCast(module, scaffold, call, repr));
 }
 
 function buildMappingSet(wasm:Module module, Scaffold scaffold, bir:MappingSetInsn insn) returns wasm:Expression {
-    wasm:Expression mapping = module.refAs("ref.as_non_null", buildLoad(module, insn.operands[0]));
+    bir:Register mappingReg = insn.operands[0];
+    bir:StringOperand keyOperand = insn.operands[1];
+    wasm:Expression mapping = module.refAs("ref.as_non_null", buildLoad(module, mappingReg));
     wasm:Expression key = buildString(module, scaffold, insn.operands[1]);    
     wasm:Expression val = buildRepr(module, scaffold, insn.operands[2], REPR_ANY);
-    return buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingSetFunction, [mapping, key, val]);
+    int? fieldIndex = mappingFieldIndex(scaffold.getTypeContext(), mappingReg.semType, keyOperand);
+    RuntimeFunction rf;
+    wasm:Expression[] args = [mapping, key, val];
+    if fieldIndex != () {
+        rf = mappingIndexedSetFunction;
+        args.push(module.addConst({ i32: fieldIndex }));
+    }
+    else {
+        rf = mappingSetFunction;
+    }
+    return buildRuntimeFunctionCall(module, scaffold.getComponent(), rf, args);
+}
+
+function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand) returns int? {
+    string? k = t:singleStringShape(keyOperand.semType);
+    if k is string {
+        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
+        if mat != () && mat.rest == t:NEVER {
+            return mat.names.indexOf(k);
+        }
+    }
+    return ();
 }

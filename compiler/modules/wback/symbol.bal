@@ -1,9 +1,5 @@
 import wso2/nballerina.bir;
 
-function mangleRuntimeSymbol(string name) returns string {
-    return "_bal_" + name;
-}
-
 // This is just enough to get us started.
 // C++ starts mangled names with `_Z` (why `Z`?),
 // Rust starts with `_R`
@@ -62,4 +58,10 @@ function mangleInternalSymbol(bir:ModuleId modId, bir:InternalSymbol symbol) ret
         return manglePublicSymbol(modId, symbol.identifier);
     }
     return "_B_" + symbol.identifier;
+}
+
+function mangleTypeSymbol(int index) returns string {
+    string result = "_Bt";
+    result += index.toString();
+    return result;    
 }

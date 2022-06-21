@@ -11,7 +11,7 @@
   (export "_bal_mapping_get_key" (func $_bal_mapping_get_key)) 
   (export "_bal_mapping_num_keys" (func $_bal_mapping_num_keys)) 
   ;; $_bal_mapping_construct
-  (func $_bal_mapping_construct (param $0 i32) (param $1 i32) (result (ref $Map))
+  (func $_bal_mapping_construct (param $0 i32) (param $1 eqref) (result (ref $Map))
     (local $2 i32)
     (local $3 i32)
     (local.set $2
@@ -53,6 +53,29 @@
         (i32.const 0)
         (rtt.canon $MapFields))
       (global.get $rttMap)))
+  ;; $_bal_mapping_indexed_set
+  (func $_bal_mapping_indexed_set (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) (param $3 i32)
+    (local $4 (ref null $MapTypeArr))
+    (local.set $4
+      (ref.cast 
+        (ref.as_data
+          (struct.get $Map $atomic
+            (local.get $0)))
+        (global.get $rttMapTypeArr)))
+    (if
+      (i32.eqz
+        (i32.and
+          (call $_bal_get_type
+            (local.get $2))
+          (array.get_u $MapTypeArr
+            (ref.as_non_null
+              (local.get $4))
+            (local.get $3))))
+      (throw $bad-mapping-store))
+    (call $_bal_mapping_set
+      (local.get $0)
+      (local.get $1)
+      (local.get $2)))
   ;; $_bal_mapping_set
   (func $_bal_mapping_set (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
     (local $3 (ref null $MapFields))
@@ -61,13 +84,19 @@
     (local $6 i32)
     (local $7 i32)
     (if
-      (i32.eqz
-        (i32.and
-          (call $_bal_get_type
-            (local.get $2))
-          (struct.get $Map $atomic
-            (local.get $0))))
-      (throw $bad-mapping-store))
+      (ref.is_i31
+        (struct.get $Map $atomic
+          (local.get $0)))
+      (if
+        (i32.eqz
+          (i32.and
+            (call $_bal_get_type
+              (local.get $2))
+            (i31.get_u
+              (ref.as_i31
+                (struct.get $Map $atomic
+                  (local.get $0))))))
+        (throw $bad-mapping-store)))
     (local.set $7
       (call $_bal_map_lookup
         (local.get $0)

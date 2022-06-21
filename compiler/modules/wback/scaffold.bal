@@ -63,6 +63,11 @@ type RegionBlocks record {|
     bir:Label[] labels;
 |};
 
+type UsedMapAtomicType record {|
+    readonly t:MappingAtomicType semType;
+    readonly string global;
+|};
+
 class Scaffold {
     private wasm:Module module;
     final bir:BasicBlock[] blocks;
@@ -194,6 +199,28 @@ class Scaffold {
         return self.renderedRegion[index.toString()];
     }
 
+    function getUsedMapAtomicType(t:MappingAtomicType ty) returns wasm:Expression {
+        wasm:Module module = self.module;
+        Component component = self.component;
+        UsedMapAtomicType? used  = component.usedMapAtomicTypes[ty];
+        if used != () {
+            return module.globalGet(used.global);
+        }
+        string symbol = mangleTypeSymbol(component.usedMapAtomicTypes.length());
+        UsedMapAtomicType t = {
+            global: symbol,
+            semType: ty
+        };
+        if ty.rest != t:NEVER {
+            module.addGlobal(symbol, "i31ref", 
+                             module.i31New(module.addConst({ i32: t:widenToUniformTypes(ty.rest) })));
+        }
+        else {
+            module.addGlobal(symbol, { base: MAP_TYPE_ARR, initial: "null" }, module.refNull(MAP_TYPE_ARR));
+        }
+        component.usedMapAtomicTypes.add(t);
+        return module.globalGet(t.global);
+    }
 }
 
 final IntRepr REPR_INT = { };

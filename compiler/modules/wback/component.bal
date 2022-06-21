@@ -1,6 +1,7 @@
 import ballerina/io;
 import ballerina/file;
 import wso2/nballerina.print.wasm;
+import wso2/nballerina.types as t;
 
 public class Component {
     final wasm:Module module;
@@ -13,6 +14,7 @@ public class Component {
     private wasm:Expression? mainBody = ();
     private wasm:Type[] mainLocals = [];
     private string? mainMangledName = ();
+    table<UsedMapAtomicType> key(semType) usedMapAtomicTypes = table [];
 
     function init() {
         self.module = new;
@@ -65,7 +67,7 @@ public class Component {
         wasm:Expression? mainBody = self.mainBody;
         string? mainMangledName = self.mainMangledName;
         if mainBody != () && mainMangledName != (){
-            wasm:Expression extendedBody = self.module.block([initStrings(module, self.segments, self.offset), mainBody]);
+            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, self.usedMapAtomicTypes), mainBody]);
             module.addFunction(mainMangledName, [], "None", self.mainLocals, extendedBody);
         }
         return module.finish();
@@ -78,8 +80,7 @@ public class Component {
     }
 
 }
-
-function initStrings(wasm:Module module, map<StringRecord> segments, int offset) returns wasm:Expression {
+function initGlobals(wasm:Module module, map<StringRecord> segments, int offset, table<UsedMapAtomicType> usedMapAtomicTypes) returns wasm:Expression {
     wasm:Expression[] body = [];
     wasm:Expression[] offsetExprs = [];
     string[] byteStrs = [];
@@ -90,6 +91,20 @@ function initStrings(wasm:Module module, map<StringRecord> segments, int offset)
     }
     int pages = (offset / 65536) + 1;
     module.setMemory(pages, "memory", byteStrs, offsetExprs);
+    foreach UsedMapAtomicType ty in usedMapAtomicTypes {
+        if ty.semType.rest == t:NEVER {
+            t:SemType[] types = ty.semType.types;
+            string symbol = ty.global;
+            wasm:Expression arr = module.arrayNewDef(MAP_TYPE_ARR, module.addConst({ i32: types.length() }));
+            body.push(module.globalSet(symbol, arr));
+            foreach int i in 0..<types.length() {
+                body.push(module.arraySet(MAP_TYPE_ARR, 
+                                              module.refAs("ref.as_non_null", module.globalGet(symbol)), 
+                                              module.addConst({ i32: i }),
+                                              module.addConst({ i32: t:widenToUniformTypes(types[i]) })));
+            }
+        }
+    }
     return module.block(body);
 }
 
