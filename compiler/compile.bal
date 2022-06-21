@@ -90,7 +90,7 @@ class CompileContext {
 
 // basename is filename without extension
 function compileBalFile(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
-    Backend backend = outOptions.hasKey("outWat") ? WASM : LLVM;
+    Backend backend = outOptions.hasKey("outWat") && <boolean>outOptions.get("outWat") ? WASM : LLVM;
     CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions, backend);
     front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
     check mod.validMain();
