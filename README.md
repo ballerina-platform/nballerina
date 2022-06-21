@@ -12,7 +12,7 @@ The compiler has not yet got to a stage where it is useful. But if you want to p
 ```
 ./wasm-opt -O3 example.wat -o example.wasm -all
 ```
-6. To run the generated `wasm` file. Use the main.js file inside the `wrun` folder.
+6. To run the generated `wasm` file. Use the main.js file inside the `wrun` folder. (Supports NodeJs version 17 and 16. Doesn't support NodeJs version 18)
 ```
 node --experimental-wasm-eh --experimental-wasm-gc main.js example.wasm
 ```
