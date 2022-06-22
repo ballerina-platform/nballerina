@@ -4,7 +4,7 @@ public type WitnessableSubtype MappingAtomicType|StringSubtype|DecimalSubtype|Fl
 
 public type WitnessValue WrappedSingleValue|string|map<WitnessValue>?;
 
-final readonly & [int, WrappedSingleValue|string][] uniformTypeSample = [
+final readonly & [UniformTypeBitSet, WrappedSingleValue|string][] uniformTypeSample = [
     [NEVER, "never"],
     [NIL, "()"],
     [BOOLEAN, { value: true }],
@@ -13,13 +13,10 @@ final readonly & [int, WrappedSingleValue|string][] uniformTypeSample = [
     [DECIMAL, { value: 3.5d }],
     [STRING, { value: "non empty string" }],
     [ERROR, "error"],
-    [LIST, "list"],
     [LIST_RO, "list"],
     [LIST_RW, "list"],
-    [MAPPING, "map"],
     [MAPPING_RO, "map"],
     [MAPPING_RW, "map"],
-    [TABLE, "table"],
     [TABLE_RO, "table"],
     [TABLE_RW, "table"],
     [FUNCTION, "function"],
@@ -27,10 +24,6 @@ final readonly & [int, WrappedSingleValue|string][] uniformTypeSample = [
     [HANDLE, "handle"],
     [XML, "xml"]
 ];
-
-function foo() {
-    int i = 0;
-}
 
 public class Witness {
     private WitnessValue witness;
@@ -73,12 +66,13 @@ function semTypeToWitnessValue(Context cx, SemType t) returns WitnessValue {
         }
         foreach var [code, _] in uniformTypeSample {
             if (code & t.some) != 0 {
-                SubtypeData subtypeData = getComplexSubtypeData(t, <UniformTypeCode>code);
+                UniformTypeCode utCode = <UniformTypeCode>uniformTypeCode(code);
+                SubtypeData subtypeData = getComplexSubtypeData(t, utCode);
                 if subtypeData is WitnessableSubtype {
                     return subtypeToWitnessValue(cx, subtypeData);
                 }
                 else if subtypeData is BddNode {
-                    return "[Bdd witness not supported]";
+                    return bddToWitness(cx, utCode, subtypeData);
                 }
                 else {
                     return "[Unsupported witness shape]";
@@ -108,6 +102,17 @@ function subtypeToWitnessValue(Context cx, WitnessableSubtype subtype) returns W
     else {
         return createIntWitness(subtype);
     }
+}
+
+function bddToWitness(Context cx, UniformTypeCode typeCode, BddNode bdd) returns WitnessValue {
+    BddMemo? m = ();
+    if typeCode is UT_LIST_RO || typeCode is UT_LIST_RW {
+        m = cx.listMemo[bdd];
+    }
+    else if typeCode is UT_MAPPING_RO || typeCode is UT_MAPPING_RW {
+        m = cx.mappingMemo[bdd];
+    }
+    return m != () ? m.witness : ();
 }
 
 function createMappingWitness(Context cx, MappingAtomicType subtype) returns WitnessValue {

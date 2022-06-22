@@ -43,12 +43,14 @@ function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
         }
     }
     // todo: Need to handle witness handling for this scenario
-    boolean isEmpty = bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty, ());
+    Witness witness = new(cx);
+    boolean isEmpty = bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty, witness);
     m.isEmpty = isEmpty;
+    m.witness = witness.get();
     return isEmpty;    
 }
 
-function errorSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness? witness) returns boolean {
+function errorSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) returns boolean {
     Bdd b = bddFixReadOnly(<Bdd>t);
     BddMemo? mm = cx.mappingMemo[b];
     BddMemo m;
@@ -70,6 +72,7 @@ function errorSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness? witness)
     // todo: Need to handle witness handling for this scenario
     boolean isEmpty = bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty, witness);
     m.isEmpty = isEmpty;
+    m.witness = witness.get();
     return isEmpty;    
 }
 

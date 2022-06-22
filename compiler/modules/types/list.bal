@@ -167,35 +167,14 @@ function listRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 }
 
 function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
-    BddMemo? mm = cx.listMemo[b];
-    BddMemo m;
-    if mm == () {
-        m = { bdd: b };
-        cx.listMemo.add(m);
-    }
-    else {
-        m = mm;
-        boolean? res = m.isEmpty;
-        if res == () {
-            // we've got a loop
-            // XXX is this right???
-            return true;
-        }
-        else {
-            return res;
-        }
-    }
-    boolean isEmpty = bddEvery(cx, b, (), (), listFormulaIsEmpty, ());
-    m.isEmpty = isEmpty;
-    return isEmpty;    
+    return listSubtypeIsEmptyWitness(cx, t, new(cx));    
 }
 
-function listRoSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness? witness) returns boolean {
+function listRoSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) returns boolean {
     return listSubtypeIsEmptyWitness(cx, bddFixReadOnly(<Bdd>t), witness);
 }
 
-function listSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness? witness) returns boolean {
+function listSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.listMemo[b];
     // todo: memoize
@@ -218,6 +197,7 @@ function listSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness? witness) 
     }
     boolean isEmpty = bddEvery(cx, b, (), (), listFormulaIsEmpty, witness);
     m.isEmpty = isEmpty;
+    m.witness = witness.get();
     return isEmpty;    
 }
 

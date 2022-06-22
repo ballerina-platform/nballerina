@@ -28,32 +28,10 @@ public class FunctionDefinition {
 }
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
-    BddMemo? mm = cx.functionMemo[b];
-    BddMemo m;
-    if mm == () {
-        m = { bdd: b };
-        cx.functionMemo.add(m);
-    }
-    else {
-        m = mm;
-        boolean? res = m.isEmpty;
-        if res == () {
-            // we've got a loop
-            io:println("got a function loop");
-            // XXX is this right???
-            return true;
-        }
-        else {
-            return res;
-        }
-    }
-    boolean isEmpty = bddEvery(cx, b, (), (), functionFormulaIsEmpty, ());
-    m.isEmpty = isEmpty;
-    return isEmpty;    
+    return functionSubtypeIsEmptyWitness(cx, t, new(cx));    
 }
 
-function functionSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness? witness) returns boolean {
+function functionSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.functionMemo[b];
     BddMemo m;
@@ -77,6 +55,7 @@ function functionSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness? witne
     }
     boolean isEmpty = bddEvery(cx, b, (), (), functionFormulaIsEmpty, witness);
     m.isEmpty = isEmpty;
+    m.witness = witness.get();
     return isEmpty;    
 }
 
