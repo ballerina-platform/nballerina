@@ -37,7 +37,7 @@ else
 compile.stamp: $(bal_files)
 	-rm -fr watnew
 	mkdir -p watnew
-	$(JAVA) -jar $(COMPILER_JAR) --outWat --outDir watnew $?
+	$(JAVA) -jar $(COMPILER_JAR) --backend wasm --outDir watnew $?
 	mkdir -p wat
 	mkdir -p result
 	cd watnew; for f in *.wat; do cmp -s $$f ../wat/$$f || mv $$f ../wat/; done

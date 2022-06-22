@@ -19,13 +19,13 @@ type Job record {|
 |};
 
 enum Backend {
-   LLVM,
-   WASM
+   LLVM = "llvm",
+   WASM = "wasm"
 }
 
 final readonly & map<string> outputExtension = {
-    LLVM: LLVM_OUTPUT_EXTENSION,
-    WASM: WAT_OUTPUT_EXTENSION
+    "llvm": LLVM_OUTPUT_EXTENSION,
+    "wasm": WAT_OUTPUT_EXTENSION
 };
 
 class CompileContext {
@@ -90,13 +90,23 @@ class CompileContext {
 
 // basename is filename without extension
 function compileBalFile(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
-    Backend backend = outOptions.hasKey("outWat") && <boolean>outOptions.get("outWat") ? WASM : LLVM;
+    Backend backend = selectBackend(outOptions["backend"]);
     CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions, backend);
     front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
     check mod.validMain();
     if backend == LLVM {
         check generateInitModule(cx, mod);
     }
+}
+
+function selectBackend(anydata? backend) returns Backend {
+    if backend != () {
+        if backend is Backend {
+            return backend;
+        }
+        panic error("invalid backend");
+    }
+    return LLVM;
 }
 
 function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename) returns front:ResolvedModule|CompileError {
