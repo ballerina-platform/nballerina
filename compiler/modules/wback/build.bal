@@ -24,6 +24,7 @@ const RuntimeType ANY_TYPE = "Any";
 const RuntimeType FLOAT_TYPE = "Float";
 const RuntimeType ERROR_TYPE = "Error";
 const RuntimeType MAP_TYPE_ARR = "MapTypeArr";
+const RuntimeType MAPPING_DESC = "MappingDesc";
 
 public type ExceptionTag string;
 public type HelperRuntimeFunction string|RuntimeFunction;

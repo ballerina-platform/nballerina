@@ -10,7 +10,8 @@
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
   (type $MapTypeArr (array (mut i32)))
-  (type $Map (struct (field $type i32) (field $atomic eqref) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
+  (type $MappingDesc (struct (field $nFields i32) (field $restType i32) (field $fieldTypes (mut (ref $MapTypeArr))))) 
+  (type $Map (struct (field $type i32) (field $desc (mut (ref $MappingDesc))) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
   (type $List (struct (field $type i32) (field $default eqref) (field $atomic i32) (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
@@ -27,6 +28,7 @@
   (global $rttMap (rtt 1 $Map) (rtt.sub $Map (global.get $rttAny)))
   (global $rttError (rtt 1 $Error) (rtt.sub $Error (global.get $rttAny)))
   (global $rttMapTypeArr (rtt 0 $MapTypeArr) (rtt.canon $MapTypeArr))
+  (global $rttMappingDesc (rtt 0 $MappingDesc) (rtt.canon $MappingDesc))
   ;; tag
   (tag $bad-conversion) 
   ;; export

@@ -80,6 +80,7 @@ public class Component {
     }
 
 }
+
 function initGlobals(wasm:Module module, map<StringRecord> segments, int offset, table<UsedMapAtomicType> usedMapAtomicTypes) returns wasm:Expression {
     wasm:Expression[] body = [];
     wasm:Expression[] offsetExprs = [];
@@ -95,11 +96,10 @@ function initGlobals(wasm:Module module, map<StringRecord> segments, int offset,
         if ty.semType.rest == t:NEVER {
             t:SemType[] types = ty.semType.types;
             string symbol = ty.global;
-            wasm:Expression arr = module.arrayNewDef(MAP_TYPE_ARR, module.addConst({ i32: types.length() }));
-            body.push(module.globalSet(symbol, arr));
+            body.push(module.globalSet(symbol, ty.struct));
             foreach int i in 0..<types.length() {
                 body.push(module.arraySet(MAP_TYPE_ARR, 
-                                              module.refAs("ref.as_non_null", module.globalGet(symbol)), 
+                                              module.structGet(MAPPING_DESC, "fieldTypes", module.refAs("ref.as_non_null", module.globalGet(symbol))), 
                                               module.addConst({ i32: i }),
                                               module.addConst({ i32: t:widenToUniformTypes(types[i]) })));
             }

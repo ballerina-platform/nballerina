@@ -65,6 +65,7 @@ type RegionBlocks record {|
 
 type UsedMapAtomicType record {|
     readonly t:MappingAtomicType semType;
+    wasm:Expression struct;
     readonly string global;
 |};
 
@@ -199,7 +200,7 @@ class Scaffold {
         return self.renderedRegion[index.toString()];
     }
 
-    function getUsedMapAtomicType(t:MappingAtomicType ty) returns wasm:Expression {
+    function getMappingDesc(t:MappingAtomicType ty) returns wasm:Expression {
         wasm:Module module = self.module;
         Component component = self.component;
         UsedMapAtomicType? used  = component.usedMapAtomicTypes[ty];
@@ -209,15 +210,10 @@ class Scaffold {
         string symbol = mangleTypeSymbol(component.usedMapAtomicTypes.length());
         UsedMapAtomicType t = {
             global: symbol,
-            semType: ty
+            semType: ty,
+            struct: createMappingDescInit(module, ty)
         };
-        if ty.rest != t:NEVER {
-            module.addGlobal(symbol, "i31ref", 
-                             module.i31New(module.addConst({ i32: t:widenToUniformTypes(ty.rest) })));
-        }
-        else {
-            module.addGlobal(symbol, { base: MAP_TYPE_ARR, initial: "null" }, module.refNull(MAP_TYPE_ARR));
-        }
+        module.addGlobal(symbol, { base: MAPPING_DESC, initial: "null" }, module.refNull(MAPPING_DESC));
         component.usedMapAtomicTypes.add(t);
         return module.globalGet(t.global);
     }

@@ -11,7 +11,7 @@
   (export "_bal_mapping_get_key" (func $_bal_mapping_get_key)) 
   (export "_bal_mapping_num_keys" (func $_bal_mapping_num_keys)) 
   ;; $_bal_mapping_construct
-  (func $_bal_mapping_construct (param $0 i32) (param $1 eqref) (result (ref $Map))
+  (func $_bal_mapping_construct (param $0 i32) (param $1 (ref $MappingDesc)) (result (ref $Map))
     (local $2 i32)
     (local $3 i32)
     (local.set $2
@@ -54,28 +54,28 @@
         (rtt.canon $MapFields))
       (global.get $rttMap)))
   ;; $_bal_mapping_indexed_set
-  (func $_bal_mapping_indexed_set (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) (param $3 i32)
-    (local $4 (ref null $MapTypeArr))
-    (local.set $4
-      (ref.cast 
-        (ref.as_data
-          (struct.get $Map $atomic
+  (func $_bal_mapping_indexed_set (param $0 (ref $Map)) (param $1 eqref) (param $2 i32)
+    (local $3 i32)
+    (local.set $3
+      (array.get $MapTypeArr
+        (struct.get $MappingDesc $fieldTypes
+          (struct.get $Map $desc
             (local.get $0)))
-        (global.get $rttMapTypeArr)))
+        (local.get $2)))
     (if
       (i32.eqz
         (i32.and
           (call $_bal_get_type
-            (local.get $2))
-          (array.get_u $MapTypeArr
-            (ref.as_non_null
-              (local.get $4))
-            (local.get $3))))
+            (local.get $1))
+          (local.get $3)))
       (throw $bad-mapping-store))
-    (call $_bal_mapping_set
-      (local.get $0)
-      (local.get $1)
-      (local.get $2)))
+    (struct.set $MapField $value
+      (array.get $MapFieldArr
+        (struct.get $MapFields $members
+          (struct.get $Map $fArray
+            (local.get $0)))
+        (local.get $2))
+      (local.get $1)))
   ;; $_bal_mapping_set
   (func $_bal_mapping_set (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
     (local $3 (ref null $MapFields))
@@ -83,26 +83,45 @@
     (local $5 i32)
     (local $6 i32)
     (local $7 i32)
-    (if
-      (ref.is_i31
-        (struct.get $Map $atomic
-          (local.get $0)))
-      (if
-        (i32.eqz
-          (i32.and
-            (call $_bal_get_type
-              (local.get $2))
-            (i31.get_u
-              (ref.as_i31
-                (struct.get $Map $atomic
-                  (local.get $0))))))
-        (throw $bad-mapping-store)))
+    (local $8 (ref null $MappingDesc))
+    (local $9 i32)
     (local.set $7
       (call $_bal_map_lookup
         (local.get $0)
         (local.get $1)
         (call $_bal_get_hash
           (local.get $1))))
+    (if 
+      (i32.ne
+        (local.get $7)
+        (i32.const -1))
+      (block
+        (local.set $8
+          (struct.get $Map $desc
+            (local.get $0)))
+        (if
+          (i32.lt_u
+            (local.get $7)
+            (struct.get $MappingDesc $nFields
+              (ref.as_non_null
+                (local.get $8))))
+          (local.set $9
+            (array.get $MapTypeArr
+              (struct.get $MappingDesc $fieldTypes
+                (ref.as_non_null
+                  (local.get $8)))
+              (local.get $7)))
+          (local.set $9
+            (struct.get $MappingDesc $restType
+              (ref.as_non_null
+                (local.get $8)))))
+          (if
+            (i32.eqz
+              (i32.and
+                (call $_bal_get_type
+                  (local.get $2))
+                (local.get $9)))
+            (throw $bad-mapping-store))))
     (if
       (i32.eq
         (local.get $7)
@@ -699,10 +718,10 @@
       (struct.get $String $hash
         (local.get $1))))
   ;; $_bal_check_type_and_map_atomic
-  (func $_bal_check_type_and_map_atomic (param $0 eqref) (param $1 i32) (result i32)
+  (func $_bal_check_type_and_map_atomic (param $0 eqref) (param $1 (ref $MappingDesc)) (result i32)
     (local $2 (ref null $Map))
     (local $3 i32)
-    (local $4 i32)
+    (local $4 (ref null $MappingDesc))
     (local.set $3
       (call $_bal_get_type
         (local.get $0)))
@@ -719,15 +738,13 @@
               (local.get $0))
             (global.get $rttMap)))
         (local.set $4
-          (struct.get $Map $atomic
+          (struct.get $Map $desc
             (ref.as_non_null
               (local.get $2))))
         (if
-          (i32.eq
-            (i32.and
-              (local.get $4)
-              (local.get $1))
-            (local.get $4))
+          (ref.eq
+            (local.get $4)
+            (local.get $1))
           (return 
             (i32.const 1))
           (return 

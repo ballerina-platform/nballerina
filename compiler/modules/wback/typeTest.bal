@@ -175,8 +175,8 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
             t:UT_MAPPING_RO => {
                 t:MappingAtomicType? atomic = t:mappingAtomicTypeRw(scaffold.getTypeContext(), semType);
                 if atomic != () {
-                    t:SemType ty = atomic.rest;
-                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkMapTypeAndAtomicFunction, [operand, module.addConst({ i32: <int>ty })]));
+                    wasm:Expression desc = module.refAs("ref.as_non_null", scaffold.getMappingDesc(atomic));
+                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkMapTypeAndAtomicFunction, [operand, desc]));
         }
             }
         }
