@@ -1,8 +1,6 @@
 # nBallerina Wasm Backend
 ## Usage
 
-The compiler has not yet got to a stage where it is useful. But if you want to play with it or help with development, this is the way:
-
 1. Clone the nBallerina repository.
 2. [Download](https://ballerina.io/downloads/) and [install](https://ballerina.io/learn/user-guide/getting-started/installation-options/) the latest Ballerina distribution (Swan Lake not 1.2.x)
 3. [Download](https://github.com/WebAssembly/binaryen/releases) and extract Binaryen Tool.
