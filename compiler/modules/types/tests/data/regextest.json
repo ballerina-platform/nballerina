@@ -1,0 +1,173 @@
+[
+    ["abc", "abc", true],
+    ["a", "a", true],
+
+    ["abcx", "abc", false],
+    ["", "a", false],
+    ["x", "a", false],
+    ["xa", "a", false],
+
+    ["a", "a*", true],
+    ["aa", "a*", true],
+    ["", "a*", true],
+
+    ["b", "a*b", true],
+    ["ab", "a*b", true],
+    ["aaab", "a*b", true],
+
+    ["a", "a*b", false],
+    ["", "a*b", false],
+    ["aba", "a*b", false],
+    ["abx", "a*b", false],
+    ["axb", "a*b", false],
+    ["abab", "a*b", false],
+
+    ["ab", "abc*d*", true],
+    ["abc", "abc*d*", true],
+    ["abcd", "abc*d*", true],
+    ["abd", "abc*d*", true],
+    ["abccd", "abc*d*", true],
+    ["abccddd", "abc*d*", true],
+
+    ["a", "abc*d*", false],
+    ["abdc", "abc*d*", false],
+    ["abcdc", "abc*d*", false],
+    ["acc", "abc*d*", false],
+    ["acd", "abc*d*", false],
+    ["bcd", "abc*d*", false],
+
+    ["abe", "abc*d*e", true],
+    ["abcde", "abc*d*e", true],
+    ["abce", "abc*d*e", true],
+    ["abcce", "abc*d*e", true],
+    ["abccde", "abc*d*e", true],
+    ["abccdde", "abc*d*e", true],
+    ["abde", "abc*d*e", true],
+    ["abdde", "abc*d*e", true],
+
+    ["ab", "abc*d*e", false],
+    ["abc", "abc*d*e", false],
+    ["a", "abc*d*e", false],
+
+    ["a", "a(bc)*", true],
+    ["abc", "a(bc)*", true],
+    ["abcbc", "a(bc)*", true],
+
+    ["abcb", "a(bc)*", false],
+    ["acb", "a(bc)*", false],
+    ["bc", "a(bc)*", false],
+    ["", "a(bc)*", false],
+
+    ["a", "a(bc)*d*", true],
+    ["abc", "a(bc)*d*", true],
+    ["abcbc", "a(bc)*d*", true],
+    ["abcd", "a(bc)*d*", true],
+    ["abcbcd", "a(bc)*d*", true],
+    ["ad", "a(bc)*d*", true],
+    ["add", "a(bc)*d*", true],
+
+    ["", "a(bc)*d*", false],
+    ["adbc", "a(bc)*d*", false],
+    ["abcbd", "a(bc)*d*", false],
+    ["abd", "a(bc)*d*", false],
+
+    ["ad", "a(bc)*d", true],
+    ["abcd", "a(bc)*d", true],
+    ["abcbcd", "a(bc)*d", true],
+
+    ["a", "a(bc)*d", false],
+    ["d", "a(bc)*d", false],
+    ["abcdd", "a(bc)*d", false],
+    ["bcd", "a(bc)*d", false],
+    ["abc", "a(bc)*d", false],
+
+    ["", "(bc)*", true],
+    ["bc", "(bc)*", true],
+    ["bcbc", "(bc)*", true],
+
+    ["b", "(bc)*", false],
+    ["bcb", "(bc)*", false],
+    ["c", "(bc)*", false],
+
+    ["", "(bc)*d*", true],
+    ["bc", "(bc)*d*", true],
+    ["bcbc", "(bc)*d*", true],
+    ["bcd", "(bc)*d*", true],
+    ["bcbcd", "(bc)*d*", true],
+    ["bcbcdd", "(bc)*d*", true],
+    ["d", "(bc)*d*", true],
+    ["dd", "(bc)*d*", true],
+
+    ["bdc", "(bc)*d*", false],
+
+    ["bc", "(bc)*(de)*", true],
+    ["bcde", "(bc)*(de)*", true],
+    ["de", "(bc)*(de)*", true],
+    ["bcbc", "(bc)*(de)*", true],
+    ["bcbcde", "(bc)*(de)*", true],
+    ["bcbcdede", "(bc)*(de)*", true],
+
+    ["", "(ab*d)*", true],
+    ["ad", "(ab*d)*", true],
+    ["adadad", "(ab*d)*", true],
+    ["abd", "(ab*d)*", true],
+    ["abbbd", "(ab*d)*", true],
+    ["abbbdad", "(ab*d)*", true],
+
+    ["b", "(ab*d)*", false],
+    ["abb", "(ab*d)*", false],
+    ["bd", "(ab*d)*", false],
+    ["bbd", "(ab*d)*", false],
+
+    ["abc", "abc", true],
+    ["abb", "ab*", true],
+
+    ["", "b*", true],
+    ["b", "b*", true],
+    ["bb", "b*", true],
+
+    ["a", "b*", false],
+    ["ab", "b*", false],
+    ["ba", "b*", false],
+    ["abb", "b*", false],
+    ["bba", "b*", false],
+
+    ["a", "ab*", true],
+    ["ab", "ab*", true],
+    ["abb", "ab*", true],
+
+    ["ca", "ab*", false],
+    ["ac", "ab*", false],
+    ["cab", "ab*", false],
+    ["abc", "ab*", false],
+    ["cabb", "ab*", false],
+    ["acbb", "ab*", false],
+    ["abcb", "ab*", false],
+    ["abbc", "ab*", false],
+
+    ["abc", "ab*c", true],
+    ["ac", "ab*c", true],
+
+    ["bc", "ab*c", false],
+    ["a", "ab*c", false],
+
+    ["", "b*c*", true],
+    ["b", "b*c*", true],
+    ["c", "b*c*", true],
+    ["bc", "b*c*", true],
+    ["bb", "b*c*", true],
+    ["bbc", "b*c*", true],
+    ["bbcc", "b*c*", true],
+    ["cc", "b*c*", true],
+
+    ["a", "b*c*", false],
+    ["ba", "b*c*", false],
+    ["ab", "b*c*", false],
+    ["ac", "b*c*", false],
+    ["ca", "b*c*", false],
+    ["abc", "b*c*", false],
+    ["abca", "b*c*", false],
+    ["cb", "b*c*", false],
+
+    ["abbbbc", "ab*c", true]
+]
