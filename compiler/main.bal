@@ -11,7 +11,7 @@ type CompileError err:Diagnostic|io:Error|file:Error|io:Error;
 public type Options record {
     boolean testJsonTypes = false;
     boolean showTypes = false;
-    boolean outWat = false;
+    string backend = LLVM;
     int? debugLevel;
     // outDir also implies treating each file as a separate module
     string? outDir = ();

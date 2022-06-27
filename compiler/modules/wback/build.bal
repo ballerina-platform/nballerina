@@ -124,7 +124,7 @@ function buildCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged
     return module.refCast(module.refAs("ref.as_data", tagged), module.globalGet("rtt" + rtt));
 }
 
-function mayBeCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, TaggedRepr repr) returns wasm:Expression {
+function maybeCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged, TaggedRepr repr) returns wasm:Expression {
     wasm:Type wasmType = repr.wasm;
     if wasmType is wasm:ComplexRefType {
         return buildCast(module, scaffold, tagged, wasmType.base);
@@ -146,18 +146,18 @@ function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand op
 
 function buildConstString(wasm:Module module, Component component, string value) returns wasm:Expression {
     int[] surrogate = buildSurrogateArray(value);
-    string label = component.mayBeAddStringRecord(value, surrogate);
+    string label = component.maybeAddStringRecord(value, surrogate);
     return module.refAs("ref.as_non_null", module.globalGet(label));
 }
 
 function buildRuntimeFunctionCall(wasm:Module module, Component component, RuntimeFunction rf, wasm:Expression[] args) returns wasm:Expression {
     var { name, returnType, rtModule } = rf;
-    component.mayBeAddRtFunction("$" + name);
+    component.maybeAddRtFunction("$" + name);
     component.addRtModule(rtModule);
     return module.call(name, args, returnType);
 }
 
-function mayBeAddRtFunction(string[] rtFunctions, string name) {
+function maybeAddRtFunction(string[] rtFunctions, string name) {
     if rtFunctions.indexOf(name) == () {
         rtFunctions.push(name);
     }
@@ -185,7 +185,7 @@ function buildFloat(wasm:Module module, bir:FloatOperand operand) returns wasm:E
 
 function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
     if targetRepr is TaggedRepr {
-        return mayBeCast(module, scaffold, value, targetRepr);
+        return maybeCast(module, scaffold, value, targetRepr);
     }
     else if targetRepr is IntRepr {
         return buildUntagInt(module, scaffold, value);
