@@ -7,7 +7,7 @@ The compiler has not yet got to a stage where it is useful. But if you want to p
 2. [Download](https://ballerina.io/downloads/) and [install](https://ballerina.io/learn/user-guide/getting-started/installation-options/) the latest Ballerina distribution (Swan Lake not 1.2.x)
 3. [Download](https://github.com/WebAssembly/binaryen/releases) and extract Binaryen Tool.
 4. You can build the compiler by using the command `bal build` in the `compiler` directory; this will generate a file `target/bin/nballerina.jar`. This should work on any system that Ballerina works on.
-4. You can use `java -jar nballerina.jar example.bal --backend wasm` to compile a Ballerina module into an `wat`  file `example.wat` (note that the backend only supports upto subset 08). Make sure you invoke the `nballerina.jar` file inside the cloned nBallerina directory.
+4. You can use `java -jar nballerina.jar example.bal --backend wasm` to compile a Ballerina module into an `wat`  file `example.wat` (note that the backend only supports upto subset 09). Make sure you invoke the `nballerina.jar` file inside the cloned nBallerina directory.
 5. If you want to be able to turn the `wat` file into a `wasm` file use the `wasm-opt` tool in the Binaryen tool chain.
 ```
 ./wasm-opt -O3 example.wat -o example.wasm -all
@@ -30,4 +30,4 @@ For those test cases that are valid Ballerina programs, the Makefile in the [tes
 
 ## Status
 
-Wasm backend is completed for [subset 08](docs/subset08.md) and are working on [subset 09](docs/subset09.md).
+Wasm backend is completed for [subset 09](docs/subset09.md) and are working on [subset 10](docs/subset10.md).
