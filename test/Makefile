@@ -1,13 +1,22 @@
-TARGETS=test all compile testll
+TARGETS=test all compile
 
-TDIRS= $(sort $(basename $(notdir $(wildcard ../compiler/testSuite/*))))
+TDIRSLL= $(sort $(addsuffix .ll, $(basename $(notdir $(wildcard ../compiler/testSuite/*)))))
+TDIRSWAT= $(sort $(addsuffix .wat, $(basename $(notdir $(wildcard ../compiler/testSuite/01-* ../compiler/testSuite/02-* ../compiler/testSuite/03-* ../compiler/testSuite/04-* ../compiler/testSuite/05-* ../compiler/testSuite/06-* ../compiler/testSuite/07-* ../compiler/testSuite/08-*)))))
 
-$(TARGETS): $(TDIRS)
+$(TARGETS): $(TDIRSLL) $(TDIRSWAT)
+
+testll: $(TDIRSLL)
+
+testwat: $(TDIRSWAT)
 
 # The filter is so we can say e.g. make 07-error
-$(TDIRS):
-	mkdir -p out/$@
-	$(MAKE) -C out/$@ -f ../../sub.mk tdir=$@ $(filter-out $@, $(MAKECMDGOALS))
+$(TDIRSLL):
+	mkdir -p outll/$(basename $@)
+	$(MAKE) -C outll/$(basename $@) -f ../../sub.mk tdir=$(basename $@) $(filter-out $(basename $@), $(MAKECMDGOALS))
+
+$(TDIRSWAT):
+	mkdir -p outwat/$(basename $@)
+	$(MAKE) -C outwat/$(basename $@) -f ../../wsub.mk tdir=$(basename $@) $(filter-out $(basename $@), $(MAKECMDGOALS))
 
 clean:
 	-rm -fr out
@@ -29,4 +38,4 @@ diff:
 		[ -e $$ll ] && cmp -s $$f $$ll || echo $$f; \
 	done
 
-.PHONY: $(TARGETS) $(TDIRS) clean update diff
+.PHONY: $(TARGETS) $(TDIRS) clean update diff wtest

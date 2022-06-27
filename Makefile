@@ -10,10 +10,10 @@ SUBDIRS=compiler.d runtime.d test.d
 all:
 	$(MAKE) target=all compiler.d runtime.d
 
-test clean:
+test testll testwat clean:
 	$(MAKE) target=$@ $(SUBDIRS)
 
-test: all
+test testll testwat: all
 
 $(SUBDIRS):
 	$(MAKE) -C $(basename $@) $(target)

@@ -28,8 +28,8 @@ exe_files = $(addsuffix .exe, $(addprefix result/, $(test_cases)))
 RT=../../../runtime/balrt.a
 RT_INLINE=../../../runtime/balrt_inline.bc
 
-test: all
-	$(MAKE) -f ../../sub.mk tdir=$(tdir) testll
+testll test: all
+	$(MAKE) -f ../../sub.mk tdir=$(tdir) test.ll
 
 all:
 	if test $(COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
@@ -53,7 +53,7 @@ compile.stamp: $(bal_files)
 endif
 
 # This compiles, runs and checks the output of ll/*.ll
-testll: fail.txt $(expect_files) $(exe_files)
+test.ll: fail.txt $(expect_files) $(exe_files)
 
 fail.txt: $(diff_files)
 	@>$@
@@ -80,7 +80,7 @@ expect/%.txt: ../../../compiler/testSuite/$(tdir)/%.bal
 clean:
 	-rm -rf actual compile.stamp expect fail.txt ll result
 
-.PHONY: all test clean compile testll
+.PHONY: all test clean compile testll test.ll
 
 .SECONDEXPANSION:
 $(exe_files): $$(patsubst %.exe,%.bc,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.bc, $(mod_bc_files)) $(RT)

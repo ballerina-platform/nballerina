@@ -35,10 +35,10 @@ function compileBaltFile(string filename, string basename, string outDir, nback:
             continue;
         }
         string outBasename = check chooseBaltCaseOutputFilename(filename, t, i);
-        string initFilename = check file:joinPath(outDir, outBasename) + "._init" + OUTPUT_EXTENSION;
-        string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
+        string initFilename = check file:joinPath(outDir, outBasename) + "._init" + LLVM_OUTPUT_EXTENSION;
+        string outFilename = check file:joinPath(outDir, outBasename) + LLVM_OUTPUT_EXTENSION;
         string[] lines = t.content;
-        CompileContext cx = new(basename, check file:joinPath(outDir, outBasename), nbackOptions, options);
+        CompileContext cx = new(basename, check file:joinPath(outDir, outBasename), nbackOptions, options, LLVM);
         CompileError? err = compileAndOutputModule(cx, DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename, initFilename);
         if t.header.Test\-Case is "panic" && err != () {
             continue;

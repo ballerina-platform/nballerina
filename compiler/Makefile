@@ -8,15 +8,15 @@ BAL_TEST_FLAGS ?= $(BAL_BUILD_FLAGS) --disable-groups longRunning
 
 all: $(COMPILER_JAR)
 
-test:
+test testll testwat:
 	$(BAL) test $(BAL_TEST_FLAGS)
 
 $(COMPILER_JAR): $(COMPILER_SRC)
-	$(BAL) build --target-dir ../build $(BAL_BUILD_FLAGS)
+	$(BAL) build --target-dir ../build --offline
 
 clean:
 	$(BAL) clean
 	-rm -rf ../build
 
-.PHONY: all test clean
+.PHONY: all test clean testll testwat
 

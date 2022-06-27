@@ -6,11 +6,12 @@ import wso2/nballerina.comm.diagnostic as d;
 import ballerina/io;
 import ballerina/file;
 
-type CompileError err:Diagnostic|io:Error|file:Error;
+type CompileError err:Diagnostic|io:Error|file:Error|io:Error;
 
 public type Options record {
     boolean testJsonTypes = false;
     boolean showTypes = false;
+    string backend = LLVM;
     int? debugLevel;
     // outDir also implies treating each file as a separate module
     string? outDir = ();
@@ -59,7 +60,8 @@ public function main(string[] filenames, *Options opts) returns error? {
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            CompileError? err = ();
+            err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
             if err is err:Internal {
                 panic error(d:toString(err.detail()), err);
             }
