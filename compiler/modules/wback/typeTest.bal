@@ -244,8 +244,3 @@ function buildTypeTest(wasm:Module module, Scaffold scaffold, bir:TypeTestInsn i
 function buildIsSubType(wasm:Module module, wasm:Expression super, wasm:Expression sub) returns wasm:Expression {
     return module.binary("i32.eq", module.binary("i32.and", super, sub), super); 
 }
-
-function buildRecordSubtype(wasm:Module module, t:MappingAtomicType mat) returns wasm:Expression {
-    
-    return module.structNew(RECORD_SUBTYPE, [module.addConst({ i32: mat.types.length() })]);
-}

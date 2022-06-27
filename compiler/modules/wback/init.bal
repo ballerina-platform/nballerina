@@ -1,7 +1,7 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.wasm;
 
-function createMappingDescInit(wasm:Module module, t:MappingAtomicType mat) returns wasm:Expression {  
+function createMappingDesc(wasm:Module module, t:MappingAtomicType mat) returns wasm:Expression {  
     wasm:Expression[] llFields = from var ty in mat.types select getMemberType(module, ty);
     return module.structNew(MAPPING_DESC, [
         module.addConst({ i32: llFields.length() }),
