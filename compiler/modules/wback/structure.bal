@@ -4,12 +4,12 @@ import wso2/nballerina.types as t;
 
 final RuntimeModule listMod = {
     file: "list.wat",
-    priority: 5
+    priority: 4
 };
 
 final RuntimeModule mapMod = {
     file: "map.wat",
-    priority: 6
+    priority: 5
 };
 
 final RuntimeFunction listCreateFunction = {
@@ -80,7 +80,7 @@ function listAtomicTypeToListRepr(wasm:Module module, Scaffold scaffold, t:ListA
             default = module.i31New(module.addConst({ i32: 0 }));
         }
         else if rest == t:STRING {
-            default = buildConstString(module, scaffold, "");
+            default = buildConstString(module, scaffold.getComponent(), "");
         }
     }
     return { rest, default };
@@ -138,7 +138,7 @@ function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:Mappin
     wasm:Expression[] children = [mapSet];
     wasm:Expression loadMap = module.refAs("ref.as_non_null", buildLoad(module, insn.result));
     foreach var [fieldName, operand] in mappingOrderFields(mat, insn.fieldNames, insn.operands) {
-        wasm:Expression key = buildConstString(module, scaffold, fieldName);
+        wasm:Expression key = buildConstString(module, scaffold.getComponent(), fieldName);
         wasm:Expression val = buildRepr(module, scaffold, operand, REPR_ANY);
         children.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingInitMemberFunction, [loadMap, key, val]));
     }

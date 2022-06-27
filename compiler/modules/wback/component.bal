@@ -15,6 +15,7 @@ public class Component {
     private wasm:Type[] mainLocals = [];
     private string? mainMangledName = ();
     table<UsedMapAtomicType> key(semType) usedMapAtomicTypes = table [];
+    table<UsedRecordSubtype> key(semType) usedRecordSubtypes = table [];
 
     function init() {
         self.module = new;
@@ -67,7 +68,7 @@ public class Component {
         wasm:Expression? mainBody = self.mainBody;
         string? mainMangledName = self.mainMangledName;
         if mainBody != () && mainMangledName != (){
-            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, self.usedMapAtomicTypes), mainBody]);
+            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, self.usedMapAtomicTypes, self.usedRecordSubtypes), mainBody]);
             module.addFunction(mainMangledName, [], "None", self.mainLocals, extendedBody);
         }
         return module.finish();
@@ -81,7 +82,7 @@ public class Component {
 
 }
 
-function initGlobals(wasm:Module module, map<StringRecord> segments, int offset, table<UsedMapAtomicType> usedMapAtomicTypes) returns wasm:Expression {
+function initGlobals(wasm:Module module, map<StringRecord> segments, int offset, table<UsedMapAtomicType> usedMapAtomicTypes, table<UsedRecordSubtype> usedRecordSubtypes) returns wasm:Expression {
     wasm:Expression[] body = [];
     wasm:Expression[] offsetExprs = [];
     string[] byteStrs = [];
@@ -93,16 +94,26 @@ function initGlobals(wasm:Module module, map<StringRecord> segments, int offset,
     int pages = (offset / 65536) + 1;
     module.setMemory(pages, "memory", byteStrs, offsetExprs);
     foreach UsedMapAtomicType ty in usedMapAtomicTypes {
-        if ty.semType.rest == t:NEVER {
-            t:SemType[] types = ty.semType.types;
-            string symbol = ty.global;
-            body.push(module.globalSet(symbol, ty.struct));
-            foreach int i in 0..<types.length() {
-                body.push(module.arraySet(MAP_TYPE_ARR, 
-                                              module.structGet(MAPPING_DESC, "fieldTypes", module.refAs("ref.as_non_null", module.globalGet(symbol))), 
-                                              module.addConst({ i32: i }),
-                                              module.addConst({ i32: t:widenToUniformTypes(types[i]) })));
-            }
+        t:SemType[] types = ty.semType.types;
+        string symbol = ty.global;
+        body.push(module.globalSet(symbol, ty.struct));
+        foreach int i in 0..<types.length() {
+            body.push(module.arraySet(MAP_TYPE_ARR, 
+                                            module.structGet(MAPPING_DESC, "fieldTypes", module.refAs("ref.as_non_null", module.globalGet(symbol))), 
+                                            module.addConst({ i32: i }),
+                                            module.addConst({ i32: t:widenToUniformTypes(types[i]) })));
+        }
+    }
+    foreach UsedRecordSubtype ty in usedRecordSubtypes {
+        t:SemType[] types = ty.semType.types;
+        string symbol = ty.global;
+        body.push(module.globalSet(symbol, ty.struct));
+        foreach int i in 0..<types.length() {
+            body.push(module.arraySet(RECORD_SUBTYPE_FIELDS,
+                                      module.structGet(RECORD_SUBTYPE, "fields", module.refAs("ref.as_non_null", module.globalGet(symbol))),
+                                      module.addConst({ i32: i }), 
+                                      module.structNew(RECORD_SUBTYPE_FIELD, [ty.names[i], module.addConst({ i32: t:widenToUniformTypes(types[i]) })])
+                                     ));
         }
     }
     return module.block(body);

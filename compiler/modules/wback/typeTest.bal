@@ -43,8 +43,15 @@ final RuntimeFunction checkListTypeAndAtomicFunction = {
     rtModule: listMod
 };
 
-final RuntimeFunction checkMapTypeAndAtomicFunction = {
-    name: "_bal_check_type_and_map_atomic",
+final RuntimeFunction mapSubtypeContainsFunction = {
+    name: "_bal_map_subtype_contains",
+    returnType: "i32",
+    rtModule: mapMod
+};
+
+
+final RuntimeFunction recordSubtypeContainsFunction = {
+    name: "_bal_record_subtype_contains",
     returnType: "i32",
     rtModule: mapMod
 };
@@ -132,7 +139,7 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                 strs.push(...sub.char.values);
                 strs.push(...sub.nonChar.values);
                 foreach var str in strs {
-                    wasm:Expression val = buildConstString(module, scaffold, str);
+                    wasm:Expression val = buildConstString(module, scaffold.getComponent(), str);
                     subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkStringTypeAndValFunction, [operand, val]));
                 }
             }
@@ -175,9 +182,18 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
             t:UT_MAPPING_RO => {
                 t:MappingAtomicType? atomic = t:mappingAtomicTypeRw(scaffold.getTypeContext(), semType);
                 if atomic != () {
-                    wasm:Expression desc = module.refAs("ref.as_non_null", scaffold.getMappingDesc(atomic));
-                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkMapTypeAndAtomicFunction, [operand, desc]));
-        }
+                    wasm:Expression desc;
+                    RuntimeFunction rf;
+                    if atomic.rest == t:NEVER {
+                        rf = recordSubtypeContainsFunction;
+                        desc = module.refAs("ref.as_non_null", scaffold.getRecordSubtype(atomic));
+                    }
+                    else {
+                        rf = mapSubtypeContainsFunction;
+                        desc = module.refAs("ref.as_non_null", scaffold.getMappingDesc(atomic));
+                    }
+                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), rf, [operand, desc]));
+                }
             }
         }
     }
@@ -227,4 +243,9 @@ function buildTypeTest(wasm:Module module, Scaffold scaffold, bir:TypeTestInsn i
 
 function buildIsSubType(wasm:Module module, wasm:Expression super, wasm:Expression sub) returns wasm:Expression {
     return module.binary("i32.eq", module.binary("i32.and", super, sub), super); 
+}
+
+function buildRecordSubtype(wasm:Module module, t:MappingAtomicType mat) returns wasm:Expression {
+    
+    return module.structNew(RECORD_SUBTYPE, [module.addConst({ i32: mat.types.length() })]);
 }

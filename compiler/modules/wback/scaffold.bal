@@ -69,6 +69,13 @@ type UsedMapAtomicType record {|
     readonly string global;
 |};
 
+type UsedRecordSubtype record {|
+    readonly t:MappingAtomicType semType;
+    wasm:Expression struct;
+    wasm:Expression[] names;
+    readonly string global;
+|};
+
 class Scaffold {
     private wasm:Module module;
     final bir:BasicBlock[] blocks;
@@ -114,10 +121,6 @@ class Scaffold {
 
     function addExceptionTag(ExceptionTag tag, wasm:Type? kind = ()) {
         self.component.addExceptionTag(tag, kind);
-    }
-
-    function mayBeAddStringRecord(string val, int[] surrogate) returns string {
-        return self.component.mayBeAddStringRecord(val, surrogate);
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
@@ -207,7 +210,7 @@ class Scaffold {
         if used != () {
             return module.globalGet(used.global);
         }
-        string symbol = mangleTypeSymbol(component.usedMapAtomicTypes.length());
+        string symbol = mangleTypeSymbol(component.usedMapAtomicTypes.length() + component.usedRecordSubtypes.length());
         UsedMapAtomicType t = {
             global: symbol,
             semType: ty,
@@ -215,6 +218,26 @@ class Scaffold {
         };
         module.addGlobal(symbol, { base: MAPPING_DESC, initial: "null" }, module.refNull(MAPPING_DESC));
         component.usedMapAtomicTypes.add(t);
+        return module.globalGet(t.global);
+    }
+
+    function getRecordSubtype(t:MappingAtomicType ty) returns wasm:Expression {
+        wasm:Module module = self.module;
+        Component component = self.component;
+        UsedRecordSubtype? used  = component.usedRecordSubtypes[ty];
+        if used != () {
+            return module.globalGet(used.global);
+        }
+        string symbol = mangleTypeSymbol(component.usedMapAtomicTypes.length() + component.usedRecordSubtypes.length());
+        var [names, struct] = createRecordSubtype(module, self.component, ty);
+        UsedRecordSubtype t = {
+            global: symbol,
+            semType: ty,
+            struct: struct,
+            names: names
+        };
+        module.addGlobal(symbol, { base: RECORD_SUBTYPE, initial: "null" }, module.refNull(RECORD_SUBTYPE));
+        component.usedRecordSubtypes.add(t);
         return module.globalGet(t.global);
     }
 }

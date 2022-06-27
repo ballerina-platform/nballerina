@@ -11,6 +11,9 @@
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
   (type $MapTypeArr (array (mut i32)))
   (type $MappingDesc (struct (field $nFields i32) (field $restType i32) (field $fieldTypes (mut (ref $MapTypeArr))))) 
+  (type $RecordSubtypeField (struct (field $name (mut eqref)) (field $bitset (mut i32)))) 
+  (type $RecordSubtypeFields (array (mut (ref null $RecordSubtypeField)))) 
+  (type $RecordSubtype (struct (field $nFields i32) (field $fields (mut (ref $RecordSubtypeFields))))) 
   (type $Map (struct (field $type i32) (field $desc (mut (ref $MappingDesc))) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
@@ -29,6 +32,8 @@
   (global $rttError (rtt 1 $Error) (rtt.sub $Error (global.get $rttAny)))
   (global $rttMapTypeArr (rtt 0 $MapTypeArr) (rtt.canon $MapTypeArr))
   (global $rttMappingDesc (rtt 0 $MappingDesc) (rtt.canon $MappingDesc))
+  (global $rttRecordSubtype (rtt 0 $RecordSubtype) (rtt.canon $RecordSubtype))
+  (global $rttRecordSubtypeField (rtt 0 $RecordSubtypeField) (rtt.canon $RecordSubtypeField))
   ;; tag
   (tag $bad-conversion) 
   ;; export

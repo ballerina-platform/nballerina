@@ -91,14 +91,14 @@
         (local.get $1)
         (call $_bal_get_hash
           (local.get $1))))
+    (local.set $8
+      (struct.get $Map $desc
+        (local.get $0)))
     (if 
       (i32.ne
         (local.get $7)
         (i32.const -1))
       (block
-        (local.set $8
-          (struct.get $Map $desc
-            (local.get $0)))
         (if
           (i32.lt_u
             (local.get $7)
@@ -121,7 +121,19 @@
                 (call $_bal_get_type
                   (local.get $2))
                 (local.get $9)))
-            (throw $bad-mapping-store))))
+            (throw $bad-mapping-store)))
+      (block
+        (local.set $9
+          (struct.get $MappingDesc $restType
+            (ref.as_non_null
+              (local.get $8))))
+        (if
+          (i32.eqz
+            (i32.and
+              (call $_bal_get_type
+                (local.get $2))
+              (local.get $9)))
+          (throw $bad-mapping-store))))
     (if
       (i32.eq
         (local.get $7)
@@ -717,39 +729,190 @@
     (return 
       (struct.get $String $hash
         (local.get $1))))
-  ;; $_bal_check_type_and_map_atomic
-  (func $_bal_check_type_and_map_atomic (param $0 eqref) (param $1 (ref $MappingDesc)) (result i32)
-    (local $2 (ref null $Map))
-    (local $3 i32)
+  ;; $_bal_record_subtype_contains
+  (func $_bal_record_subtype_contains (param $0 eqref) (param $1 (ref $RecordSubtype)) (result i32)
+    (local $2 i32)
+    (local $3 (ref null $Map))
     (local $4 (ref null $MappingDesc))
-    (local.set $3
+    (local $5 i32)
+    (local $6 i32)
+    (local $7 (ref null $RecordSubtypeFields))
+    (local $8 i32)
+    (local $9 (ref null $MapTypeArr))
+    (local $10 (ref null $MapFieldArr))
+    (local $11 (ref null $RecordSubtypeField))
+    (local.set $2
       (call $_bal_get_type
         (local.get $0)))
     (if 
+      (i32.ne
+        (i32.and
+          (local.get $2)  
+          (i32.const 524296))
+        (local.get $2))
+      (return 
+        (i32.const 0)))
+    (local.set $3
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttMap)))
+    (local.set $4
+      (struct.get $Map $desc
+        (ref.as_non_null
+          (local.get $3))))
+    (local.set $5
+      (struct.get $MappingDesc $nFields
+        (ref.as_non_null
+          (local.get $4))))
+    (local.set $6
+      (struct.get $RecordSubtype $nFields
+        (local.get $1)))
+    (if
+      (i32.ne
+        (local.get $5)
+        (local.get $6))
+      (return 
+        (i32.const 0)))
+    (local.set $7
+      (struct.get $RecordSubtype $fields
+        (local.get $1)))
+    (local.set $8
+      (i32.const 0))
+    (local.set $9
+      (struct.get $MappingDesc $fieldTypes
+        (ref.as_non_null
+          (local.get $4))))
+    (local.set $10
+      (struct.get $MapFields $members
+        (struct.get $Map $fArray
+          (ref.as_non_null
+            (local.get $3)))))
+    (loop $loop$cont  
+      (if
+        (i32.lt_u
+          (local.get $8)
+          (local.get $5))
+        (block
+          (local.set $11
+            (array.get $RecordSubtypeFields
+              (ref.as_non_null
+                (local.get $7))
+              (local.get $8)))
+          (if
+            (i32.ne
+              (i32.and
+                (array.get $MapTypeArr
+                  (ref.as_non_null
+                    (local.get $9))
+                  (local.get $8))
+                (i32.xor
+                  (i32.const 4294967295)
+                  (struct.get $RecordSubtypeField $bitset
+                    (ref.as_non_null
+                      (local.get $11)))))
+              (i32.const 0))
+            (return
+              (i32.const 0))
+            (block
+              (if
+                (i32.eqz
+                  (call $_bal_string_eq
+                    (struct.get $MapField $key
+                      (array.get $MapFieldArr
+                        (ref.as_non_null
+                          (local.get $10))
+                        (local.get $8)))
+                    (struct.get $RecordSubtypeField $name
+                      (ref.as_non_null
+                        (local.get $11)))))
+                  (return 
+                    (i32.const 0)))
+              (local.set $8
+                (i32.add
+                  (local.get $8)
+                  (i32.const 1)))
+              (br $loop$cont))))  
+        ))
+    (return
+      (i32.const 1)))
+  ;; $_bal_map_subtype_contains
+  (func $_bal_map_subtype_contains (param $0 eqref) (param $1 (ref $MappingDesc)) (result i32)
+    (local $2 i32)
+    (local $3 (ref null $Map))
+    (local $4 (ref null $MappingDesc))
+    (local $5 i32)
+    (local $6 i32)
+    (local $7 i32)
+    (local $8 (ref null $MapTypeArr))
+    (local.set $2
+      (call $_bal_get_type
+        (local.get $0)))
+    (if 
+      (i32.ne
+        (i32.and
+          (local.get $2)  
+          (i32.const 524296))
+        (local.get $2))
+      (return 
+        (i32.const 0)))
+    (local.set $3
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttMap)))
+    (local.set $4
+      (struct.get $Map $desc
+        (ref.as_non_null
+          (local.get $3))))
+    (local.set $5
+      (struct.get $MappingDesc $nFields
+        (ref.as_non_null
+          (local.get $4))))
+    (local.set $6
+      (struct.get $MappingDesc $restType
+        (local.get $1)))
+    (local.set $7
+      (i32.const 0))
+    (local.set $8
+      (struct.get $MappingDesc $fieldTypes
+        (ref.as_non_null
+          (local.get $4))))
+    (loop $loop$cont  
+      (if
+        (i32.lt_u
+          (local.get $7)
+          (local.get $5))
+        (if
+          (i32.ne
+            (i32.and
+              (array.get $MapTypeArr
+                (ref.as_non_null
+                  (local.get $8))
+                (local.get $7))
+              (local.get $6))
+          (array.get $MapTypeArr
+            (ref.as_non_null
+              (local.get $8))
+            (local.get $7)))
+          (return
+            (i32.const 0))
+          (block
+            (local.set $7
+              (i32.add
+                (local.get $7)
+                (i32.const 1)))
+            (br $loop$cont)))  
+        ))
+    (return
       (i32.eq
         (i32.and
-          (local.get $3)  
-          (i32.const 524296))
-        (local.get $3))
-      (block
-        (local.set $2
-          (ref.cast 
-            (ref.as_data
-              (local.get $0))
-            (global.get $rttMap)))
-        (local.set $4
-          (struct.get $Map $desc
+          (struct.get $MappingDesc $restType
             (ref.as_non_null
-              (local.get $2))))
-        (if
-          (ref.eq
-            (local.get $4)
-            (local.get $1))
-          (return 
-            (i32.const 1))
-          (return 
-            (i32.const 0))))
-      (return 
-        (i32.const 0))))
+              (local.get $4)))
+          (local.get $6))
+        (struct.get $MappingDesc $restType
+          (ref.as_non_null
+            (local.get $4))))))
   ;; end
   )
