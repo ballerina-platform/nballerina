@@ -6,6 +6,8 @@ type LlvmModule llvm:Module;
 
 # The preferred output extension for the output filename.
 const OUTPUT_EXTENSION = ".o";
+const WAT_OUTPUT_EXTENSION = ".wat";
+
 
 type OutputOptions record {
     string? target = ();

@@ -30,7 +30,7 @@ export BCLIB=balrt_inline.bc
 all: $(LIB) $(BCLIB)
 	$(MAKE) -C tests all
 
-test: all
+test testll testwat: all
 	$(MAKE) -C tests test
 
 testCoverage: $(LIB) $(BCLIB)
@@ -87,7 +87,7 @@ clean:
 	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
 	$(MAKE) -C tests clean
 
-.PHONY: test all
+.PHONY: test all testll testall
 # Ensure bogus files get deleted when there's an error
 .DELETE_ON_ERROR:
 
