@@ -80,7 +80,8 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
                 wasm:Expression[] ifFalseExprs = [];
                 if lastInsn is bir:TypeBranchInsn {
                     ifTrueExprs = [buildNarrowReg(module, scaffold, lastInsn.ifTrueRegister)];
-                    ifFalseExprs = lastInsn.ifFalse != exit ? [buildNarrowReg(module, scaffold, lastInsn.ifFalseRegister)] : [];
+                    ifFalseExprs = [buildNarrowReg(module, scaffold, lastInsn.ifFalseRegister)];
+                    // ifFalseExprs = lastInsn.ifFalse != exit ? [buildNarrowReg(module, scaffold, lastInsn.ifFalseRegister)] : [];
                 }
                 ifTrueExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifTrue, region, index, exit));
                 ifFalseExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifFalse, region, index, exit));
