@@ -180,8 +180,7 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                     }
                 }
                 else {
-                    t:ListMemberTypes memberType = t:listAllMemberTypes(scaffold.getTypeContext(), semType);
-                    t:SemType[] types = memberType[1];
+                    var [_, types] = t:listAllMemberTypes(scaffold.getTypeContext(), semType);
                     foreach var ty in types {
                         subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkListTypeAndAtomicFunction, [operand, module.addConst({ i32: t:widenToUniformTypes(ty) })]));                    
                     }
