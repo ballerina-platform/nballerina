@@ -214,7 +214,7 @@ class Scaffold {
         UsedMapAtomicType t = {
             global: symbol,
             semType: ty,
-            struct: createMappingDescInit(module, ty)
+            struct: createMappingDesc(module, ty)
         };
         module.addGlobal(symbol, { base: MAPPING_DESC, initial: "null" }, module.refNull(MAPPING_DESC));
         component.usedMapAtomicTypes.add(t);
