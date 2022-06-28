@@ -170,15 +170,23 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                 wasm:Expression val = module.refNull();
                 subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkNilTypeAndValFunction, [operand, val]));
             }
-            t:UT_LIST_RO => {
+            t:UT_LIST_RO 
+            | t:UT_LIST_RW => {
                 var atomic = t:listAtomicTypeRw(scaffold.getTypeContext(), semType);
                 if atomic != () {
                     t:SemType? ty = t:listAtomicSimpleArrayMemberType(atomic);
                     if ty != () {
                         subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkListTypeAndAtomicFunction, [operand, module.addConst({ i32: <int>ty })]));
-        }
-    }
-        }
+                    }
+                }
+                else {
+                    t:ListMemberTypes memberType = t:listAllMemberTypes(scaffold.getTypeContext(), semType);
+                    t:SemType[] types = memberType[1];
+                    foreach var ty in types {
+                        subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkListTypeAndAtomicFunction, [operand, module.addConst({ i32: t:widenToUniformTypes(ty) })]));                    
+                    }
+                }
+            }
             t:UT_MAPPING_RO => {
                 t:MappingAtomicType? atomic = t:mappingAtomicTypeRw(scaffold.getTypeContext(), semType);
                 if atomic != () {
@@ -243,9 +251,4 @@ function buildTypeTest(wasm:Module module, Scaffold scaffold, bir:TypeTestInsn i
 
 function buildIsSubType(wasm:Module module, wasm:Expression super, wasm:Expression sub) returns wasm:Expression {
     return module.binary("i32.eq", module.binary("i32.and", super, sub), super); 
-}
-
-function buildRecordSubtype(wasm:Module module, t:MappingAtomicType mat) returns wasm:Expression {
-    
-    return module.structNew(RECORD_SUBTYPE, [module.addConst({ i32: mat.types.length() })]);
 }
