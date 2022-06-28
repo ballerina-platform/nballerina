@@ -221,12 +221,18 @@ function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType t
     return ();
 }
 
-function buildNarrowReg(wasm:Module module, Scaffold scaffold, bir:NarrowRegister register) returns wasm:Expression {
+function buildNarrowReg(wasm:Module module, Scaffold scaffold, bir:NarrowRegister register, boolean isFalse = false) returns wasm:Expression {
     var sourceReg = register.underlying;
     var sourceRepr = scaffold.getRepr(sourceReg);
     var value = buildLoad(module, sourceReg);
     wasm:Expression narrowed = buildNarrowRepr(module, scaffold, sourceRepr, value, scaffold.getRepr(register));
-    return buildStore(module, register, narrowed);
+    wasm:Expression store = buildStore(module, register, narrowed);
+    if isFalse && sourceRepr is TaggedRepr {
+        wasm:Expression rtt = buildRuntimeFunctionCall(module, scaffold.getComponent(), getTypeFunction, [value]);
+        wasm:Expression narrowTy = module.addConst({ i32: t:widenToUniformTypes(register.semType) });
+        return module.addIf(module.binary("i32.eq", module.binary("i32.and", rtt, narrowTy), rtt), store);    
+    }
+    return store;
 }
 
 function buildNarrowRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
