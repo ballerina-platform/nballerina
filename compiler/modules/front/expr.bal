@@ -1198,7 +1198,7 @@ function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemT
     bir:NarrowRegister ifFalseRegister = cx.createNarrowRegister(diff, reg);
     TypeMerger trueMerger = createNarrowMerger(cx, opBinding, ifTrueRegister, pos, nextBlock.label, prevs?.trueMerger);
     TypeMerger falseMerger = createNarrowMerger(cx, opBinding, ifFalseRegister, pos, nextBlock.label, prevs?.falseMerger);
-    bir:TypeBranchInsn insn = { operand: reg, semType: intersect, ifTrue: trueMerger.dest.label, ifFalse: falseMerger.dest.label, ifTrueRegister, ifFalseRegister, pos };
+    bir:TypeBranchInsn insn = { operand: reg, semType: negated ? intersect: semType, ifTrue: trueMerger.dest.label, ifFalse: falseMerger.dest.label, ifTrueRegister, ifFalseRegister, pos };
     nextBlock.insns.push(insn);
     return { trueMerger, falseMerger };
 }
