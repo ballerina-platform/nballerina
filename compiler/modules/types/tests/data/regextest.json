@@ -184,5 +184,41 @@
     ["acx", "a|bc", false],
     ["axc", "a|bc", false],
 
-    ["ab", "ab|c", true]
+    ["ab", "ab|c", true],
+
+    ["ab", "(ab)|c", true],
+    ["c", "(ab)|c", true],
+
+    ["", "(ab)|c", false],
+    ["a", "(ab)|c", false],
+    ["b", "(ab)|c", false],
+
+    ["xab", "x(ab)|c", true],
+    ["xc", "x(ab)|c", true],
+
+    ["x", "x(ab)|c", false],
+    ["ab", "x(ab)|c", false],
+    ["c", "x(ab)|c", false],
+
+    ["abx", "(ab)|cx", true],
+    ["cx", "(ab)|cx", true],
+
+    ["x", "(ab)|cx", false],
+    ["ab", "(ab)|cx", false],
+    ["c", "(ab)|cx", false],
+
+    ["ab", "(ab)|(cd)", true],
+    ["cd", "(ab)|(cd)", true],
+
+    ["ab", "(ab*)|c", true],
+    ["abbb", "(ab*)|c", true],
+    ["a", "(ab*)|c", true],
+    ["c", "(ab*)|c", true],
+
+    ["", "(ab|cd)*", true],
+    ["abd", "(ab|cd)*", true],
+    ["abdacd", "(ab|cd)*", true],
+
+    ["ad", "(ab|cd)*", false],
+    ["ab", "(ab|cd)*", false]
 ]

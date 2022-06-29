@@ -94,7 +94,7 @@ function starToSemType(Env env, string regex, int index, int startIndex, int end
     }
     else if pattern is Star {
         // io:println(regex, ":", regex.substring(pattern.nextIndex, endIndex+1), "<=", pattern, regex[endIndex]);
-        SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, endIndex+1, recTy);
+        SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, endIndex + 1, recTy);
         ListDefinition innerLD = new;
         SemType ty = union(rest, innerLD.getSemType(env));
         // pr-todo fix pattern.pattern
@@ -103,7 +103,10 @@ function starToSemType(Env env, string regex, int index, int startIndex, int end
         return ty;
     }
     else {
-        panic error("not implemented");
+        SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, endIndex + 1, recTy);
+        SemType lhs = regexToSemTypeInner(env, regex, pattern.lhs.startIndex, pattern.lhs.endIndex + 1, rest);
+        SemType rhs = regexToSemTypeInner(env, regex, pattern.rhs.startIndex, pattern.rhs.endIndex + 1, rest);
+        return union(lhs, rhs);
     }
 }
 

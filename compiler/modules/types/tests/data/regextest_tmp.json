@@ -1,4 +1,18 @@
 [
+    
+    ["a", "(a(x(b*)d)*)|c", true],
+    ["axbd", "(a(x(b*)d)*)|c", true],
+    ["axbbd", "(a(x(b*)d)*)|c", true],
+    ["axd", "(a(x(b*)d)*)|c", true],
+    ["axdxdxd", "(a(x(b*)d)*)|c", true],
+    ["axbdxdxd", "(a(x(b*)d)*)|c", true],
+
+    ["ab", "(a(x(b*)d)*)|c", false],
+    ["abbdb", "(a(x(b*)d)*)|c", false],
+    ["axbb", "(a(x(b*)d)*)|c", false],
+    ["abbd", "(a(x(b*)d)*)|c", false]
+
+    // 
     ["", "(ab)*", true],
     ["ab", "(ab)*", true],
     ["abab", "(ab)*", true],
