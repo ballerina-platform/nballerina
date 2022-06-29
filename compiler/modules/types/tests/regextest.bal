@@ -17,7 +17,9 @@ function testRegex(string str, string regex, boolean expected) {
     // io:println(regex, "=>", parseRegex(regex));
     SemType regexTy = regexToSemType(env, regex);
     boolean isMatch = isSubtype(context, strTy, regexTy);
-    test:assertEquals(regex:matches(str, regex), expected, "jBal discrepancy"); // sanity check to make sure our test is valid
+    if regex:matches(str, regex) != expected {
+        io:println("jBal discrepancy in ", regex, ":", str);
+    }// sanity check to make sure our test is valid
     // if isMatch != expected {
     //     io:println(regexTy, "\n");
     // }
@@ -53,13 +55,20 @@ function regexToSemTypeInner(Env env, string regex, int index, int end, SemType 
         return restTy;
     }
     else {
-        RegexPattern pattern = nextPattern(regex, index);
+        RegexPattern pattern = nextPattern(regex, index, end);
         if pattern is Star {
             SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, end, restTy);
             ListDefinition defn = new;
             SemType ty = union(rest, defn.getSemType(env));
-            _ = starToSemType(env, regex, pattern.startIndex, pattern.startIndex, pattern.endIndex, ty, defn);
+            PatternRange range = pattern.range;
+            _ = starToSemType(env, regex, range.startIndex, range.startIndex, range.endIndex, ty, defn);
             return ty;
+        }
+        else if pattern is Or {
+            SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, end, restTy);
+            SemType lhs = regexToSemTypeInner(env, regex, pattern.lhs.startIndex, pattern.lhs.endIndex + 1, rest);
+            SemType rhs = regexToSemTypeInner(env, regex, pattern.rhs.startIndex, pattern.rhs.endIndex + 1, rest);
+            return union(lhs, rhs);
         }
         else {
             string:Char char = regex[index];
@@ -71,8 +80,8 @@ function regexToSemTypeInner(Env env, string regex, int index, int end, SemType 
 
 function starToSemType(Env env, string regex, int index, int startIndex, int endIndex, SemType recTy, ListDefinition recListDefn) returns SemType{
     ListDefinition defn = (index == startIndex) ? recListDefn : new;
-    RegexPattern pattern = nextPattern(regex, index);
-    if (pattern is Star && pattern.startIndex == startIndex && pattern.endIndex == endIndex ) || pattern is Seq {
+    RegexPattern pattern = nextPattern(regex, index, endIndex);
+    if (pattern is Star && pattern.range.startIndex == startIndex && pattern.range.endIndex == endIndex ) || pattern is Seq {
         string:Char char = regex[index];
         if index == endIndex {
             // last character in the pattern
@@ -88,12 +97,12 @@ function starToSemType(Env env, string regex, int index, int startIndex, int end
         SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, endIndex+1, recTy);
         ListDefinition innerLD = new;
         SemType ty = union(rest, innerLD.getSemType(env));
-        _ = starToSemType(env, regex, pattern.startIndex, pattern.startIndex, pattern.endIndex, ty, innerLD);
+        // pr-todo fix pattern.pattern
+        PatternRange range = pattern.range;
+        _ = starToSemType(env, regex, range.startIndex, range.startIndex, range.endIndex, ty, innerLD);
         return ty;
     }
     else {
-        // io:println(pattern);
-        // io:println(regex.substring(index));
         panic error("not implemented");
     }
 }
@@ -101,42 +110,63 @@ function starToSemType(Env env, string regex, int index, int startIndex, int end
 type RegexPattern Seq|Star|Or;
 
 type Seq "seq";
-type Or "or";
+
+type PatternRange record {|
+    int startIndex; // position of first char in pattern (not including "(")
+    int endIndex; // position of last char in pattern (not including ")")
+|};
 
 type Star record {|
-    int startIndex; // position of first char in pattern
-    int endIndex; // position of last char in pattern (i.e. index before *)
+    PatternRange range;
     int nextIndex; // starting position of the next pattern
 |};
 
-function nextPattern(string regex, int index) returns RegexPattern {
-    if regex.length() > index + 1 {
-        if regex[index+1] == "*" {
+type Or record {|
+    PatternRange lhs;
+    PatternRange rhs;
+    int nextIndex;
+|};
+
+function nextPattern(string regex, int index, int end) returns RegexPattern {
+    var [lhs, lhsWrapped] = readPattern(regex, index);
+    int endIndex = lhsWrapped ? (lhs.endIndex + 2) : (lhs.endIndex + 1);
+    if end > endIndex {
+        string op = regex[endIndex];
+        if op == "*" {
             return {
-                startIndex: index,
-                endIndex: index,
-                nextIndex: index + 2
+                range: lhs,
+                nextIndex: endIndex + 1
+            };
+        }
+        else if op == "|" {
+            var [rhs, rhsWrapped] = readPattern(regex, endIndex + 1);
+            int nextIndex = rhsWrapped ? (rhs.endIndex + 2) : (rhs.endIndex + 1);
+            return {
+                lhs,
+                rhs,
+                nextIndex
             };
         }
     }
-    if regex[index] == "(" {
-        int endIndex = index + 1;
-        while regex[endIndex] != ")" {
-            if regex[endIndex] == "(" {
-                panic error("nesting not implemented");
-            }
-            endIndex += 1;
-        }
-        if regex[endIndex + 1] != "*" {
-            panic error("not implemented");
-        }
-        return {
-            startIndex: index + 1,
-            endIndex: endIndex - 1,
-            nextIndex: endIndex + 2
-        };
-    }
     return "seq";
+}
+
+function readPattern(string regex, int index) returns [PatternRange, boolean] {
+    if regex[index] != "(" {
+        return [{ startIndex: index, endIndex: index }, false];
+    }
+    int endIndex = index + 1;
+    int openCount = 1;
+    while openCount != 0 {
+        if regex[endIndex] == "(" {
+            openCount += 1;
+        }
+        endIndex += 1;
+        if regex[endIndex] == ")" {
+            openCount -= 1;
+        }
+    }
+    return [{ startIndex: index + 1, endIndex: endIndex - 1 }, true];
 }
 
 function readRegexTests() returns map<TestCase>|error {

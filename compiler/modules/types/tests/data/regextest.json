@@ -169,5 +169,20 @@
     ["abca", "b*c*", false],
     ["cb", "b*c*", false],
 
-    ["abbbbc", "ab*c", true]
+    ["abbbbc", "ab*c", true],
+
+    ["a", "a|b", true],
+    ["b", "a|b", true],
+
+    ["", "a|b", false],
+    ["x", "a|b", false],
+    ["xa", "a|b", false],
+
+    ["ac", "a|bc", true],
+    ["bc", "a|bc", true],
+
+    ["acx", "a|bc", false],
+    ["axc", "a|bc", false],
+
+    ["ab", "ab|c", true]
 ]
