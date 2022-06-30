@@ -1,0 +1,12 @@
+[
+    ["a", "a|b", true],
+    ["b", "a|b", true],
+
+    ["ab", "a|b", false],
+
+    ["a*b*", "(a|b)*", true],
+    ["(ab)*a", "a(ba)*", true],
+    ["(ab)*a", "a(ba)*", true],
+
+    ["(ab)*", "a*b*", false]
+]

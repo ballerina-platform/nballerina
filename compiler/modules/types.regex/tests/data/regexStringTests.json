@@ -15,6 +15,10 @@
     ["ab", "a*b", true],
     ["aaab", "a*b", true],
 
+    ["b", "ba*", true],
+    ["ba", "ba*", true],
+    ["baaa", "ba*", true],
+
     ["a", "a*b", false],
     ["", "a*b", false],
     ["aba", "a*b", false],
@@ -178,7 +182,7 @@
     ["x", "a|b", false],
     ["xa", "a|b", false],
 
-    ["ac", "a|bc", true],
+    ["ac", "a|bc", false],
     ["bc", "a|bc", true],
 
     ["acx", "a|bc", false],
@@ -193,19 +197,19 @@
     ["a", "(ab)|c", false],
     ["b", "(ab)|c", false],
 
-    ["xab", "x(ab)|c", true],
-    ["xc", "x(ab)|c", true],
+    ["xab", "xab|c", true],
+    ["xc", "xab|c", false],
 
-    ["x", "x(ab)|c", false],
-    ["ab", "x(ab)|c", false],
-    ["c", "x(ab)|c", false],
+    ["x", "xab|c", false],
+    ["ab", "xab|c", false],
+    ["c", "xab|c", true],
 
-    ["abx", "(ab)|cx", true],
-    ["cx", "(ab)|cx", true],
+    ["abx", "ab|cx", false],
+    ["cx", "ab|cx", true],
 
-    ["x", "(ab)|cx", false],
-    ["ab", "(ab)|cx", false],
-    ["c", "(ab)|cx", false],
+    ["x", "ab|cx", false],
+    ["ab", "ab|cx", true],
+    ["c", "ab|cx", false],
 
     ["ab", "(ab)|(cd)", true],
     ["cd", "(ab)|(cd)", true],
@@ -216,9 +220,34 @@
     ["c", "(ab*)|c", true],
 
     ["", "(ab|cd)*", true],
-    ["abd", "(ab|cd)*", true],
-    ["abdacd", "(ab|cd)*", true],
+    ["abdacd", "(ab|cd)*", false],
 
-    ["ad", "(ab|cd)*", false],
-    ["ab", "(ab|cd)*", false]
+    ["a", "a(x(b*)d)*", true],
+
+    ["a", "(a(x(b*)d)*)|c", true],
+    ["c", "(a(x(b*)d)*)|c", true],
+
+    ["", "((a|b)d)*", true],
+
+    ["", "(a*bc)*", true],
+    ["bc", "(a*bc)*", true],
+    ["bcbc", "(a*bc)*", true],
+    ["bcabc", "(a*bc)*", true],
+    ["abcabc", "(a*bc)*", true],
+    ["aabcabc", "(a*bc)*", true],
+
+    ["aa", "(a*bc)*", false],
+    ["aaba", "(a*bc)*", false],
+
+    ["", "(bx|yc)*", true],
+    ["byc", "(bx|yc)*", false],
+    ["bxcbyc", "(bx|yc)*", false],
+
+    ["", "(x|ybc)*", true],
+    ["ybc", "(x|ybc)*", true],
+
+    ["", "(a*b)*", true],
+    ["b", "(a*b)*", true],
+    ["ab", "(a*b)*", true],
+    ["abb", "(a*b)*", true]
 ]
