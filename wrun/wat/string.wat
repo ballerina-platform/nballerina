@@ -5,6 +5,12 @@
   (import "string" "concat" (func $_js_string_concat (param anyref) (param anyref) (result anyref))) 
   (import "string" "eq" (func $_js_string_eq (param anyref) (param anyref) (result i32))) 
   (import "string" "comp" (func $_js_string_comp (param anyref) (param anyref) (result i32))) 
+  ;; $_bal_is_char
+  (func $_bal_is_char (param $0 eqref) (result i32) 
+    (i32.eq
+      (call $_bal_string_length
+        (local.get $0))
+      (i32.const 1)))
   ;; $_bal_string_length
   (func $_bal_string_length (param $0 eqref) (result i64) 
     (local $1 (ref null $String))

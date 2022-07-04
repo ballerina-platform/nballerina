@@ -536,5 +536,12 @@
           (i64.const -9223372036854775808) 
           (local.get $0))) 
       (throw $overflow)))
+  ;; $_bal_is_nan
+  (func $_bal_is_nan (param $0 f64) (result i32)
+    (i32.xor
+      (f64.eq
+        (local.get $0)
+        (local.get $0))
+      (i32.const 1)))
   ;; end
   ) 

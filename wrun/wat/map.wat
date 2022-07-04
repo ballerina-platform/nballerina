@@ -57,7 +57,7 @@
   (func $_bal_mapping_indexed_set (param $0 (ref $Map)) (param $1 eqref) (param $2 i32)
     (local $3 i32)
     (local.set $3
-      (array.get $MapTypeArr
+      (array.get $AnyList
         (struct.get $MappingDesc $fieldTypes
           (struct.get $Map $desc
             (local.get $0)))
@@ -106,7 +106,7 @@
               (ref.as_non_null
                 (local.get $8))))
           (local.set $9
-            (array.get $MapTypeArr
+            (array.get $AnyList
               (struct.get $MappingDesc $fieldTypes
                 (ref.as_non_null
                   (local.get $8)))
