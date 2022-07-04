@@ -127,11 +127,11 @@ function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return mappingSubtypeIsEmptyWitness(cx, t, new(cx));    
 }
 
-function mappingRoSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) returns boolean {
+function mappingRoSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector witness) returns boolean {
     return mappingSubtypeIsEmptyWitness(cx, bddFixReadOnly(<Bdd>t), witness);
 }
 
-function mappingSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) returns boolean {
+function mappingSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector witness) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.mappingMemo[b];
     // todo: memoize 
@@ -160,7 +160,7 @@ function mappingSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness
 
 // This works the same as the tuple case, except that instead of
 // just comparing the lengths of the tuples we compare the sorted list of field names
-function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList, Witness witness) returns boolean {
+function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList, WitnessCollector witness) returns boolean {
     TempMappingSubtype combined;
     if posList == () {
         combined = {
@@ -200,9 +200,9 @@ function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? ne
     return !mappingInhabited(cx, combined, negList, witness);
 }
 
-function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negList, Witness witness) returns boolean {
+function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negList, WitnessCollector witness) returns boolean {
     if negList == () {
-        witness.remainingType(pos.cloneWithType(MappingAtomicType));
+        witness.remainingSubType(pos.cloneWithType(MappingAtomicType));
         return true;
     }
     else {

@@ -37,13 +37,13 @@ function and(Atom atom, Conjunction? next) returns Conjunction {
     return { atom, next };
 }
 
-type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg, Witness witness) returns boolean;
+type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg, WitnessCollector witness) returns boolean;
 
 // A Bdd represents a disjunction of conjunctions of atoms, where each atom is either positive or
 // negative (negated). Each path from the root to a leaf that is true represents one of the conjunctions
 // We walk the tree, accumulating the positive and negative conjunctions for a path as we go.
 // When we get to a leaf that is true, we apply the predicate to the accumulated conjunctions.
-function bddEvery(Context cx, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate, Witness witness) returns boolean {
+function bddEvery(Context cx, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate, WitnessCollector witness) returns boolean {
     if b is boolean {
         return !b || predicate(cx, pos, neg, witness);
     }
@@ -54,7 +54,7 @@ function bddEvery(Context cx, Bdd b, Conjunction? pos, Conjunction? neg, BddPred
     }
 }
 
-function bddEveryPositive(Context cx, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate, Witness witness) returns boolean {
+function bddEveryPositive(Context cx, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate, WitnessCollector witness) returns boolean {
     if b is boolean {
         return !b || predicate(cx, pos, neg, witness);
     }

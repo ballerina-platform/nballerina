@@ -385,7 +385,7 @@ public type StringOperand StringConstOperand|Register;
 public type FunctionOperand FunctionRef|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns [boolean, string] {
-    t:Witness witness = new(tc);
+    t:WitnessCollector witness = new(tc);
     return [t:isSubtypeWitness(tc, operand.semType, semType, witness), w:typeWitnessToString(witness)];
 }
 

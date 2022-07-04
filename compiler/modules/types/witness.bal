@@ -2,7 +2,13 @@ import wso2/nballerina.comm.lib;
 
 public type WitnessableSubtype MappingAtomicType|StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype;
 
-public type WitnessValue WrappedSingleValue|string|map<WitnessValue>?;
+public type ListWitness readonly & record {|
+    SemType[] memberTypes;
+    int[] indices;
+    int fixedLen;
+|};
+
+public type WitnessValue WrappedSingleValue|string|map<WitnessValue>|ListWitness?;
 
 final readonly & [UniformTypeBitSet, WrappedSingleValue|string][] uniformTypeSample = [
     [NEVER, "never"],
@@ -25,7 +31,7 @@ final readonly & [UniformTypeBitSet, WrappedSingleValue|string][] uniformTypeSam
     [XML, "xml"]
 ];
 
-public class Witness {
+public class WitnessCollector {
     private WitnessValue witness;
     private Context cx;
 
@@ -34,9 +40,15 @@ public class Witness {
         self.witness = ();
     }
 
-    public function remainingType(WitnessableSubtype|error subtypeData) {
+    public function remainingSubType(WitnessableSubtype|error subtypeData) {
         if self.witness == () && subtypeData !is error {
             self.witness = subtypeToWitnessValue(self.cx, subtypeData);
+        }
+    }
+
+    public function remainingListType(ListWitness listWitness) {
+        if self.witness == () {
+            self.witness = listWitness;
         }
     }
 

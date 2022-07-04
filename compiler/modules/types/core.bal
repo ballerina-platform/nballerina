@@ -249,7 +249,7 @@ type UniformSubtype [UniformTypeCode, ProperSubtypeData];
 type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
 type UnaryOp function(SubtypeData t) returns SubtypeData;
 type UnaryTypeCheckOp function(Context cx, SubtypeData t) returns boolean;
-type UnaryTypeCheckWitnessOp function(Context cx, SubtypeData t, Witness w) returns boolean;
+type UnaryTypeCheckWitnessOp function(Context cx, SubtypeData t, WitnessCollector w) returns boolean;
 
 function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
     panic error("binary operation should not be called");
@@ -263,7 +263,7 @@ function unaryTypeCheckOpPanic(Context cx, SubtypeData t) returns boolean {
     panic error("unary boolean operation should not be called");
 }
 
-function unaryTypeCheckOpWitnessPanic(Context cx, SubtypeData t, Witness w) returns boolean {
+function unaryTypeCheckOpWitnessPanic(Context cx, SubtypeData t, WitnessCollector w) returns boolean {
     panic error("unary boolean operation should not be called");
 }
 
@@ -777,7 +777,7 @@ public function isEmpty(Context cx, SemType t) returns boolean {
     }
 }
 
-public function isEmptyWitness(Context cx, SemType t, Witness w) returns boolean {
+public function isEmptyWitness(Context cx, SemType t, WitnessCollector w) returns boolean {
     if t is UniformTypeBitSet {
         boolean noBits = t == 0;
         if !noBits {
@@ -806,7 +806,7 @@ public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean {
     return isEmpty(cx, diff(t1, t2));
 }
 
-public function isSubtypeWitness(Context cx, SemType t1, SemType t2, Witness w) returns boolean { 
+public function isSubtypeWitness(Context cx, SemType t1, SemType t2, WitnessCollector w) returns boolean { 
     return isEmptyWitness(cx, diff(t1, t2), w);
 }
 

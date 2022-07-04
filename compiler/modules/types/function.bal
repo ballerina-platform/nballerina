@@ -31,7 +31,7 @@ function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return functionSubtypeIsEmptyWitness(cx, t, new(cx));    
 }
 
-function functionSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) returns boolean {
+function functionSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector witness) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.functionMemo[b];
     BddMemo m;
@@ -59,7 +59,7 @@ function functionSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witnes
     return isEmpty;    
 }
 
-function functionFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg, Witness? witness) returns boolean {
+function functionFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg, WitnessCollector? witness) returns boolean {
     return functionPathIsEmpty(cx, functionUnionParams(cx, pos), pos, neg);
 }
 

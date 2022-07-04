@@ -241,7 +241,7 @@ function testSemtypeWitness(front:SourcePart[] sources, string[] expected) retur
         string lhsStr = test.left.toString();
         string rhsStr = test.right.toString();
         
-        t:Witness w = new(tc);
+        t:WitnessCollector w = new(tc);
         boolean lsr = t:isSubtypeWitness(tc, left, right, w);
         string witness = w:typeWitnessToString(w);
         match test.op { 

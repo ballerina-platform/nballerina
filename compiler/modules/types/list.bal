@@ -77,7 +77,7 @@ public class ListDefinition {
             return s;
         }
     }
-
+    
     public function define(Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER) returns ComplexSemType {
         FixedLengthArray members = fixedLengthNormalize({ initial, fixedLength });
         ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
@@ -170,11 +170,11 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return listSubtypeIsEmptyWitness(cx, t, new(cx));    
 }
 
-function listRoSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) returns boolean {
+function listRoSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector witness) returns boolean {
     return listSubtypeIsEmptyWitness(cx, bddFixReadOnly(<Bdd>t), witness);
 }
 
-function listSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) returns boolean {
+function listSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector witness) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.listMemo[b];
     // todo: memoize
@@ -201,7 +201,7 @@ function listSubtypeIsEmptyWitness(Context cx, SubtypeData t, Witness witness) r
     return isEmpty;    
 }
 
-function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg, Witness? witness) returns boolean {
+function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg, WitnessCollector witness) returns boolean {
     FixedLengthArray members;
     SemType rest;
     if pos == () {
@@ -243,7 +243,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg, Witn
     }
     int[] indices = listSamples(cx, members, rest, neg);
     var [memberTypes, nRequired] = listSampleTypes(cx, members, rest, indices);
-    return !listInhabited(cx, indices, memberTypes, nRequired, neg, witness);
+    return !listInhabited(cx, indices, memberTypes, nRequired, neg, members.fixedLength, witness);
 }
 
 function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
@@ -271,30 +271,30 @@ function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLength
 // `memberTypes[i]` is the type that P gives to `indices[i]`;
 // `nRequired` is the number of members of `memberTypes` that are required by P.
 // `neg` represents N.
-function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg, Witness? witness) returns boolean {
+function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg, int fixedLen, WitnessCollector witness) returns boolean {
     if neg == () {
-        listCreateWitness(witness, indices, memberTypes, nRequired);
+        witness.remainingListType({ fixedLen, indices: indices.cloneReadOnly(), memberTypes: memberTypes.cloneReadOnly() });
         return true;
     }
     else {
         final ListAtomicType nt = cx.listAtomType(neg.atom);
         if nRequired > 0 && isNever(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
             // Skip this negative if it is always shorter than the minimum required by the positive
-            return listInhabited(cx, indices, memberTypes, nRequired, neg.next, witness);
+            return listInhabited(cx, indices, memberTypes, nRequired, neg.next, fixedLen, witness);
         }
         // Consider cases we can avoid this negative by having a sufficiently short list
         int negLen = nt.members.fixedLength;
         if negLen > 0 {
             int len = memberTypes.length();
             if len < indices.length() && indices[len] < negLen {
-                return listInhabited(cx, indices, memberTypes, nRequired, neg.next, witness);
+                return listInhabited(cx, indices, memberTypes, nRequired, neg.next, fixedLen, witness);
             }
             foreach int i in nRequired ..< memberTypes.length() {
                 if indices[i] >= negLen {
                     break;
                 }
                 SemType[] t = memberTypes.slice(0, i);
-                if listInhabited(cx, indices, t, nRequired, neg.next, witness) {
+                if listInhabited(cx, indices, t, nRequired, neg.next, fixedLen, witness) {
                     return true;
                 }
             }
@@ -326,7 +326,7 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
                 SemType[] t = memberTypes.clone();
                 t[i] = d;
                 // We need to make index i be required
-                if listInhabited(cx, indices, t, int:max(nRequired, i + 1), neg.next, witness) {
+                if listInhabited(cx, indices, t, int:max(nRequired, i + 1), neg.next, fixedLen, witness) {
                     return true;
                 }
             }
@@ -440,11 +440,6 @@ function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) retu
     }
     return rest;
 } 
-
-
-function listCreateWitness(Witness? witness, int[] indices, SemType[] memberTypes, int nRequired) {
-    
-}
 
 function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean {
     foreach var t in array.initial {

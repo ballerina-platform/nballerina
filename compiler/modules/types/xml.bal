@@ -139,7 +139,7 @@ function xmlRoSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
     return xmlBddEmptyRo(cx, sd.sequence, new(cx));
 }
 
-function xmlRwSubtypeIsEmptyWitness(Context cx, SubtypeData d, Witness witness) returns boolean {
+function xmlRwSubtypeIsEmptyWitness(Context cx, SubtypeData d, WitnessCollector witness) returns boolean {
     XmlSubtype sd = <XmlSubtype>d;
     if sd.primitives != 0 {
         return false;
@@ -147,7 +147,7 @@ function xmlRwSubtypeIsEmptyWitness(Context cx, SubtypeData d, Witness witness) 
     return xmlBddEmptyRw(cx, sd.sequence, witness);
 }
 
-function xmlRoSubtypeIsEmptyWitness(Context cx, SubtypeData d, Witness witness) returns boolean {
+function xmlRoSubtypeIsEmptyWitness(Context cx, SubtypeData d, WitnessCollector witness) returns boolean {
     XmlSubtype sd = <XmlSubtype>d;
     if sd.primitives != 0 {
         return false;
@@ -155,19 +155,19 @@ function xmlRoSubtypeIsEmptyWitness(Context cx, SubtypeData d, Witness witness) 
     return xmlBddEmptyRo(cx, sd.sequence, witness);
 }
 
-function xmlBddEmptyRw(Context cx, Bdd bdd, Witness witness) returns boolean {
+function xmlBddEmptyRw(Context cx, Bdd bdd, WitnessCollector witness) returns boolean {
     return bddEvery(cx, bdd, (), (), xmlFormulaIsEmptyRw, witness);
 }
 
-function xmlBddEmptyRo(Context cx, Bdd bdd, Witness witness) returns boolean {
+function xmlBddEmptyRo(Context cx, Bdd bdd, WitnessCollector witness) returns boolean {
     return bddEvery(cx, bdd, (), (), xmlFormulaIsEmptyRo, witness);
 }
 
-function xmlFormulaIsEmptyRo(Context cx, Conjunction? pos, Conjunction? neg, Witness witness) returns boolean {
+function xmlFormulaIsEmptyRo(Context cx, Conjunction? pos, Conjunction? neg, WitnessCollector witness) returns boolean {
     return hasTotalNegative(cx, collectAllBits(pos), neg);
 }
 
-function xmlFormulaIsEmptyRw(Context cx, Conjunction? pos, Conjunction? neg, Witness witness) returns boolean {
+function xmlFormulaIsEmptyRw(Context cx, Conjunction? pos, Conjunction? neg, WitnessCollector witness) returns boolean {
     int rwOnlyBits = collectAllBits(pos) & XML_PRIMITIVE_RW_MASK;
     return hasTotalNegative(cx, rwOnlyBits, neg);
 }
