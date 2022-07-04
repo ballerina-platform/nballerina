@@ -16,7 +16,7 @@ type StringRecord record {
 public function buildModule(bir:Module birMod, Component? wComp, boolean isDefault) returns Component|BuildError {
     bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
     bir:ModuleId modId = birMod.getId();
-    Component component = wComp != () ? wComp : new;
+    Component component = wComp != () ? wComp : new(birMod);
     wasm:Module module = component.module;
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check birMod.generateFunctionCode(i);

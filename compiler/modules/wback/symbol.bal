@@ -65,3 +65,11 @@ function mangleTypeSymbol(int index) returns string {
     result += index.toString();
     return result;    
 }
+
+function memberTypeSymbol(int n) returns string {
+    return ".member" + n.toString();
+}
+
+function subtypeDefnSymbol(int n) returns string {
+    return ".subtype" + n.toString();
+}

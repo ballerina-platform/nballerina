@@ -100,6 +100,18 @@ final RuntimeFunction arrayStringCompareFunction = {
     rtModule: compareMod
 };
 
+final RuntimeFunction arrayListCompareFunction = {
+    name: "_bal_array_list_compare",
+    returnType: "i32",
+    rtModule: compareMod
+};
+
+final RuntimeFunction optListCompareFunction = {
+    name: "_bal_opt_list_compare",
+    returnType: "i32",
+    rtModule: compareMod
+};
+
 final RuntimeFunction transformCompareResultFunction = {
     name: "_bal_transform_compare_result",
     returnType: "i32",
@@ -193,10 +205,20 @@ function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns Ru
     foreach int i in 0 ..< 2 {
         memberType |= t:widenToUniformTypes(t:listMemberType(tc, semTypes[i], t:INT));
     }
-    memberType &= ~t:NIL;
-    t:UniformTypeCode memberTypeCode = <t:UniformTypeCode>t:uniformTypeCode(memberType);
-    TaggedCompareFunction tcf = compareFunctions.get(memberTypeCode);
-    return tcf.arrayCompareFunction;
+    if memberType != t:NIL {
+        memberType &= ~t:NIL;
+        t:UniformTypeCode? memberTypeCode = t:uniformTypeCode(memberType);
+        if memberTypeCode != () {
+            TaggedCompareFunction? tcf = compareFunctions[memberTypeCode];
+            if tcf != () {
+                return tcf.arrayCompareFunction;
+            }
+        }
+        if t:isSubtypeSimple(memberType, t:LIST) {
+            return arrayListCompareFunction;
+        }
+    }
+    return optListCompareFunction;
 }
 
 function buildCompareStore(wasm:Module module, Scaffold scaffold, int expected, wasm:Expression compareResult, bir:Register reg) returns wasm:Expression {

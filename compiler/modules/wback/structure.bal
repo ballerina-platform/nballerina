@@ -94,7 +94,7 @@ function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConst
     wasm:Expression list = buildRuntimeFunctionCall(module, scaffold.getComponent(), listCreateFunction, [
                                                                                 module.addConst({ i64: length }), 
                                                                                 default, 
-                                                                                module.addConst({ i32: <int>rest })
+                                                                                module.addConst({ i32: t:widenToUniformTypes(rest) })
                                                                                ]);                      
     wasm:Expression storeList = buildStore(module, insn.result, list);
     wasm:Expression[] children = [storeList];
@@ -129,7 +129,7 @@ function buildListSet(wasm:Module module, Scaffold scaffold, bir:ListSetInsn ins
 function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:MappingConstructInsn insn) returns wasm:Expression {
     int length = insn.fieldNames.length();
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(scaffold.getTypeContext(), insn.result.semType);  
-    wasm:Expression desc = scaffold.getMappingDesc(mat);
+    wasm:Expression desc = scaffold.getInherentType(insn.result.semType);
     wasm:Expression mapping = buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingConstructFunction, [
                                                                                             module.addConst({ i32: length }), 
                                                                                             module.refAs("ref.as_non_null", desc)

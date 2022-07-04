@@ -1,5 +1,6 @@
 (module  
   ;; type
+  (type $subTypeContains (func (param eqref eqref) (result i32)))
   (type $Any (struct (field $type i32)))
   (type $BoxedInt (struct (field $type i32) (field $val i64)))
   (type $Float (struct (field $type i32) (field $val f64)))
@@ -9,16 +10,21 @@
   (type $MapKeys (array (mut eqref))) 
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
-  (type $MapTypeArr (array (mut i32)))
-  (type $MappingDesc (struct (field $nFields i32) (field $restType i32) (field $fieldTypes (mut (ref $MapTypeArr))))) 
-  (type $RecordSubtypeField (struct (field $name (mut eqref)) (field $bitset (mut i32)))) 
-  (type $RecordSubtypeFields (array (mut (ref null $RecordSubtypeField)))) 
-  (type $RecordSubtype (struct (field $nFields i32) (field $fields (mut (ref $RecordSubtypeFields))))) 
+  (type $MappingDesc (struct (field $tid i32) (field $nFields i32) (field $restType i31ref) (field $fieldTypes (mut (ref $AnyList))))) 
   (type $Map (struct (field $type i32) (field $desc (mut (ref $MappingDesc))) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
   (type $List (struct (field $type i32) (field $default eqref) (field $atomic i32) (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
   (type $AnyList (array (mut eqref))) 
+  (type $SubType (struct (field $func (ref $subTypeContains))))
+  (type $RecordSubtypeField (struct (field $name (mut eqref)) (field $bitset (mut i32)))) 
+  (type $RecordSubtypeFields (array (mut (ref null $RecordSubtypeField)))) 
+  (type $RecordSubtype (struct (field $func (ref $subTypeContains)) (field $nFields i32) (field $fields (mut (ref $RecordSubtypeFields))))) 
+  (type $PrecomputedTids (array (mut i32))) 
+  (type $PrecomputedSubtype (struct (field $func (ref $subTypeContains)) (field $length i32) (field $tids (mut (ref $PrecomputedTids))))) 
+  (type $ArrMapSubtype (struct (field $func (ref $subTypeContains)) (field $bitSet i32))) 
+  (type $SubTypeList (array (mut (ref null $SubType))))
+  (type $ComplexType (struct (field $all i32) (field $some i32) (field $subtypes (mut (ref $SubTypeList))))) 
   ;; import
   (import "console" "log" (func $println (param eqref))) 
   (import "int" "hex" (func $_js_int_to_hex (param i64) (result anyref))) 
@@ -30,10 +36,13 @@
   (global $rttString (rtt 1 $String) (rtt.sub $String (global.get $rttAny)))
   (global $rttMap (rtt 1 $Map) (rtt.sub $Map (global.get $rttAny)))
   (global $rttError (rtt 1 $Error) (rtt.sub $Error (global.get $rttAny)))
-  (global $rttMapTypeArr (rtt 0 $MapTypeArr) (rtt.canon $MapTypeArr))
+  (global $rttSubType (rtt 0 $SubType) (rtt.canon $SubType))
+  (global $rttPrecomputedSubtype (rtt 1 $PrecomputedSubtype) (rtt.sub $PrecomputedSubtype (global.get $rttSubType)))
+  (global $rttArrMapSubtype (rtt 1 $ArrMapSubtype) (rtt.sub $ArrMapSubtype (global.get $rttSubType)))
+  (global $rttRecordSubtype (rtt 1 $RecordSubtype) (rtt.sub $RecordSubtype (global.get $rttSubType)))
   (global $rttMappingDesc (rtt 0 $MappingDesc) (rtt.canon $MappingDesc))
-  (global $rttRecordSubtype (rtt 0 $RecordSubtype) (rtt.canon $RecordSubtype))
   (global $rttRecordSubtypeField (rtt 0 $RecordSubtypeField) (rtt.canon $RecordSubtypeField))
+  (global $rttComplexType (rtt 0 $ComplexType) (rtt.canon $ComplexType))
   ;; tag
   (tag $bad-conversion) 
   ;; export
@@ -45,6 +54,26 @@
   (export "_bal_get_type_children" (func $_bal_get_type_children)) 
   (export "_bal_get_error" (func $_bal_get_error)) 
   (export "_bal_get_string" (func $_bal_get_string)) 
+  (export "_bal_record_subtype_contains" (func $_bal_record_subtype_contains)) 
+  (export "_bal_map_subtype_contains" (func $_bal_map_subtype_contains)) 
+  (export "_bal_precomputed_subtype_contains" (func $_bal_precomputed_subtype_contains)) 
+  (export "_bal_array_subtype_contains" (func $_bal_array_subtype_contains)) 
+  ;; $_bal_record_subtype_contains
+  (func $_bal_record_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
+    (return
+      (i32.const 0)))
+  ;; $_bal_precomputed_subtype_contains
+  (func $_bal_precomputed_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
+    (return
+      (i32.const 0)))
+  ;; $_bal_map_subtype_contains
+  (func $_bal_map_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
+    (return
+      (i32.const 0)))
+  ;; $_bal_array_subtype_contains
+  (func $_bal_array_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
+    (return
+      (i32.const 0)))
   ;; $toHexString
   (func $toHexString (param $0 i64) (result (ref $String)) 
     (struct.new_with_rtt $String 

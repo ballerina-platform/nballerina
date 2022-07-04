@@ -23,11 +23,16 @@ const RuntimeType STRING_TYPE = "String";
 const RuntimeType ANY_TYPE = "Any";
 const RuntimeType FLOAT_TYPE = "Float";
 const RuntimeType ERROR_TYPE = "Error";
-const RuntimeType MAP_TYPE_ARR = "MapTypeArr";
+const RuntimeType MAP_TYPE_ARR = "AnyList";
 const RuntimeType MAPPING_DESC = "MappingDesc";
+const RuntimeType PRECOMPUTED_SUBTYPE = "PrecomputedSubtype";
+const RuntimeType PRECOMPUTED_TIDS = "PrecomputedTids";
+const RuntimeType ARRMAP_SUBTYPE = "ArrMapSubtype";
 const RuntimeType RECORD_SUBTYPE = "RecordSubtype";
 const RuntimeType RECORD_SUBTYPE_FIELDS = "RecordSubtypeFields";
 const RuntimeType RECORD_SUBTYPE_FIELD = "RecordSubtypeField";
+const RuntimeType COMPLEX_TYPE = "ComplexType";
+const RuntimeType SUBTYPE_DATA_LIST = "SubTypeList";
 
 public type ExceptionTag string;
 const ExceptionTag BAD_CONVERSION_TAG = "bad-conversion";
