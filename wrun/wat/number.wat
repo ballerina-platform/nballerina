@@ -5,52 +5,6 @@
   ;; export
   (export "overflow" (tag $overflow)) 
   (export "bad-conversion" (tag $bad-conversion)) 
-  ;; $_bal_check_type_and_int_val
-  (func $_bal_check_type_and_int_val (param $0 eqref) (param $1 i64) (result i32)
-    (local $2 i32) 
-    (local $3 i32) 
-    (local.set $2
-      (i32.const 0)) 
-    (local.set $3
-      (call $_bal_get_type
-        (local.get $0))) 
-    (if 
-      (i32.eq
-        (local.get $3)
-        (i32.const 128))
-      (local.set $2
-        (i64.eq
-          (struct.get $BoxedInt $val
-            (ref.cast
-              (ref.as_data  
-                (local.get $0))
-              (global.get $rttBoxedInt)))
-          (local.get $1))))
-    (return
-      (local.get $2))) 
-  ;; $_bal_check_type_and_float_val
-  (func $_bal_check_type_and_float_val (param $0 eqref) (param $1 f64) (result i32)
-    (local $2 i32) 
-    (local $3 i32) 
-    (local.set $2
-      (i32.const 0)) 
-    (local.set $3
-      (call $_bal_get_type
-        (local.get $0))) 
-    (if 
-      (i32.eq
-        (local.get $3)
-        (i32.const 256))
-      (local.set $2
-        (call $_bal_float_eq
-          (struct.get $Float $val
-            (ref.cast
-              (ref.as_data  
-                (local.get $0))
-              (global.get $rttFloat)))
-          (local.get $1))))
-    (return
-      (local.get $2)))
   ;; $_bal_convert_to_float
   (func $_bal_convert_to_float (param $0 eqref) (result (ref $Float))
     (local $1 i32)

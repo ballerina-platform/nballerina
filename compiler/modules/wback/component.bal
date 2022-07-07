@@ -4,6 +4,11 @@ import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
 import wso2/nballerina.types as t;
 
+const TYPE_TEST = 0;
+const INHERENT_TYPE = 1;
+
+type Usage TYPE_TEST|INHERENT_TYPE;
+
 public class Component {
     final wasm:Module module;
     private ExceptionTag[] exceptionTags = [];
@@ -16,12 +21,12 @@ public class Component {
     private wasm:Type[] mainLocals = [];
     private t:Context typeContext;
     private string? mainMangledName = ();
-    table<UsedMapAtomicType> key(semType) usedMapAtomicTypes = table [];
-    table<UsedRecordSubtype> key(semType) usedRecordSubtypes = table [];
+    table<UsedSemType> key(semType)[2] usedSemTypes = [table [], table[]];
     table<ComplexTypeDefn> key(semType) complexTypeDefns = table [];
     table<InherentTypeDefn> key(semType)[2] inherentTypeDefns = [table [], table[]];
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
     private ModuleContext cx;
+    boolean inherentTypesComplete = false;
     SubtypeStruct[] subtypeStructs = [];
 
     function init(bir:Module birMod) {
@@ -78,24 +83,19 @@ public class Component {
         self.cx.usedSemTypes.add(used);
     }
 
-    function usedSemType(t:SemType semType) returns UsedSemType? {
-        return self.cx.usedSemTypes[semType];
-    }
-
     function nextUsedSemTypeSymbol() returns string {
         return mangleTypeSymbol(self.cx.usedSemTypes.length());
     }
 
-    function getUsedSemType(t:SemType semType) returns UsedSemType {
-        UsedSemType? used  = self.cx.usedSemTypes[semType];
+    function getUsedSemType(t:SemType semType, Usage usage) returns UsedSemType {
+        UsedSemType? used = self.usedSemTypes[usage][semType];
         if used == () {
-            string global = mangleTypeSymbol(self.cx.usedSemTypes.length());
-            self.module.addGlobal(global, { base: MAPPING_DESC, initial: "null" }, self.module.refNull(MAPPING_DESC));
+            string global = mangleTypeSymbol(self.usedSemTypes[INHERENT_TYPE].length() + self.usedSemTypes[TYPE_TEST].length());
             UsedSemType t = {
                 global,
                 semType
             };
-            self.cx.usedSemTypes.add(t);
+            self.usedSemTypes[usage].add(t);
             return t;
         }
         else {
@@ -110,7 +110,7 @@ public class Component {
         wasm:Expression? mainBody = self.mainBody;
         string? mainMangledName = self.mainMangledName;
         if mainBody != () && mainMangledName != (){
-            wasm:Expression[] types = buildTypes(module, self, self.cx.usedSemTypes);
+            wasm:Expression[] types = buildTypes(module, self, self.usedSemTypes);
             wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, types, self.subtypeStructs, self.complexTypeDefns), mainBody]);
             module.addFunction(mainMangledName, [], "None", self.mainLocals, extendedBody);
         }

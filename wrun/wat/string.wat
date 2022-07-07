@@ -7,10 +7,10 @@
   (import "string" "comp" (func $_js_string_comp (param anyref) (param anyref) (result i32))) 
   ;; $_bal_is_char
   (func $_bal_is_char (param $0 eqref) (result i32) 
-    (i32.eq
+    (i64.eq
       (call $_bal_string_length
         (local.get $0))
-      (i32.const 1)))
+      (i64.const 1)))
   ;; $_bal_string_length
   (func $_bal_string_length (param $0 eqref) (result i64) 
     (local $1 (ref null $String))
@@ -131,25 +131,6 @@
             (local.get $6))
           (i32.const -1) 
           (global.get $rttString)))))
-  ;; $_bal_check_type_and_string_val
-  (func $_bal_check_type_and_string_val (param $0 eqref) (param $1 eqref) (result i32)
-    (local $2 i32) 
-    (local $3 i32) 
-    (local.set $2
-      (i32.const 0)) 
-    (local.set $3
-      (call $_bal_get_type
-        (local.get $0))) 
-    (if 
-      (i32.eq
-        (local.get $3)
-        (i32.const 1024))
-      (local.set $2
-        (call $_bal_string_eq
-          (local.get $0)
-          (local.get $1))))
-    (return
-      (local.get $2))) 
   ;; $_bal_string_eq
   (func $_bal_string_eq (param $0 eqref) (param $1 eqref) (result i32) 
     (local $2 anyref)

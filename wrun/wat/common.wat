@@ -10,13 +10,15 @@
   (type $MapKeys (array (mut eqref))) 
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
-  (type $MappingDesc (struct (field $tid i32) (field $nFields i32) (field $restType i31ref) (field $fieldTypes (mut (ref $AnyList))))) 
+  (type $Desc (struct (field $tid i32))) 
+  (type $MappingDesc (struct (field $tid i32) (field $nFields i32) (field $restType eqref) (field $fieldTypes (mut (ref $AnyList))))) 
+  (type $ListDesc (struct (field $tid i32) (field $restType eqref))) 
   (type $Map (struct (field $type i32) (field $desc (mut (ref $MappingDesc))) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
-  (type $List (struct (field $type i32) (field $default eqref) (field $atomic i32) (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
+  (type $List (struct (field $type i32) (field $default eqref) (field $desc (ref $ListDesc)) (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
   (type $AnyList (array (mut eqref))) 
-  (type $SubType (struct (field $func (ref $subTypeContains))))
+  (type $Subtype (struct (field $func (ref $subTypeContains))))
   (type $RecordSubtypeField (struct (field $name (mut eqref)) (field $bitset (mut i32)))) 
   (type $RecordSubtypeFields (array (mut (ref null $RecordSubtypeField)))) 
   (type $RecordSubtype (struct (field $func (ref $subTypeContains)) (field $nFields i32) (field $fields (mut (ref $RecordSubtypeFields))))) 
@@ -29,7 +31,7 @@
   (type $FloatValues (array (mut f64))) 
   (type $FloatSubtype (struct (field $func (ref $subTypeContains)) (field $allowed i32) (field $values (mut (ref $FloatValues))))) 
   (type $ArrMapSubtype (struct (field $func (ref $subTypeContains)) (field $bitSet i32))) 
-  (type $SubTypeList (array (mut (ref null $SubType))))
+  (type $SubTypeList (array (mut (ref null $Subtype))))
   (type $ComplexType (struct (field $all i32) (field $some i32) (field $subtypes (mut (ref $SubTypeList))))) 
   ;; import
   (import "console" "log" (func $println (param eqref))) 
@@ -42,16 +44,19 @@
   (global $rttString (rtt 1 $String) (rtt.sub $String (global.get $rttAny)))
   (global $rttMap (rtt 1 $Map) (rtt.sub $Map (global.get $rttAny)))
   (global $rttError (rtt 1 $Error) (rtt.sub $Error (global.get $rttAny)))
-  (global $rttSubType (rtt 0 $SubType) (rtt.canon $SubType))
-  (global $rttPrecomputedSubtype (rtt 1 $PrecomputedSubtype) (rtt.sub $PrecomputedSubtype (global.get $rttSubType)))
-  (global $rttArrMapSubtype (rtt 1 $ArrMapSubtype) (rtt.sub $ArrMapSubtype (global.get $rttSubType)))
-  (global $rttRecordSubtype (rtt 1 $RecordSubtype) (rtt.sub $RecordSubtype (global.get $rttSubType)))
-  (global $rttIntSubtype (rtt 1 $IntSubtype) (rtt.sub $IntSubtype (global.get $rttSubType)))
-  (global $rttFloatSubtype (rtt 1 $FloatSubtype) (rtt.sub $FloatSubtype (global.get $rttSubType)))
-  (global $rttStringSubtype (rtt 1 $StringSubtype) (rtt.sub $StringSubtype (global.get $rttSubType)))
-  (global $rttMappingDesc (rtt 0 $MappingDesc) (rtt.canon $MappingDesc))
+  (global $rttSubtype (rtt 0 $Subtype) (rtt.canon $Subtype))
+  (global $rttPrecomputedSubtype (rtt 1 $PrecomputedSubtype) (rtt.sub $PrecomputedSubtype (global.get $rttSubtype)))
+  (global $rttArrMapSubtype (rtt 1 $ArrMapSubtype) (rtt.sub $ArrMapSubtype (global.get $rttSubtype)))
+  (global $rttRecordSubtype (rtt 1 $RecordSubtype) (rtt.sub $RecordSubtype (global.get $rttSubtype)))
+  (global $rttIntSubtype (rtt 1 $IntSubtype) (rtt.sub $IntSubtype (global.get $rttSubtype)))
+  (global $rttFloatSubtype (rtt 1 $FloatSubtype) (rtt.sub $FloatSubtype (global.get $rttSubtype)))
+  (global $rttStringSubtype (rtt 1 $StringSubtype) (rtt.sub $StringSubtype (global.get $rttSubtype)))
+  (global $rttDesc (rtt 0 $Desc) (rtt.canon $Desc))
+  (global $rttMappingDesc (rtt 1 $MappingDesc) (rtt.sub $MappingDesc (global.get $rttDesc)))
+  (global $rttListDesc (rtt 1 $ListDesc) (rtt.sub $ListDesc (global.get $rttDesc)))
   (global $rttRecordSubtypeField (rtt 0 $RecordSubtypeField) (rtt.canon $RecordSubtypeField))
   (global $rttComplexType (rtt 0 $ComplexType) (rtt.canon $ComplexType))
+  (global $rttIntRange (rtt 0 $IntRange) (rtt.canon $IntRange))
   ;; tag
   (tag $bad-conversion) 
   ;; export
@@ -80,7 +85,7 @@
     (local $4 i32)
     (local $5 i32)
     (local $6 i32)
-    (local $7 (ref null $SubType))
+    (local $7 (ref null $Subtype))
     (local.set $2
       (call $_bal_get_type
         (local.get $1)))
@@ -125,12 +130,16 @@
               (ref.as_non_null
                 (local.get $3)))
             (local.get $6)))
-        (global.get $rttSubType)))
+        (global.get $rttSubtype)))
     (return
       (call_ref
-        (local.get $0)
+        (array.get $SubTypeList
+          (struct.get $ComplexType $subtypes
+            (ref.as_non_null
+              (local.get $3)))
+          (local.get $6))
         (local.get $1)
-        (struct.get $SubType $func
+        (struct.get $Subtype $func
           (ref.as_non_null
             (local.get $7))))))
   ;; $_bal_record_subtype_contains
@@ -148,19 +157,19 @@
     (local $12 (ref null $RecordSubtype))
     (local.set $2
       (call $_bal_get_type
-        (local.get $0)))
+        (local.get $1)))
     (if 
       (i32.ne
         (i32.and
           (local.get $2)  
-          (i32.const 524296))
+          (i32.const 524288))
         (local.get $2))
       (return 
         (i32.const 0)))
     (local.set $3
       (ref.cast
         (ref.as_data
-          (local.get $0))
+          (local.get $1))
         (global.get $rttMap)))
     (local.set $4
       (struct.get $Map $desc
@@ -173,7 +182,7 @@
     (local.set $12
       (ref.cast
         (ref.as_data
-          (local.get $1))
+          (local.get $0))
         (global.get $rttRecordSubtype)))
     (local.set $6
       (struct.get $RecordSubtype $nFields
@@ -252,7 +261,7 @@
     (local $5 i32)
     (local $6 i32)
     (local $7 i32)
-    (local $8 (ref null $MapTypeArr))
+    (local $8 (ref null $AnyList))
     (local $9 (ref null $ArrMapSubtype))
     (local.set $2
       (call $_bal_get_type
@@ -261,7 +270,7 @@
       (i32.ne
         (i32.and
           (local.get $2)  
-          (i32.const 524296))
+          (i32.const 524288))
         (local.get $2))
       (return 
         (i32.const 0)))
@@ -354,8 +363,30 @@
             (local.get $1))))))
   ;; $_bal_array_subtype_contains
   (func $_bal_array_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 (ref null $ArrMapSubtype))
+    (local $3 i32)
+    (local $4 (ref null $ListDesc))
+    (local.set $2
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttArrMapSubtype)))
+    (local.set $3
+      (struct.get $ArrMapSubtype $bitSet
+        (ref.as_non_null
+          (local.get $2))))
+    (local.set $4
+      (struct.get $List $desc 
+        (ref.cast
+          (ref.as_data
+            (local.get $1))
+          (global.get $rttList))))
     (return
-      (i32.const 0)))
+      (call $_bal_member_type_is_subtype_simple
+        (struct.get $ListDesc $restType
+          (ref.as_non_null
+            (local.get $4)))
+        (local.get $3))))
   ;; $_bal_false_subtype_contains
   (func $_bal_false_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
     (return
@@ -512,7 +543,7 @@
   (func $_bal_precomputed_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 (ref null $PrecomputedSubtype))
     (local $3 (ref null $PrecomputedTids))
-    (local $4 (ref null $MappingDesc))
+    (local $4 (ref null $Desc))
     (local.set $2
       (ref.cast
         (ref.as_data
@@ -522,16 +553,28 @@
       (struct.get $PrecomputedSubtype $tids
         (ref.as_non_null
           (local.get $2))))
-    (local.set $4
-      (ref.cast
-        (ref.as_data
-          (local.get $0))
-        (global.get $rttMappingDesc)))
+    (if
+      (i32.eq
+        (call $_bal_get_type
+          (local.get $1))
+        (i32.const 262144))
+      (local.set $4
+        (struct.get $List $desc
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttList))))
+      (local.set $4
+        (struct.get $Map $desc
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttMap)))))
     (return
       (call $_bal_tid_list_contains
         (ref.as_non_null
           (local.get $3))
-        (struct.get $MappingDesc $tid
+        (struct.get $Desc $tid
           (ref.as_non_null
             (local.get $4))))))
   ;; $_bal_tid_list_contains
@@ -765,39 +808,6 @@
           (ref.as_data 
             (local.get $0)) 
           (global.get $rttError))))) 
-  ;; $_bal_check_type_and_boolean_val
-  (func $_bal_check_type_and_boolean_val (param $0 eqref) (param $1 i32) (result i32)
-    (local $2 i32) 
-    (local.set $2
-      (i32.const 0)) 
-    (if 
-      (ref.is_i31
-        (local.get $0))
-      (if
-        (i32.eq
-          (i31.get_u
-            (ref.as_i31
-              (local.get $0)))
-          (local.get $1))
-        (local.set $2
-          (i32.const 1))))
-    (return 
-      (local.get $2)))
-  ;; $_bal_check_type_and_nil_val
-  (func $_bal_check_type_and_nil_val (param $0 eqref) (param $1 eqref) (result i32)
-    (local $2 i32) 
-    (local.set $2
-      (i32.const 0)) 
-    (if 
-      (i32.and
-        (ref.is_null
-          (local.get $0))
-        (ref.is_null
-          (local.get $1)))
-      (local.set $2
-        (i32.const 1)))
-    (return 
-      (local.get $2)))
   ;; $length
   (func $length (param $0 eqref) (result i64) 
     (local $1 i64) 
@@ -815,7 +825,7 @@
       (if
         (i32.eq
           (local.get $2)
-          (i32.const 262148))
+          (i32.const 262144))
         (local.set $1 
           (call $_bal_list_length
             (local.get $0)))

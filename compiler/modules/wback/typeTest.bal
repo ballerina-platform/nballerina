@@ -7,42 +7,6 @@ final RuntimeModule numberMod = {
     priority: 3
 };
 
-final RuntimeFunction checkStringTypeAndValFunction = {
-    name: "_bal_check_type_and_string_val",
-    returnType: "i32",
-    rtModule: stringMod
-};
-
-final RuntimeFunction checkIntTypeAndValFunction = {
-    name: "_bal_check_type_and_int_val",
-    returnType: "i32",
-    rtModule: numberMod
-};
-
-final RuntimeFunction checkFloatTypeAndValFunction = {
-    name: "_bal_check_type_and_float_val",
-    returnType: "i32",
-    rtModule: numberMod
-};
-
-final RuntimeFunction checkBooleanTypeAndValFunction = {
-    name: "_bal_check_type_and_boolean_val",
-    returnType: "i32",
-    rtModule: commonMod
-};
-
-final RuntimeFunction checkNilTypeAndValFunction = {
-    name: "_bal_check_type_and_nil_val",
-    returnType: "i32",
-    rtModule: commonMod
-};
-
-final RuntimeFunction checkListTypeAndAtomicFunction = {
-    name: "_bal_check_type_and_list_atomic",
-    returnType: "i32",
-    rtModule: listMod
-};
-
 final RuntimeFunction typeContainsFunction = {
     name: "_bal_type_contains",
     returnType: "i32",
@@ -74,7 +38,7 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
             hasType = buildHasTagInSet(module, scaffold, semType, value, bitSet);
         }
         else {
-            hasType = buildRuntimeFunctionCall(module, scaffold.getComponent(), typeContainsFunction, [scaffold.getInherentType(semType), value]);
+            hasType = buildRuntimeFunctionCall(module, scaffold.getComponent(), typeContainsFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
         }
     }
     else if baseRepr == BASE_REPR_INT {

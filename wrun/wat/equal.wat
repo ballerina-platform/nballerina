@@ -59,7 +59,7 @@
                 (if 
                   (i32.eq
                     (local.get $2)
-                    (i32.const 262148))
+                    (i32.const 262144))
                   (local.set $4
                     (call $_bal_list_eq
                       (local.get $0)
@@ -67,7 +67,7 @@
                   (if 
                     (i32.eq
                       (local.get $2)
-                      (i32.const 524296))
+                      (i32.const 524288))
                     (local.set $4
                       (call $_bal_map_eq
                         (local.get $0)

@@ -63,12 +63,6 @@ type RegionBlocks record {|
     bir:Label[] labels;
 |};
 
-type UsedMapAtomicType record {|
-    readonly t:MappingAtomicType semType;
-    wasm:Expression struct;
-    readonly string global;
-|};
-
 type ComplexTypeDefn record {|
     readonly string global;
     wasm:Expression[] body;
@@ -80,13 +74,6 @@ type SubtypeDefn record {|
     readonly t:UniformTypeCode typeCode;
     SubtypeStruct? struct = ();
     string global;
-|};
-
-type UsedRecordSubtype record {|
-    readonly t:MappingAtomicType semType;
-    wasm:Expression struct;
-    wasm:Expression[] names;
-    readonly string global;
 |};
 
 class Scaffold {
@@ -217,7 +204,12 @@ class Scaffold {
     }
     
     function getInherentType(t:SemType ty) returns wasm:Expression {
-        UsedSemType used = self.component.getUsedSemType(ty);
+        UsedSemType used = self.component.getUsedSemType(ty, INHERENT_TYPE);
+        return self.module.globalGet(used.global);
+    }
+
+    function getTypeTest(t:ComplexSemType ty) returns wasm:Expression {
+        UsedSemType used = self.component.getUsedSemType(ty, TYPE_TEST);
         return self.module.globalGet(used.global);
     }
     

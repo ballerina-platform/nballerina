@@ -46,18 +46,37 @@ type ModuleContext record {|
     boolean inherentTypesComplete;
 |};
 
-function buildTypes(wasm:Module module, Component component, table<UsedSemType> key(semType) usedSemTypes) returns wasm:Expression[] {
+function buildTypes(wasm:Module module, Component component, table<UsedSemType> key(semType)[2] usedSemTypes) returns wasm:Expression[] {
     wasm:Expression[] body = [];
-    table<InherentTypeDefn> key(semType) defns = component.inherentTypeDefns[STRUCTURE_MAPPING];
-    foreach UsedSemType used in usedSemTypes {
-        int tid = component.inherentTypeDefns[STRUCTURE_MAPPING].length();
-        component.inherentTypeDefns[STRUCTURE_MAPPING].add({ global: used.global, semType: used.semType, tid });
+    table<InherentTypeDefn> key(semType) mappingDefns = component.inherentTypeDefns[STRUCTURE_MAPPING];
+    table<InherentTypeDefn> key(semType) listDefns = component.inherentTypeDefns[STRUCTURE_LIST];
+    foreach UsedSemType used in usedSemTypes[INHERENT_TYPE] {
+        StructureBasicType basic = <StructureBasicType>structureBasicType(used.semType);
+        RuntimeType ty = basic == STRUCTURE_LIST ? LIST_DESC : MAPPING_DESC;
+        module.addGlobal(used.global, { base: ty, initial: "null" }, module.refNull(ty));
+        int tid = component.inherentTypeDefns[basic].length();
+        component.inherentTypeDefns[basic].add({ global: used.global, semType: used.semType, tid });
     }
-    foreach InherentTypeDefn used in defns {
+    foreach InherentTypeDefn used in mappingDefns {
         t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(component.getTypeContext(), used.semType);
         body.push(...createMappingDesc(module, component, mat, used.global, used.tid));
     }
+    foreach InherentTypeDefn used in listDefns {
+        t:ListAtomicType mat = <t:ListAtomicType>t:listAtomicTypeRw(component.getTypeContext(), used.semType);
+        body.push(createListDesc(module, component, mat, used.global, used.tid));
+    }
     finishSubtypeDefns(component, module);
+    component.inherentTypesComplete = true;
+    foreach UsedSemType used in usedSemTypes[TYPE_TEST] {
+        ComplexTypeDefn? defn  = component.complexTypeDefns[<t:ComplexSemType>used.semType];
+        if defn != () {
+            module.addGlobal(used.global, { base: COMPLEX_TYPE, initial: "null" }, module.refNull(COMPLEX_TYPE));
+            body.push(module.globalSet(used.global, module.globalGet(defn.global)));
+        }
+        else {
+            addComplexTypeDefn(module, component, used.global, <t:ComplexSemType>used.semType);
+        }
+    }
     return body;
 }
 
@@ -78,6 +97,14 @@ function createMappingDesc(wasm:Module module, Component component, t:MappingAto
                                                fields[i]));
     }
     return body;
+}
+
+function createListDesc(wasm:Module module, Component component, t:ListAtomicType lat, string global, int tid) returns wasm:Expression {  
+    wasm:Expression struct =  module.structNew(LIST_DESC, [
+                                                            module.addConst({ i32: tid }),
+                                                            getMemberType(module, component, lat.rest)
+                                                          ]);
+    return module.globalSet(global, struct);
 }
 
 function getMemberType(wasm:Module module, Component component, t:SemType memberType) returns wasm:Expression {
@@ -136,6 +163,9 @@ function getUniformSubtype(Component cx, wasm:Module module, t:UniformTypeCode t
         global = subtypeDefnSymbol(cx.subtypeDefns.length());
         SubtypeDefn newDefn = { typeCode, semType, global };
         cx.subtypeDefns.add(newDefn);
+        if (cx.inherentTypesComplete) {
+            cx.subtypeStructs.push(createSubtypeStruct(cx, module, typeCode, semType, global));
+        }
     }
     return module.globalGet(global); 
 }
@@ -323,7 +353,6 @@ function createPrecomputedSubtypeStruct(Component cx, wasm:Module module, Struct
     wasm:Expression[] values = [];
     wasm:Expression struct = module.structNew(PRECOMPUTED_SUBTYPE, [
                                               module.refFunc(TYPE_KIND_PRECOMPUTED),
-                                              module.addConst({ i32: tids.length() }),
                                               module.arrayNewDef(PRECOMPUTED_TIDS, module.addConst({ i32: tids.length() }))
                                             ]);
     values.push(module.globalSet(symbol, struct));
@@ -335,4 +364,14 @@ function createPrecomputedSubtypeStruct(Component cx, wasm:Module module, Struct
                                    ));
     }
     return { values };
+}
+
+function structureBasicType(t:SemType semType) returns StructureBasicType? {
+    if t:isSubtypeSimple(semType, t:LIST) {
+        return STRUCTURE_LIST;
+    }
+    if t:isSubtypeSimple(semType, t:MAPPING) {
+        return STRUCTURE_MAPPING;
+    }
+    return ();
 }

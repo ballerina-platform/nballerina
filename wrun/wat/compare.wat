@@ -100,7 +100,7 @@
     (if
       (i32.eq 
         (local.get $2)
-        (i32.const 262148))
+        (i32.const 262144))
       (return
         (call $_bal_opt_list_compare
           (local.get $0)

@@ -90,11 +90,12 @@ function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConst
     final int length = insn.operands.length();
     t:SemType listType = insn.result.semType;
     var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.getTypeContext(), listType);
-    var { rest, default } = listAtomicTypeToListRepr(module, scaffold, atomic);
+    ListRepr repr = listAtomicTypeToListRepr(module, scaffold, atomic);
+    wasm:Expression inherent = scaffold.getInherentType(listType);
     wasm:Expression list = buildRuntimeFunctionCall(module, scaffold.getComponent(), listCreateFunction, [
                                                                                 module.addConst({ i64: length }), 
-                                                                                default, 
-                                                                                module.addConst({ i32: t:widenToUniformTypes(rest) })
+                                                                                repr.default, 
+                                                                                module.refAs("ref.as_non_null", inherent)
                                                                                ]);                      
     wasm:Expression storeList = buildStore(module, insn.result, list);
     wasm:Expression[] children = [storeList];
