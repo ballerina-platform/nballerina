@@ -30,4 +30,4 @@ For those test cases that are valid Ballerina programs, the Makefile in the [tes
 
 ## Status
 
-Wasm backend is completed for [subset 09](docs/subset09.md) and are working on [subset 10](docs/subset10.md).
+Wasm backend is completed for [subset 11](docs/subset11.md) and are working on [subset 12](docs/subset12.md).

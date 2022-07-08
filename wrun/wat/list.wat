@@ -459,92 +459,31 @@
   ;; $_bal_mapping_construct
   (func $_bal_mapping_construct (param $0 i32) (param $1 eqref) (result eqref)
     (ref.null data))
-  ;; $_bal_member_type_contains_tagged
-  (func $_bal_member_type_contains_tagged (param $0 eqref) (param $1 eqref) (result i32)
-    (local $2 i32)
-    (local $3 (ref null $ComplexType))
-    (local $4 i32)
-    (local.set $4
-      (call $_bal_get_type
-        (local.get $1)))
-    (if
-      (ref.is_i31
-        (local.get $0))
-      (block
-        (local.set $2
-          (i31.get_u
-            (ref.as_i31
-              (local.get $0))))
-        (return 
-          (i32.ne
-            (i32.const 0)
-            (i32.and
-              (local.get $2)
-              (local.get $4)))))
-      (block
-        (local.set $3
-          (ref.cast
-            (ref.as_data
-              (local.get $0))
-            (global.get $rttComplexType)))
-        (return
-          (call $_bal_complex_type_contains_tagged
-            (ref.as_non_null
-              (local.get $3))
-            (local.get $1))))))
-  ;; $_bal_complex_type_contains_tagged 
-  (func $_bal_complex_type_contains_tagged (param $0 (ref $ComplexType)) (param $1 eqref) (result i32)
-    (local $2 i32)
+  ;; $_bal_array_subtype_contains
+  (func $_bal_array_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 (ref null $ArrMapSubtype))
     (local $3 i32)
-    (local $4 i32)
-    (local $5 i32)
-    (local $6 (ref null $Subtype))
+    (local $4 (ref null $ListDesc))
     (local.set $2
-      (call $_bal_get_type
-        (local.get $1)))
-    (local.set $3
-      (struct.get $ComplexType $all
-        (local.get $0)))
-    (local.set $4
-      (struct.get $ComplexType $some
-        (local.get $0)))
-    (if
-      (i32.and
-        (local.get $3)
-        (local.get $2))
-      (return 
-        (i32.const 1)))
-    (if
-      (i32.eqz
-        (i32.and
-          (local.get $4)
-          (local.get $2)))
-      (return 
-        (i32.const 0)))
-    (local.set $5
-      (i32.popcnt
-        (i32.and
-          (local.get $4)
-          (i32.sub
-            (local.get $2)
-            (i32.const 1)))))
-    (local.set $6
-      (ref.cast 
+      (ref.cast
         (ref.as_data
-          (array.get $SubTypeList
-            (struct.get $ComplexType $subtypes
-                (local.get $0))
-            (local.get $5)))
-        (global.get $rttSubtype)))
+          (local.get $0))
+        (global.get $rttArrMapSubtype)))
+    (local.set $3
+      (struct.get $ArrMapSubtype $bitSet
+        (ref.as_non_null
+          (local.get $2))))
+    (local.set $4
+      (struct.get $List $desc 
+        (ref.cast
+          (ref.as_data
+            (local.get $1))
+          (global.get $rttList))))
     (return
-      (call_ref
-        (array.get $SubTypeList
-          (struct.get $ComplexType $subtypes
-            (local.get $0))
-          (local.get $5))
-        (local.get $1)
-        (struct.get $Subtype $func
+      (call $_bal_member_type_is_subtype_simple
+        (struct.get $ListDesc $restType
           (ref.as_non_null
-            (local.get $6))))))
+            (local.get $4)))
+        (local.get $3))))
  ;; end
 ) 

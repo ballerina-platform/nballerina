@@ -5,6 +5,91 @@
   (import "string" "concat" (func $_js_string_concat (param anyref) (param anyref) (result anyref))) 
   (import "string" "eq" (func $_js_string_eq (param anyref) (param anyref) (result i32))) 
   (import "string" "comp" (func $_js_string_comp (param anyref) (param anyref) (result i32))) 
+  ;; $_bal_string_subtype_contains
+  (func $_bal_string_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 (ref null $StringSubtype))
+    (local $3 (ref null $AnyList))
+    (local $4 i32)
+    (local $5 i32)
+    (local.set $2
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttStringSubtype)))
+    (local.set $3
+      (struct.get $StringSubtype $values
+        (ref.as_non_null
+          (local.get $2))))
+    (local.set $4
+      (call $_bal_string_list_contains
+        (ref.as_non_null
+          (local.get $3))
+        (local.get $1)))
+    (if
+      (i32.eqz
+        (call $_bal_is_char
+          (local.get $1)))
+      (local.set $5
+        (struct.get $StringSubtype $nonCharAllowed
+          (ref.as_non_null
+            (local.get $2))))
+      (local.set $5
+        (struct.get $StringSubtype $charAllowed
+          (ref.as_non_null
+            (local.get $2)))))
+    (return 
+      (i32.eq
+        (local.get $4)
+        (local.get $5))))
+  ;; $_bal_string_list_contains
+  (func $_bal_string_list_contains (param $0 (ref $AnyList)) (param $1 eqref) (result i32)
+    (local $2 i32)
+    (local $3 i32)
+    (local $4 i32)
+    (local $5 i32)
+    (local.set $2
+      (i32.const 0))
+    (local.set $3
+      (array.len $AnyList
+        (local.get $0)))
+    (loop $loop$cont
+      (if
+        (i32.lt_u
+          (local.get $2)
+          (local.get $3))
+        (block
+          (local.set $4
+            (i32.add
+              (local.get $2)
+              (i32.div_u
+                (i32.sub
+                  (local.get $3)
+                  (local.get $2))
+                (i32.const 2))))
+          (local.set $5
+            (call $_bal_string_compare
+              (local.get $1)
+              (array.get $AnyList
+                (local.get $0)
+                (local.get $4))))
+          (if 
+            (i32.eq  
+              (local.get $5)
+              (i32.const 1))
+            (return
+              (i32.const 1)))
+          (if
+            (i32.eqz
+              (local.get $5))
+            (local.set $3
+              (local.get $4))
+            (local.set $2
+              (i32.add
+                (i32.const 1)
+                (local.get $4))))
+          (br $loop$cont))))
+    (return 
+      (i32.const 0)))
   ;; $_bal_is_char
   (func $_bal_is_char (param $0 eqref) (result i32) 
     (i64.eq
