@@ -42,6 +42,7 @@ const RuntimeType RECORD_SUBTYPE_FIELDS = "RecordSubtypeFields";
 const RuntimeType RECORD_SUBTYPE_FIELD = "RecordSubtypeField";
 const RuntimeType COMPLEX_TYPE = "ComplexType";
 const RuntimeType SUBTYPE_DATA_LIST = "SubTypeList";
+const RuntimeType EQSTACK = "EqStack";
 
 public type ExceptionTag string;
 const ExceptionTag BAD_CONVERSION_TAG = "bad-conversion";

@@ -48,22 +48,9 @@ type ModuleContext record {|
 
 function buildTypes(wasm:Module module, Component component, table<UsedSemType> key(semType)[2] usedSemTypes) returns wasm:Expression[] {
     wasm:Expression[] body = [];
-    table<InherentTypeDefn> key(semType) mappingDefns = component.inherentTypeDefns[STRUCTURE_MAPPING];
-    table<InherentTypeDefn> key(semType) listDefns = component.inherentTypeDefns[STRUCTURE_LIST];
-    foreach UsedSemType used in usedSemTypes[INHERENT_TYPE] {
-        StructureBasicType basic = <StructureBasicType>structureBasicType(used.semType);
-        RuntimeType ty = basic == STRUCTURE_LIST ? LIST_DESC : MAPPING_DESC;
-        module.addGlobal(used.global, { base: ty, initial: "null" }, module.refNull(ty));
-        int tid = component.inherentTypeDefns[basic].length();
-        component.inherentTypeDefns[basic].add({ global: used.global, semType: used.semType, tid });
-    }
-    foreach InherentTypeDefn used in mappingDefns {
-        t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(component.getTypeContext(), used.semType);
-        body.push(...createMappingDesc(module, component, mat, used.global, used.tid));
-    }
-    foreach InherentTypeDefn used in listDefns {
-        t:ListAtomicType mat = <t:ListAtomicType>t:listAtomicTypeRw(component.getTypeContext(), used.semType);
-        body.push(createListDesc(module, component, mat, used.global, used.tid));
+    table<UsedSemType> key(semType) inherent = usedSemTypes[INHERENT_TYPE].cloneReadOnly();
+    foreach UsedSemType used in inherent {
+        body.push(...addInherentTypeDefn(component, module, used.global, used.semType));
     }
     finishSubtypeDefns(component, module);
     component.inherentTypesComplete = true;
@@ -80,7 +67,25 @@ function buildTypes(wasm:Module module, Component component, table<UsedSemType> 
     return body;
 }
 
-function createMappingDesc(wasm:Module module, Component component, t:MappingAtomicType mat, string global, int tid) returns wasm:Expression[] {  
+function addInherentTypeDefn(Component component, wasm:Module module, string symbol, t:SemType semType) returns wasm:Expression[]  {
+    StructureBasicType basic = <StructureBasicType>structureBasicType(semType);
+    table<InherentTypeDefn> key(semType) defns = component.inherentTypeDefns[basic];
+    int tid = defns.length();
+    RuntimeType ty = basic == STRUCTURE_LIST ? LIST_DESC : MAPPING_DESC;
+    module.addGlobal(symbol, { base: ty, initial: "null" }, module.refNull(ty));
+    defns.add({ global: symbol, semType: semType, tid });
+    wasm:Expression[] init;
+    if basic == STRUCTURE_LIST {
+        init = [createListDesc(module, component, semType, symbol, tid)];        
+    }
+    else {
+        init = createMappingDesc(module, component, semType, symbol, tid);        
+    }
+    return init;
+}
+
+function createMappingDesc(wasm:Module module, Component component, t:SemType semType, string global, int tid) returns wasm:Expression[] {  
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(component.getTypeContext(), semType);
     wasm:Expression[] fields = from var ty in mat.types select getMemberType(module, component, ty);
     wasm:Expression[] body = [];
     wasm:Expression struct =  module.structNew(MAPPING_DESC, [
@@ -99,10 +104,12 @@ function createMappingDesc(wasm:Module module, Component component, t:MappingAto
     return body;
 }
 
-function createListDesc(wasm:Module module, Component component, t:ListAtomicType lat, string global, int tid) returns wasm:Expression {  
+function createListDesc(wasm:Module module, Component component, t:SemType semType, string global, int tid) returns wasm:Expression {  
+    t:ListAtomicType lat = <t:ListAtomicType>t:listAtomicTypeRw(component.getTypeContext(), semType);
     wasm:Expression struct =  module.structNew(LIST_DESC, [
                                                             module.addConst({ i32: tid }),
-                                                            getMemberType(module, component, lat.rest)
+                                                            getMemberType(module, component, lat.rest),
+                                                            getFillerDesc(component, module, lat.rest)
                                                           ]);
     return module.globalSet(global, struct);
 }
@@ -372,6 +379,42 @@ function structureBasicType(t:SemType semType) returns StructureBasicType? {
     }
     if t:isSubtypeSimple(semType, t:MAPPING) {
         return STRUCTURE_MAPPING;
+    }
+    return ();
+}
+
+function getFillerDesc(Component component, wasm:Module module, t:SemType memberType) returns wasm:Expression {
+    StructureBasicType? basic = fillableStructureBasicType(component.getTypeContext(), memberType);
+    // JBUG narrowing does not work if you say `== ()`
+    if basic is () {
+        return module.refNull();
+    }
+    table<InherentTypeDefn> key(semType) defns = component.inherentTypeDefns[basic];
+    InherentTypeDefn? existingDefn = defns[memberType];
+    wasm:Expression desc;
+    if existingDefn != () {
+        desc = module.globalGet(existingDefn.global);
+    }
+    else {
+        UsedSemType used = component.getUsedSemType(memberType, INHERENT_TYPE);
+        component.types.push(...addInherentTypeDefn(component, module, used.global, memberType));
+        desc = module.globalGet(used.global);
+    }
+    return desc;
+}
+
+function fillableStructureBasicType(t:Context tc, t:SemType semType) returns StructureBasicType? {
+    StructureBasicType? basic = structureBasicType(semType);
+    if basic == STRUCTURE_LIST {
+        if t:listAtomicTypeRw(tc, semType) != () {
+            return basic;
+        }
+    }
+    if basic == STRUCTURE_MAPPING {
+        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, semType);
+        if  mat != () && mat.names.length() == 0 {
+            return basic;
+        }
     }
     return ();
 }

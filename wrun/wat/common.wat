@@ -12,11 +12,11 @@
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
   (type $Desc (struct (field $tid i32))) 
   (type $MappingDesc (struct (field $tid i32) (field $nFields i32) (field $restType eqref) (field $fieldTypes (mut (ref $AnyList))))) 
-  (type $ListDesc (struct (field $tid i32) (field $restType eqref))) 
+  (type $ListDesc (struct (field $tid i32) (field $restType eqref) (field $filler eqref))) 
   (type $Map (struct (field $type i32) (field $desc (mut (ref $MappingDesc))) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
-  (type $List (struct (field $type i32) (field $default eqref) (field $desc (ref $ListDesc)) (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
+  (type $List (struct (field $type i32) (field $desc (ref $ListDesc)) (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
   (type $AnyList (array (mut eqref))) 
   (type $Subtype (struct (field $func (ref $subTypeContains))))
   (type $RecordSubtypeField (struct (field $name (mut eqref)) (field $bitset (mut i32)))) 
@@ -33,6 +33,7 @@
   (type $ArrMapSubtype (struct (field $func (ref $subTypeContains)) (field $bitSet i32))) 
   (type $SubTypeList (array (mut (ref null $Subtype))))
   (type $ComplexType (struct (field $all i32) (field $some i32) (field $subtypes (mut (ref $SubTypeList))))) 
+  (type $EqStack (struct (field $p1 eqref) (field $p2 eqref) (field $next (ref null $EqStack)))) 
   ;; import
   (import "console" "log" (func $println (param eqref))) 
   (import "int" "hex" (func $_js_int_to_hex (param i64) (result anyref))) 
@@ -57,6 +58,7 @@
   (global $rttRecordSubtypeField (rtt 0 $RecordSubtypeField) (rtt.canon $RecordSubtypeField))
   (global $rttComplexType (rtt 0 $ComplexType) (rtt.canon $ComplexType))
   (global $rttIntRange (rtt 0 $IntRange) (rtt.canon $IntRange))
+  (global $rttEqStack (rtt 0 $EqStack) (rtt.canon $EqStack))
   ;; tag
   (tag $bad-conversion) 
   ;; export

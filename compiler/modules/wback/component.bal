@@ -28,6 +28,7 @@ public class Component {
     private ModuleContext cx;
     boolean inherentTypesComplete = false;
     SubtypeStruct[] subtypeStructs = [];
+    wasm:Expression[] types = [];
 
     function init(bir:Module birMod) {
         self.module = new;
@@ -110,8 +111,8 @@ public class Component {
         wasm:Expression? mainBody = self.mainBody;
         string? mainMangledName = self.mainMangledName;
         if mainBody != () && mainMangledName != (){
-            wasm:Expression[] types = buildTypes(module, self, self.usedSemTypes);
-            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, types, self.subtypeStructs, self.complexTypeDefns), mainBody]);
+            self.types.push(...buildTypes(module, self, self.usedSemTypes));
+            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, self.types, self.subtypeStructs, self.complexTypeDefns), mainBody]);
             module.addFunction(mainMangledName, [], "None", self.mainLocals, extendedBody);
         }
         return module.finish();

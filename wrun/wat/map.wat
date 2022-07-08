@@ -222,67 +222,68 @@
       (local.get $3)
       (local.get $5)))
   ;; $_bal_map_eq
-  (func $_bal_map_eq (param $0 eqref) (param $1 eqref) (result i32)
-    (local $2 i32)
-    (local $3 eqref)
+  (func $_bal_map_eq (param $0 eqref) (param $1 eqref) (param $2 (ref null $EqStack)) (result i32)
+    (local $3 i32)
     (local $4 eqref)
-    (local $5 i32)
+    (local $5 eqref)
     (local $6 i32)
     (local $7 i32)
-    (local.set $2
-      (i32.const 0))
-    (local.set $7
-      (i32.const 0))
+    (local $8 i32)
     (local.set $3
-      (call $_bal_map_get_keys
-        (local.get $0)))
+      (i32.const 0))
+    (local.set $8
+      (i32.const 0))
     (local.set $4
       (call $_bal_map_get_keys
-        (local.get $1)))
+        (local.get $0)))
     (local.set $5
-      (call $_bal_mapping_num_keys 
-        (ref.as_non_null
-          (local.get $3))))
+      (call $_bal_map_get_keys
+        (local.get $1)))
     (local.set $6
       (call $_bal_mapping_num_keys 
         (ref.as_non_null
           (local.get $4))))
+    (local.set $7
+      (call $_bal_mapping_num_keys 
+        (ref.as_non_null
+          (local.get $5))))
     (if 
       (i32.eq
-        (local.get $5)
-        (local.get $6))
+        (local.get $6)
+        (local.get $7))
       (block $loop$br 
         (loop $loop$cont
           (if 
             (i32.lt_u
-              (local.get $7)
-              (local.get $5))
+              (local.get $8)
+              (local.get $6))
             (if 
               (call $_bal_eq
                 (call $_bal_mapping_get
                   (local.get $0)
                   (call $_bal_mapping_get_key
-                    (local.get $3)
-                    (local.get $7)))
+                    (local.get $4)
+                    (local.get $8)))
                 (call $_bal_mapping_get
                   (local.get $1)
                   (call $_bal_mapping_get_key
-                    (local.get $3)
-                    (local.get $7))))
+                    (local.get $4)
+                    (local.get $8)))
+                (local.get $2))
               (block
-                (local.set $7
+                (local.set $8
                   (i32.add
-                    (local.get $7)
+                    (local.get $8)
                     (i32.const 1)))
-                (local.set $2
+                (local.set $3
                   (i32.const 1))
                 (br $loop$cont))
               (block
-                (local.set $2
+                (local.set $3
                   (i32.const 0))
                 (br $loop$br)))))))
     (return 
-      (local.get $2)))
+      (local.get $3)))
   ;; $_bal_mapping_get
   (func $_bal_mapping_get (param $0 eqref) (param $1 eqref) (result eqref);;map, key
     (local $2 i32)

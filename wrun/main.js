@@ -107,7 +107,7 @@ const getValue = (ref, parent = null) => {
       break;
     case TYPE_STRING:
       result = WasmModule._bal_get_string(ref);
-      if (parent != null) result = JSON.stringify(result)
+      if (parent != null) result = result == null ? "\"\"" : JSON.stringify(result)
       break;
     case TYPE_LIST:
       let length = WasmModule._bal_list_length(ref);
