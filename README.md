@@ -1,8 +1,6 @@
 # nBallerina Wasm Backend
 ## Usage
 
-The compiler has not yet got to a stage where it is useful. But if you want to play with it or help with development, this is the way:
-
 1. Clone the nBallerina repository.
 2. [Download](https://ballerina.io/downloads/) and [install](https://ballerina.io/learn/user-guide/getting-started/installation-options/) the latest Ballerina distribution (Swan Lake not 1.2.x)
 3. [Download](https://github.com/WebAssembly/binaryen/releases) and extract Binaryen Tool.
@@ -30,4 +28,5 @@ For those test cases that are valid Ballerina programs, the Makefile in the [tes
 
 ## Status
 
-Wasm backend is completed for [subset 09](docs/subset09.md) and are working on [subset 10](docs/subset10.md).
+Wasm backend is completed for [subset 10](docs/subset10.md) and are working on [subset 11](docs/subset11.md).
+A [blog post](https://poorna.info/posts/wasm-backend/) on compiler operation.
