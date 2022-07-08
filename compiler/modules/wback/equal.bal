@@ -6,7 +6,7 @@ type CmpEqOp "ne"|"eq";
 
 final RuntimeModule equalMod = {
     file: "equal.wat",
-    priority: 2
+    priority: 3
 };
 
 final RuntimeFunction eqFunction = {

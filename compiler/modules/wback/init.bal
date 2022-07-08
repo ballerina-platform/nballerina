@@ -12,38 +12,73 @@ const STRUCTURE_MAPPING = 1;
 
 type StructureBasicType STRUCTURE_LIST|STRUCTURE_MAPPING;
 
-const TYPE_KIND_TRUE = "_bal_true_subtype_contains";
-const TYPE_KIND_FALSE = "_bal_false_subtype_contains";
-const TYPE_KIND_INT = "_bal_int_subtype_contains";
-const TYPE_KIND_STRING = "_bal_string_subtype_contains";
-const TYPE_KIND_PRECOMPUTED = "_bal_precomputed_subtype_contains";
-const TYPE_KIND_FLOAT = "_bal_float_subtype_contains";
-const TYPE_KIND_MAP = "_bal_map_subtype_contains";
-const TYPE_KIND_RECORD = "_bal_record_subtype_contains";
-const TYPE_KIND_ARRAY = "_bal_array_subtype_contains";
+final RuntimeModule typeMod = {
+    file: "type.wat",
+    priority: 7
+};
+
+final RuntimeFunction falseSubtypeContains = {
+    name: "_bal_false_subtype_contains",
+    returnType: "i32",
+    rtModule: typeMod
+};
+
+final RuntimeFunction trueSubtypeContains = {
+    name: "_bal_true_subtype_contains",
+    returnType: "i32",
+    rtModule: typeMod
+};
+
+final RuntimeFunction floatSubtypeContains = {
+    name: "_bal_float_subtype_contains",
+    returnType: "i32",
+    rtModule: typeMod
+};
+
+final RuntimeFunction intSubtypeContains = {
+    name: "_bal_int_subtype_contains",
+    returnType: "i32",
+    rtModule: numberMod
+};
+
+
+final RuntimeFunction stringSubtypeContains = {
+    name: "_bal_string_subtype_contains",
+    returnType: "i32",
+    rtModule: stringMod
+};
+
+final RuntimeFunction precomputedSubtypeContains = {
+    name: "_bal_precomputed_subtype_contains",
+    returnType: "i32",
+    rtModule: typeMod
+};
+
+final RuntimeFunction mapSubtypeContains = {
+    name: "_bal_map_subtype_contains",
+    returnType: "i32",
+    rtModule: mapMod
+};
+
+final RuntimeFunction recordSubtypeContains = {
+    name: "_bal_record_subtype_contains",
+    returnType: "i32",
+    rtModule: mapMod
+};
+
+final RuntimeFunction arraySubtypeContains = {
+    name: "_bal_array_subtype_contains",
+    returnType: "i32",
+    rtModule: listMod
+};
 
 type SubtypeStruct record {|
     wasm:Expression[] values;
 |};
 
-type TypeKindArrayOrMap TYPE_KIND_ARRAY|TYPE_KIND_MAP;
-type TypeKindSimple TYPE_KIND_TRUE|TYPE_KIND_FALSE|TYPE_KIND_INT|TYPE_KIND_FLOAT;
-type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED|TYPE_KIND_STRING|TypeKindSimple;
-
 type UsedSemType record {|
     readonly t:SemType semType;
     string global;
-|};
-
-type ModuleContext record {|
-    t:Context tc;
-    table<UsedSemType> key(semType) usedSemTypes = table [];
-    table<InherentTypeDefn> key(semType)[2] inherentTypeDefns = [table [], table[]];
-    table<ComplexTypeDefn> key(semType) complexTypeDefns = table [];
-    table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
-    // subtype definitions cannot be completed before inherent types are complete,
-    // because precomputed subtypes need to know all inherent types
-    boolean inherentTypesComplete;
 |};
 
 function buildTypes(wasm:Module module, Component component, table<UsedSemType> key(semType)[2] usedSemTypes) returns wasm:Expression[] {
@@ -160,70 +195,71 @@ function addComplexTypeDefn(wasm:Module module, Component component, string glob
     component.complexTypeDefns.add({ global, body, semType });
 }
 
-function getUniformSubtype(Component cx, wasm:Module module, t:UniformTypeCode typeCode, t:ComplexSemType semType) returns wasm:Expression {
-    SubtypeDefn? existingDefn = cx.subtypeDefns[typeCode, semType];
+function getUniformSubtype(Component component, wasm:Module module, t:UniformTypeCode typeCode, t:ComplexSemType semType) returns wasm:Expression {
+    SubtypeDefn? existingDefn = component.subtypeDefns[typeCode, semType];
     string global;
     if existingDefn != () {
         global = existingDefn.global;
     }
     else {
-        global = subtypeDefnSymbol(cx.subtypeDefns.length());
+        global = subtypeDefnSymbol(component.subtypeDefns.length());
         SubtypeDefn newDefn = { typeCode, semType, global };
-        cx.subtypeDefns.add(newDefn);
-        if (cx.inherentTypesComplete) {
-            cx.subtypeStructs.push(createSubtypeStruct(cx, module, typeCode, semType, global));
+        component.subtypeDefns.add(newDefn);
+        if (component.inherentTypesComplete) {
+            component.subtypeStructs.push(createSubtypeStruct(component, module, typeCode, semType, global));
         }
     }
     return module.globalGet(global); 
 }
 
-function finishSubtypeDefns(Component cx, wasm:Module module) {
-    foreach SubtypeDefn defn in cx.subtypeDefns {
-        cx.subtypeStructs.push(createSubtypeStruct(cx, module, defn.typeCode, defn.semType, defn.global));
+function finishSubtypeDefns(Component component, wasm:Module module) {
+    foreach SubtypeDefn defn in component.subtypeDefns {
+        component.subtypeStructs.push(createSubtypeStruct(component, module, defn.typeCode, defn.semType, defn.global));
     }
 }
 
-function createSubtypeStruct(Component cx, wasm:Module module, t:UniformTypeCode typeCode, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
+function createSubtypeStruct(Component component, wasm:Module module, t:UniformTypeCode typeCode, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
     match typeCode {
         t:UT_BOOLEAN => {
-            return createBooleanSubtypeStruct(module, semType, symbol);
+            return createBooleanSubtypeStruct(component, module, semType, symbol);
         }
         t:UT_INT => {
-            return createIntSubtypeStruct(module, semType, symbol);
+            return createIntSubtypeStruct(component, module, semType, symbol);
         }
         t:UT_FLOAT => {
-            return createFloatSubtypeStruct(module, semType, symbol);
+            return createFloatSubtypeStruct(component, module, semType, symbol);
         }
         t:UT_STRING => {
-            return createStringSubtypeStruct(cx, module, semType, symbol);
+            return createStringSubtypeStruct(component, module, semType, symbol);
         }
         t:UT_LIST_RW => {
-            return createListSubtypeStruct(cx, module, semType, symbol); 
+            return createListSubtypeStruct(component, module, semType, symbol); 
         }
         t:UT_MAPPING_RW => {
-            return createMappingSubtypeStruct(cx, module, semType, symbol); 
+            return createMappingSubtypeStruct(component, module, semType, symbol); 
         }
     }
     panic error("subtypes of uniform type are not implemented");    
 }
 
-function createBooleanSubtypeStruct(wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
+function createBooleanSubtypeStruct(Component component, wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
     module.addGlobal(symbol, { base: BASE_SUBTYPE, initial: "null" }, module.refNull(BASE_SUBTYPE));
     t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(semType);
-    wasm:Expression struct =  module.structNew(BASE_SUBTYPE, [module.refFunc(sub.value ? TYPE_KIND_TRUE : TYPE_KIND_FALSE)]);
+    wasm:Expression refFunc = buildRefFunc(module, component, sub.value ? trueSubtypeContains : falseSubtypeContains);
+    wasm:Expression struct =  module.structNew(BASE_SUBTYPE, [refFunc]);
     return { values: [module.globalSet(symbol, struct)] };
 }
 
-function createIntSubtypeStruct(wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
+function createIntSubtypeStruct(Component component, wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
     module.addGlobal(symbol, { base: INT_SUBTYPE, initial: "null" }, module.refNull(INT_SUBTYPE));
     t:IntSubtype ranges = <t:IntSubtype>t:intSubtype(semType);
     if ranges.length() == 0 {
         panic error("empty list of int ranges in complex subtype");
     }
     wasm:Expression[] values = [];
-    wasm:Expression struct = module.structNew(INT_SUBTYPE, [module.refFunc(TYPE_KIND_INT), 
+    wasm:Expression struct = module.structNew(INT_SUBTYPE, [buildRefFunc(module, component, intSubtypeContains), 
                                                             module.arrayNewDef(INT_SUBTYPE_RANGES, module.addConst({ i32: ranges.length() }))
-                                                            ]);
+                                                           ]);
     values.push(module.globalSet(symbol, struct));
     foreach int i in 0..<ranges.length() {
         values.push(module.arraySet(INT_SUBTYPE_RANGES,
@@ -235,7 +271,7 @@ function createIntSubtypeStruct(wasm:Module module, t:ComplexSemType semType, st
     return { values };
 }
 
-function createFloatSubtypeStruct(wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
+function createFloatSubtypeStruct(Component component, wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
     module.addGlobal(symbol, { base: FLOAT_SUBTYPE, initial: "null" }, module.refNull(FLOAT_SUBTYPE));
     t:FloatSubtype sub = <t:FloatSubtype>t:floatSubtype(semType);
     int len = sub.values.length();
@@ -243,7 +279,7 @@ function createFloatSubtypeStruct(wasm:Module module, t:ComplexSemType semType, 
         panic error("empty list of float ranges in complex subtype");
     }
     wasm:Expression[] values = [];
-    wasm:Expression struct = module.structNew(FLOAT_SUBTYPE, [module.refFunc(TYPE_KIND_FLOAT), 
+    wasm:Expression struct = module.structNew(FLOAT_SUBTYPE, [buildRefFunc(module, component, floatSubtypeContains), 
                                                               module.addConst({ i32: sub.allowed ? 1 : 0 }),
                                                               module.arrayNewDef(FLOAT_VALUES, module.addConst({ i32: len }))
                                                              ]);
@@ -258,7 +294,7 @@ function createFloatSubtypeStruct(wasm:Module module, t:ComplexSemType semType, 
     return { values };
 }
 
-function createStringSubtypeStruct(Component cx, wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
+function createStringSubtypeStruct(Component component, wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
     module.addGlobal(symbol, { base: STRING_SUBTYPE, initial: "null" }, module.refNull(STRING_SUBTYPE));
     t:StringSubtype sub = <t:StringSubtype>t:stringSubtype(semType);
     string[] strs = [];
@@ -268,9 +304,9 @@ function createStringSubtypeStruct(Component cx, wasm:Module module, t:ComplexSe
     foreach string s in sub.nonChar.values {
         strs.push(s);
     }
-    wasm:Expression[] strConsts = from var s in strs.sort() select buildConstString(module, cx, s);
+    wasm:Expression[] strConsts = from var s in strs.sort() select buildConstString(module, component, s);
     wasm:Expression[] values = [];
-    wasm:Expression struct = module.structNew(STRING_SUBTYPE, [module.refFunc(TYPE_KIND_STRING), 
+    wasm:Expression struct = module.structNew(STRING_SUBTYPE, [buildRefFunc(module, component, stringSubtypeContains), 
                                                                module.addConst({ i32: sub.char.allowed ? 1 : 0 }),
                                                                module.addConst({ i32: sub.nonChar.allowed ? 1 : 0 }),
                                                                module.arrayNewDef(ANY_ARR_TYPE, module.addConst({ i32: strs.length() }))
@@ -286,15 +322,15 @@ function createStringSubtypeStruct(Component cx, wasm:Module module, t:ComplexSe
     return { values };
 }
 
-function createListSubtypeStruct(Component cx, wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
-    t:ListAtomicType? lat = t:listAtomicTypeRw(cx.getTypeContext(), semType);
+function createListSubtypeStruct(Component component, wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
+    t:ListAtomicType? lat = t:listAtomicTypeRw(component.getTypeContext(), semType);
     if lat != () {
         t:SemType rest = lat.rest;
         if rest is t:UniformTypeBitSet && lat.members.fixedLength == 0 {
-            return createArrayMapSubtypeStruct(module, rest, TYPE_KIND_ARRAY, symbol);
+            return createArrayMapSubtypeStruct(component, module, rest, arraySubtypeContains, symbol);
         }
     }
-    return createPrecomputedSubtypeStruct(cx, module, STRUCTURE_LIST, semType, symbol);
+    return createPrecomputedSubtypeStruct(component, module, STRUCTURE_LIST, semType, symbol);
 }
 
 function createMappingSubtypeStruct(Component component, wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
@@ -316,16 +352,16 @@ function createMappingSubtypeStruct(Component component, wasm:Module module, t:C
             }
         }
         else if rest is t:UniformTypeBitSet && mat.names.length() == 0 {
-            return createArrayMapSubtypeStruct(module, rest, TYPE_KIND_MAP, symbol);
+            return createArrayMapSubtypeStruct(component, module, rest, mapSubtypeContains, symbol);
         }
     }
     return createPrecomputedSubtypeStruct(component, module, STRUCTURE_MAPPING, semType, symbol);
 }
 
-function createArrayMapSubtypeStruct(wasm:Module module, t:UniformTypeBitSet bitSet, TypeKindArrayOrMap arrayOrMap, string symbol) returns SubtypeStruct {
+function createArrayMapSubtypeStruct(Component component, wasm:Module module, t:UniformTypeBitSet bitSet, RuntimeFunction rf, string symbol) returns SubtypeStruct {
     module.addGlobal(symbol, { base: ARRMAP_SUBTYPE, initial: "null" }, module.refNull(ARRMAP_SUBTYPE));
     wasm:Expression struct = module.structNew(ARRMAP_SUBTYPE, [
-        module.refFunc(arrayOrMap),
+        buildRefFunc(module, component, rf),
         module.addConst({ i32: bitSet })
     ]);
     return { values: [module.globalSet(symbol, struct)] };
@@ -339,7 +375,7 @@ function createRecordSubtypeStruct(Component component, wasm:Module module, t:Ma
     }
     wasm:Expression[] values = [];
     wasm:Expression struct = module.structNew(RECORD_SUBTYPE, [
-                                              module.refFunc(TYPE_KIND_RECORD),
+                                              buildRefFunc(module, component, recordSubtypeContains),
                                               module.addConst({ i32: mat.types.length() }),
                                               module.arrayNewDef(RECORD_SUBTYPE_FIELDS, module.addConst({ i32: mat.types.length() }))
                                             ]);
@@ -354,12 +390,12 @@ function createRecordSubtypeStruct(Component component, wasm:Module module, t:Ma
     return { values };
 }
 
-function createPrecomputedSubtypeStruct(Component cx, wasm:Module module, StructureBasicType basic, t:ComplexSemType ty, string symbol) returns SubtypeStruct {
+function createPrecomputedSubtypeStruct(Component component, wasm:Module module, StructureBasicType basic, t:ComplexSemType ty, string symbol) returns SubtypeStruct {
     module.addGlobal(symbol, { base: PRECOMPUTED_SUBTYPE, initial: "null" }, module.refNull(PRECOMPUTED_SUBTYPE));
-    wasm:Expression[] tids = from var itd in cx.inherentTypeDefns[basic] where t:isSubtype(cx.getTypeContext(), itd.semType, ty) select module.addConst({ i32: itd.tid });
+    wasm:Expression[] tids = from var itd in component.inherentTypeDefns[basic] where t:isSubtype(component.getTypeContext(), itd.semType, ty) select module.addConst({ i32: itd.tid });
     wasm:Expression[] values = [];
     wasm:Expression struct = module.structNew(PRECOMPUTED_SUBTYPE, [
-                                              module.refFunc(TYPE_KIND_PRECOMPUTED),
+                                              buildRefFunc(module, component, precomputedSubtypeContains),
                                               module.arrayNewDef(PRECOMPUTED_TIDS, module.addConst({ i32: tids.length() }))
                                             ]);
     values.push(module.globalSet(symbol, struct));

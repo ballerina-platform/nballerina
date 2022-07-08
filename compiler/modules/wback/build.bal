@@ -172,6 +172,13 @@ function buildRuntimeFunctionCall(wasm:Module module, Component component, Runti
     return module.call(name, args, returnType);
 }
 
+function buildRefFunc(wasm:Module module, Component component, RuntimeFunction rf) returns wasm:Expression {
+    var { name, rtModule } = rf;
+    component.maybeAddRtFunction("$" + name);
+    component.addRtModule(rtModule);
+    return module.refFunc(name);
+}
+
 function maybeAddRtFunction(string[] rtFunctions, string name) {
     if rtFunctions.indexOf(name) == () {
         rtFunctions.push(name);

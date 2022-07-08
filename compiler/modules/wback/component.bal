@@ -25,7 +25,6 @@ public class Component {
     table<ComplexTypeDefn> key(semType) complexTypeDefns = table [];
     table<InherentTypeDefn> key(semType)[2] inherentTypeDefns = [table [], table[]];
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
-    private ModuleContext cx;
     boolean inherentTypesComplete = false;
     SubtypeStruct[] subtypeStructs = [];
     wasm:Expression[] types = [];
@@ -33,7 +32,7 @@ public class Component {
     function init(bir:Module birMod) {
         self.module = new;
         self.typeContext = birMod.getTypeContext();
-        self.cx = { tc : birMod.getTypeContext(), inherentTypesComplete: false };
+        self.rtModules[typeMod.priority] = typeMod;
     }
 
     function addExceptionTag(ExceptionTag tag, wasm:Type? kind = ()) {
@@ -80,14 +79,6 @@ public class Component {
         return self.rtFunctions;
     }
 
-    function addUsedSemType(UsedSemType used) {
-        self.cx.usedSemTypes.add(used);
-    }
-
-    function nextUsedSemTypeSymbol() returns string {
-        return mangleTypeSymbol(self.cx.usedSemTypes.length());
-    }
-
     function getUsedSemType(t:SemType semType, Usage usage) returns UsedSemType {
         UsedSemType? used = self.usedSemTypes[usage][semType];
         if used == () {
@@ -107,11 +98,11 @@ public class Component {
     public function finish() returns wasm:Wat[]|io:Error?|file:Error? {
         wasm:Module module = self.module;
         module.addGlobal("bal$err", { base: ERROR_TYPE, initial: "null" }, module.refNull(ERROR_TYPE));
+        self.types.push(...buildTypes(module, self, self.usedSemTypes));
         check addRttFunctions(module, self);
         wasm:Expression? mainBody = self.mainBody;
         string? mainMangledName = self.mainMangledName;
         if mainBody != () && mainMangledName != (){
-            self.types.push(...buildTypes(module, self, self.usedSemTypes));
             wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, self.types, self.subtypeStructs, self.complexTypeDefns), mainBody]);
             module.addFunction(mainMangledName, [], "None", self.mainLocals, extendedBody);
         }

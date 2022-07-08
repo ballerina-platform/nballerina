@@ -4,13 +4,13 @@ import wso2/nballerina.print.wasm;
 
 final RuntimeModule numberMod = {
     file: "number.wat",
-    priority: 3
+    priority: 2
 };
 
 final RuntimeFunction typeContainsFunction = {
     name: "_bal_type_contains",
     returnType: "i32",
-    rtModule: commonMod
+    rtModule: typeMod
 };
 
 function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn insn) returns wasm:Expression {
