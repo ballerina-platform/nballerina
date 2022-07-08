@@ -19,6 +19,12 @@ public type FixedLengthArray record {|
 // The SemTypes in this list are not `never`.
 public type ListMemberTypes [Range[], SemType[]];
 
+public type ListSubtypeWitness readonly & record {|
+    SemType[] memberTypes;
+    int[] indices;
+    int fixedLen;
+|};
+
 public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
     if i < atomic.members.fixedLength {
         int initialLen = atomic.members.initial.length();
@@ -273,7 +279,7 @@ function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLength
 // `neg` represents N.
 function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg, int fixedLen, WitnessCollector witness) returns boolean {
     if neg == () {
-        witness.remainingListType({ fixedLen, indices: indices.cloneReadOnly(), memberTypes: memberTypes.cloneReadOnly() });
+        witness.remainingSubType({ fixedLen, indices: indices.cloneReadOnly(), memberTypes: memberTypes.cloneReadOnly() });
         return true;
     }
     else {

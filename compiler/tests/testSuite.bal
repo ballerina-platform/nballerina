@@ -4,7 +4,6 @@ import wso2/nballerina.front;
 import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
-import wso2/nballerina.front.'type.witness as w;
 
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
@@ -243,10 +242,10 @@ function testSemtypeWitness(front:SourcePart[] sources, string[] expected) retur
         
         t:WitnessCollector w = new(tc);
         boolean lsr = t:isSubtypeWitness(tc, left, right, w);
-        string witness = w:typeWitnessToString(w);
+        string witness = s:typeWitnessToString(w);
         match test.op { 
             "<" => {
-                test:assertEquals(lsr, false, string `${lhsStr} is not a proper subtype of ${rhsStr}`);
+                test:assertEquals(lsr, false, string `Invalid semtype witness assertion ${lhsStr} is a proper subtype of ${rhsStr}`);
             }
             _ => {
                 test:assertFail(string `Invalid type relation: ${test.op}, only '<' is accepted`);

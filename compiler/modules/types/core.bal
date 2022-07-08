@@ -273,7 +273,7 @@ type UniformTypeOps readonly & record {|
     BinOp diff = binOpPanic;
     UnaryOp complement = unaryOpPanic;
     UnaryTypeCheckOp isEmpty = unaryTypeCheckOpPanic;
-    UnaryTypeCheckWitnessOp isEmptyWitness = unaryTypeCheckOpWitnessPanic;
+    UnaryTypeCheckWitnessOp? isEmptyWitness = ();
 |};
 
 final readonly & (UniformSubtype[]) EMPTY_SUBTYPES = [];
@@ -793,10 +793,17 @@ public function isEmptyWitness(Context cx, SemType t, WitnessCollector w) return
         }
         foreach var st in unpackComplexSemType(t) {
             var [code, data] = st;
-            var isEmpty = ops[code].isEmptyWitness;
-            if !isEmpty(cx, data, w) {
+            var isEmptyWitness = ops[code].isEmptyWitness;
+            if isEmptyWitness != () {
+                if !isEmptyWitness(cx, data, w) {
+                    return false;
+                }
+            }
+            var isEmpty = ops[code].isEmpty;
+            if !isEmpty(cx, data) {
                 return false;
             }
+
         }
         return true;
     }

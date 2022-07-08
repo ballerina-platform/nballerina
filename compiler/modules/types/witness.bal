@@ -1,14 +1,14 @@
 import wso2/nballerina.comm.lib;
 
-public type WitnessableSubtype MappingAtomicType|StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype;
+public type WitnessableSubtype MappingAtomicType|ListSubtypeWitness|StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype;
 
-public type ListWitness readonly & record {|
-    SemType[] memberTypes;
+public type ListWitnessValue readonly & record {|
+    WitnessValue[] memberValues;
     int[] indices;
     int fixedLen;
 |};
 
-public type WitnessValue WrappedSingleValue|string|map<WitnessValue>|ListWitness?;
+public type WitnessValue WrappedSingleValue|string|map<WitnessValue>|ListWitnessValue?;
 
 final readonly & [UniformTypeBitSet, WrappedSingleValue|string][] uniformTypeSample = [
     [NEVER, "never"],
@@ -46,12 +46,6 @@ public class WitnessCollector {
         }
     }
 
-    public function remainingListType(ListWitness listWitness) {
-        if self.witness == () {
-            self.witness = listWitness;
-        }
-    }
-
     public function allOfTypes(UniformTypeBitSet all) {
         self.witness = uniformTypesToWitnessValue(all);
     }
@@ -78,7 +72,10 @@ function semTypeToWitnessValue(Context cx, SemType t) returns WitnessValue {
         }
         foreach var [code, _] in uniformTypeSample {
             if (code & t.some) != 0 {
-                UniformTypeCode utCode = <UniformTypeCode>uniformTypeCode(code);
+                UniformTypeCode? utCode = uniformTypeCode(code);
+                if utCode == () {
+                    continue;
+                }
                 SubtypeData subtypeData = getComplexSubtypeData(t, utCode);
                 if subtypeData is WitnessableSubtype {
                     return subtypeToWitnessValue(cx, subtypeData);
@@ -111,6 +108,9 @@ function subtypeToWitnessValue(Context cx, WitnessableSubtype subtype) returns W
     else if subtype is BooleanSubtype {
         return createBooleanWitness(subtype);
     }
+    else if subtype is ListSubtypeWitness {
+        return createListWitness(cx, subtype);
+    }
     else {
         return createIntWitness(subtype);
     }
@@ -136,6 +136,12 @@ function createMappingWitness(Context cx, MappingAtomicType subtype) returns Wit
         witness["..."] = semTypeToWitnessValue(cx, subtype.rest);
     }
     return witness;
+}
+
+function createListWitness(Context cx, ListSubtypeWitness listWitnessType) returns ListWitnessValue {
+    var { memberTypes, indices, fixedLen } = listWitnessType;
+    WitnessValue[] memberValues = from var m in memberTypes select semTypeToWitnessValue(cx, m);
+    return { memberValues: memberValues.cloneReadOnly(), indices, fixedLen };
 }
 
 function createStringWitness(StringSubtype subtype) returns WrappedSingleValue {
