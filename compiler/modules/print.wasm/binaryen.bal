@@ -374,6 +374,10 @@ public class Module {
         return { tokens: appendBraces(["ref.null", kind is Type ? kind : "$" + kind]) };
     }
 
+    public function refFunc(string kind) returns Expression {
+        return { tokens: appendBraces(["ref.func", "$" + kind]) };
+    }
+
     public function rtt(string kind) returns Expression {
         Token[] inst = ["rtt.canon", "$" + kind];
         return { tokens: appendBraces(inst) };

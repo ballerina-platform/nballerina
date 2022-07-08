@@ -4,56 +4,13 @@ import wso2/nballerina.print.wasm;
 
 final RuntimeModule numberMod = {
     file: "number.wat",
-    priority: 3
+    priority: 2
 };
 
-final RuntimeFunction checkStringTypeAndValFunction = {
-    name: "_bal_check_type_and_string_val",
+final RuntimeFunction typeContainsFunction = {
+    name: "_bal_type_contains",
     returnType: "i32",
-    rtModule: stringMod
-};
-
-final RuntimeFunction checkIntTypeAndValFunction = {
-    name: "_bal_check_type_and_int_val",
-    returnType: "i32",
-    rtModule: numberMod
-};
-
-final RuntimeFunction checkFloatTypeAndValFunction = {
-    name: "_bal_check_type_and_float_val",
-    returnType: "i32",
-    rtModule: numberMod
-};
-
-final RuntimeFunction checkBooleanTypeAndValFunction = {
-    name: "_bal_check_type_and_boolean_val",
-    returnType: "i32",
-    rtModule: commonMod
-};
-
-final RuntimeFunction checkNilTypeAndValFunction = {
-    name: "_bal_check_type_and_nil_val",
-    returnType: "i32",
-    rtModule: commonMod
-};
-
-final RuntimeFunction checkListTypeAndAtomicFunction = {
-    name: "_bal_check_type_and_list_atomic",
-    returnType: "i32",
-    rtModule: listMod
-};
-
-final RuntimeFunction mapSubtypeContainsFunction = {
-    name: "_bal_map_subtype_contains",
-    returnType: "i32",
-    rtModule: mapMod
-};
-
-
-final RuntimeFunction recordSubtypeContainsFunction = {
-    name: "_bal_record_subtype_contains",
-    returnType: "i32",
-    rtModule: mapMod
+    rtModule: typeMod
 };
 
 function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn insn) returns wasm:Expression {
@@ -81,7 +38,7 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
             hasType = buildHasTagInSet(module, scaffold, semType, value, bitSet);
         }
         else {
-            hasType = singleValueConditions(module, scaffold, semType, value);
+            hasType = buildRuntimeFunctionCall(module, scaffold.getComponent(), typeContainsFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
         }
     }
     else if baseRepr == BASE_REPR_INT {
@@ -121,96 +78,6 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
 function buildHasTagInSet(wasm:Module module, Scaffold scaffold, t:SemType semType, wasm:Expression operand, t:UniformTypeBitSet bitSet) returns wasm:Expression {
     return buildIsSubType(module, buildRuntimeFunctionCall(module, scaffold.getComponent(), getTypeFunction, [operand]), module.addConst({ i32: bitSet }));
 }
-
-function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType semType, wasm:Expression operand) returns wasm:Expression? {
-    wasm:Expression[] subConditions = [];
-    t:SplitSemType {all, some} = t:split(semType);
-    if all != 0 {
-        return ();
-    }
-    foreach var [code, subtype] in some {
-        match code {
-            t:UT_STRING => {
-                t:StringSubtype sub = <t:StringSubtype>t:stringSubtype(subtype);
-                if !sub.char.allowed || !sub.nonChar.allowed{
-                    continue;
-                }
-                string [] strs = [];
-                strs.push(...sub.char.values);
-                strs.push(...sub.nonChar.values);
-                foreach var str in strs {
-                    wasm:Expression val = buildConstString(module, scaffold.getComponent(), str);
-                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkStringTypeAndValFunction, [operand, val]));
-                }
-            }
-            t:UT_INT => {
-                t:IntSubtype sub = <t:IntSubtype>t:intSubtype(subtype);
-                foreach var range in sub {
-                    foreach var i in range.min...range.max {
-                        wasm:Expression val = module.addConst({ i64: i });
-                        subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkIntTypeAndValFunction, [operand, val]));
-                    }
-                }
-            }
-            t:UT_FLOAT => {
-                t:FloatSubtype sub = <t:FloatSubtype>t:floatSubtype(semType);
-                if sub.allowed {
-                    foreach float flt in sub.values {
-                        wasm:Expression val = module.addConst({ f64: flt });
-                        subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkFloatTypeAndValFunction, [operand, val]));
-                    }
-                }
-            }
-            t:UT_BOOLEAN => {
-                t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(subtype);
-                wasm:Expression val = module.addConst({ i32: sub.value ? 1 : 0 });
-                subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkBooleanTypeAndValFunction, [operand, val]));
-            }
-            t:UT_NIL => {
-                wasm:Expression val = module.refNull();
-                subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkNilTypeAndValFunction, [operand, val]));
-            }
-            t:UT_LIST_RO 
-            | t:UT_LIST_RW => {
-                var atomic = t:listAtomicTypeRw(scaffold.getTypeContext(), semType);
-                if atomic != () {
-                    t:SemType? ty = t:listAtomicSimpleArrayMemberType(atomic);
-                    if ty != () {
-                        subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkListTypeAndAtomicFunction, [operand, module.addConst({ i32: <int>ty })]));
-                    }
-                }
-                else {
-                    var [_, types] = t:listAllMemberTypes(scaffold.getTypeContext(), semType);
-                    foreach var ty in types {
-                        subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkListTypeAndAtomicFunction, [operand, module.addConst({ i32: t:widenToUniformTypes(ty) })]));                    
-                    }
-                }
-            }
-            t:UT_MAPPING_RO => {
-                t:MappingAtomicType? atomic = t:mappingAtomicTypeRw(scaffold.getTypeContext(), semType);
-                if atomic != () {
-                    wasm:Expression desc;
-                    RuntimeFunction rf;
-                    if atomic.rest == t:NEVER {
-                        rf = recordSubtypeContainsFunction;
-                        desc = module.refAs("ref.as_non_null", scaffold.getRecordSubtype(atomic));
-                    }
-                    else {
-                        rf = mapSubtypeContainsFunction;
-                        desc = module.refAs("ref.as_non_null", scaffold.getMappingDesc(atomic));
-                    }
-                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), rf, [operand, desc]));
-                }
-            }
-        }
-    }
-    wasm:Expression? condition = ();
-    foreach wasm:Expression sub in subConditions {
-        condition = condition != () ? module.binary("i32.or", sub, condition) : sub;
-    }
-    return condition;
-}
-
 
 function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType targetType) returns t:UniformTypeBitSet? {
     t:UniformTypeBitSet bitSet = t:widenToUniformTypes(targetType);

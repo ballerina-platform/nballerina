@@ -1,7 +1,13 @@
 import ballerina/io;
 import ballerina/file;
+import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
 import wso2/nballerina.types as t;
+
+const TYPE_TEST = 0;
+const INHERENT_TYPE = 1;
+
+type Usage TYPE_TEST|INHERENT_TYPE;
 
 public class Component {
     final wasm:Module module;
@@ -13,12 +19,20 @@ public class Component {
     private string[] rtFunctions = [];
     private wasm:Expression? mainBody = ();
     private wasm:Type[] mainLocals = [];
+    private t:Context typeContext;
     private string? mainMangledName = ();
-    table<UsedMapAtomicType> key(semType) usedMapAtomicTypes = table [];
-    table<UsedRecordSubtype> key(semType) usedRecordSubtypes = table [];
+    table<UsedSemType> key(semType)[2] usedSemTypes = [table [], table[]];
+    table<ComplexTypeDefn> key(semType) complexTypeDefns = table [];
+    table<InherentTypeDefn> key(semType)[2] inherentTypeDefns = [table [], table[]];
+    table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
+    boolean inherentTypesComplete = false;
+    SubtypeStruct[] subtypeStructs = [];
+    wasm:Expression[] types = [];
 
-    function init() {
+    function init(bir:Module birMod) {
         self.module = new;
+        self.typeContext = birMod.getTypeContext();
+        self.rtModules[typeMod.priority] = typeMod;
     }
 
     function addExceptionTag(ExceptionTag tag, wasm:Type? kind = ()) {
@@ -43,6 +57,10 @@ public class Component {
         return global;
     }
 
+    function getTypeContext() returns t:Context {
+        return self.typeContext;
+    }
+    
     function maybeAddRtFunction(string name) {
         if self.rtFunctions.indexOf(name) == () {
             self.rtFunctions.push(name);
@@ -61,14 +79,31 @@ public class Component {
         return self.rtFunctions;
     }
 
+    function getUsedSemType(t:SemType semType, Usage usage) returns UsedSemType {
+        UsedSemType? used = self.usedSemTypes[usage][semType];
+        if used == () {
+            string global = mangleTypeSymbol(self.usedSemTypes[INHERENT_TYPE].length() + self.usedSemTypes[TYPE_TEST].length());
+            UsedSemType t = {
+                global,
+                semType
+            };
+            self.usedSemTypes[usage].add(t);
+            return t;
+        }
+        else {
+            return used;
+        }
+    }
+
     public function finish() returns wasm:Wat[]|io:Error?|file:Error? {
         wasm:Module module = self.module;
         module.addGlobal("bal$err", { base: ERROR_TYPE, initial: "null" }, module.refNull(ERROR_TYPE));
+        self.types.push(...buildTypes(module, self, self.usedSemTypes));
         check addRttFunctions(module, self);
         wasm:Expression? mainBody = self.mainBody;
         string? mainMangledName = self.mainMangledName;
         if mainBody != () && mainMangledName != (){
-            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, self.usedMapAtomicTypes, self.usedRecordSubtypes), mainBody]);
+            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, self.types, self.subtypeStructs, self.complexTypeDefns), mainBody]);
             module.addFunction(mainMangledName, [], "None", self.mainLocals, extendedBody);
         }
         return module.finish();
@@ -82,7 +117,7 @@ public class Component {
 
 }
 
-function initGlobals(wasm:Module module, map<StringRecord> segments, int offset, table<UsedMapAtomicType> usedMapAtomicTypes, table<UsedRecordSubtype> usedRecordSubtypes) returns wasm:Expression {
+function initGlobals(wasm:Module module, map<StringRecord> segments, int offset, wasm:Expression[] types, SubtypeStruct[] structs, table<ComplexTypeDefn> key(semType) complexTypeDefns) returns wasm:Expression {
     wasm:Expression[] body = [];
     wasm:Expression[] offsetExprs = [];
     string[] byteStrs = [];
@@ -93,29 +128,13 @@ function initGlobals(wasm:Module module, map<StringRecord> segments, int offset,
     }
     int pages = (offset / 65536) + 1;
     module.setMemory(pages, "memory", byteStrs, offsetExprs);
-    foreach UsedMapAtomicType ty in usedMapAtomicTypes {
-        t:SemType[] types = ty.semType.types;
-        string symbol = ty.global;
-        body.push(module.globalSet(symbol, ty.struct));
-        foreach int i in 0..<types.length() {
-            body.push(module.arraySet(MAP_TYPE_ARR, 
-                                            module.structGet(MAPPING_DESC, "fieldTypes", module.refAs("ref.as_non_null", module.globalGet(symbol))), 
-                                            module.addConst({ i32: i }),
-                                            module.addConst({ i32: t:widenToUniformTypes(types[i]) })));
-        }
+    foreach SubtypeStruct struct in structs {
+        body.push(...struct.values);
     }
-    foreach UsedRecordSubtype ty in usedRecordSubtypes {
-        t:SemType[] types = ty.semType.types;
-        string symbol = ty.global;
-        body.push(module.globalSet(symbol, ty.struct));
-        foreach int i in 0..<types.length() {
-            body.push(module.arraySet(RECORD_SUBTYPE_FIELDS,
-                                      module.structGet(RECORD_SUBTYPE, "fields", module.refAs("ref.as_non_null", module.globalGet(symbol))),
-                                      module.addConst({ i32: i }), 
-                                      module.structNew(RECORD_SUBTYPE_FIELD, [ty.names[i], module.addConst({ i32: t:widenToUniformTypes(types[i]) })])
-                                     ));
-        }
+    foreach ComplexTypeDefn defn in complexTypeDefns {
+        body.push(...defn.body);
     }
+    body.push(...types);
     return module.block(body);
 }
 

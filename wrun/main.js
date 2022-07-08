@@ -10,8 +10,8 @@ const TYPE_INT = 128;
 const TYPE_FLOAT = 256;
 const TYPE_STRING = 1024;
 const TYPE_ERROR = 2048;
-const TYPE_LIST = 262148;
-const TYPE_MAP = 524296;
+const TYPE_LIST = 262144;
+const TYPE_MAP = 524288;
 const COMPARE_LT = 0;
 const COMPARE_LE = 1;
 const COMPARE_GT = 2;
@@ -107,7 +107,7 @@ const getValue = (ref, parent = null) => {
       break;
     case TYPE_STRING:
       result = WasmModule._bal_get_string(ref);
-      if (parent != null) result = JSON.stringify(result)
+      if (parent != null) result = result == null ? "\"\"" : JSON.stringify(result)
       break;
     case TYPE_LIST:
       let length = WasmModule._bal_list_length(ref);

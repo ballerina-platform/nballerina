@@ -63,17 +63,17 @@ type RegionBlocks record {|
     bir:Label[] labels;
 |};
 
-type UsedMapAtomicType record {|
-    readonly t:MappingAtomicType semType;
-    wasm:Expression struct;
+type ComplexTypeDefn record {|
     readonly string global;
+    wasm:Expression[] body;
+    readonly t:ComplexSemType semType;
 |};
 
-type UsedRecordSubtype record {|
-    readonly t:MappingAtomicType semType;
-    wasm:Expression struct;
-    wasm:Expression[] names;
-    readonly string global;
+type SubtypeDefn record {|
+    readonly t:ComplexSemType semType;
+    readonly t:UniformTypeCode typeCode;
+    SubtypeStruct? struct = ();
+    string global;
 |};
 
 class Scaffold {
@@ -104,7 +104,7 @@ class Scaffold {
         self.defn = def;
         self.returnType = def.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
-        self.typeContext = birMod.getTypeContext();
+        self.typeContext = component.getTypeContext();
         self.modId = birMod.getId();
         self.component = component;
         self.initializeReprs(code.registers);
@@ -202,44 +202,17 @@ class Scaffold {
     function getRenderedRegion(bir:RegionIndex index) returns wasm:Expression[]? {
         return self.renderedRegion[index.toString()];
     }
-
-    function getMappingDesc(t:MappingAtomicType ty) returns wasm:Expression {
-        wasm:Module module = self.module;
-        Component component = self.component;
-        UsedMapAtomicType? used  = component.usedMapAtomicTypes[ty];
-        if used != () {
-            return module.globalGet(used.global);
-        }
-        string symbol = mangleTypeSymbol(component.usedMapAtomicTypes.length() + component.usedRecordSubtypes.length());
-        UsedMapAtomicType t = {
-            global: symbol,
-            semType: ty,
-            struct: createMappingDesc(module, ty)
-        };
-        module.addGlobal(symbol, { base: MAPPING_DESC, initial: "null" }, module.refNull(MAPPING_DESC));
-        component.usedMapAtomicTypes.add(t);
-        return module.globalGet(t.global);
+    
+    function getInherentType(t:SemType ty) returns wasm:Expression {
+        UsedSemType used = self.component.getUsedSemType(ty, INHERENT_TYPE);
+        return self.module.globalGet(used.global);
     }
 
-    function getRecordSubtype(t:MappingAtomicType ty) returns wasm:Expression {
-        wasm:Module module = self.module;
-        Component component = self.component;
-        UsedRecordSubtype? used  = component.usedRecordSubtypes[ty];
-        if used != () {
-            return module.globalGet(used.global);
-        }
-        string symbol = mangleTypeSymbol(component.usedMapAtomicTypes.length() + component.usedRecordSubtypes.length());
-        var [names, struct] = createRecordSubtype(module, self.component, ty);
-        UsedRecordSubtype t = {
-            global: symbol,
-            semType: ty,
-            struct: struct,
-            names: names
-        };
-        module.addGlobal(symbol, { base: RECORD_SUBTYPE, initial: "null" }, module.refNull(RECORD_SUBTYPE));
-        component.usedRecordSubtypes.add(t);
-        return module.globalGet(t.global);
+    function getTypeTest(t:ComplexSemType ty) returns wasm:Expression {
+        UsedSemType used = self.component.getUsedSemType(ty, TYPE_TEST);
+        return self.module.globalGet(used.global);
     }
+    
 }
 
 final IntRepr REPR_INT = { };

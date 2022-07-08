@@ -6,7 +6,7 @@ type CmpEqOp "ne"|"eq";
 
 final RuntimeModule equalMod = {
     file: "equal.wat",
-    priority: 2
+    priority: 3
 };
 
 final RuntimeFunction eqFunction = {
@@ -136,7 +136,11 @@ function buildEqualStringString(wasm:Module module, Scaffold scaffold, CmpEqOp o
 
 function buildEqualTaggedTagged(wasm:Module module, Scaffold scaffold, boolean exact, CmpEqOp op, wasm:Expression rhs, wasm:Expression lhs, bir:Register result) returns wasm:Expression {
     RuntimeFunction func = exact ? exactEqFunction : eqFunction;
-    wasm:Expression eq =  buildRuntimeFunctionCall(module, scaffold.getComponent(), func, [lhs, rhs]);
+    wasm:Expression[] args = [lhs, rhs];
+    if func == eqFunction {
+        args.push(module.refNull(EQSTACK));
+    }
+    wasm:Expression eq =  buildRuntimeFunctionCall(module, scaffold.getComponent(), func, args);
     if op != "eq" {
         eq = module.binary("i32.xor", module.addConst({ i32: 1 }), eq);
     }

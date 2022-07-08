@@ -65,36 +65,13 @@ type ListRepr record {|
     wasm:Expression default;
 |};
 
-function listAtomicTypeToListRepr(wasm:Module module, Scaffold scaffold, t:ListAtomicType? atomic) returns ListRepr {
-    t:SemType rest = t:ANY;
-    wasm:Expression default = module.refNull();
-    if atomic != () && atomic.members.fixedLength == 0 {
-        rest = atomic.rest;
-        if rest == t:INT {
-            default = module.structNew(BOXED_INT_TYPE, [module.addConst({ i32: TYPE_INT }), module.addConst({ i64: 0 })]);
-        }
-        else if rest == t:FLOAT {
-            default = module.structNew(FLOAT_TYPE, [module.addConst({ i32: TYPE_FLOAT }), module.addConst({ f64: 0.0 })]);
-        }
-        else if rest == t:BOOLEAN {
-            default = module.i31New(module.addConst({ i32: 0 }));
-        }
-        else if rest == t:STRING {
-            default = buildConstString(module, scaffold.getComponent(), "");
-        }
-    }
-    return { rest, default };
-}
-
 function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConstructInsn insn) returns wasm:Expression {
     final int length = insn.operands.length();
     t:SemType listType = insn.result.semType;
-    var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.getTypeContext(), listType);
-    var { rest, default } = listAtomicTypeToListRepr(module, scaffold, atomic);
+    wasm:Expression inherent = scaffold.getInherentType(listType);
     wasm:Expression list = buildRuntimeFunctionCall(module, scaffold.getComponent(), listCreateFunction, [
                                                                                 module.addConst({ i64: length }), 
-                                                                                default, 
-                                                                                module.addConst({ i32: <int>rest })
+                                                                                module.refAs("ref.as_non_null", inherent)
                                                                                ]);                      
     wasm:Expression storeList = buildStore(module, insn.result, list);
     wasm:Expression[] children = [storeList];
@@ -129,7 +106,7 @@ function buildListSet(wasm:Module module, Scaffold scaffold, bir:ListSetInsn ins
 function buildMappingConstruct(wasm:Module module, Scaffold scaffold, bir:MappingConstructInsn insn) returns wasm:Expression {
     int length = insn.fieldNames.length();
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(scaffold.getTypeContext(), insn.result.semType);  
-    wasm:Expression desc = scaffold.getMappingDesc(mat);
+    wasm:Expression desc = scaffold.getInherentType(insn.result.semType);
     wasm:Expression mapping = buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingConstructFunction, [
                                                                                             module.addConst({ i32: length }), 
                                                                                             module.refAs("ref.as_non_null", desc)

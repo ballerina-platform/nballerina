@@ -5,9 +5,9 @@ import wso2/nballerina.print.wasm;
 final int TYPE_INT     = t:INT;
 final int TYPE_BOOLEAN = t:BOOLEAN;
 final int TYPE_NIL     = t:NIL;
-final int TYPE_LIST    = t:LIST;
+final int TYPE_LIST    = t:LIST_RW;
 final int TYPE_STRING  = t:STRING;
-final int TYPE_MAP     = t:MAPPING;
+final int TYPE_MAP     = t:MAPPING_RW;
 final int TYPE_FLOAT   = t:FLOAT;
 final int TYPE_ERROR   = t:ERROR;
 const int SELF_REFERENCE = 4;
@@ -23,11 +23,26 @@ const RuntimeType STRING_TYPE = "String";
 const RuntimeType ANY_TYPE = "Any";
 const RuntimeType FLOAT_TYPE = "Float";
 const RuntimeType ERROR_TYPE = "Error";
-const RuntimeType MAP_TYPE_ARR = "MapTypeArr";
+const RuntimeType MAP_TYPE_ARR = "AnyList";
 const RuntimeType MAPPING_DESC = "MappingDesc";
+const RuntimeType LIST_DESC = "ListDesc";
+const RuntimeType INT_SUBTYPE = "IntSubtype";
+const RuntimeType INT_SUBTYPE_RANGES = "IntSubtypeRanges";
+const RuntimeType INT_RANGE = "IntRange";
+const RuntimeType STRING_SUBTYPE = "StringSubtype";
+const RuntimeType FLOAT_VALUES = "FloatValues";
+const RuntimeType FLOAT_SUBTYPE = "FloatSubtype";
+const RuntimeType BOOLEAN_SUBTYPE = "BooleanSubtype";
+const RuntimeType BASE_SUBTYPE = "Subtype";
+const RuntimeType PRECOMPUTED_SUBTYPE = "PrecomputedSubtype";
+const RuntimeType PRECOMPUTED_TIDS = "PrecomputedTids";
+const RuntimeType ARRMAP_SUBTYPE = "ArrMapSubtype";
 const RuntimeType RECORD_SUBTYPE = "RecordSubtype";
 const RuntimeType RECORD_SUBTYPE_FIELDS = "RecordSubtypeFields";
 const RuntimeType RECORD_SUBTYPE_FIELD = "RecordSubtypeField";
+const RuntimeType COMPLEX_TYPE = "ComplexType";
+const RuntimeType SUBTYPE_DATA_LIST = "SubTypeList";
+const RuntimeType EQSTACK = "EqStack";
 
 public type ExceptionTag string;
 const ExceptionTag BAD_CONVERSION_TAG = "bad-conversion";
@@ -155,6 +170,13 @@ function buildRuntimeFunctionCall(wasm:Module module, Component component, Runti
     component.maybeAddRtFunction("$" + name);
     component.addRtModule(rtModule);
     return module.call(name, args, returnType);
+}
+
+function buildRefFunc(wasm:Module module, Component component, RuntimeFunction rf) returns wasm:Expression {
+    var { name, rtModule } = rf;
+    component.maybeAddRtFunction("$" + name);
+    component.addRtModule(rtModule);
+    return module.refFunc(name);
 }
 
 function maybeAddRtFunction(string[] rtFunctions, string name) {
