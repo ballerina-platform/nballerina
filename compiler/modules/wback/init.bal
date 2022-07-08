@@ -32,7 +32,7 @@ final RuntimeFunction trueSubtypeContains = {
 final RuntimeFunction floatSubtypeContains = {
     name: "_bal_float_subtype_contains",
     returnType: "i32",
-    rtModule: typeMod
+    rtModule: numberMod
 };
 
 final RuntimeFunction intSubtypeContains = {
