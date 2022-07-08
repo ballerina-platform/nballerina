@@ -43,8 +43,15 @@ final RuntimeFunction checkListTypeAndAtomicFunction = {
     rtModule: listMod
 };
 
-final RuntimeFunction checkMapTypeAndAtomicFunction = {
-    name: "_bal_check_type_and_map_atomic",
+final RuntimeFunction mapSubtypeContainsFunction = {
+    name: "_bal_map_subtype_contains",
+    returnType: "i32",
+    rtModule: mapMod
+};
+
+
+final RuntimeFunction recordSubtypeContainsFunction = {
+    name: "_bal_record_subtype_contains",
     returnType: "i32",
     rtModule: mapMod
 };
@@ -132,7 +139,7 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                 strs.push(...sub.char.values);
                 strs.push(...sub.nonChar.values);
                 foreach var str in strs {
-                    wasm:Expression val = buildConstString(module, scaffold, str);
+                    wasm:Expression val = buildConstString(module, scaffold.getComponent(), str);
                     subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkStringTypeAndValFunction, [operand, val]));
                 }
             }
@@ -163,21 +170,37 @@ function singleValueConditions(wasm:Module module, Scaffold scaffold, t:SemType 
                 wasm:Expression val = module.refNull();
                 subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkNilTypeAndValFunction, [operand, val]));
             }
-            t:UT_LIST_RO => {
+            t:UT_LIST_RO 
+            | t:UT_LIST_RW => {
                 var atomic = t:listAtomicTypeRw(scaffold.getTypeContext(), semType);
                 if atomic != () {
                     t:SemType? ty = t:listAtomicSimpleArrayMemberType(atomic);
                     if ty != () {
                         subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkListTypeAndAtomicFunction, [operand, module.addConst({ i32: <int>ty })]));
-        }
-    }
-        }
+                    }
+                }
+                else {
+                    var [_, types] = t:listAllMemberTypes(scaffold.getTypeContext(), semType);
+                    foreach var ty in types {
+                        subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkListTypeAndAtomicFunction, [operand, module.addConst({ i32: t:widenToUniformTypes(ty) })]));                    
+                    }
+                }
+            }
             t:UT_MAPPING_RO => {
                 t:MappingAtomicType? atomic = t:mappingAtomicTypeRw(scaffold.getTypeContext(), semType);
                 if atomic != () {
-                    t:SemType ty = atomic.rest;
-                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), checkMapTypeAndAtomicFunction, [operand, module.addConst({ i32: <int>ty })]));
-        }
+                    wasm:Expression desc;
+                    RuntimeFunction rf;
+                    if atomic.rest == t:NEVER {
+                        rf = recordSubtypeContainsFunction;
+                        desc = module.refAs("ref.as_non_null", scaffold.getRecordSubtype(atomic));
+                    }
+                    else {
+                        rf = mapSubtypeContainsFunction;
+                        desc = module.refAs("ref.as_non_null", scaffold.getMappingDesc(atomic));
+                    }
+                    subConditions.push(buildRuntimeFunctionCall(module, scaffold.getComponent(), rf, [operand, desc]));
+                }
             }
         }
     }
@@ -197,12 +220,18 @@ function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType t
     return ();
 }
 
-function buildNarrowReg(wasm:Module module, Scaffold scaffold, bir:NarrowRegister register) returns wasm:Expression {
+function buildNarrowReg(wasm:Module module, Scaffold scaffold, bir:NarrowRegister register, boolean isFalse = false) returns wasm:Expression {
     var sourceReg = register.underlying;
     var sourceRepr = scaffold.getRepr(sourceReg);
     var value = buildLoad(module, sourceReg);
     wasm:Expression narrowed = buildNarrowRepr(module, scaffold, sourceRepr, value, scaffold.getRepr(register));
-    return buildStore(module, register, narrowed);
+    wasm:Expression store = buildStore(module, register, narrowed);
+    if isFalse && sourceRepr is TaggedRepr {
+        wasm:Expression rtt = buildRuntimeFunctionCall(module, scaffold.getComponent(), getTypeFunction, [value]);
+        wasm:Expression narrowTy = module.addConst({ i32: t:widenToUniformTypes(register.semType) });
+        return module.addIf(module.binary("i32.eq", module.binary("i32.and", rtt, narrowTy), rtt), store);    
+    }
+    return store;
 }
 
 function buildNarrowRepr(wasm:Module module, Scaffold scaffold, Repr sourceRepr, wasm:Expression value, Repr targetRepr) returns wasm:Expression {

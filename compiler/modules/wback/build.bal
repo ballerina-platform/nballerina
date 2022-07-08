@@ -23,9 +23,13 @@ const RuntimeType STRING_TYPE = "String";
 const RuntimeType ANY_TYPE = "Any";
 const RuntimeType FLOAT_TYPE = "Float";
 const RuntimeType ERROR_TYPE = "Error";
+const RuntimeType MAP_TYPE_ARR = "MapTypeArr";
+const RuntimeType MAPPING_DESC = "MappingDesc";
+const RuntimeType RECORD_SUBTYPE = "RecordSubtype";
+const RuntimeType RECORD_SUBTYPE_FIELDS = "RecordSubtypeFields";
+const RuntimeType RECORD_SUBTYPE_FIELD = "RecordSubtypeField";
 
 public type ExceptionTag string;
-public type HelperRuntimeFunction string|RuntimeFunction;
 const ExceptionTag BAD_CONVERSION_TAG = "bad-conversion";
 const ExceptionTag CUSTOM_EXCEPTION_TAG = "custom-exception";
 
@@ -41,7 +45,7 @@ final RuntimeModule commonMod = {
 
 final RuntimeModule stringMod = {
     file: "string.wat",
-    priority: 4
+    priority: 6
 };
 
 type RuntimeFunction readonly & record {|
@@ -131,7 +135,7 @@ function maybeCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged
 function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand operand) returns wasm:Expression {
     wasm:Expression op;
     if operand is bir:StringConstOperand {
-        op = buildConstString(module, scaffold, operand.value);
+        op = buildConstString(module, scaffold.getComponent(), operand.value);
     }
     else {
         op = buildLoad(module, operand);
@@ -140,9 +144,9 @@ function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand op
     return module.refCast(asData, module.globalGet("rttString"));
 }
 
-function buildConstString(wasm:Module module, Scaffold scaffold, string value) returns wasm:Expression {
+function buildConstString(wasm:Module module, Component component, string value) returns wasm:Expression {
     int[] surrogate = buildSurrogateArray(value);
-    string label = scaffold.maybeAddStringRecord(value, surrogate);
+    string label = component.maybeAddStringRecord(value, surrogate);
     return module.refAs("ref.as_non_null", module.globalGet(label));
 }
 
@@ -212,7 +216,7 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
     else {
         t:SingleValue value = operand.value;
         if value is string {
-            return [REPR_STRING, buildConstString(module, scaffold, value)];
+            return [REPR_STRING, buildConstString(module, scaffold.getComponent(), value)];
         }
         else if value == () {
             return [REPR_NIL, module.refNull()];

@@ -63,6 +63,19 @@ type RegionBlocks record {|
     bir:Label[] labels;
 |};
 
+type UsedMapAtomicType record {|
+    readonly t:MappingAtomicType semType;
+    wasm:Expression struct;
+    readonly string global;
+|};
+
+type UsedRecordSubtype record {|
+    readonly t:MappingAtomicType semType;
+    wasm:Expression struct;
+    wasm:Expression[] names;
+    readonly string global;
+|};
+
 class Scaffold {
     private wasm:Module module;
     final bir:BasicBlock[] blocks;
@@ -108,10 +121,6 @@ class Scaffold {
 
     function addExceptionTag(ExceptionTag tag, wasm:Type? kind = ()) {
         self.component.addExceptionTag(tag, kind);
-    }
-
-    function maybeAddStringRecord(string val, int[] surrogate) returns string {
-        return self.component.maybeAddStringRecord(val, surrogate);
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
@@ -194,6 +203,43 @@ class Scaffold {
         return self.renderedRegion[index.toString()];
     }
 
+    function getMappingDesc(t:MappingAtomicType ty) returns wasm:Expression {
+        wasm:Module module = self.module;
+        Component component = self.component;
+        UsedMapAtomicType? used  = component.usedMapAtomicTypes[ty];
+        if used != () {
+            return module.globalGet(used.global);
+        }
+        string symbol = mangleTypeSymbol(component.usedMapAtomicTypes.length() + component.usedRecordSubtypes.length());
+        UsedMapAtomicType t = {
+            global: symbol,
+            semType: ty,
+            struct: createMappingDesc(module, ty)
+        };
+        module.addGlobal(symbol, { base: MAPPING_DESC, initial: "null" }, module.refNull(MAPPING_DESC));
+        component.usedMapAtomicTypes.add(t);
+        return module.globalGet(t.global);
+    }
+
+    function getRecordSubtype(t:MappingAtomicType ty) returns wasm:Expression {
+        wasm:Module module = self.module;
+        Component component = self.component;
+        UsedRecordSubtype? used  = component.usedRecordSubtypes[ty];
+        if used != () {
+            return module.globalGet(used.global);
+        }
+        string symbol = mangleTypeSymbol(component.usedMapAtomicTypes.length() + component.usedRecordSubtypes.length());
+        var [names, struct] = createRecordSubtype(module, self.component, ty);
+        UsedRecordSubtype t = {
+            global: symbol,
+            semType: ty,
+            struct: struct,
+            names: names
+        };
+        module.addGlobal(symbol, { base: RECORD_SUBTYPE, initial: "null" }, module.refNull(RECORD_SUBTYPE));
+        component.usedRecordSubtypes.add(t);
+        return module.globalGet(t.global);
+    }
 }
 
 final IntRepr REPR_INT = { };
