@@ -31,3 +31,4 @@ For those test cases that are valid Ballerina programs, the Makefile in the [tes
 ## Status
 
 Wasm backend is completed for [subset 11](docs/subset11.md) and are working on [subset 12](docs/subset12.md).
+A [blog post](https://poorna.info/posts/wasm-backend/) on compiler operation.
