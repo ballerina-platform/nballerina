@@ -273,11 +273,11 @@ function intersectMapping(TempMappingSubtype m1, TempMappingSubtype m2) returns 
     string[] names = [];
     SemType[] types = [];
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
-        names.push(name);
         SemType t = intersect(type1, type2);
         if isNever(t) {
             return ();
         }
+        names.push(name);
         types.push(t);
     }
     SemType rest = intersect(m1.rest, m2.rest);
@@ -449,6 +449,49 @@ function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean re
     }
 }
 
+function intersectMappingAtomicTypes(BddNode bddNode)returns MappingAtomicType? {
+    // TODO: this will need to support more than one (go over middle until over)
+    BddNode t1Bdd = bddNode;
+    BddNode t2Bdd = <BddNode>bddNode.left;
+    var t1Atom = t1Bdd.atom;
+    var t2Atom = t2Bdd.atom;
+
+    if t1Atom !is TypeAtom || t2Atom !is TypeAtom {
+        // TODO deal with rec atoms
+        panic error("unexpected");
+    }
+
+    if t2Bdd.left != true || t2Bdd.middle != false || t2Bdd.right != false {
+        panic error("unexpected");
+    }
+
+    var t1Ty = t1Atom.atomicType;
+    var t2Ty = t2Atom.atomicType;
+
+    if t1Ty !is MappingAtomicType || t2Ty !is MappingAtomicType {
+        return ();
+    }
+    
+    string[] names = [];
+    SemType[] types = [];
+    foreach var { name, type1, type2 } in new MappingPairing(t1Ty, t2Ty) {
+        SemType ty = intersect(type1, type2);
+        if isNever(ty) {
+            return ();
+        }
+        names.push(name);
+        types.push(ty);
+    }
+    SemType rest = intersect(t1Ty.rest, t2Ty.rest);
+    if names.length() == 0 && isNever(rest) {
+        return ();
+    }
+    return {
+        names: names.cloneReadOnly(),
+        types: types.cloneReadOnly(),
+        rest
+    };
+}
 final UniformTypeOps mappingRoOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
@@ -464,4 +507,3 @@ final UniformTypeOps mappingRwOps = {
     complement: bddSubtypeComplement,
     isEmpty: mappingSubtypeIsEmpty
 };
-

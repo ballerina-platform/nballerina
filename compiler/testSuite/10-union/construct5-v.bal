@@ -1,5 +1,5 @@
 public function main() {
     record {| int x; |} | (record {| int|string y; |} & record {| int? y; |}) r =
-      { y: 1 }; // @error
+      { y: 1 };
     _ = r;
 }
