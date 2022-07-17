@@ -1166,7 +1166,7 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
         return env.mappingAtomType(bdd.atom);    
     }
     else if bdd.left is BddNode && bdd.right == false && bdd.middle is false {
-        return intersectMappingAtomicTypes(bdd);
+        return mappingIntersectionToAtomicType(env, bdd, <BddNode>bdd.left);
     }
     return ();
 }
