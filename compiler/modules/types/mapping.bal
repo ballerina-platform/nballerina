@@ -456,9 +456,11 @@ function mappingIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) retu
     if rhs.left is BddNode {
         if rhs.middle !is false || rhs.right !is false {
             // not a "pure" intersection (I think this shouldn't happen ever)
-            panic error("unexpected intersection");
+            // intersection between union and mapping type is empty
+            // intersection between negative atom and mapping type is undefined
+            return ();
         }
-        MappingAtomicType? newRhsTy = <MappingAtomicType>mappingIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
+        MappingAtomicType? newRhsTy = mappingIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
         if newRhsTy is () {
             return ();
         }
