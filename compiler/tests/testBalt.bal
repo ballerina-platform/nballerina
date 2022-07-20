@@ -39,7 +39,7 @@ function testBalt(string baltName, int offset, BaltTestHeader header, string[] l
 }
 
 function parseBalts() returns TestCaseMap|error {
-    string[] files = from var entry in check file:readDir("testSuite")
+    string[] files = check from var entry in check file:readDir("testSuite")
             where basenameExtension(check file:basename(entry.absPath))[1] == ".balt"
             select entry.absPath;
 

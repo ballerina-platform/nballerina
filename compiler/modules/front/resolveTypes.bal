@@ -161,7 +161,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         if defn == () {
             t:ListDefinition d = new;
             td.defn = d;
-            t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
+            t:SemType[] members = check from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             t:SemType rest = t:NEVER;
             s:TypeDesc? restTd = td.rest;
             if restTd != () {
@@ -289,7 +289,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             foreach var arg in td.params {
                 a.push(arg.td);
             }
-            t:SemType[] args = from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
+            t:SemType[] args = check from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             s:TypeDesc? retTy = td.ret;
             t:SemType ret = retTy != () ? check resolveTypeDesc(mod, modDefn, depth + 1, retTy) : t:NIL;
             return d.define(env, t:tuple(env, ...args), ret);
