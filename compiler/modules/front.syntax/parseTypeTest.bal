@@ -94,8 +94,11 @@ function parseTypeWitness(Tokenizer tok) returns string|error {
                 }
                 var str => {
                     string val = <string>str;
+                    if val == "}" {
+                        words.push(" ");
+                    }
                     words.push(val);
-                    if val == "," {
+                    if val == "," || val == "{" || val == ":" {
                         words.push(" ");
                     }
 

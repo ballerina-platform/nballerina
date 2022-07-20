@@ -250,9 +250,30 @@ function testSemtypeWitness(front:SourcePart[] sources, string[] expected) retur
                 test:assertFail(string `Invalid type relation: ${test.op}, only '<' is accepted`);
             }
         }
-        string witness = s:typeWitnessToString(w);
+        string witness = replaceNewLineWithSpaceChar(s:typeWitnessToString(w));
         test:assertEquals(witness, test.witness, string `Witness assertion failure: ${item}`);
     }  
+}
+
+function replaceNewLineWithSpaceChar(string str) returns string {
+    int prev = 0;
+    int cur = 0;
+    string[] parts = [];
+    while cur < str.length() {
+        int? index = str.indexOf("\n", prev);
+        if index == () {
+            cur = str.length();
+            parts.push(str.substring(prev, cur));
+        }
+        else {
+            cur = index + 1;
+            parts.push(str.substring(prev, cur - 1));
+            parts.push(" ");
+        }
+        prev = cur;
+
+    }
+    return "".join(...parts);
 }
 
 function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeProjection tn) returns t:SemType {
