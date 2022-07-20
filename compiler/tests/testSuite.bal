@@ -160,9 +160,6 @@ function listSources(string initialChars) returns TestSuiteCases|io:Error|file:E
             if ext != ".bal" {
                 continue;
             }
-            if !base.endsWith("list-w") {
-                continue;
-            }
             int? dash = base.lastIndexOf("-");
             test:assertTrue(dash is int, "test file name must be in <name>-<kind>.bal format");
             string testKind = base.substring(1 + <int>dash);
@@ -254,7 +251,7 @@ function testSemtypeWitness(front:SourcePart[] sources, string[] expected) retur
             }
         }
         string witness = s:typeWitnessToString(w);
-        test:assertEquals(witness, test.witness);
+        test:assertEquals(witness, test.witness, string `Witness assertion failure: ${item}`);
     }  
 }
 

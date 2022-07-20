@@ -41,16 +41,30 @@ public class WitnessCollector {
     }
 
     public function remainingSubType(WitnessableSubtype|error subtypeData) {
-        if self.witness == () && subtypeData !is error {
-            self.witness = subtypeToWitnessValue(self.cx, subtypeData);
+        lock {
+            if self.witness == () && subtypeData !is error {
+                self.witness = subtypeToWitnessValue(self.cx, subtypeData);
+            }
         }
     }
 
     public function allOfTypes(UniformTypeBitSet all) {
-        self.witness = uniformTypesToWitnessValue(all);
+        lock {
+            self.witness = uniformTypesToWitnessValue(all);
+        }
     }
 
-    public function get() returns WitnessValue => self.witness;
+    public function get() returns WitnessValue {
+        lock {
+            return self.witness;
+        }
+    } 
+
+    public function set(WitnessValue witness) {
+        lock {
+            self.witness = witness;
+        }
+    }
 }
 
 function uniformTypesToWitnessValue(UniformTypeBitSet bitset) returns WrappedSingleValue|string? {

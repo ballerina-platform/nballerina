@@ -192,6 +192,7 @@ function listSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector w
     else {
         m = mm;
         boolean? res = m.isEmpty;
+        witness.set(m.witness);
         if res == () {
             // we've got a loop
             // XXX is this right???
