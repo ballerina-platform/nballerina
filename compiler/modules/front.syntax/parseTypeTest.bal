@@ -83,10 +83,8 @@ function parseTypeWitness(Tokenizer tok) returns string|error {
         check tok.advance();
         if curTok != () {
             match curTok {
-                [STRING_LITERAL, var _] => {
-                    // can't recover original string, so
-                    // lets just return a minimal expectation
-                    words.push("\"");
+                [STRING_LITERAL, var value] => {
+                    words.push(string `"${value}"`);
                 }
                 [DECIMAL_FP_NUMBER, var digits, var suffix] => {
                     words.push(digits.toLowerAscii() + (suffix ?: ""));
@@ -95,10 +93,15 @@ function parseTypeWitness(Tokenizer tok) returns string|error {
                     words.push(str);
                 }
                 var str => {
-                    words.push(<string>str);
+                    string val = <string>str;
+                    words.push(val);
+                    if val == "," {
+                        words.push(" ");
+                    }
+
                 }
             }
         }
     }
-    return " ".join(...words);
+    return "".join(...words);
 }

@@ -160,6 +160,9 @@ function listSources(string initialChars) returns TestSuiteCases|io:Error|file:E
             if ext != ".bal" {
                 continue;
             }
+            if !base.endsWith("list-w") {
+                continue;
+            }
             int? dash = base.lastIndexOf("-");
             test:assertTrue(dash is int, "test file name must be in <name>-<kind>.bal format");
             string testKind = base.substring(1 + <int>dash);
@@ -242,7 +245,6 @@ function testSemtypeWitness(front:SourcePart[] sources, string[] expected) retur
         
         t:WitnessCollector w = new(tc);
         boolean lsr = t:isSubtypeWitness(tc, left, right, w);
-        string witness = s:typeWitnessToString(w);
         match test.op { 
             "<" => {
                 test:assertEquals(lsr, false, string `Invalid semtype witness assertion ${lhsStr} is a proper subtype of ${rhsStr}`);
@@ -251,6 +253,7 @@ function testSemtypeWitness(front:SourcePart[] sources, string[] expected) retur
                 test:assertFail(string `Invalid type relation: ${test.op}, only '<' is accepted`);
             }
         }
+        string witness = s:typeWitnessToString(w);
         test:assertEquals(witness, test.witness);
     }  
 }

@@ -29,7 +29,7 @@ public isolated class Random {
 
     public function randomStringValue(int len) returns string {
         int[] codePoints = [];
-        foreach int _ in 0 ... len {
+        foreach int _ in 0 ..< len {
             int r = self.nextRange(52);
             boolean upper = r < 26;
             int c = upper ? (65 + r) : (97 + r - 26); // ('A' + c) or ('a' + c)

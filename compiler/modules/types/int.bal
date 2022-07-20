@@ -145,6 +145,16 @@ function intSubtypeMin(IntSubtype subtype) returns int {
     return subtype[0].min;
 }
 
+function intSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector w) returns false {
+    if t == true {
+        w.allOfTypes(UT_INT);
+    }
+    else {
+        w.remainingSubType(<IntSubtype>t);
+    }
+    return false;
+}
+
 function rangeListUnion(Range[] v1, Range[] v2) returns Range[] {
     Range[] result = [];
     int i1 = 0;
@@ -289,5 +299,6 @@ final UniformTypeOps intOps = {
     intersect: intSubtypeIntersect,
     diff: intSubtypeDiff,
     complement: intSubtypeComplement,
-    isEmpty: notIsEmpty
+    isEmpty: notIsEmpty,
+    isEmptyWitness: intSubtypeIsEmptyWitness
 };

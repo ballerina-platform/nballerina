@@ -40,9 +40,9 @@ function listWitnessToLiteral(t:ListWitnessValue value) returns ListConstructorE
     Expr[] members = [];
     foreach int i in 0 ..< memberValues.length() {
         Expr m = typeWitnessToExpr(memberValues[i]);
+        members.push(m);
         if i + 1 < indices.length() {
             int nextIndex = indices[i + 1];
-            members.push(m);
             foreach var _ in members.length() ..< nextIndex {
                 members.push(m);
             }
