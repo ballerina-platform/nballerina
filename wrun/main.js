@@ -1,4 +1,6 @@
 const fs = require('fs');
+var Decimal = require('decimal.js-light');
+Decimal.set({ precision: 34, defaults: true });
 let WasmModule = {
   tags: [],
   memory: null
@@ -8,14 +10,11 @@ const TYPE_BOOLEAN = 2;
 const SELF_REFERENCE = 4;
 const TYPE_INT = 128;
 const TYPE_FLOAT = 256;
+const TYPE_DECIMAL = 512;
 const TYPE_STRING = 1024;
 const TYPE_ERROR = 2048;
 const TYPE_LIST = 262144;
 const TYPE_MAP = 524288;
-const COMPARE_LT = 0;
-const COMPARE_LE = 1;
-const COMPARE_GT = 2;
-const COMPARE_GE = 3;
 
 let fileName = process.argv[2];
 const wasmBuffer = fs.readFileSync(fileName);
@@ -55,6 +54,15 @@ const stringImport = {
   }
 };
 
+const decimalImport = {
+  create: (offset, length) => {
+    var bytes = new Uint8Array(WasmModule.memory.buffer, offset, length);
+    var decString = new TextDecoder('utf8').decode(bytes);
+    let dec = new Decimal(decString);
+    return dec;
+  }
+};
+
 const intImport = {
   hex: (arg) => {
     return arg.toString(16)
@@ -70,7 +78,8 @@ const ioImport = {
 let importObject = {
   console: ioImport,
   string: stringImport,
-  int: intImport
+  int: intImport,
+  decimal: decimalImport
 };
 
 WebAssembly.instantiate(wasmBuffer, importObject).then(obj => {
@@ -104,6 +113,9 @@ const getValue = (ref, parent = null) => {
       else if (Number.isInteger(result)) {
         result = `${result}.0`;
       }
+      break;
+    case TYPE_DECIMAL:
+      result = WasmModule._bal_get_decimal(ref).toString()
       break;
     case TYPE_STRING:
       result = WasmModule._bal_get_string(ref);

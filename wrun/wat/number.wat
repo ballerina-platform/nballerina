@@ -1,4 +1,6 @@
 (module 
+  ;; import
+  (import "decimal" "create" (func $_js_decimal_create (param i32) (param i32) (result anyref))) 
   ;; tag
   (tag $bad-conversion) 
   (tag $overflow) 

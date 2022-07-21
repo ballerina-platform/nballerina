@@ -10,6 +10,7 @@ final int TYPE_STRING  = t:STRING;
 final int TYPE_MAP     = t:MAPPING_RW;
 final int TYPE_FLOAT   = t:FLOAT;
 final int TYPE_ERROR   = t:ERROR;
+final int TYPE_DECIMAL  = t:DECIMAL;
 const int SELF_REFERENCE = 4;
 const int INITIAL_CAPACITY = 4;
 const int MAX_CAPACITY = 4294967295;
@@ -23,6 +24,7 @@ const RuntimeType STRING_TYPE = "String";
 const RuntimeType ANY_TYPE = "Any";
 const RuntimeType FLOAT_TYPE = "Float";
 const RuntimeType ERROR_TYPE = "Error";
+const RuntimeType DECIMAL_TYPE = "Decimal";
 const RuntimeType MAP_TYPE_ARR = "AnyList";
 const RuntimeType MAPPING_DESC = "MappingDesc";
 const RuntimeType LIST_DESC = "ListDesc";
@@ -111,6 +113,12 @@ final RuntimeFunction createStringFunction = {
     rtModule: stringMod
 };
 
+final RuntimeFunction createDecimalFunction = {
+    name: "_js_decimal_create",
+    returnType: "eqref",
+    rtModule: numberMod
+};
+
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
     return module.i31New(value);
 }
@@ -162,6 +170,23 @@ function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand op
 function buildConstString(wasm:Module module, Component component, string value) returns wasm:Expression {
     int[] surrogate = buildSurrogateArray(value);
     string label = component.maybeAddStringRecord(value, surrogate);
+    return module.refAs("ref.as_non_null", module.globalGet(label));
+}
+
+function buildDecimal(wasm:Module module, Scaffold scaffold, bir:DecimalOperand operand) returns wasm:Expression {
+    wasm:Expression op;
+    if operand is bir:DecimalConstOperand {
+        op = buildConstDecimal(module, scaffold.getComponent(), operand.value);
+    }
+    else {
+        op = buildLoad(module, operand);
+    }
+    wasm:Expression asData = module.refAs("ref.as_data", op);
+    return module.refCast(asData, module.globalGet("rttDecimal"));
+}
+
+function buildConstDecimal(wasm:Module module, Component component, decimal value) returns wasm:Expression {
+    string label = component.maybeAddDecimalRecord(value);
     return module.refAs("ref.as_non_null", module.globalGet(label));
 }
 
@@ -252,8 +277,11 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
         else if value is float {
             return [REPR_FLOAT, module.addConst({ f64: value })];
         }
+        else {
+            decimal _ = value;
+            return [REPR_DECIMAL, buildConstDecimal(module, scaffold.getComponent(), value)];
+        }
     }
-    panic error("type not handled");
 }
 
 function buildInt(wasm:Module module, bir:IntOperand operand) returns wasm:Expression {
@@ -305,7 +333,8 @@ function buildConvertRepr(wasm:Module module, Repr sourceRepr, wasm:Expression v
 
 function buildGlobalString(wasm:Module module, Component component, string val, string global, int[] surrogate, int offset, int length) returns StringRecord {
     wasm:Expression[] body = [];
-    string byteStr = buildStringData(module, val, global);
+    string byteStr = buildMemoryData(module, val, global);
+    module.addGlobal(global, { base: STRING_TYPE, initial: "null" }, module.refNull(STRING_TYPE));
     wasm:Expression offsetExpr = module.addConst({ i32: offset });
     wasm:Expression jsString = buildRuntimeFunctionCall(module, component, createStringFunction, [
                                                                                                     module.addConst({ i32: offset }), 
@@ -330,8 +359,21 @@ function buildGlobalString(wasm:Module module, Component component, string val, 
     return { global, body, byteStr, offsetExpr };
 }
 
+function buildGlobalDecimal(wasm:Module module, Component component, decimal value, string global, int offset, int length) returns DecimalRecord {
+    wasm:Expression[] body = [];
+    string byteStr = buildMemoryData(module, value.toString(), global);
+    module.addGlobal(global, { base: DECIMAL_TYPE, initial: "null" }, module.refNull(DECIMAL_TYPE));
+    wasm:Expression offsetExpr = module.addConst({ i32: offset });
+    wasm:Expression jsDecimal = buildRuntimeFunctionCall(module, component, createDecimalFunction, [
+                                                                                                    module.addConst({ i32: offset }), 
+                                                                                                    module.addConst({i32: length })
+                                                                                                ]);
+    wasm:Expression struct = module.structNew(DECIMAL_TYPE, [module.addConst({ i32: TYPE_DECIMAL }), jsDecimal]);
+    body.push(module.globalSet(global, struct));
+    return { value, global, body, byteStr, offsetExpr };
+}
 
-function buildStringData(wasm:Module module, string val, string global) returns string {
+function buildMemoryData(wasm:Module module, string val, string global) returns string {
     byte[] bytes = val.toBytes();
     string[] hexes = [];
     foreach byte item in bytes {
@@ -340,6 +382,5 @@ function buildStringData(wasm:Module module, string val, string global) returns 
     }
     string byteStr = "\\".'join(...hexes);
     byteStr = byteStr.length() > 0 ? "\\" + byteStr : byteStr;
-    module.addGlobal(global, { base: STRING_TYPE, initial: "null" }, module.refNull(STRING_TYPE));
     return byteStr;
 }

@@ -1,6 +1,18 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
 
+final RuntimeFunction decimalNegFunction = {
+    name: "_bal_decimal_neg",
+    returnType: "eqref",
+    rtModule: numberMod
+};
+
+final RuntimeFunction convertToDecimalFunction = {
+    name: "_bal_convert_to_decimal",
+    returnType: "eqref",
+    rtModule: numberMod
+};
+
 final readonly & map<wasm:Op> intArithmeticOps = {
     "+": "i64.add",
     "-": "i64.sub",
@@ -74,6 +86,24 @@ final readonly & map<RuntimeFunction> overflowFunction = {
     "i64.div_s": checkOverflowDivFunction
 };
 
+final readonly & map<string> decimalArithmeticFuncNames = {
+    "+": "add",
+    "-": "sub",
+    "*": "mul",
+    "/": "div",
+    "%": "rem"
+};
+
+final readonly & map<RuntimeFunction> decimalArithmeticFuncs = createDecimalArithmeticFuncs();
+
+function createDecimalArithmeticFuncs() returns readonly & map<RuntimeFunction> {
+    map<RuntimeFunction> m = {};
+    foreach var [op, name] in decimalArithmeticFuncNames.entries() {
+        m[op] = { name: "_bal_decimal_" + name, returnType: "eqref", rtModule: numberMod };
+    }
+    return m.cloneReadOnly();
+}
+
 function buildBitwiseBinary(wasm:Module module, bir:IntBitwiseBinaryInsn insn) returns wasm:Expression {
     wasm:Op op = binaryBitwiseOp.get(insn.op);
     wasm:Expression lhs = buildInt(module, insn.operands[0]);
@@ -135,3 +165,48 @@ function buildFloatNegate(wasm:Module module, bir:FloatNegateInsn insn) returns 
     wasm:Expression operand = buildFloat(module, insn.operand);
     return buildStore(module, insn.result, module.unary("f64.neg", operand));
 }
+
+function buildDecimalArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:DecimalArithmeticBinaryInsn insn) returns wasm:Expression {
+    wasm:Expression lhs = buildDecimal(module, scaffold, insn.operands[0]);
+    wasm:Expression rhs = buildDecimal(module, scaffold, insn.operands[1]);
+    wasm:Expression result = buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalArithmeticFuncs.get(insn.op), [lhs, rhs]);
+    return buildStore(module, insn.result, result);                                  
+}
+
+function buildDecimalNegate(wasm:Module module, Scaffold scaffold, bir:DecimalNegateInsn insn) returns wasm:Expression {
+    wasm:Expression operand = buildDecimal(module, scaffold, insn.operand);
+    wasm:Expression result = buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalNegFunction, [operand]);
+    return buildStore(module, insn.result, result);
+}
+
+function buildConvertToDecimal(wasm:Module module, Scaffold scaffold, bir:ConvertToDecimalInsn insn) returns wasm:Expression {
+    var [repr, val] = buildReprValue(module, scaffold, insn.operand);
+    if repr.base == BASE_REPR_INT {
+        return buildConvertIntToDecimal(module, scaffold, val, insn);
+    }
+    else if repr.base == BASE_REPR_FLOAT {
+        return buildConvertFloatToDecimal(module, scaffold, val, insn);
+    }
+    // convert to decimal from tagged pointer
+    wasm:Expression result = buildRuntimeFunctionCall(module, scaffold.getComponent(), convertToDecimalFunction, [val]);
+    return buildStore(module, insn.result, result);   
+}
+
+
+function buildConvertIntToDecimal(wasm:Module module, Scaffold scaffold, wasm:Expression intVal, bir:ConvertToDecimalInsn insn) returns wasm:Expression {
+    // llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+    // llvm:BasicBlock errBlock = scaffold.addBasicBlock();
+    // module.condBr(llvm:constInt(LLVM_BOOLEAN, 0), errBlock, continueBlock);
+    // module.positionAtEnd(errBlock);
+    // module.br(scaffold.getOnPanic());
+    // module.positionAtEnd(continueBlock);
+    // buildStoreDecimal(module, scaffold, buildRuntimeFunctionCall(module, scaffold, decimalFromIntFunction, [intVal]), insn.result);
+    panic error("conversion not implemented yet");
+}
+
+function buildConvertFloatToDecimal(wasm:Module module, Scaffold scaffold, wasm:Expression floatVal, bir:ConvertToDecimalInsn insn) returns wasm:Expression {
+    // wasm:Expression resultWithErr = buildRuntimeFunctionCall(module, scaffold, decimalFromFloatFunction, [floatVal]);
+    // buildStoreDecimal(module, scaffold, buildCheckPanicCode(module, scaffold, resultWithErr, insn.pos), insn.result);
+    panic error("conversion not implemented yet");
+}
+

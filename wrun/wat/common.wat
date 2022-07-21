@@ -16,6 +16,7 @@
   (type $Map (struct (field $type i32) (field $desc (mut (ref $MappingDesc))) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
+  (type $Decimal (struct (field $type i32) (field $val (mut anyref)))) 
   (type $List (struct (field $type i32) (field $desc (ref $ListDesc)) (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
   (type $AnyList (array (mut eqref))) 
   (type $Subtype (struct (field $func (ref $subTypeContains))))
@@ -43,6 +44,7 @@
   (global $rttFloat (rtt 1 $Float) (rtt.sub $Float (global.get $rttAny)))
   (global $rttList (rtt 1 $List) (rtt.sub $List (global.get $rttAny)))
   (global $rttString (rtt 1 $String) (rtt.sub $String (global.get $rttAny)))
+  (global $rttDecimal (rtt 1 $Decimal) (rtt.sub $Decimal (global.get $rttAny)))
   (global $rttMap (rtt 1 $Map) (rtt.sub $Map (global.get $rttAny)))
   (global $rttError (rtt 1 $Error) (rtt.sub $Error (global.get $rttAny)))
   (global $rttSubtype (rtt 0 $Subtype) (rtt.canon $Subtype))
@@ -70,6 +72,7 @@
   (export "_bal_get_type_children" (func $_bal_get_type_children)) 
   (export "_bal_get_error" (func $_bal_get_error)) 
   (export "_bal_get_string" (func $_bal_get_string))
+  (export "_bal_get_decimal" (func $_bal_get_decimal))
   ;; $toHexString
   (func $toHexString (param $0 i64) (result (ref $String)) 
     (struct.new_with_rtt $String 
@@ -139,6 +142,13 @@
         (ref.as_data 
           (local.get $0)) 
         (global.get $rttString))))
+  ;; $_bal_get_decimal
+  (func $_bal_get_decimal (param $0 eqref) (result anyref) 
+    (struct.get $Decimal $val 
+      (ref.cast 
+        (ref.as_data 
+          (local.get $0)) 
+        (global.get $rttDecimal))))
   ;; $_bal_get_error
   (func $_bal_get_error (param $0 eqref) (result anyref) 
     (return 
