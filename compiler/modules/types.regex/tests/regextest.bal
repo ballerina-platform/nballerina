@@ -13,35 +13,22 @@ function testRegexString(f:SubtypeTestOp op, string str, string regex) {
     t:Context cx = t:contextFromEnv(env);
     t:SemType strTy = stringToSingleton(env, str);
     t:SemType regexTy = regexToSemType(env, regex);
-    testTypeRelation(cx, str, regex, strTy, regexTy, op);
+    boolean[2] testPair = [t:isSubtype(cx, strTy, regexTy), t:isSubtype(cx, regexTy, strTy)];
+    string result;
+    match testPair {
+        [true, true] => { result = "="; }
+        [true, false] => { result = "<"; }
+        [false, true] => { result = ">"; }
+        _ => { result = "<>"; }
+    }
+    test:assertEquals(op, result);
 }
 
 @test:Config{
     dataProvider: readInclusionTests
 }
 function testRegexInclusion(f:SubtypeTestOp op, string lhs, string rhs) {
-    t:Env env = new;
-    t:Context cx = t:contextFromEnv(env);
-    t:SemType lhsTy = regexToSemType(env, lhs);
-    t:SemType rhsTy = regexToSemType(env, rhs);
-    testTypeRelation(cx, lhs, rhs, lhsTy, rhsTy, op);
-}
-
-function testTypeRelation(t:Context tc, string left, string right, t:SemType leftTy, t:SemType rightTy, f:SubtypeTestOp op) {
-    boolean lsr = t:isSubtype(tc, leftTy, rightTy);
-    boolean rsl = t:isSubtype(tc, rightTy, leftTy);
-    boolean[2] testPair = [lsr, rsl];
-    match op {
-        "<" => {
-            test:assertEquals(testPair, [true, false], string `${left} is not a proper subtype of ${right}`);
-        }
-        "<>" => {
-            test:assertEquals(testPair, [false, false], string `${left} and ${right} are subtypes`);
-        }
-        "=" => {
-            test:assertEquals(testPair, [true, true], string `${left} is not equivalent to ${right}`);
-        }
-    }
+    test:assertEquals(typeRelation(lhs, rhs), op);
 }
 
 function readRegexStringTests() returns map<TestCase>|error => readTestCases("modules/types.regex/tests/data/regexStringTests.json");

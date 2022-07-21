@@ -20,6 +20,21 @@ type PatternRange record {|
     int endIndex; // position of last char in pattern (not including ")")
 |};
 
+public function typeRelation(string lhs, string rhs) returns string  {
+    t:Env env = new;
+    t:SemType lhsTy = regexToSemType(env, lhs);
+    t:SemType rhsTy = regexToSemType(env, rhs);
+    t:Context cx = t:contextFromEnv(env);
+    var relation = [t:isSubtype(cx, lhsTy, rhsTy), t:isSubtype(cx, rhsTy, lhsTy)];
+    match relation {
+        [true, true] => { return "="; }
+        [true, false] => { return "<"; }
+        [false, true] => { return ">"; }
+        _ => { return "<>"; }
+    }
+}
+
+// This is faster than using regexToSemType but should produce the same result
 function stringToSingleton(t:Env env, string str) returns t:SemType {
     StringAsList stringList = stringToList(str, 0);
     return stringListToSemType(env, stringList);
@@ -40,7 +55,7 @@ function stringListToSemType(t:Env env, StringAsList stringList) returns t:SemTy
     return definition.define(env, [t:stringConst(stringList[0]), stringListToSemType(env, stringList[1])]);
 }
 
-function regexToSemType(t:Env env, string regex) returns t:SemType {
+public function regexToSemType(t:Env env, string regex) returns t:SemType {
     return regexToSemTypeInner(env, regex, 0, regex.length(), t:NIL);
 }
 
