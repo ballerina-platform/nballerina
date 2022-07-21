@@ -128,7 +128,7 @@ function xmlRwSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
     if sd.primitives != 0 {
         return false;
     }
-    return xmlBddEmptyRw(cx, sd.sequence);
+    return xmlBddEmptyRw(cx, sd.sequence, new(cx));
 }
 
 function xmlRoSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
@@ -136,24 +136,40 @@ function xmlRoSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
     if sd.primitives != 0 {
         return false;
     }
-    return xmlBddEmptyRo(cx, sd.sequence);
+    return xmlBddEmptyRo(cx, sd.sequence, new(cx));
 }
 
-function xmlBddEmptyRw(Context cx, Bdd bdd) returns boolean {
-    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmptyRw);
+function xmlRwSubtypeIsEmptyWitness(Context cx, SubtypeData d, WitnessCollector witness) returns boolean {
+    XmlSubtype sd = <XmlSubtype>d;
+    if sd.primitives != 0 {
+        return false;
+    }
+    return xmlBddEmptyRw(cx, sd.sequence, witness);
 }
 
-function xmlBddEmptyRo(Context cx, Bdd bdd) returns boolean {
-    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmptyRo);
+function xmlRoSubtypeIsEmptyWitness(Context cx, SubtypeData d, WitnessCollector witness) returns boolean {
+    XmlSubtype sd = <XmlSubtype>d;
+    if sd.primitives != 0 {
+        return false;
+    }
+    return xmlBddEmptyRo(cx, sd.sequence, witness);
 }
 
-function xmlFormulaIsEmptyRo(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    return hasTotalNegative(collectAllBits(pos), neg);
+function xmlBddEmptyRw(Context cx, Bdd bdd, WitnessCollector witness) returns boolean {
+    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmptyRw, witness);
 }
 
-function xmlFormulaIsEmptyRw(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+function xmlBddEmptyRo(Context cx, Bdd bdd, WitnessCollector witness) returns boolean {
+    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmptyRo, witness);
+}
+
+function xmlFormulaIsEmptyRo(Context cx, Conjunction? pos, Conjunction? neg, WitnessCollector witness) returns boolean {
+    return hasTotalNegative(cx, collectAllBits(pos), neg);
+}
+
+function xmlFormulaIsEmptyRw(Context cx, Conjunction? pos, Conjunction? neg, WitnessCollector witness) returns boolean {
     int rwOnlyBits = collectAllBits(pos) & XML_PRIMITIVE_RW_MASK;
-    return hasTotalNegative(rwOnlyBits, neg);
+    return hasTotalNegative(cx, rwOnlyBits, neg);
 }
 
 function collectAllBits(Conjunction? con) returns int {
@@ -166,7 +182,7 @@ function collectAllBits(Conjunction? con) returns int {
     return allBits;
 }
 
-function hasTotalNegative(int allBits, Conjunction? con) returns boolean {
+function hasTotalNegative(Context cx, int allBits, Conjunction? con) returns boolean {
     if allBits == 0 {
         return true;
     }
@@ -194,7 +210,8 @@ final UniformTypeOps xmlRoOps = {
     intersect: xmlSubtypeIntersect,
     diff: xmlSubtypeDiff,
     complement: xmlSubtypeComplementRo,
-    isEmpty: xmlRoSubtypeIsEmpty
+    isEmpty: xmlRoSubtypeIsEmpty,
+    isEmptyWitness: xmlRoSubtypeIsEmptyWitness
 };
 
 final UniformTypeOps xmlRwOps = {
@@ -202,5 +219,6 @@ final UniformTypeOps xmlRwOps = {
     intersect: xmlSubtypeIntersect,
     diff: xmlSubtypeDiff,
     complement: xmlSubtypeComplementRw,
-    isEmpty: xmlRwSubtypeIsEmpty
+    isEmpty: xmlRwSubtypeIsEmpty,
+    isEmptyWitness: xmlRwSubtypeIsEmptyWitness
 };

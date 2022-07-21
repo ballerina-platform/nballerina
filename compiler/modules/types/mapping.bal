@@ -124,8 +124,17 @@ function mappingRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 }
 
 function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
+    return mappingSubtypeIsEmptyWitness(cx, t, new(cx));    
+}
+
+function mappingRoSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector witness) returns boolean {
+    return mappingSubtypeIsEmptyWitness(cx, bddFixReadOnly(<Bdd>t), witness);
+}
+
+function mappingSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector witness) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.mappingMemo[b];
+    // todo: memoize 
     BddMemo m;
     if mm == () {
         m = { bdd: b };
@@ -143,14 +152,15 @@ function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
             return res;
         }
     }
-    boolean isEmpty = bddEvery(cx, b, (), (), mappingFormulaIsEmpty);
+    boolean isEmpty = bddEvery(cx, b, (), (), mappingFormulaIsEmpty, witness);
     m.isEmpty = isEmpty;
+    m.witness = witness.get();
     return isEmpty;    
 }
 
 // This works the same as the tuple case, except that instead of
 // just comparing the lengths of the tuples we compare the sorted list of field names
-function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
+function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList, WitnessCollector witness) returns boolean {
     TempMappingSubtype combined;
     if posList == () {
         combined = {
@@ -187,11 +197,12 @@ function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? ne
         }
        
     }
-    return !mappingInhabited(cx, combined, negList);
+    return !mappingInhabited(cx, combined, negList, witness);
 }
 
-function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negList) returns boolean {
+function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negList, WitnessCollector witness) returns boolean {
     if negList == () {
+        witness.remainingSubType(pos.cloneWithType(MappingAtomicType));
         return true;
     }
     else {
@@ -206,12 +217,12 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
 
             // Deal the easy case of two closed records fast.
             if isNever(pos.rest) && isNever(neg.rest) {
-                return mappingInhabited(cx, pos, negList.next);
+                return mappingInhabited(cx, pos, negList.next, witness);
             }
             pairing = new (pos, neg);
             foreach var {type1: posType, type2: negType} in pairing {
                 if isNever(posType) || isNever(negType) {
-                    return mappingInhabited(cx, pos, negList.next);
+                    return mappingInhabited(cx, pos, negList.next, witness);
                 }
             }
             pairing.reset();
@@ -221,7 +232,7 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
         }
 
         if !isEmpty(cx, diff(pos.rest, neg.rest)) {
-            return mappingInhabited(cx, pos, negList.next);
+            return mappingInhabited(cx, pos, negList.next, witness);
         }
         foreach var { name, index1, type1: posType, type2: negType } in pairing {
             SemType d = diff(posType, negType);
@@ -236,7 +247,7 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
                     posTypes[index1] = d;
                     mt = { types: posTypes, names: pos.names, rest: pos.rest };
                 }
-                if mappingInhabited(cx, mt, negList.next) {
+                if mappingInhabited(cx, mt, negList.next, witness) {
                     return true;
                 }
             }          
@@ -454,7 +465,8 @@ final UniformTypeOps mappingRoOps = {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: mappingRoSubtypeIsEmpty
+    isEmpty: mappingRoSubtypeIsEmpty,
+    isEmptyWitness:  mappingRoSubtypeIsEmptyWitness
 };
 
 final UniformTypeOps mappingRwOps = {
@@ -462,6 +474,7 @@ final UniformTypeOps mappingRwOps = {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: mappingSubtypeIsEmpty
+    isEmpty: mappingSubtypeIsEmpty,
+    isEmptyWitness:  mappingSubtypeIsEmptyWitness
 };
 

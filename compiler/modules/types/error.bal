@@ -42,8 +42,37 @@ function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
             return res;
         }
     }
-    boolean isEmpty = bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty);
+    // todo: Need to handle witness handling for this scenario
+    WitnessCollector witness = new(cx);
+    boolean isEmpty = bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty, witness);
     m.isEmpty = isEmpty;
+    m.witness = witness.get();
+    return isEmpty;    
+}
+
+function errorSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector witness) returns boolean {
+    Bdd b = bddFixReadOnly(<Bdd>t);
+    BddMemo? mm = cx.mappingMemo[b];
+    BddMemo m;
+    if mm == () {
+        m = { bdd: b };
+        cx.mappingMemo.add(m);
+        // todo: memoize witness
+    }
+    else {
+        m = mm;
+        boolean? res = m.isEmpty;
+        if res == () {
+            return true;
+        }
+        else {
+            return res;
+        }
+    }
+    // todo: Need to handle witness handling for this scenario
+    boolean isEmpty = bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty, witness);
+    m.isEmpty = isEmpty;
+    m.witness = witness.get();
     return isEmpty;    
 }
 
@@ -52,7 +81,8 @@ final UniformTypeOps errorOps = {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: errorSubtypeIsEmpty
+    isEmpty: errorSubtypeIsEmpty,
+    isEmptyWitness: errorSubtypeIsEmptyWitness
 };
 
 

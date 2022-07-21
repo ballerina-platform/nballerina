@@ -28,12 +28,17 @@ public class FunctionDefinition {
 }
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
+    return functionSubtypeIsEmptyWitness(cx, t, new(cx));    
+}
+
+function functionSubtypeIsEmptyWitness(Context cx, SubtypeData t, WitnessCollector witness) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.functionMemo[b];
     BddMemo m;
     if mm == () {
         m = { bdd: b };
         cx.functionMemo.add(m);
+        // todo: memoize witness
     }
     else {
         m = mm;
@@ -48,12 +53,13 @@ function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
             return res;
         }
     }
-    boolean isEmpty = bddEvery(cx, b, (), (), functionFormulaIsEmpty);
+    boolean isEmpty = bddEvery(cx, b, (), (), functionFormulaIsEmpty, witness);
     m.isEmpty = isEmpty;
+    m.witness = witness.get();
     return isEmpty;    
 }
 
-function functionFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+function functionFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg, WitnessCollector? witness) returns boolean {
     return functionPathIsEmpty(cx, functionUnionParams(cx, pos), pos, neg);
 }
 
@@ -112,5 +118,6 @@ UniformTypeOps functionOps =  {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: functionSubtypeIsEmpty
+    isEmpty: functionSubtypeIsEmpty,
+    isEmptyWitness:  functionSubtypeIsEmptyWitness
 };

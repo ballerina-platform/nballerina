@@ -191,6 +191,16 @@ function stringSubtypeComplement(SubtypeData d) returns SubtypeData {
     );
 }
 
+function stringSubtypeIsEmpty(Context cx, SubtypeData t, WitnessCollector w) returns false {
+    if t == true {
+        w.allOfTypes(UT_STRING);
+    }
+    else {
+        w.remainingSubType(<StringSubtype>t);
+    }
+    return false;
+}
+
 function createStringSubtype(CharStringSubtype char, NonCharStringSubtype nonChar) returns SubtypeData {
     if char.values.length() == 0 && nonChar.values.length() == 0 {
         if !char.allowed && !nonChar.allowed {
@@ -209,5 +219,6 @@ final UniformTypeOps stringOps = {
     diff: stringSubtypeDiff,
     complement: stringSubtypeComplement,
     // Empty string sets don't use subtype representation.
-    isEmpty: notIsEmpty
+    isEmpty: notIsEmpty,
+    isEmptyWitness: stringSubtypeIsEmpty
 };

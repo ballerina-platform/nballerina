@@ -384,7 +384,8 @@ public type StringOperand StringConstOperand|Register;
 public type FunctionOperand FunctionRef|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
-    return t:isSubtype(tc, operand.semType, semType);
+    t:WitnessCollector witness = new(tc);
+    return t:isSubtypeWitness(tc, operand.semType, semType, witness);
 }
 
 # Perform a arithmetic operand on ints with two operands.
