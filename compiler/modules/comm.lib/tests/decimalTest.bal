@@ -6,10 +6,10 @@ type TestCase [string, int, int];
 @test:Config{
     dataProvider: readDecimalTests
 }
-function testEncoding(string decimalVal, int expectedLestSignificant, int expectedMostSignificant) {
+function testEncoding(string decimalVal, int expectedLeastSignificant, int expectedMostSignificant) {
     decimal val = checkpanic decimal:fromString(decimalVal);
-    var [lestSignificant, mostSignificant] = toLeDpd(val);
-    test:assertEquals(lestSignificant, expectedLestSignificant);
+    var [leastSignificant, mostSignificant] = toLeDpd(val);
+    test:assertEquals(leastSignificant, expectedLeastSignificant);
     test:assertEquals(mostSignificant, expectedMostSignificant);
 }
 

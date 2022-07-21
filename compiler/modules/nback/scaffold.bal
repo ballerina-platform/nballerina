@@ -430,8 +430,8 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
 }
 
 function addDecimalDefn(llvm:Context context, llvm:Module mod, int defnIndex, decimal val) returns llvm:ConstPointerValue {
-    var[lestSignificantVal, mostSignificantVal] = lib:toLeDpd(val);
-    llvm:ConstValue lestSignificant = llvm:constInt("i64", lestSignificantVal);
+    var [leastSignificantVal, mostSignificantVal] = lib:toLeDpd(val);
+    llvm:ConstValue lestSignificant = llvm:constInt("i64", leastSignificantVal);
     llvm:ConstValue mostSignificant = llvm:constInt("i64", mostSignificantVal);
     llvm:ConstPointerValue ptr = mod.addGlobal(llvm:arrayType("i64", 2),
                                                decimalDefnSymbol(defnIndex),

@@ -12,17 +12,17 @@ public function toLeDpd(decimal val) returns int[2] {
     }
     byte[] significandBcd = from int i in sFirst ... sLast where i != dot select <byte>checkpanic int:fromString(stringRep[i]);
     if significandBcd.length() > 34 && significandBcd[0] == 0 {
-        int leading_zeros = 0;
+        int leadingZeros = 0;
         foreach int i in 0 ..< significandBcd.length() {
             if significandBcd[i] == 0 {
-                leading_zeros += 1;
+                leadingZeros += 1;
             }
             else {
                 break;
             }
         }
-        exponent -= leading_zeros;
-        significandBcd = significandBcd.slice(leading_zeros);
+        exponent -= leadingZeros;
+        significandBcd = significandBcd.slice(leadingZeros);
     }
     while exponent - 6111 > 0 {
         // exponent is too large for exponent field
@@ -40,8 +40,8 @@ public function toLeDpd(decimal val) returns int[2] {
     }
     int:Unsigned16[] dpds = from int index in  0 ... 10 let int startingIndex = (index * 3) + 1 select bcd3ToDeclet(significandBcd.slice(startingIndex, startingIndex + 3));
     int mostSignificant = sign | dpdCombinationBits(exponent, significandBcd) | (dpds[0] << 36) | (dpds[1] << 26) | (dpds[2] << 16) | (dpds[3] << 6) | (dpds[4] >> 4);
-    int lestSignificant = (dpds[4] & 0xf) << 60 | (dpds[5] << 50) | (dpds[6] << 40) | (dpds[7] << 30) | (dpds[8] << 20) | (dpds[9] << 10) | dpds[10];
-    return [lestSignificant, mostSignificant];
+    int leastSignificant = (dpds[4] & 0xf) << 60 | (dpds[5] << 50) | (dpds[6] << 40) | (dpds[7] << 30) | (dpds[8] << 20) | (dpds[9] << 10) | dpds[10];
+    return [leastSignificant, mostSignificant];
 }
 
 // Takes 3 consecutive decimal numbers [0-9] and encode them to a 10-bit declet
