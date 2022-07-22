@@ -79,6 +79,18 @@ final RuntimeFunction checkOverflowDivFunction = {
     rtModule: numberMod
 };
 
+final RuntimeFunction decimalFromFloatFunction = {
+    name: "_bal_decimal_from_float",
+    returnType: { base: DECIMAL_TYPE },
+    rtModule: numberMod
+};
+
+final RuntimeFunction decimalFromIntFunction = {
+    name: "_bal_decimal_from_int",
+    returnType: { base: DECIMAL_TYPE },
+    rtModule: numberMod
+};
+
 final readonly & map<RuntimeFunction> overflowFunction = {
     "i64.add": checkOverflowAddFunction,
     "i64.sub": checkOverflowSubFunction,
@@ -194,19 +206,12 @@ function buildConvertToDecimal(wasm:Module module, Scaffold scaffold, bir:Conver
 
 
 function buildConvertIntToDecimal(wasm:Module module, Scaffold scaffold, wasm:Expression intVal, bir:ConvertToDecimalInsn insn) returns wasm:Expression {
-    // llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
-    // llvm:BasicBlock errBlock = scaffold.addBasicBlock();
-    // module.condBr(llvm:constInt(LLVM_BOOLEAN, 0), errBlock, continueBlock);
-    // module.positionAtEnd(errBlock);
-    // module.br(scaffold.getOnPanic());
-    // module.positionAtEnd(continueBlock);
-    // buildStoreDecimal(module, scaffold, buildRuntimeFunctionCall(module, scaffold, decimalFromIntFunction, [intVal]), insn.result);
-    panic error("conversion not implemented yet");
+    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalFromIntFunction, [intVal]);
+    return buildStore(module, insn.result, call);
 }
 
 function buildConvertFloatToDecimal(wasm:Module module, Scaffold scaffold, wasm:Expression floatVal, bir:ConvertToDecimalInsn insn) returns wasm:Expression {
-    // wasm:Expression resultWithErr = buildRuntimeFunctionCall(module, scaffold, decimalFromFloatFunction, [floatVal]);
-    // buildStoreDecimal(module, scaffold, buildCheckPanicCode(module, scaffold, resultWithErr, insn.pos), insn.result);
-    panic error("conversion not implemented yet");
+    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalFromFloatFunction, [floatVal]);
+    return buildStore(module, insn.result, call);
 }
 

@@ -1,6 +1,15 @@
 (module 
   ;; import
   (import "decimal" "create" (func $_js_decimal_create (param i32) (param i32) (result anyref))) 
+  (import "decimal" "add" (func $_js_decimal_add (param anyref) (param anyref) (result anyref))) 
+  (import "decimal" "sub" (func $_js_decimal_sub (param anyref) (param anyref) (result anyref))) 
+  (import "decimal" "mul" (func $_js_decimal_mul (param anyref) (param anyref) (result anyref))) 
+  (import "decimal" "div" (func $_js_decimal_div (param anyref) (param anyref) (result anyref))) 
+  (import "decimal" "rem" (func $_js_decimal_rem (param anyref) (param anyref) (result anyref))) 
+  (import "decimal" "eq" (func $_js_decimal_eq (param anyref) (param anyref) (result i32))) 
+  (import "decimal" "exact_eq" (func $_js_decimal_exact_eq (param anyref) (param anyref) (result i32))) 
+  (import "decimal" "from_float" (func $_js_decimal_from_float (param f64) (result anyref))) 
+  (import "decimal" "from_int" (func $_js_decimal_from_int (param i64) (result anyref))) 
   ;; tag
   (tag $bad-conversion) 
   (tag $overflow) 
@@ -146,7 +155,7 @@
         (local.get $2)
         (global.get $rttFloat))))
   ;; $_bal_convert_to_int
-  (func $_bal_convert_to_int (param $0 eqref) (result (ref $BoxedInt))
+  (func $_bal_convert_to_int (param $0 eqref) (result i64)
     (local $1 i32)
     (local $2 i64)
     (local.set $1
@@ -176,10 +185,7 @@
               (global.get $rttBoxedInt))))
         (throw $bad-conversion)))
     (return 
-      (struct.new_with_rtt $BoxedInt
-        (i32.const 128)
-        (local.get $2)
-        (global.get $rttBoxedInt))))
+      (local.get $2)))
   ;; $_bal_float_rem
   (func $_bal_float_rem (param $0 f64) (param $1 f64) (result f64)
     (local $2 i64) 
@@ -651,5 +657,157 @@
           (i64.const -9223372036854775808) 
           (local.get $0))) 
       (throw $overflow)))
+  ;; $_bal_decimal_add
+  (func $_bal_decimal_add (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
+    (local $2 anyref)
+    (local.set $2
+      (call $_js_decimal_add
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttDecimal)))
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttDecimal)))))
+    (return
+      (struct.new_with_rtt $Decimal
+        (i32.const 512)
+        (local.get $2)
+        (global.get $rttDecimal))))
+  ;; $_bal_decimal_sub
+  (func $_bal_decimal_sub (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
+    (local $2 anyref)
+    (local.set $2
+      (call $_js_decimal_sub
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttDecimal)))
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttDecimal)))))
+    (return
+      (struct.new_with_rtt $Decimal
+        (i32.const 512)
+        (local.get $2)
+        (global.get $rttDecimal))))
+  ;; $_bal_decimal_mul
+  (func $_bal_decimal_mul (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
+    (local $2 anyref)
+    (local.set $2
+      (call $_js_decimal_mul
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttDecimal)))
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttDecimal)))))
+    (return
+      (struct.new_with_rtt $Decimal
+        (i32.const 512)
+        (local.get $2)
+        (global.get $rttDecimal))))
+  ;; $_bal_decimal_div
+  (func $_bal_decimal_div (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
+    (local $2 anyref)
+    (local.set $2
+      (call $_js_decimal_div
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttDecimal)))
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttDecimal)))))
+    (return
+      (struct.new_with_rtt $Decimal
+        (i32.const 512)
+        (local.get $2)
+        (global.get $rttDecimal))))
+  ;; $_bal_decimal_rem
+  (func $_bal_decimal_rem (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
+    (local $2 anyref)
+    (local.set $2
+      (call $_js_decimal_rem
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttDecimal)))
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttDecimal)))))
+    (return
+      (struct.new_with_rtt $Decimal
+        (i32.const 512)
+        (local.get $2)
+        (global.get $rttDecimal))))
+  ;; $_bal_decimal_eq
+  (func $_bal_decimal_eq (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 i32)
+    (return
+      (call $_js_decimal_eq
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttDecimal)))
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttDecimal))))))
+  ;; $_bal_decimal_exact_eq
+  (func $_bal_decimal_exact_eq (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 i32)
+    (return
+      (call $_js_decimal_exact_eq
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttDecimal)))
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttDecimal))))))
+  ;; $_bal_decimal_from_float
+  (func $_bal_decimal_from_float (param $0 f64) (result (ref $Decimal))
+    (local $1 anyref)
+    (local.set $1
+      (call $_js_decimal_from_float
+        (local.get $0)))
+    (return
+      (struct.new_with_rtt $Decimal
+        (i32.const 512)
+        (local.get $1)
+        (global.get $rttDecimal))))
+  ;; $_bal_decimal_from_int
+  (func $_bal_decimal_from_int (param $0 i64) (result (ref $Decimal))
+    (local $1 anyref)
+    (local.set $1
+      (call $_js_decimal_from_int
+        (local.get $0)))
+    (return
+      (struct.new_with_rtt $Decimal
+        (i32.const 512)
+        (local.get $1)
+        (global.get $rttDecimal))))
   ;; end
   ) 

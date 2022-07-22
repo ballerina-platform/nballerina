@@ -95,12 +95,6 @@ final RuntimeFunction getTypeFunction = {
     rtModule: commonMod
 };
 
-final RuntimeFunction stringCompFunction = {
-    name: "_bal_string_compare",
-    returnType: "i32",
-    rtModule: stringMod
-};
-
 final RuntimeFunction stringConcatFunction = {
     name: "_bal_string_concat",
     returnType: { base: STRING_TYPE },

@@ -1,6 +1,6 @@
 const fs = require('fs');
-var Decimal = require('decimal.js-light');
-Decimal.set({ precision: 34, defaults: true });
+var Decimal = require('./decimal');
+Decimal.set({ precision: 34, toExpPos: 34, defaults: true });
 let WasmModule = {
   tags: [],
   memory: null
@@ -60,8 +60,45 @@ const decimalImport = {
     var decString = new TextDecoder('utf8').decode(bytes);
     let dec = new Decimal(decString);
     return dec;
+  },
+  add: (arg1, arg2) => {
+    return arg1.add(arg2);
+  },
+  sub: (arg1, arg2) => {
+    return arg1.sub(arg2);
+  },
+  div: (arg1, arg2) => {
+    return arg1.div(arg2);
+  },
+  mul: (arg1, arg2) => {
+    return arg1.mul(arg2);
+  },
+  rem: (arg1, arg2) => {
+    return arg1.rem(arg2);
+  },
+  eq: (arg1, arg2) => {
+    console.log(arg1)
+    console.log(arg2)
+    return arg1.equals(arg2);
+  },
+  exact_eq: (arg1, arg2) => {
+    return arg1.equals(arg2);
+  },
+  from_float: (arg1) => {
+    let decString = arg1.toString();
+    let dec = new Decimal(decString);
+    return dec;
+  },
+  from_int: (arg1) => {
+    let decString = arg1.toString();
+    let dec = new Decimal(decString);
+    return dec;
+  },
+  comp: (arg1, arg2) => {
+    let result = arg1.comparedTo(arg2) + 1;
+    return result;
   }
-};
+}
 
 const intImport = {
   hex: (arg) => {
@@ -115,7 +152,7 @@ const getValue = (ref, parent = null) => {
       }
       break;
     case TYPE_DECIMAL:
-      result = WasmModule._bal_get_decimal(ref).toString()
+      result = WasmModule._bal_get_decimal(ref).toString().toUpperCase()
       break;
     case TYPE_STRING:
       result = WasmModule._bal_get_string(ref);

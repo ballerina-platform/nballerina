@@ -149,7 +149,8 @@ function initGlobals(wasm:Module module, map<StringRecord> segments, table<Decim
         offsetExprs.push(rec.offsetExpr);
         byteStrs.push(rec.byteStr);
     }
-    foreach DecimalRecord rec in decimalConsts {
+    foreach decimal val in decimalConsts.keys() {
+        DecimalRecord rec = decimalConsts.get(val);
         body.push(...rec.body);
         offsetExprs.push(rec.offsetExpr);
         byteStrs.push(rec.byteStr);
