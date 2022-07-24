@@ -449,31 +449,23 @@ function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean re
     }
 }
 
-function mappingIntersectionToAtomicType(Env env, BddNode lhs, MappingAtomicType? rhsTy) returns MappingAtomicType? {
-    if rhsTy is () {
-        return ();
-    }
+function mappingIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns MappingAtomicType? {
     MappingAtomicType lhsTy = env.mappingAtomType(lhs.atom);
-    string[] names = [];
-    SemType[] types = [];
-    foreach var { name, type1, type2 } in new MappingPairing(lhsTy, rhsTy) {
-        SemType ty = intersect(type1, type2);
-        if isNever(ty) {
+    MappingAtomicType rhsTy = env.mappingAtomType(rhs.atom);
+    if rhs.left is BddNode {
+        if rhs.middle !is false || rhs.right !is false {
+            // not a "pure" intersection (I think this shouldn't happen ever)
+            // intersection between union and mapping type is empty
+            // intersection between negative atom and mapping type is undefined
             return ();
         }
-        names.push(name);
-        types.push(ty);
+        MappingAtomicType? newRhsTy = mappingIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
+        if newRhsTy is () {
+            return ();
+        }
+        rhsTy = newRhsTy;
     }
-    SemType rest = intersect(lhsTy.rest, rhsTy.rest);
-    // empty map
-    if names.length() == 0 && isNever(rest) {
-        return ();
-    }
-    return {
-        names: names.cloneReadOnly(),
-        types: types.cloneReadOnly(),
-        rest
-    };
+    return intersectMapping(lhsTy, rhsTy).cloneReadOnly();
 }
 
 final UniformTypeOps mappingRoOps = {

@@ -116,22 +116,38 @@ type BddPath record {|
     Atom[] neg = [];
 |};
 
-function bddPaths(Bdd b, BddPath[] paths, BddPath accum) {
+function bddPaths(Env env, Bdd b, BddPath[] paths, BddPath accum) {
     if b is boolean {
         if b {
             paths.push(accum);
         }
     }
     else {
-        BddPath left = accum.clone();
-        BddPath right = accum.clone();
-        left.pos.push(b.atom);
-        left.bdd = bddIntersect(left.bdd, bddAtom(b.atom));
-        bddPaths(b.left, paths, left);
-        bddPaths(b.middle, paths, accum);
-        right.neg.push(b.atom);
-        right.bdd = bddDiff(right.bdd, bddAtom(b.atom));
-        bddPaths(b.right, paths, right);
+        Atom atom = b.atom;
+        Bdd leftNode = b.left;
+        // TODO: this check is common for both list and mapping
+        if atom is TypeAtom && atom.atomicType is MappingAtomicType && leftNode is BddNode {
+            if b.right == false && b.middle is false {
+                // FIXME:
+                MappingAtomicType? mappingAtomicType = mappingIntersectionToAtomicType(env, b, leftNode);
+                if mappingAtomicType !is () {
+                    TypeAtom tyAtom = { index: atom.index, atomicType: mappingAtomicType};
+                    Bdd bdd = bddAtom(tyAtom);
+                    return paths.push({ bdd, pos: [atom, leftNode.atom], neg: []});
+                }
+            }
+        }
+        else {
+            BddPath left = accum.clone();
+            BddPath right = accum.clone();
+            left.pos.push(b.atom);
+            left.bdd = bddIntersect(left.bdd, bddAtom(b.atom));
+            bddPaths(env, b.left, paths, left);
+            bddPaths(env, b.middle, paths, accum);
+            right.neg.push(b.atom);
+            right.bdd = bddDiff(right.bdd, bddAtom(b.atom));
+            bddPaths(env, b.right, paths, right);
+        }
     }
 }
 
