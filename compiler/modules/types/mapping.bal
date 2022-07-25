@@ -225,7 +225,7 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
         }
         foreach var { name, index1, type1: posType, type2: negType } in pairing {
             SemType d = diff(posType, negType);
-            if !isEmpty(cx, d) {
+            if !isEmpty(cx, d) || index1 is () {
                 TempMappingSubtype mt;
                 if index1 == () {
                     // the posType came from the rest type
