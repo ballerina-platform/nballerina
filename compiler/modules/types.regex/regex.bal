@@ -5,10 +5,12 @@ type StringAsList ()|[string:Char, StringAsList];
 type RegexPattern Concat|Star|Or;
 
 type Concat "concat";
+
 type Star record {|
     PatternRange range;
     int nextIndex; // starting position of the next pattern
 |};
+
 type Or record {|
     PatternRange lhs;
     PatternRange rhs;
@@ -128,19 +130,12 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
     if end > endIndex {
         string op = regex[endIndex];
         if op == "*" {
-            return {
-                range: lhs,
-                nextIndex: endIndex + 1
-            };
+            return { range: lhs, nextIndex: endIndex + 1 };
         }
         else if op == "|" {
             var [rhs, rhsWrapped] = readPattern(regex, endIndex + 1, end);
             int nextIndex = rhsWrapped ? (rhs.endIndex + 2) : (rhs.endIndex + 1);
-            return {
-                lhs,
-                rhs,
-                nextIndex
-            };
+            return { lhs, rhs, nextIndex };
         }
     }
     return "concat";
