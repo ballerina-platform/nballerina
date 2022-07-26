@@ -263,7 +263,7 @@ static bool decimalListContains(const DecimalConstPtr *start, const DecimalConst
     initContext(&cx);
     while (start < end) {
         const DecimalConstPtr *mid = start + (end - start)/2;
-        decQuad midVal = **mid;
+        decQuad midVal = **((decQuad**)mid);
         decQuad cmp;
         decQuadCompare(&cmp, dq, &midVal, &cx);
         enum decClass cmpClass = decQuadClass(&cmp);
