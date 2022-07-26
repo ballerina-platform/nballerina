@@ -71,7 +71,7 @@ public class Component {
         if rec != () {
             return rec.global;
         }
-        int numDecimal = self.decimalConsts.keys().length();
+        int numDecimal = self.decimalConsts.length();
         string global = "bal$dec" + numDecimal.toString();
         int length = val.toString().toBytes().length();
         DecimalRecord newRec = buildGlobalDecimal(self.module, self, val, global, self.offset, length);

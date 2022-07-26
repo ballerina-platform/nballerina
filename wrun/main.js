@@ -19,6 +19,22 @@ const TYPE_MAP = 524288;
 let fileName = process.argv[2];
 const wasmBuffer = fs.readFileSync(fileName);
 
+const formatNumberString = (num, separator) => {
+  let parts = num.split("e");
+  if (parts.length == 2) {
+      let exponent = parts[1]
+      exponent = exponent.replace("+","");
+      if (exponent.substr(-2) == ".0") {
+          exponent = exponent.substr(0, exponent.length -2)
+      }
+      parts[1] = exponent;
+      return parts.join(separator);
+  }
+  else {
+      return num;
+  }
+}
+
 const stringImport = {
   create: (offset, length) => {
     var bytes = new Uint8Array(WasmModule.memory.buffer, offset, length);
@@ -54,6 +70,12 @@ const stringImport = {
   }
 };
 
+const checkDecimalOverflow = (result) => {
+  if (result.gte("1e+6145") || result.lte("-1e+6145")) {
+    throw Error("arithmetic overflow")
+  }
+}
+
 const decimalImport = {
   create: (offset, length) => {
     var bytes = new Uint8Array(WasmModule.memory.buffer, offset, length);
@@ -62,19 +84,35 @@ const decimalImport = {
     return dec;
   },
   add: (arg1, arg2) => {
-    return arg1.add(arg2);
+    let result = arg1.add(arg2);
+    checkDecimalOverflow(result);
+    return result;
   },
   sub: (arg1, arg2) => {
-    return arg1.sub(arg2);
+    let result = arg1.sub(arg2);
+    checkDecimalOverflow(result);
+    return result;
   },
   div: (arg1, arg2) => {
-    return arg1.div(arg2);
+    if (arg1.isZero() && arg2.isZero()) {
+      throw Error("not a valid decimal")
+    }
+    else if (arg2.isZero(arg2)) {
+      throw Error("divide by zero")
+    }
+    let result = arg1.div(arg2);
+    checkDecimalOverflow(result);
+    return result;
   },
   mul: (arg1, arg2) => {
-    return arg1.mul(arg2);
+    let result = arg1.mul(arg2);
+    checkDecimalOverflow(result);
+    return result;
   },
   rem: (arg1, arg2) => {
-    return arg1.rem(arg2);
+    let result = arg1.modulo(arg2);
+    checkDecimalOverflow(result);
+    return result;
   },
   eq: (arg1, arg2) => {
     console.log(arg1)
@@ -85,6 +123,12 @@ const decimalImport = {
     return arg1.equals(arg2);
   },
   from_float: (arg1) => {
+    if (isNaN(arg1)) {
+      throw Error("not a valid decimal")
+    }
+    if (!isFinite(arg1)) {
+      throw Error("arithmetic overflow")
+    }
     let decString = arg1.toString();
     let dec = new Decimal(decString);
     return dec;
@@ -97,6 +141,19 @@ const decimalImport = {
   comp: (arg1, arg2) => {
     let result = arg1.comparedTo(arg2) + 1;
     return result;
+  },
+  to_int: (arg1) => {
+    let result = arg1.toNearest(1);
+    if (arg1.gt(9223372036854775807) || arg1.lt(-9223372036854775808)) {
+      throw Error("arithmetic overflow")
+    }
+    return BigInt(result);
+  },
+  to_float: (arg1) => {
+    return arg1.toNumber();
+  },
+  neg: (arg1) => {
+    return arg1.neg();
   }
 }
 
@@ -150,6 +207,7 @@ const getValue = (ref, parent = null) => {
       else if (Number.isInteger(result)) {
         result = `${result}.0`;
       }
+      result = formatNumberString(result.toString(), "e");
       break;
     case TYPE_DECIMAL:
       result = WasmModule._bal_get_decimal(ref).toString().toUpperCase()

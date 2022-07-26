@@ -41,7 +41,6 @@ final RuntimeFunction intSubtypeContains = {
     rtModule: numberMod
 };
 
-
 final RuntimeFunction stringSubtypeContains = {
     name: "_bal_string_subtype_contains",
     returnType: "i32",
@@ -70,6 +69,12 @@ final RuntimeFunction arraySubtypeContains = {
     name: "_bal_array_subtype_contains",
     returnType: "i32",
     rtModule: listMod
+};
+
+final RuntimeFunction decimalSubtypeContains = {
+    name: "_bal_decimal_subtype_contains",
+    returnType: "i32",
+    rtModule: numberMod
 };
 
 type SubtypeStruct record {|
@@ -125,8 +130,9 @@ function createMappingDesc(wasm:Module module, Component component, t:SemType se
     wasm:Expression[] body = [];
     wasm:Expression struct =  module.structNew(MAPPING_DESC, [
                                                               module.addConst({ i32: tid }),
-                                                              module.addConst({ i32: fields.length() }),
                                                               getMemberType(module, component, mat.rest),
+                                                              getFillerDesc(component, module, mat.rest),
+                                                              module.addConst({ i32: fields.length() }),
                                                               module.arrayNewDef(MAP_TYPE_ARR, module.addConst({ i32: fields.length() }))
                                                              ]);
     body.push(module.globalSet(global, struct));
@@ -229,6 +235,9 @@ function createSubtypeStruct(Component component, wasm:Module module, t:UniformT
         t:UT_FLOAT => {
             return createFloatSubtypeStruct(component, module, semType, symbol);
         }
+        t:UT_DECIMAL => {
+            return createDecimalSubtypeStruct(component, module, semType, symbol);
+        }
         t:UT_STRING => {
             return createStringSubtypeStruct(component, module, semType, symbol);
         }
@@ -317,6 +326,29 @@ function createStringSubtypeStruct(Component component, wasm:Module module, t:Co
                                     module.structGet(STRING_SUBTYPE, "values", module.refAs("ref.as_non_null", module.globalGet(symbol))),
                                     module.addConst({ i32: i }), 
                                     strConsts[i]
+                                   ));
+    }
+    return { values };
+}
+
+function createDecimalSubtypeStruct(Component component, wasm:Module module, t:ComplexSemType semType, string symbol) returns SubtypeStruct {
+    module.addGlobal(symbol, { base: DECIMAL_SUBTYPE, initial: "null" }, module.refNull(DECIMAL_SUBTYPE));
+    t:DecimalSubtype sub = <t:DecimalSubtype>t:decimalSubtype(semType);
+    int len = sub.values.length();
+    if len == 0 {
+        panic error("empty list of decimal ranges in complex subtype");
+    }
+    wasm:Expression[] values = [];
+    wasm:Expression struct = module.structNew(DECIMAL_SUBTYPE, [buildRefFunc(module, component, decimalSubtypeContains), 
+                                                                module.addConst({ i32: sub.allowed ? 1 : 0 }),
+                                                                module.arrayNewDef(DECIMAL_VALUES, module.addConst({ i32: len }))
+                                                               ]);
+    values.push(module.globalSet(symbol, struct));
+    foreach int i in 0..<len {
+        values.push(module.arraySet(DECIMAL_VALUES,
+                                    module.structGet(DECIMAL_SUBTYPE, "values", module.refAs("ref.as_non_null", module.globalGet(symbol))),
+                                    module.addConst({ i32: i }), 
+                                    buildConstDecimal(module, component, sub.values[i])
                                    ));
     }
     return { values };

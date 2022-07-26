@@ -1,11 +1,13 @@
 (module 
   ;; tag
   (tag $bad-mapping-store)
+  (tag $no-filler-value) 
   ;; import
   (import "string" "hash" (func $_js_string_hash (param anyref) (result i32))) 
   (import "string" "eq" (func $_js_string_eq (param anyref) (param anyref) (result i32)))
   ;; export
   (export "bad-mapping-store" (tag $bad-mapping-store)) 
+  (export "no-filler-value" (tag $no-filler-value)) 
   (export "_bal_mapping_get" (func $_bal_mapping_get)) 
   (export "_bal_map_get_keys" (func $_bal_map_get_keys)) 
   (export "_bal_mapping_get_key" (func $_bal_mapping_get_key)) 
@@ -72,6 +74,114 @@
             (local.get $0)))
         (local.get $2))
       (local.get $1)))
+  ;; $_bal_mapping_filling_get
+  (func $_bal_mapping_filling_get (param $0 eqref) (param $1 eqref) (result eqref)
+    (local $2 (ref null $Map))
+    (local $3 i32)
+    (local $4 (ref null $MappingDesc))
+    (local $5 i32)
+    (local $6 eqref)
+    (local.set $2
+      (ref.cast 
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttMap)))
+    (local.set $3
+      (call $_bal_map_lookup
+        (ref.as_non_null
+          (local.get $2))
+        (local.get $1)
+        (call $_bal_get_hash
+          (local.get $1))))
+    (if
+      (i32.ge_s
+        (local.get $3)
+        (i32.const 0))
+      (return 
+        (struct.get $MapField $value
+          (array.get $MapFieldArr 
+            (struct.get $MapFields $members
+              (struct.get $Map $fArray
+                (ref.as_non_null
+                  (local.get $2))))
+            (local.get $3)))))
+    (local.set $4
+      (struct.get $Map $desc
+        (ref.as_non_null
+          (local.get $2))))
+    (local.set $5
+      (call $_bal_check_filler_value
+        (struct.get $MappingDesc $restType
+          (ref.as_non_null
+            (local.get $4)))
+        (struct.get $MappingDesc $filler
+          (ref.as_non_null
+            (local.get $4)))))
+    (if
+      (i32.eqz
+        (local.get $5))
+      (throw $no-filler-value))
+    (local.set $6
+      (call $_bal_filler_value
+        (struct.get $MappingDesc $restType
+          (ref.as_non_null
+            (local.get $4)))
+        (struct.get $MappingDesc $filler
+          (ref.as_non_null
+            (local.get $4)))))
+    (call $_bal_mapping_grow_push
+      (ref.as_non_null
+        (local.get $2))
+      (local.get $1)
+      (local.get $6))
+    (return 
+      (local.get $6)))
+  ;; $_bal_mapping_grow_push
+  (func $_bal_mapping_grow_push (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
+    (local $3 (ref null $MapFields))
+    (local $4 i32)
+    (local $5 i32)
+    (local $6 i32)
+    (call $_bal_mapping_init_member
+      (local.get $0)
+      (local.get $1)
+      (local.get $2))
+    (local.set $4
+      (struct.get $MapFields $length
+        (struct.get $Map $fArray
+          (local.get $0))))
+    (local.set $5
+      (array.len $MapFieldArr
+        (struct.get $MapFields $members
+          (struct.get $Map $fArray  
+            (local.get $0)))))
+    (if 
+      (i32.eq
+        (local.get $5)
+        (local.get $4))
+      (call $_bal_map_array_grow
+        (local.get $0)
+        (local.get $4)))
+    (local.set $6
+      (i32.shl
+        (i32.const 1)
+        (i32.sub  
+          (struct.get $Map $tableLengthShift
+            (local.get $0))
+          (i32.const 1))))
+    (if
+      (i32.ge_u
+        (local.get $4)
+        (local.get $6))
+      (block
+        (struct.set $Map $tableLengthShift
+          (local.get $0)
+          (i32.add
+            (i32.const 1)
+            (struct.get $Map $tableLengthShift
+              (local.get $0))))
+        (call $_bal_map_table_grow
+          (local.get $0)))))
   ;; $_bal_mapping_set
   (func $_bal_mapping_set (param $0 (ref $Map)) (param $1 eqref) (param $2 eqref) ;; map, key, val
     (local $3 (ref null $MapFields))
@@ -313,6 +423,21 @@
             (ref.as_non_null
               (local.get $3))))
         (local.get $2))))
+  ;; $_bal_mapping_indexed_get
+  (func $_bal_mapping_indexed_get (param $0 eqref) (param $1 i32) (result eqref);;map, key
+    (local $2 (ref null $Map))
+    (local.set $2
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttMap)))
+    (struct.get $MapField $value
+      (array.get $MapFieldArr 
+        (struct.get $MapFields $members
+          (struct.get $Map $fArray
+            (ref.as_non_null
+              (local.get $2))))
+        (local.get $1))))
   ;; $_bal_map_insert
   (func $_bal_map_insert (param $0 (ref $Map)) (param $1 eqref) (param $2 i32) (param $3 i32) ;;map, key, hash, index in fArray ;; tableLength
     (local $4 i32)
@@ -911,5 +1036,167 @@
           (ref.as_non_null
             (local.get $4)))
         (local.get $6))))
+  ;; $_bal_check_filler_value
+  (func $_bal_check_filler_value (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 (ref null $ComplexType))
+    (local $3 i32)
+    (local $4 i32)
+    (if
+      (ref.is_i31
+        (local.get $0))
+      (block
+        (local.set $4
+          (i31.get_u
+            (ref.as_i31
+              (local.get $0))))
+        (if
+          (i32.or
+            (i32.eq
+              (i32.popcnt
+                (local.get $4))
+              (i32.const 1))
+            (i32.eq 
+              (i32.const 8386559)
+              (local.get $4)))
+          (return 
+            (i32.const 1)))
+        (return
+          (i32.const 0))))
+    (local.set $2
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttComplexType)))
+    (local.set $3
+      (i32.or
+        (struct.get $ComplexType $all
+          (ref.as_non_null
+            (local.get $2)))
+        (struct.get $ComplexType $some
+          (ref.as_non_null
+            (local.get $2)))))
+    (if 
+      (ref.is_null
+        (local.get $1))
+      (return 
+        (i32.const 0)))
+    (if
+      (i32.and
+        (local.get $3)
+        (i32.const 262144))
+      (return 
+        (i32.const 1)))
+    (if
+      (i32.and
+        (local.get $3)
+        (i32.const 524288))
+      (return 
+        (i32.const 1)))
+    (return
+      (i32.const 0)))
+  ;; $_bal_filler_value
+  (func $_bal_filler_value (param $0 eqref) (param $1 eqref) (result eqref) ;; restType, filler
+    (local $2 (ref null $ComplexType))
+    (local $3 i32)
+    (local $4 eqref)
+    (if
+      (i32.eqz
+        (ref.is_i31
+          (local.get $0)))
+      (block
+        (local.set $2
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttComplexType)))
+        (local.set $3
+          (i32.or
+            (struct.get $ComplexType $all
+              (ref.as_non_null
+                (local.get $2)))
+            (struct.get $ComplexType $some
+              (ref.as_non_null
+                (local.get $2)))))
+        (if 
+          (i32.eqz
+            (ref.is_null
+              (local.get $1)))
+          (block
+            (if
+              (i32.eq
+                (local.get $3)
+                (i32.const 262144))
+              (return 
+                (call $_bal_list_create
+                  (i64.const 0)
+                  (ref.cast
+                    (ref.as_data
+                      (ref.as_non_null
+                        (local.get $1)))
+                    (global.get $rttListDesc)))))
+            (if
+              (i32.eq
+                (local.get $3)
+                (i32.const 524288))
+              (return 
+                (call $_bal_mapping_construct
+                  (i32.const 0)
+                  (ref.cast
+                    (ref.as_data
+                      (ref.as_non_null
+                        (local.get $1)))
+                    (global.get $rttMappingDesc))))))))
+      (block
+        (local.set $3
+          (i31.get_u
+            (ref.as_i31
+              (local.get $0))))))
+    (return 
+      (call $_bal_uniform_type_filler
+        (local.get $3))))
+  ;; $_bal_uniform_type_filler
+  (func $_bal_uniform_type_filler (param $0 i32) (result eqref)
+    (if 
+      (i32.eq
+        (i32.const 128)
+        (local.get $0))
+      (return
+        (struct.new_with_rtt $BoxedInt 
+          (i32.const 128) 
+          (i64.const 0) 
+          (global.get $rttBoxedInt))))
+    (if 
+      (i32.eq
+        (i32.const 256)
+        (local.get $0))
+      (return
+        (struct.new_with_rtt $Float
+          (i32.const 256) 
+          (f64.const 0.0) 
+          (global.get $rttFloat))))
+    (if 
+      (i32.eq
+        (i32.const 1024)
+        (local.get $0))
+      (return
+        (struct.new_with_rtt $String 
+          (i32.const 1024) 
+          (call $_js_string_create 
+            (i32.const 0) 
+            (i32.const 0)) 
+          (array.new_default_with_rtt $Surrogate 
+            (i32.const 0) 
+            (rtt.canon $Surrogate)) 
+          (i32.const -1) 
+          (global.get $rttString))))
+    (if 
+      (i32.eq
+        (i32.const 2)
+        (local.get $0))
+      (return
+        (i31.new
+          (i32.const 0))))
+    (return
+      (ref.null data)))
   ;; end
   )

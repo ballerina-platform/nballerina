@@ -237,6 +237,7 @@ final readonly & record {|
     { domain: t:FLOAT, repr: REPR_FLOAT },
     { domain: t:INT, repr: REPR_INT },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
+    { domain: t:DECIMAL, repr: REPR_DECIMAL },
     { domain: t:NIL, repr: REPR_NIL },
     { domain: t:ANY, repr: REPR_ANY },
     { domain: t:TOP, repr: REPR_ANY },

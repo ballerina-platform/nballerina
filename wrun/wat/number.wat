@@ -10,6 +10,10 @@
   (import "decimal" "exact_eq" (func $_js_decimal_exact_eq (param anyref) (param anyref) (result i32))) 
   (import "decimal" "from_float" (func $_js_decimal_from_float (param f64) (result anyref))) 
   (import "decimal" "from_int" (func $_js_decimal_from_int (param i64) (result anyref))) 
+  (import "decimal" "to_int" (func $_js_decimal_to_int (param anyref) (result i64))) 
+  (import "decimal" "to_float" (func $_js_decimal_to_float (param anyref) (result f64))) 
+  (import "decimal" "comp" (func $_js_decimal_compare (param anyref) (param anyref) (result i32))) 
+  (import "decimal" "neg" (func $_js_decimal_neg (param anyref) (result anyref))) 
   ;; tag
   (tag $bad-conversion) 
   (tag $overflow) 
@@ -121,7 +125,7 @@
         (local.get $0))
       (i32.const 1)))
   ;; $_bal_convert_to_float
-  (func $_bal_convert_to_float (param $0 eqref) (result (ref $Float))
+  (func $_bal_convert_to_float (param $0 eqref) (result f64)
     (local $1 i32)
     (local $2 f64)
     (local.set $1
@@ -131,29 +135,43 @@
       (i32.eq
         (local.get $1)
         (i32.const 256))
-      (local.set $2
+      (return
         (struct.get $Float $val 
           (ref.cast
             (ref.as_data
               (local.get $0))
-            (global.get $rttFloat))))
-      (if
-        (i32.eq
-          (local.get $1)
-          (i32.const 128))
-        (local.set $2
-          (f64.convert_i64_s
-            (struct.get $BoxedInt $val 
-              (ref.cast
-                (ref.as_data
-                  (local.get $0))
-                (global.get $rttBoxedInt)))))
-        (throw $bad-conversion)))
-    (return 
-      (struct.new_with_rtt $Float
-        (i32.const 256)
-        (local.get $2)
-        (global.get $rttFloat))))
+            (global.get $rttFloat)))))
+    (if
+      (i32.eq
+        (local.get $1)
+        (i32.const 128))
+      (return
+        (f64.convert_i64_s
+          (struct.get $BoxedInt $val 
+            (ref.cast
+              (ref.as_data
+                (local.get $0))
+              (global.get $rttBoxedInt))))))
+    (if
+      (i32.eq
+        (local.get $1)
+        (i32.const 512))
+      (return
+        (call $_js_decimal_to_float
+          (struct.get $Decimal $val 
+            (ref.cast
+              (ref.as_data
+                (local.get $0))
+              (global.get $rttDecimal)))))
+      (throw $bad-conversion)))
+  ;; $_bal_decimal_to_float
+  (func $_bal_decimal_to_float (param $0 eqref) (result f64) 
+    (call $_js_decimal_to_float
+      (struct.get $Decimal $val 
+        (ref.cast 
+          (ref.as_data
+            (local.get $0))
+          (global.get $rttDecimal)))))
   ;; $_bal_convert_to_int
   (func $_bal_convert_to_int (param $0 eqref) (result i64)
     (local $1 i32)
@@ -165,27 +183,42 @@
       (i32.eq
         (local.get $1)
         (i32.const 256))
-      (local.set $2
+      (return
         (i64.trunc_f64_s
           (f64.nearest
             (struct.get $Float $val 
               (ref.cast
                 (ref.as_data
                   (local.get $0))
-                (global.get $rttFloat))))))
-      (if
-        (i32.eq
-          (local.get $1)
-          (i32.const 128))
-        (local.set $2
-          (struct.get $BoxedInt $val 
-            (ref.cast
-              (ref.as_data
-                (local.get $0))
-              (global.get $rttBoxedInt))))
-        (throw $bad-conversion)))
+                (global.get $rttFloat)))))))
+    (if 
+      (i32.eq
+        (local.get $1)
+        (i32.const 512))
+      (return
+        (call $_bal_decimal_to_int
+          (local.get $0))))
+    (if
+      (i32.eq
+        (local.get $1)
+        (i32.const 128))
+      (return
+        (struct.get $BoxedInt $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttBoxedInt))))
+      (throw $bad-conversion))
     (return 
       (local.get $2)))
+  ;; $_bal_decimal_to_int
+  (func $_bal_decimal_to_int (param $0 eqref) (result i64)
+    (call $_js_decimal_to_int
+      (struct.get $Decimal $val
+        (ref.cast 
+          (ref.as_data
+            (local.get $0))
+          (global.get $rttDecimal)))))
   ;; $_bal_float_rem
   (func $_bal_float_rem (param $0 f64) (param $1 f64) (result f64)
     (local $2 i64) 
@@ -787,6 +820,39 @@
             (ref.as_data
               (local.get $1))
             (global.get $rttDecimal))))))
+  ;; $_bal_convert_to_decimal
+  (func $_bal_convert_to_decimal (param $0 eqref) (result (ref $Decimal))
+    (local $1 i32)
+    (local.set $1
+      (call $_bal_get_type
+        (local.get $0)))
+    (if
+      (i32.eq
+        (local.get $1)
+        (i32.const 256))
+      (return
+        (call $_bal_decimal_from_float
+          (struct.get $Float $val
+            (ref.cast
+              (ref.as_data
+                (local.get $0))
+              (global.get $rttFloat))))))
+    (if
+      (i32.eq
+        (local.get $1)
+        (i32.const 128))
+      (return
+        (call $_bal_decimal_from_int
+          (struct.get $BoxedInt $val
+            (ref.cast
+              (ref.as_data
+                (local.get $0))
+              (global.get $rttBoxedInt))))))
+    (return 
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttDecimal))))
   ;; $_bal_decimal_from_float
   (func $_bal_decimal_from_float (param $0 f64) (result (ref $Decimal))
     (local $1 anyref)
@@ -809,5 +875,100 @@
         (i32.const 512)
         (local.get $1)
         (global.get $rttDecimal))))
+  ;; $_bal_decimal_neg
+  (func $_bal_decimal_neg (param $0 eqref) (result (ref $Decimal))
+    (local $1 anyref)
+    (local.set $1
+      (call $_js_decimal_neg
+        (struct.get $Decimal $val
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttDecimal)))))
+    (return
+      (struct.new_with_rtt $Decimal
+        (i32.const 512)
+        (local.get $1)
+        (global.get $rttDecimal))))
+  ;; $_bal_decimal_subtype_contains
+  (func $_bal_decimal_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
+    (local $2 (ref null $DecimalSubtype))
+    (local $3 i32)
+    (local.set $2
+      (ref.cast 
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttDecimalSubtype)))
+    (local.set $3
+      (call $_bal_decimal_list_contains
+        (struct.get $DecimalSubtype $values
+          (ref.as_non_null
+            (local.get $2)))
+        (ref.cast
+          (ref.as_data
+            (local.get $1))
+          (global.get $rttDecimal))))
+    (if
+      (struct.get $DecimalSubtype $allowed
+        (ref.as_non_null
+          (local.get $2)))
+      (return 
+        (local.get $3))
+      (return
+        (i32.xor  
+          (i32.const 1)
+          (local.get $3)))))
+  ;; $_bal_decimal_list_contains
+  (func $_bal_decimal_list_contains (param $0 (ref $DecimalValues)) (param $1 (ref $Decimal)) (result i32)
+    (local $2 i32)
+    (local $3 i32)
+    (local $4 i32)
+    (local $5 (ref null $Decimal))
+    (local.set $2 
+      (i32.const 0))
+    (local.set $3
+      (array.len $DecimalValues
+        (local.get $0)))
+    (loop $loop$cont
+      (if
+        (i32.lt_u
+          (local.get $2)
+          (local.get $3))
+        (block
+          (local.set $4
+            (i32.add
+              (local.get $2)
+              (i32.div_u
+                (i32.sub
+                  (local.get $3)
+                  (local.get $2))
+                (i32.const 2))))
+          (local.set $5
+            (array.get $DecimalValues
+              (local.get $0)
+              (local.get $4)))
+          (if 
+            (call $_js_decimal_eq
+              (struct.get $Decimal $val 
+                (local.get $1))
+              (struct.get $Decimal $val 
+                (ref.as_non_null
+                  (local.get $5))))
+            (return
+              (i32.const 1)))
+          (if
+            (i32.eqz
+              (call $_js_decimal_compare
+                (local.get $1)
+                (local.get $5)))
+            (local.set $3
+              (local.get $4))
+            (local.set $2
+              (i32.add
+                (i32.const 1)
+                (local.get $4))))
+          (br $loop$cont))))
+    (return
+      (i32.const 0)))
   ;; end
   ) 

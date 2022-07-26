@@ -280,6 +280,5 @@
           (br $loop$cont))))
     (return 
       (i32.const 0)))
-    
-    ;; end
-)
+  ;; end
+  )

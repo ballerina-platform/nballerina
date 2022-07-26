@@ -60,6 +60,18 @@ final RuntimeFunction mappingGetFunction = {
     rtModule: mapMod
 };
 
+final RuntimeFunction mappingFillingGetFunction = {
+    name: "_bal_mapping_filling_get",
+    returnType: "eqref",
+    rtModule: mapMod
+};
+
+final RuntimeFunction mappingIndexedGetFunction = {
+    name: "_bal_mapping_indexed_get",
+    returnType: "eqref",
+    rtModule: mapMod
+};
+
 type ListRepr record {|
     t:SemType rest;
     wasm:Expression default;
@@ -144,10 +156,25 @@ function mappingOrderFields(t:MappingAtomicType mat, string[] fieldNames, bir:Op
 }
 
 function buildMappingGet(wasm:Module module, Scaffold scaffold, bir:MappingGetInsn insn) returns wasm:Expression {
-    wasm:Expression mapping = module.refAs("ref.as_non_null", buildLoad(module, insn.operands[0]));
-    wasm:Expression key = buildString(module, scaffold, insn.operands[1]);
-    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), mappingGetFunction, [mapping, key]);
+    bir:Register mappingReg = insn.operands[0];
+    bir:StringOperand keyOperand = insn.operands[1];
+    wasm:Expression mapping = module.refAs("ref.as_non_null", buildLoad(module, mappingReg));
     Repr repr = semTypeRepr(insn.result.semType);
+    int? fieldIndex = mappingFieldIndex(scaffold.getTypeContext(), mappingReg.semType, keyOperand);
+    boolean fill;
+    RuntimeFunction rf;
+    wasm:Expression k;
+    if fieldIndex == () {
+        fill = insn.name == bir:INSN_MAPPING_FILLING_GET;
+        rf = fill ? mappingFillingGetFunction : mappingGetFunction;
+        k = buildString(module, scaffold, keyOperand);
+    }
+    else {
+        fill = false;
+        rf = mappingIndexedGetFunction;
+        k = module.addConst({ i32: fieldIndex });
+    }
+    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), rf, [mapping, k]);
     if repr !is TaggedRepr {
         return buildStore(module, insn.result, buildUntagged(module, scaffold, call, repr));
     }
