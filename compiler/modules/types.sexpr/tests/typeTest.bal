@@ -1,7 +1,8 @@
-import ballerina/test;
-import ballerina/io;
 import ballerina/file;
+import ballerina/io;
+import ballerina/test;
 import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.sexpr;
 import wso2/nballerina.types as t;
 
 type Relation "assert<"|"assert<>"|"assert=";
@@ -12,13 +13,12 @@ type Test readonly & Assertion|BoundAssertion;
 
 const TEST_DATA_DIR = "modules/types.sexpr/tests/data";
 
-function listTypeTests() returns error|map<[string, int, Test]> {
+function listTypeTests() returns error|map<[string, int, sexpr:Any]> {
     string absTestDataDir = check file:getAbsolutePath(TEST_DATA_DIR);
-    map<[string, int, Test]> files = {};
+    map<[string, int, sexpr:Any]> files = {};
     foreach var file in checkpanic file:readDir(absTestDataDir) {
         string input = check io:fileReadString(file.absPath);
-        SExpr[] p = check parse(input);
-        Test[] tests = check p.cloneWithType();
+        sexpr:Any[] tests = check sexpr:parse(input);
         int i = 0;
         foreach var test in tests {
             string name =  checkpanic file:relativePath(absTestDataDir, file.absPath) + "#" + i.toString();
@@ -32,7 +32,8 @@ function listTypeTests() returns error|map<[string, int, Test]> {
 @test:Config {
     dataProvider: listTypeTests
 }
-function typeTests(string filename, int index, Test test) returns error? {
+function typeTests(string filename, int index, sexpr:Any testSexpr) returns error? {
+    Test test = check testSexpr.cloneWithType();
     t:Env env = new;
     t:Context tc = t:typeContext(env);
     map<Atom> bindings = {};

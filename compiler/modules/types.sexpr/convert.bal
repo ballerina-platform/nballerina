@@ -19,17 +19,25 @@ public function semTypeFromSexpr(t:Env env, map<Atom> bindings, Type tySExpr) re
         return intSubtype;
     }
     else if tySExpr is Union|Intersection {
-        // JBUG `is Union` evaluates to true even if it is an Intersection
-        if tySExpr[0] == "&" {
+        // JBUG `is Union` evaluates to true even if it is an Intersection, therefor let's test tySExpr[0] instead
+        "&"|"!"|"|" op = tySExpr[0];
+        if op == "!" {
+            if tySExpr.length() > 2 {
+                // This should ideally be enforced at cloneWithType but we can't currently due to JBUG
+                panic error("not constructor should only take one type as the parameter");
+            }
+            return t:complement(semTypeFromSexpr(env, bindings, tySExpr[1])); 
+        }
+        if op == "&" {
             t:SemType intersect = t:TOP;
             foreach int i in 1 ..< tySExpr.length() {
                 // JBUG #36911 cast to anydata is needed
                 var part = <Type>(<anydata[]>tySExpr)[i];
                 intersect = t:intersect(intersect, semTypeFromSexpr(env, bindings, part));
             }
-            return intersect;
+            return intersect; 
         }
-        else {
+        else { // op == "|"
             t:SemType union = t:NEVER;
             foreach int i in 1 ..< tySExpr.length() {
                 // JBUG #36911 cast to anydata is needed
@@ -55,7 +63,9 @@ public function semTypeFromSexpr(t:Env env, map<Atom> bindings, Type tySExpr) re
 }
 
 public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSexpr) returns t:SemType {
-    // JBUG #37085 can't use if-else and type check
+    // JBUG #37085 can't use if-elses with type checks
+    // Nor can we use match due to below, have to use a combination of both
+    // JBUG if we a match clause ["mapping", var members] , 1) it matches ["mapping", var fixed, var rest], 2) type of atomSexpr becomes 'other'
     match atomSexpr {
         ["list", var m] => {
             // JBUG cast. inline variable when fixed 
@@ -73,9 +83,8 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
             t:ListDefinition d = new;
             return d.define(env, rest = semTypeFromSexpr(env, bindings, <Type>members));
         }
-        // JBUG if ["mapping", var members] is matched here, 1) it matches ["mapping", var fixed, var rest], 2) type of atomSexpr becomes 'other'
     }
-    // atomSexpr is an array string with "mapping"
+    // atomSexpr is an array starting with "mapping"
     Type rest;
     t:Field[] fields;
     int mappingLen = atomSexpr.length();
