@@ -47,6 +47,9 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:TypeBranchInsn {
             body.push(buildTypeBranch(module, scaffold, insn));
         }
+        else if insn is bir:TypeMergeInsn {
+            body.push(buildTypeMerge(module, scaffold, insn));
+        }
         else if insn is bir:TypeTestInsn {
             body.push(buildTypeTest(module, scaffold, insn));
         }

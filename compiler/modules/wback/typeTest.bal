@@ -124,3 +124,19 @@ function buildTypeTest(wasm:Module module, Scaffold scaffold, bir:TypeTestInsn i
 function buildIsSubType(wasm:Module module, wasm:Expression super, wasm:Expression sub) returns wasm:Expression {
     return module.binary("i32.eq", module.binary("i32.and", super, sub), super); 
 }
+
+function buildTypeMerge(wasm:Module module, Scaffold scaffold, bir:TypeMergeInsn insn) returns wasm:Expression {
+    bir:Register unnarrowed = unnarrow(insn.operands[0]);
+    var [sourceRepr, value] = buildReprValue(module, scaffold, unnarrowed);
+    wasm:Expression narrowed = buildNarrowRepr(module, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
+    return buildStore(module, insn.result, narrowed);
+}
+
+function unnarrow(bir:Register reg) returns bir:Register {
+    if reg is bir:NarrowRegister {
+        return unnarrow(reg.underlying);
+    }
+    else {
+        return reg;
+    }
+}

@@ -102,9 +102,14 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
             wasm:Expression loop;
             string loopLabel = "$block$" + entry.toString() + "$break";
             wasm:Expression[] loopHeader = buildBasicBlock(scaffold, module, entryBb);
+            bir:Insn lastInsn = getLastInsn(entryBb);
             bir:Label? loopBodyStartBb = getLoopBodyBlockLabel(entryBb);
             if loopBodyStartBb != () {
-                wasm:Expression[] loopBodyChildren = buildBlocksInRegion(scaffold, module, loopBodyStartBb, region, index, exit);
+                wasm:Expression[] loopBodyChildren = [];
+                if lastInsn is bir:TypeBranchInsn {
+                    loopBodyChildren = [buildNarrowReg(module, scaffold, lastInsn.ifTrueRegister)];
+                }
+                loopBodyChildren.push(...buildBlocksInRegion(scaffold, module, loopBodyStartBb, region, index, exit));
                 wasm:Expression loopBody = module.block(loopBodyChildren);
                 if isForLoop(entry, loopBodyStartBb) {
                     bir:Label? stepBlock = scaffold.getStepBlock(index);
@@ -120,7 +125,6 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
                     loopHeader.push(module.addIf(condition, loopBody));
                     loopBody = module.block(loopHeader);
                 }
-                bir:Insn lastInsn = getLastInsn(scaffold.blocks[entry]);
                 if lastInsn is bir:CondBranchInsn {
                     if exit != lastInsn.ifFalse {
                         wasm:Expression[] children = [loopBody];
@@ -137,10 +141,14 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
                 loop = module.block([loop], "$block$" + exit.toString() + "$break");
             }
             cur.push(loop);
-            if exit != () {
-                wasm:Expression[] exitCode = buildBlocksInRegion(scaffold, module, exit, region, index);
-                cur.push(module.block(exitCode));
+            wasm:Expression[] exitCode = [];
+            if lastInsn is bir:TypeBranchInsn {
+                exitCode.push(buildNarrowReg(module, scaffold, lastInsn.ifFalseRegister, true));
             }
+            if exit != () {
+                exitCode.push(...buildBlocksInRegion(scaffold, module, exit, region, index));
+            }
+            cur.push(module.block(exitCode));
         }
         scaffold.setRenderedRegion(index, cur);
     }
