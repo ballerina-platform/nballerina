@@ -1,7 +1,7 @@
 BAL?=bal
 BAL_BUILD_FLAGS?= --offline
 SUBDIRS=regex.d
-TARGETS=regex
+TARGETS=regex test
 
 regex:
 	$(MAKE) target=build regex.d
