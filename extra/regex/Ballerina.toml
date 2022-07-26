@@ -3,7 +3,6 @@ org = "wso2"
 name = "nballerina.regex"
 version = "0.1.0"
 
-
 [[dependency]]
 org = "wso2"
 name = "nballerina"
