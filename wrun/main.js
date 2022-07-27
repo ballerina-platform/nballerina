@@ -115,8 +115,6 @@ const decimalImport = {
     return result;
   },
   eq: (arg1, arg2) => {
-    console.log(arg1)
-    console.log(arg2)
     return arg1.equals(arg2);
   },
   exact_eq: (arg1, arg2) => {
