@@ -16,30 +16,36 @@
   ;; $_bal_list_create
   (func $_bal_list_create (param $0 i64) (param $1 (ref $ListDesc)) (result (ref $List)) 
     (local $3 i64) 
-    (block 
-      (if 
-        (i64.ge_s 
-          (local.get $0) 
-          (i64.const 4)) 
-        (local.set $3
-          (local.get $0)) 
-        (local.set $3 
-          (i64.const 4))) 
-      (return 
-        (struct.new_with_rtt $List
-          (i32.const 262144)
-          (local.get $1)
-          (array.new_with_rtt $AnyList 
-            (call $_bal_filler_value
-              (struct.get $ListDesc $restType
-               (local.get $1))
-              (struct.get $ListDesc $filler
-               (local.get $1))) 
-            (i32.wrap_i64 
-              (local.get $3))
-            (rtt.canon $AnyList)) 
-          (local.get $0)
-          (global.get $rttList)))))
+    (local $4 (ref null $List)) 
+    (if 
+      (i64.ge_s 
+        (local.get $0) 
+        (i64.const 4)) 
+      (local.set $3
+        (local.get $0)) 
+      (local.set $3 
+        (i64.const 4))) 
+    (local.set $4
+      (struct.new_with_rtt $List
+        (i32.const 262144)
+        (local.get $1)
+        (array.new_default_with_rtt $AnyList  
+          (i32.wrap_i64 
+            (local.get $3))
+          (rtt.canon $AnyList)) 
+        (local.get $0)
+        (global.get $rttList)))
+    (call $_bal_init_default
+      (struct.get $List $arr
+        (ref.as_non_null
+          (local.get $4)))
+      (local.get $1)
+      (i32.const 0)
+      (i32.wrap_i64 
+        (local.get $3)))
+    (return
+      (ref.as_non_null
+        (local.get $4))))
   ;; $_bal_list_get
   (func $_bal_list_get (param $0 eqref) (param $1 i32) (result eqref) 
     (local $2 (ref null $List))
@@ -160,17 +166,18 @@
             (i32.wrap_i64 
               (local.get $4))) 
           (local.set $7 
-            (array.new_with_rtt $AnyList 
-              (call $_bal_filler_value
-                (struct.get $ListDesc $restType
-                  (struct.get $List $desc
-                    (local.get $0)))
-                (struct.get $ListDesc $filler
-                  (struct.get $List $desc
-                    (local.get $0))))
+            (array.new_default_with_rtt $AnyList 
               (i32.wrap_i64 
                 (local.get $6)) 
-              (rtt.canon $AnyList))) 
+              (rtt.canon $AnyList)))
+          (call $_bal_init_default
+            (ref.as_non_null
+              (local.get $7))
+            (struct.get $List $desc
+              (local.get $0))
+            (i32.const 0)
+            (i32.wrap_i64 
+              (local.get $6))) 
           (local.set $8 
             (i32.const 0)) 
           (loop $block1$continue 
@@ -390,6 +397,30 @@
         (i32.const 1)))
     (return
       (i32.const 0)))
+  ;; $_bal_init_default
+  (func $_bal_init_default (param $0 (ref $AnyList)) (param $1 (ref $ListDesc)) (param $2 i32) (param $3 i32)
+    (local $4 i32)
+    (local.set $4
+      (local.get $2))
+    (loop $loop$cont
+      (if
+        (i32.lt_u
+          (local.get $4)
+          (local.get $3))
+        (block
+          (array.set $AnyList 
+            (local.get $0)
+            (local.get $4)
+            (call $_bal_filler_value
+              (struct.get $ListDesc $restType
+               (local.get $1))
+              (struct.get $ListDesc $filler
+               (local.get $1))))
+          (local.set $4
+            (i32.add
+              (local.get $4)
+              (i32.const 1)))
+          (br $loop$cont)))))
   ;; $_bal_filler_value
   (func $_bal_filler_value (param $0 eqref) (param $1 eqref) (result eqref) ;; restType, filler
     (local $2 (ref null $ComplexType))

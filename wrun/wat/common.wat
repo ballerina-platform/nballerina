@@ -31,7 +31,7 @@
   (type $StringSubtype (struct (field $func (ref $subTypeContains)) (field $charAllowed i32) (field $nonCharAllowed i32) (field $values (mut (ref $AnyList))))) 
   (type $FloatValues (array (mut f64))) 
   (type $FloatSubtype (struct (field $func (ref $subTypeContains)) (field $allowed i32) (field $values (mut (ref $FloatValues))))) 
-  (type $DecimalValues (array (mut (ref $Decimal)))) 
+  (type $DecimalValues (array (mut (ref null $Decimal)))) 
   (type $DecimalSubtype (struct (field $func (ref $subTypeContains)) (field $allowed i32) (field $values (mut (ref $DecimalValues))))) 
   (type $ArrMapSubtype (struct (field $func (ref $subTypeContains)) (field $bitSet i32))) 
   (type $SubTypeList (array (mut (ref null $Subtype))))
