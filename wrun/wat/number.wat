@@ -959,8 +959,11 @@
           (if
             (i32.eqz
               (call $_js_decimal_compare
-                (local.get $1)
-                (local.get $5)))
+                (struct.get $Decimal $val 
+                  (local.get $1))
+                (struct.get $Decimal $val 
+                  (ref.as_non_null
+                    (local.get $5)))))
             (local.set $3
               (local.get $4))
             (local.set $2
