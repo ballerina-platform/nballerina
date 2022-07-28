@@ -5,8 +5,8 @@ CFLAGS=-O2
 JAVA?=$(shell test/findJava.sh)
 TARGETS=all clean test pack extra
 export CLANG CFLAGS BAL JAVA LLVM_SUFFIX
-SUBDIRS=compiler.d runtime.d test.d extra.d
-EXTRAS=regex
+SUBDIRS=compiler.d runtime.d test.d
+EXTRAS=$(notdir $(wildcard ./extra/*))
 
 all:
 	$(MAKE) target=all compiler.d runtime.d
@@ -20,7 +20,7 @@ pack:
 	$(MAKE) target=pack compiler.d
 
 $(EXTRAS): pack
-	$(MAKE) target=$@ extra.d
+	$(MAKE) -C ./extra/$@ target=build
 
 extras: $(EXTRAS)
 

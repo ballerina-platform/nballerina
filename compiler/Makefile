@@ -25,5 +25,5 @@ clean:
 	$(BAL) clean
 	-rm -rf ../build
 
-.PHONY: all test clean
+.PHONY: all pack test clean
 
