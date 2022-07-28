@@ -258,7 +258,8 @@ TaggedPtr _bal_decimal_const(const char *decString) {
 
 bool _bal_decimal_subtype_contains(UniformSubtypePtr stp, TaggedPtr tp) {
     DecimalSubtypePtr dstp = (DecimalSubtypePtr)stp;
-    return decimalListContains(dstp->decimals, dstp->decimals + dstp->nDecimals, taggedToDecQuad(tp));
+    bool included = dstp->included;
+    return decimalListContains(dstp->decimals, dstp->decimals + dstp->nDecimals, taggedToDecQuad(tp)) == included;
 }
 
 // Do binary search for tp
