@@ -1,6 +1,6 @@
 const fs = require('fs');
 var Decimal = require('./decimal');
-Decimal.set({ precision: 34, toExpPos: 34, defaults: true });
+Decimal.set({ precision: 34, toExpPos: 34, defaults: true, rounding: Decimal.ROUND_HALF_EVEN });
 let WasmModule = {
   tags: [],
   memory: null
@@ -70,11 +70,18 @@ const stringImport = {
   }
 };
 
-const checkDecimalOverflow = (result) => {
+const finish = (result) => {
   if (result.gte("1e+6145") || result.lte("-1e+6145")) {
     throw Error("arithmetic overflow")
   }
+  if ((result.lt("1E-6143") && result.gt("0"))  || (result.gt("-1E-6143") && result.lt("0"))) {
+    return new Decimal("0");
+  }
+  else {
+    return result;
+  }
 }
+
 
 const decimalImport = {
   create: (offset, length) => {
@@ -85,13 +92,11 @@ const decimalImport = {
   },
   add: (arg1, arg2) => {
     let result = arg1.add(arg2);
-    checkDecimalOverflow(result);
-    return result;
+    return finish(result);
   },
   sub: (arg1, arg2) => {
     let result = arg1.sub(arg2);
-    checkDecimalOverflow(result);
-    return result;
+    return finish(result);
   },
   div: (arg1, arg2) => {
     if (arg1.isZero() && arg2.isZero()) {
@@ -101,18 +106,15 @@ const decimalImport = {
       throw Error("divide by zero")
     }
     let result = arg1.div(arg2);
-    checkDecimalOverflow(result);
-    return result;
+    return finish(result);
   },
   mul: (arg1, arg2) => {
     let result = arg1.mul(arg2);
-    checkDecimalOverflow(result);
-    return result;
+    return finish(result);
   },
   rem: (arg1, arg2) => {
     let result = arg1.modulo(arg2);
-    checkDecimalOverflow(result);
-    return result;
+    return finish(result);
   },
   eq: (arg1, arg2) => {
     return arg1.equals(arg2);
@@ -142,7 +144,7 @@ const decimalImport = {
   },
   to_int: (arg1) => {
     let result = arg1.toNearest(1);
-    if (arg1.gt(9223372036854775807) || arg1.lt(-9223372036854775808)) {
+    if (result.gt(new Decimal("9223372036854775807")) || result.lt("-9223372036854775808")) {
       throw Error("arithmetic overflow")
     }
     return BigInt(result);

@@ -9,8 +9,9 @@ const INHERENT_TYPE = 1;
 
 type Usage TYPE_TEST|INHERENT_TYPE;
 
+// value which is the key is not a decimal is because of a bug in JBallerina
 type DecimalRecord record {
-    readonly decimal value;
+    readonly string value;
     string global;
     wasm:Expression offsetExpr;
     string byteStr;
@@ -67,7 +68,7 @@ public class Component {
     }
 
     function maybeAddDecimalRecord(decimal val) returns string {
-        DecimalRecord? rec = self.decimalConsts[val];
+        DecimalRecord? rec = self.decimalConsts[val.toString()];
         if rec != () {
             return rec.global;
         }
@@ -149,7 +150,8 @@ function initGlobals(wasm:Module module, map<StringRecord> segments, table<Decim
         offsetExprs.push(rec.offsetExpr);
         byteStrs.push(rec.byteStr);
     }
-    foreach decimal val in decimalConsts.keys() {
+    string[] keys = decimalConsts.keys();
+    foreach string val in keys {
         DecimalRecord rec = decimalConsts.get(val);
         body.push(...rec.body);
         offsetExprs.push(rec.offsetExpr);

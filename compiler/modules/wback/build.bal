@@ -355,9 +355,10 @@ function buildGlobalString(wasm:Module module, Component component, string val, 
     return { global, body, byteStr, offsetExpr };
 }
 
-function buildGlobalDecimal(wasm:Module module, Component component, decimal value, string global, int offset, int length) returns DecimalRecord {
+function buildGlobalDecimal(wasm:Module module, Component component, decimal val, string global, int offset, int length) returns DecimalRecord {
     wasm:Expression[] body = [];
-    string byteStr = buildMemoryData(module, value.toString(), global);
+    string value = val.toString();
+    string byteStr = buildMemoryData(module, value, global);
     module.addGlobal(global, { base: DECIMAL_TYPE, initial: "null" }, module.refNull(DECIMAL_TYPE));
     wasm:Expression offsetExpr = module.addConst({ i32: offset });
     wasm:Expression jsDecimal = buildRuntimeFunctionCall(module, component, createDecimalFunction, [
