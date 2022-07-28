@@ -2,12 +2,13 @@ REGEX_SRC=$(wildcard *.bal)
 REGEX_JAR=../../build/extra/bin/nballerina.regex.jar
 COMPILER_PACK=../../build/bala/wso2-nballerina-any-0.1.0.bala
 COMPILER_SRC=$(wildcard ../../compiler/*.bal) $(wildcard ../../compiler/modules/*/*.bal)
-TARGETS=build clean
+TARGETS=all clean test
 
-build: $(REGEX_JAR)
+all: $(REGEX_JAR)
 
 clean:
 	rm -f $(REGEX_JAR)
+	bal clean
 
 $(REGEX_JAR): $(REGEX_SRC) $(COMPILER_PACK)
 	bal build --target-dir ../../build/extra $(BAL_BUILD_FLAGS)

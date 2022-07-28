@@ -16,7 +16,7 @@ test clean:
 test: all
 
 regex:
-	$(MAKE) target=build extra/regex.d
+	$(MAKE) target=all extra/regex.d
 
 $(SUBDIRS):
 	$(MAKE) -C $(basename $@) $(target)
