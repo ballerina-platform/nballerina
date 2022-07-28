@@ -17,7 +17,7 @@ const int UT_RW_MASK = UT_MASK & ~UT_READONLY;
 
 public type UniformTypeCode
     UT_NIL|UT_BOOLEAN|UT_INT|UT_FLOAT|UT_DECIMAL
-    |UT_STRING|UT_ERROR|UT_FUNCTION|UT_TYPEDESC|UT_HANDLE
+    |UT_STRING|UT_ERROR|UT_FUNCTION|UT_TYPEDESC|UT_HANDLE|UT_CELL
     |UT_XML_RO|UT_LIST_RO|UT_MAPPING_RO|UT_TABLE_RO|UT_OBJECT_RO
     |UT_XML_RW|UT_LIST_RW|UT_MAPPING_RW|UT_TABLE_RW|UT_OBJECT_RW
     |UT_STREAM|UT_FUTURE;
@@ -31,7 +31,7 @@ type TypeAtom readonly & record {|
     AtomicType atomicType;
 |};
 
-type AtomicType ListAtomicType|MappingAtomicType;
+type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType;
 
 
 // All the SemTypes used in any type operation (e.g. isSubtype) must have been created using the Env.
@@ -41,6 +41,7 @@ public isolated class Env {
     private final ListAtomicType?[] recListAtoms = [ LIST_SUBTYPE_RO ];
     private final MappingAtomicType?[] recMappingAtoms = [ MAPPING_SUBTYPE_RO ];
     private final FunctionAtomicType?[] recFunctionAtoms = [];
+    private final CellAtomicType?[] recCellAtoms = [];
     // Count of the total number of non-nil members
     // of recListAtoms, recMappingAtoms and recFunctionAtoms
     private int recAtomCount = 2;
@@ -65,6 +66,10 @@ public isolated class Env {
     }
 
     isolated function mappingAtom(MappingAtomicType atomicType) returns TypeAtom {
+        return self.typeAtom(atomicType);
+    }
+
+    isolated function cellAtom(CellAtomicType atomicType) returns TypeAtom {
         return self.typeAtom(atomicType);
     }
 
@@ -124,6 +129,14 @@ public isolated class Env {
         }
     }
 
+    isolated function recCellAtom() returns RecAtom {
+        lock {
+            int result = self.recCellAtoms.length();
+            self.recCellAtoms.push(());
+            return result;
+        }
+    }
+
     isolated function setRecListAtomType(RecAtom ra, ListAtomicType atomicType) {
         lock {
             self.recListAtoms[ra] = atomicType;
@@ -145,6 +158,13 @@ public isolated class Env {
         }
     }
 
+    isolated function setRecCellAtomType(RecAtom ra, CellAtomicType atomicType) {
+        lock {
+            self.recCellAtoms[ra] = atomicType;
+            self.recAtomCount += 1;
+        }
+    }    
+
     isolated function getRecListAtomType(RecAtom ra) returns ListAtomicType {
         lock {
             return <ListAtomicType>self.recListAtoms[ra];
@@ -162,6 +182,12 @@ public isolated class Env {
             return <FunctionAtomicType>self.recFunctionAtoms[ra];
         }
     }
+
+    isolated function getRecCellAtomType(RecAtom ra) returns CellAtomicType {
+        lock {
+            return <CellAtomicType>self.recCellAtoms[ra];
+        }
+    }    
 }
 
 public type BddMemo record {|
@@ -205,6 +231,7 @@ public class Context {
     BddMemoTable listMemo = table [];
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
+    BddMemoTable cellMemo = table [];
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
     final table<FillerMemo> key(semType) fillerMemo = table [];
@@ -236,6 +263,15 @@ public class Context {
 
     function functionAtomType(Atom atom) returns FunctionAtomicType {
         return self.env.getRecFunctionAtomType(<RecAtom>atom);
+    }
+
+    function cellAtomType(Atom atom) returns CellAtomicType {
+        if atom is RecAtom {
+            return self.env.getRecCellAtomType(atom);
+        }
+        else {
+            return <CellAtomicType>atom.atomicType;
+        }
     }
 }
 
@@ -1576,7 +1612,7 @@ function init() {
         functionOps,  // function
         {}, // typedesc
         {}, // handle
-        {}, // unused
+        cellOps, // cell
         {}, // RW future
         {}, // RW stream
         listRwOps, // RW list
