@@ -248,14 +248,6 @@ IntWithOverflow _bal_decimal_to_int(TaggedPtr tp) {
     return res;
 }
 
-TaggedPtr _bal_decimal_const(const char *decString) {
-    decContext cx;
-    initContext(&cx);
-    decQuad dq;
-    decQuadFromString(&dq, decString, &cx);
-    return createDecimal(&dq);
-}
-
 bool _bal_decimal_subtype_contains(UniformSubtypePtr stp, TaggedPtr tp) {
     DecimalSubtypePtr dstp = (DecimalSubtypePtr)stp;
     bool included = dstp->included;
@@ -264,10 +256,6 @@ bool _bal_decimal_subtype_contains(UniformSubtypePtr stp, TaggedPtr tp) {
 
 // Do binary search for tp
 // Approximately the same code as tidListContains
-// The decimal constants are currently stored as ASCII strings,
-// which means we have to convert each before we compare it.
-// (Obviously far from optimal: the compiler should convert decimal constants into the IEEE binary128
-// format used by decNumber. This will be easier if we can self-host since we can link to decNumber.)
 static bool decimalListContains(const DecimalConstPtr *start, const DecimalConstPtr *end, const decQuad *dq) {
     // Lower bound inclusive; upper bound is exclusive
     // Invariant: if there is a member in the list == to dq, then its address p 
@@ -276,10 +264,8 @@ static bool decimalListContains(const DecimalConstPtr *start, const DecimalConst
     initContext(&cx);
     while (start < end) {
         const DecimalConstPtr *mid = start + (end - start)/2;
-        decQuad midVal;
-        decQuadFromString(&midVal, *mid, &cx);
         decQuad cmp;
-        decQuadCompare(&cmp, dq, &midVal, &cx);
+        decQuadCompare(&cmp, dq, (const decQuad *) *mid, &cx);
         enum decClass cmpClass = decQuadClass(&cmp);
         // We have start <= mid < end
         // int64_t cmp = _bal_decimal_cmp(tp, *mid);
