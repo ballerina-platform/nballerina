@@ -263,9 +263,8 @@ static bool decimalListContains(const DecimalConstPtr *start, const DecimalConst
     initContext(&cx);
     while (start < end) {
         const DecimalConstPtr *mid = start + (end - start)/2;
-        decQuad midVal = **((decQuad**)mid);
         decQuad cmp;
-        decQuadCompare(&cmp, dq, &midVal, &cx);
+        decQuadCompare(&cmp, dq, (const decQuad *) *mid, &cx);
         enum decClass cmpClass = decQuadClass(&cmp);
         // We have start <= mid < end
         // int64_t cmp = _bal_decimal_cmp(tp, *mid);
