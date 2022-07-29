@@ -67,8 +67,12 @@ class VerifyContext {
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
     VerifyContext cx = new(mod, defn);
+    boolean[] tmpRegisterInitialized = [];
+    if code.registers.length() > 0 {
+        tmpRegisterInitialized[code.registers.length() - 1] = false;
+    }
     foreach BasicBlock b in code.blocks {
-        check verifyBasicBlock(cx, b);
+        check verifyBasicBlock(cx, b, tmpRegisterInitialized);
     }
 }
 
@@ -76,9 +80,21 @@ type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
 type Error err:Semantic|err:Internal;
 
-function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
+function verifyBasicBlock(VerifyContext vc, BasicBlock bb, boolean[] tmpRegisterInitialized) returns Error? {
     foreach Insn insn in bb.insns {
         check verifyInsn(vc, insn);
+        check verifyTmpRegisterAssignment(vc, insn, tmpRegisterInitialized);
+    }
+}
+
+function verifyTmpRegisterAssignment(VerifyContext vc, Insn insn, boolean[] tmpRegisterInitialized) returns Error? {
+    if insn is ResultInsnBase {
+        if tmpRegisterInitialized[insn.result.number] {
+            return vc.invalidErr("multiple assignments to a tmp register", insn.pos);
+        }
+        else {
+            tmpRegisterInitialized[insn.result.number] = true;
+        }
     }
 }
 
