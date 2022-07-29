@@ -236,6 +236,30 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, indices, memberTypes, nRequired, neg);
 }
 
+// TODO: this is similar to mappingIntersectionToAtomicType may be we can share code
+function listIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns ListAtomicType? {
+    ListAtomicType lhsTy = env.listAtomType(lhs.atom);
+    ListAtomicType rhsTy = env.listAtomType(rhs.atom);
+    if rhs.left is BddNode {
+        if rhs.middle !is false || rhs.right !is false {
+            // not a "pure" intersection (I think this shouldn't happen ever)
+            // intersection between union and mapping type is empty
+            // intersection between negative atom and mapping type is undefined
+            return ();
+        }
+        ListAtomicType? newRhsTy = listIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
+        if newRhsTy is () {
+            return ();
+        }
+        rhsTy = newRhsTy;
+    }
+    var intersection = listIntersectWith(lhsTy.members, lhsTy.rest, rhsTy.members, rhsTy.rest);
+    if intersection is () {
+        return ();
+    }
+    return { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
+}
+
 function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
     if listLengthsDisjoint(members1, rest1, members2, rest2) {
         return ();

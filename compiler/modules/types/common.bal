@@ -126,12 +126,11 @@ function bddPaths(Env env, Bdd b, BddPath[] paths, BddPath accum) {
         Atom atom = b.atom;
         Bdd leftNode = b.left;
         // TODO: this check is common for both list and mapping
-        if atom is TypeAtom && atom.atomicType is MappingAtomicType && leftNode is BddNode {
+        if atom is TypeAtom && leftNode is BddNode {
             if b.right == false && b.middle is false {
-                // FIXME:
-                MappingAtomicType? mappingAtomicType = mappingIntersectionToAtomicType(env, b, leftNode);
-                if mappingAtomicType !is () {
-                    TypeAtom tyAtom = { index: atom.index, atomicType: mappingAtomicType};
+                var atomicType = atom.atomicType is MappingAtomicType ? mappingIntersectionToAtomicType(env, b, leftNode) : listIntersectionToAtomicType(env, b, leftNode);
+                if atomicType !is () {
+                    TypeAtom tyAtom = { index: atom.index, atomicType };
                     Bdd bdd = bddAtom(tyAtom);
                     return paths.push({ bdd, pos: [atom, leftNode.atom], neg: []});
                 }
