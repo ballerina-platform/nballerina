@@ -223,23 +223,17 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
         if !isEmpty(cx, diff(pos.rest, neg.rest)) {
             return mappingInhabited(cx, pos, negList.next);
         }
-        foreach var { name, index1, type1: posType, type2: negType } in pairing {
+        foreach var { index1, type1: posType, type2: negType } in pairing {
             SemType d = diff(posType, negType);
-            if index1 is () && isEmpty(cx, d) {
+             if index1 is () {
                 // We cannot match the rest field of the positive with named field of a negative atom
                 return mappingInhabited(cx, pos, negList.next);
             }
             if !isEmpty(cx, d) {
                 TempMappingSubtype mt;
-                if index1 == () {
-                    // the posType came from the rest type
-                    mt = insertField(pos, name, d);
-                }
-                else {
-                    SemType[] posTypes = shallowCopyTypes(pos.types);
-                    posTypes[index1] = d;
-                    mt = { types: posTypes, names: pos.names, rest: pos.rest };
-                }
+                SemType[] posTypes = shallowCopyTypes(pos.types);
+                posTypes[index1] = d;
+                mt = { types: posTypes, names: pos.names, rest: pos.rest };
                 if mappingInhabited(cx, mt, negList.next) {
                     return true;
                 }
