@@ -226,6 +226,13 @@ function buildFloat(wasm:Module module, bir:FloatOperand operand) returns wasm:E
     }
 }
 
+function buildMaybeUntag(wasm:Module module, Scaffold scaffold, wasm:Expression value, Repr sourceRepr, Repr targetRepr) returns wasm:Expression {
+    if targetRepr == sourceRepr {
+        return value;
+    }
+    return buildUntagged(module, scaffold, value, targetRepr);
+}
+
 function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
     if targetRepr is TaggedRepr {
         return maybeCast(module, scaffold, value, targetRepr);

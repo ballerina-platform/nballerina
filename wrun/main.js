@@ -165,7 +165,14 @@ const intImport = {
 
 const ioImport = {
   log: (arg) => {
-    console.log(getValue(WasmModule._bal_list_get(arg, 0)));
+    let length = WasmModule._bal_list_length(arg);
+    let elements = []
+    for (let index = 0; index < length; index++) {
+      let element = getValue(WasmModule._bal_list_get(arg, index));
+      elements.push(element);
+    }
+    result = elements.join("")
+    console.log(result);
   }
 };
 

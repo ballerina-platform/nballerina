@@ -381,8 +381,23 @@
     (if 
       (ref.is_null
         (local.get $1))
-      (return 
-        (i32.const 0)))
+      (if
+        (i32.and
+          (i32.eq
+            (i32.popcnt
+              (local.get $3))
+            (i32.const 1))
+          (i32.or
+            (i32.ne
+              (local.get $3)
+              (i32.const 262144))
+            (i32.ne
+              (local.get $3)
+              (i32.const 524288))))
+        (return
+          (i32.const 1))
+        (return 
+          (i32.const 0))))
     (if
       (i32.and
         (local.get $3)

@@ -14,11 +14,11 @@ final RuntimeFunction typeContainsFunction = {
 };
 
 function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn insn) returns wasm:Expression {
-    var [_, val] = buildReprValue(module, scaffold, insn.operand);
+    var [sourceRepr, val] = buildReprValue(module, scaffold, insn.operand);
     t:SemType semType = insn.semType;
-    Repr repr = semTypeRepr(semType);
+    Repr targetRepr = scaffold.getRepr(insn.result);
     return module.addIf(buildTypeTestedValue(module, scaffold, insn.operand, semType), 
-                        buildStore(module, insn.result, buildUntagged(module, scaffold, val, repr)), 
+                        buildStore(module, insn.result, buildMaybeUntag(module, scaffold, val, sourceRepr, targetRepr)), 
                         module.throw(BAD_CONVERSION_TAG));
 }
 
@@ -51,7 +51,9 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
         else {
             t:IntSubtype subtype = <t:IntSubtype>t:intSubtype(semType);
             foreach t:Range range in subtype {
-                wasm:Expression cond = module.binary("i64.eq", value, module.addConst({ i64: range.max }));
+                wasm:Expression cond = module.binary("i32.and", 
+                                                     module.binary("i64.le_s", module.addConst({ i64: range.min}), value),
+                                                     module.binary("i64.ge_s", module.addConst({ i64: range.max}), value));
                 hasType = hasType != () ? module.binary("i32.or", cond, hasType) : cond;
             }
         }
