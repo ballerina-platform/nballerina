@@ -1,7 +1,7 @@
 import wso2/nballerina.comm.sexpr;
 
 public type Field [sexpr:Str, Type];
-public type Atom ["list", Type[]] | ["list", Type[], int] | ["array", Type] | ["mapping", Type] | ["mapping", Field[], Type] | ["cell", Type, Mutation]; 
+public type Atom ["list", Type[]] | ["list", Type[], int] | ["array", Type] | ["mapping", Type] | ["mapping", Field[], Type] | ["cell", Type, CellMutability]; 
 // JBUG compile time stack overflow if ["!", Type] is added
 public type Type AtomRef | ["|", Type...] | ["&", Type...] | ["!", Type...] | Int | IntSubtype ; 
 public type AtomRef string;
@@ -20,5 +20,5 @@ public type OpenMapping ["mapping", Field[], Type];
 public type IntSubtype ["int", [int, int], [int, int]...];
 public type NonRepeatingTuple ["list", Type[]];
 public type RepeatingTuple ["list", Type[], int];
-public type Cell ["cell", Type, Mutation];
-public type Mutation 0|1|2;
+public type Cell ["cell", Type, CellMutability];
+public type CellMutability "readonly"|"mutable"|"matching";

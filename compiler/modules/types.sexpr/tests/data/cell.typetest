@@ -1,11 +1,11 @@
-(let ((cell-a (cell int 0))
-      (cell-b (cell int 0)))
+(let ((cell-a (cell int readonly))
+      (cell-b (cell int readonly)))
      (assert= cell-a cell-b))
 
-(let ((cell-a (cell (int (0 255)) 0))
-      (cell-b (cell int 0)))
+(let ((cell-a (cell (int (0 255)) readonly))
+      (cell-b (cell int readonly)))
      (assert< cell-a cell-b))
 
-//(let ((cell-a (cell boolean 0))
-//      (cell-b (cell int 0)))
+//(let ((cell-a (cell boolean readonly))
+//      (cell-b (cell int readonly)))
 //     (assert<> cell-a cell-b))    

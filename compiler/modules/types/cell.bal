@@ -1,10 +1,14 @@
 // Implementation specific to basic type cell.
 
-public type Mutation 0|1|2;
+public const READONLY_CELL = 0;
+public const MUTABLE_CELL = 1;
+public const MATCHING_CELL = 2;
+
+public type CellMutability READONLY_CELL|MUTABLE_CELL|MATCHING_CELL;
 
 public type CellAtomicType readonly & record {|
     SemType t;
-    Mutation m;
+    CellMutability m;
 |};
 
 public class CellDefinition {
@@ -24,7 +28,7 @@ public class CellDefinition {
         }
     }
 
-    public function define(Env env, SemType t, Mutation m) returns ComplexSemType {
+    public function define(Env env, SemType t, CellMutability m) returns ComplexSemType {
         CellAtomicType cellType = {t, m};
         Atom atom;
         RecAtom? rec = self.rec;
@@ -76,7 +80,7 @@ function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 
 function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
     SemType combined;
-    Mutation minM;
+    CellMutability minM;
     if posList == () {
         combined = TOP;
         minM = 2; // TODO: revisit
@@ -95,7 +99,7 @@ function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negLi
             cellAtomType = cx.cellAtomType(p.atom);
             combined = intersect(combined, cellAtomType.t);
 
-            Mutation newM = cellAtomType.m;
+            CellMutability newM = cellAtomType.m;
             minM = minM > newM ? newM : minM;
             p = p.next;
         }
@@ -106,19 +110,19 @@ function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negLi
     }
 
     match minM {
-        0 => {
-            return condition0(cx, combined, negList);
+        READONLY_CELL => {
+            return checkReadonlyCellSubptyeRelation(cx, combined, negList);
         }
-        1 => {
-            return condition1(cx, combined, negList);
+        MUTABLE_CELL => {
+            return checkMutableCellSubtyeRelation(cx, combined, negList);
         }
-        2|_ => {
-            return condition2(cx, combined, negList);
+        MATCHING_CELL|_ => {
+            return hasMatchingCellSubtypeRelation(cx, combined, negList);
         }
     }
 }
 
-function condition0(Context cx, SemType posCombined, Conjunction? negList) returns boolean {
+function checkReadonlyCellSubptyeRelation(Context cx, SemType posCombined, Conjunction? negList) returns boolean {
     SemType? negListUnionResult = negListUnion(cx, negList);
     return negListUnionResult != () && isEmpty(cx, diff(posCombined, negListUnionResult));
 }
@@ -142,7 +146,7 @@ function negListUnion(Context cx, Conjunction? negList) returns SemType? {
     return nUnion;
 }
 
-function condition1(Context cx, SemType combined, Conjunction? negList) returns boolean {
+function checkMutableCellSubtyeRelation(Context cx, SemType combined, Conjunction? negList) returns boolean {
     Conjunction? n = negList;
     while true {
         if n == () {
@@ -158,7 +162,7 @@ function condition1(Context cx, SemType combined, Conjunction? negList) returns 
     return false;
 }
 
-function condition2(Context cx, SemType posCombined, Conjunction? negList) returns boolean {
+function hasMatchingCellSubtypeRelation(Context cx, SemType posCombined, Conjunction? negList) returns boolean {
     Conjunction? n = negList;
     while true {
         if n == () {

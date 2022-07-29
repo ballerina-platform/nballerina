@@ -86,12 +86,25 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
     }
 
     match atomSexpr {
-        // JBUG can't merge this with above match-stmt
+        // JBUG #37176 can't merge this with above match-stmt
         // JBUG #37136 cannot use ["cell", var t, var m]
         // JBUG ["cell"] matches ["cell", var t, var m]
         ["cell"] => {
             Type t = <Type>atomSexpr[1];
-            t:Mutation m = <t:Mutation>atomSexpr[2];
+            string s = <string>atomSexpr[2];
+
+            t:CellMutability m;
+            match s {
+                "readonly" => {
+                    m = t:READONLY_CELL;
+                }
+                "mutable" => {
+                    m = t:MUTABLE_CELL;
+                }
+                "matching"|_ => {
+                    m = t:MATCHING_CELL;
+                }
+            }
 
             t:SemType semType = semTypeFromSexpr(env, bindings, t);
             t:CellDefinition d = new;
