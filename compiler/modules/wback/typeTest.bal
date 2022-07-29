@@ -17,9 +17,7 @@ function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn i
     var [_, val] = buildReprValue(module, scaffold, insn.operand);
     t:SemType semType = insn.semType;
     Repr repr = semTypeRepr(semType);
-    wasm:Expression sourceTy = buildRuntimeFunctionCall(module, scaffold.getComponent(), getTypeFunction, [val]);
-    wasm:Expression targetTy = module.addConst({ i32: t:widenToUniformTypes(semType) });
-    return module.addIf(buildIsSubType(module, sourceTy, targetTy), 
+    return module.addIf(buildTypeTestedValue(module, scaffold, insn.operand, semType), 
                         buildStore(module, insn.result, buildUntagged(module, scaffold, val, repr)), 
                         module.throw(BAD_CONVERSION_TAG));
 }
@@ -51,9 +49,11 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
                                     module.binary("i64.ge_s", constraintMax, value));
         }
         else {
-            hasType = module.binary("i64.eq", 
-                                    buildLoad(module, operand), 
-                                    module.addConst({ i64 : 0 }));
+            t:IntSubtype subtype = <t:IntSubtype>t:intSubtype(semType);
+            foreach t:Range range in subtype {
+                wasm:Expression cond = module.binary("i64.eq", value, module.addConst({ i64: range.max }));
+                hasType = hasType != () ? module.binary("i32.or", cond, hasType) : cond;
+            }
         }
     }
     else if baseRepr == BASE_REPR_FLOAT {
@@ -61,6 +61,13 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
         if sub.allowed {
             foreach float val in sub.values {
                 wasm:Expression cond = module.binary("f64.eq", value, module.addConst({ f64: val }));
+                float NaN = 0.0/0.0;
+                if val == NaN {
+                    cond = module.unary("i32.eqz", module.binary("f64.eq", value, value));
+                }
+                else {
+                    cond = module.binary("f64.eq", value, module.addConst({ f64: val }));
+                }
                 hasType = hasType != () ? module.binary("i32.or", cond, hasType) : cond;
             }
         }
