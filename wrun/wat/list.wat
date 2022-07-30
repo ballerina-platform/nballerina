@@ -471,8 +471,16 @@
             (i32.ne
               (local.get $3)
               (i32.const 524288))))
-        (return
-          (i32.const 1))
+        (if
+          (call $_bal_complex_type_contains_tagged
+            (ref.as_non_null
+              (local.get $2))
+            (call $_bal_uniform_type_filler
+              (local.get $3)))
+          (return
+            (i32.const 1))
+          (return 
+            (i32.const 0)))
         (return 
           (i32.const 0))))
     (if
