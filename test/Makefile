@@ -1,7 +1,7 @@
 TARGETS=test all compile
 
 TDIRSLL= $(sort $(addsuffix .ll, $(basename $(notdir $(wildcard ../compiler/testSuite/*)))))
-TDIRSWAT= $(sort $(addsuffix .wat, $(basename $(notdir $(wildcard ../compiler/testSuite/01-* ../compiler/testSuite/02-* ../compiler/testSuite/03-* ../compiler/testSuite/04-* ../compiler/testSuite/05-* ../compiler/testSuite/06-* ../compiler/testSuite/07-* ../compiler/testSuite/08-* ../compiler/testSuite/09-* ../compiler/testSuite/10-* ../compiler/testSuite/11-*)))))
+TDIRSWAT= $(sort $(addsuffix .wat, $(basename $(notdir $(wildcard ../compiler/testSuite/01-* ../compiler/testSuite/02-* ../compiler/testSuite/03-* ../compiler/testSuite/04-* ../compiler/testSuite/05-* ../compiler/testSuite/06-* ../compiler/testSuite/07-* ../compiler/testSuite/08-* ../compiler/testSuite/09-* ../compiler/testSuite/10-* ../compiler/testSuite/11-* ../compiler/testSuite/14-*)))))
 
 $(TARGETS): $(TDIRSLL) $(TDIRSWAT)
 
