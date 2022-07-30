@@ -1,4 +1,6 @@
 const fs = require('fs');
+var Decimal = require('./decimal');
+Decimal.set({ precision: 34, toExpPos: 34, defaults: true, rounding: Decimal.ROUND_HALF_EVEN });
 let WasmModule = {
   tags: [],
   memory: null
@@ -8,17 +10,30 @@ const TYPE_BOOLEAN = 2;
 const SELF_REFERENCE = 4;
 const TYPE_INT = 128;
 const TYPE_FLOAT = 256;
+const TYPE_DECIMAL = 512;
 const TYPE_STRING = 1024;
 const TYPE_ERROR = 2048;
 const TYPE_LIST = 262144;
 const TYPE_MAP = 524288;
-const COMPARE_LT = 0;
-const COMPARE_LE = 1;
-const COMPARE_GT = 2;
-const COMPARE_GE = 3;
 
 let fileName = process.argv[2];
 const wasmBuffer = fs.readFileSync(fileName);
+
+const formatNumberString = (num, separator) => {
+  let parts = num.toString().split("e");
+  if (parts.length == 2) {
+      let exponent = parts[1]
+      exponent = exponent.replace("+","");
+      if (exponent.substr(-2) == ".0") {
+          exponent = exponent.substr(0, exponent.length -2)
+      }
+      parts[1] = exponent;
+      return parts.join(separator);
+  }
+  else {
+      return num;
+  }
+}
 
 const stringImport = {
   create: (offset, length) => {
@@ -55,6 +70,93 @@ const stringImport = {
   }
 };
 
+const finish = (result) => {
+  if (result.gte("1e+6145") || result.lte("-1e+6145")) {
+    throw Error("arithmetic overflow")
+  }
+  if ((result.lt("1E-6143") && result.gt("0"))  || (result.gt("-1E-6143") && result.lt("0"))) {
+    return new Decimal("0");
+  }
+  else {
+    return result;
+  }
+}
+
+
+const decimalImport = {
+  create: (offset, length) => {
+    var bytes = new Uint8Array(WasmModule.memory.buffer, offset, length);
+    var decString = new TextDecoder('utf8').decode(bytes);
+    let dec = new Decimal(decString);
+    return dec;
+  },
+  add: (arg1, arg2) => {
+    let result = arg1.add(arg2);
+    return finish(result);
+  },
+  sub: (arg1, arg2) => {
+    let result = arg1.sub(arg2);
+    return finish(result);
+  },
+  div: (arg1, arg2) => {
+    if (arg1.isZero() && arg2.isZero()) {
+      throw Error("not a valid decimal")
+    }
+    else if (arg2.isZero(arg2)) {
+      throw Error("divide by zero")
+    }
+    let result = arg1.div(arg2);
+    return finish(result);
+  },
+  mul: (arg1, arg2) => {
+    let result = arg1.mul(arg2);
+    return finish(result);
+  },
+  rem: (arg1, arg2) => {
+    let result = arg1.modulo(arg2);
+    return finish(result);
+  },
+  eq: (arg1, arg2) => {
+    return arg1.equals(arg2);
+  },
+  exact_eq: (arg1, arg2) => {
+    return arg1.equals(arg2);
+  },
+  from_float: (arg1) => {
+    if (isNaN(arg1)) {
+      throw Error("not a valid decimal")
+    }
+    if (!isFinite(arg1)) {
+      throw Error("arithmetic overflow")
+    }
+    let decString = arg1.toString();
+    let dec = new Decimal(decString);
+    return dec;
+  },
+  from_int: (arg1) => {
+    let decString = arg1.toString();
+    let dec = new Decimal(decString);
+    return dec;
+  },
+  comp: (arg1, arg2) => {
+    let result = arg1.comparedTo(arg2) + 1;
+    return result;
+  },
+  to_int: (arg1) => {
+    let result = arg1.toNearest(1);
+    if (result.gt(new Decimal("9223372036854775807")) || result.lt("-9223372036854775808")) {
+      throw Error("arithmetic overflow")
+    }
+    return BigInt(result);
+  },
+  to_float: (arg1) => {
+    return arg1.toNumber();
+  },
+  neg: (arg1) => {
+    return arg1.neg();
+  }
+}
+
 const intImport = {
   hex: (arg) => {
     return arg.toString(16)
@@ -63,14 +165,22 @@ const intImport = {
 
 const ioImport = {
   log: (arg) => {
-    console.log(getValue(WasmModule._bal_list_get(arg, 0)));
+    let length = WasmModule._bal_list_length(arg);
+    let elements = []
+    for (let index = 0; index < length; index++) {
+      let element = getValue(WasmModule._bal_list_get(arg, index));
+      elements.push(element);
+    }
+    result = elements.join("")
+    console.log(result);
   }
 };
 
 let importObject = {
   console: ioImport,
   string: stringImport,
-  int: intImport
+  int: intImport,
+  decimal: decimalImport
 };
 
 WebAssembly.instantiate(wasmBuffer, importObject).then(obj => {
@@ -104,6 +214,10 @@ const getValue = (ref, parent = null) => {
       else if (Number.isInteger(result)) {
         result = `${result}.0`;
       }
+      result = formatNumberString(result.toString(), "e");
+      break;
+    case TYPE_DECIMAL:
+      result = WasmModule._bal_get_decimal(ref).toString().toUpperCase()
       break;
     case TYPE_STRING:
       result = WasmModule._bal_get_string(ref);

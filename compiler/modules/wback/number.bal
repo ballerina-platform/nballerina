@@ -1,5 +1,18 @@
 import wso2/nballerina.bir;
+import wso2/nballerina.types as t;
 import wso2/nballerina.print.wasm;
+
+final RuntimeFunction decimalNegFunction = {
+    name: "_bal_decimal_neg",
+    returnType: "eqref",
+    rtModule: numberMod
+};
+
+final RuntimeFunction convertToDecimalFunction = {
+    name: "_bal_convert_to_decimal",
+    returnType: "eqref",
+    rtModule: numberMod
+};
 
 final readonly & map<wasm:Op> intArithmeticOps = {
     "+": "i64.add",
@@ -67,12 +80,54 @@ final RuntimeFunction checkOverflowDivFunction = {
     rtModule: numberMod
 };
 
+final RuntimeFunction decimalFromFloatFunction = {
+    name: "_bal_decimal_from_float",
+    returnType: { base: DECIMAL_TYPE },
+    rtModule: numberMod
+};
+
+final RuntimeFunction decimalFromIntFunction = {
+    name: "_bal_decimal_from_int",
+    returnType: { base: DECIMAL_TYPE },
+    rtModule: numberMod
+};
+
+final RuntimeFunction decimalToFloatFunction = {
+    name: "_bal_decimal_to_float",
+    returnType: "f64",
+    rtModule: numberMod
+};
+
+final RuntimeFunction decimalToIntFunction = {
+    name: "_bal_decimal_to_int",
+    returnType: "i64",
+    rtModule: numberMod
+};
+
 final readonly & map<RuntimeFunction> overflowFunction = {
     "i64.add": checkOverflowAddFunction,
     "i64.sub": checkOverflowSubFunction,
     "i64.mul": checkOverflowMulFunction,
     "i64.div_s": checkOverflowDivFunction
 };
+
+final readonly & map<string> decimalArithmeticFuncNames = {
+    "+": "add",
+    "-": "sub",
+    "*": "mul",
+    "/": "div",
+    "%": "rem"
+};
+
+final readonly & map<RuntimeFunction> decimalArithmeticFuncs = createDecimalArithmeticFuncs();
+
+function createDecimalArithmeticFuncs() returns readonly & map<RuntimeFunction> {
+    map<RuntimeFunction> m = {};
+    foreach var [op, name] in decimalArithmeticFuncNames.entries() {
+        m[op] = { name: "_bal_decimal_" + name, returnType: "eqref", rtModule: numberMod };
+    }
+    return m.cloneReadOnly();
+}
 
 function buildBitwiseBinary(wasm:Module module, bir:IntBitwiseBinaryInsn insn) returns wasm:Expression {
     wasm:Op op = binaryBitwiseOp.get(insn.op);
@@ -96,10 +151,21 @@ function buildArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:IntAri
 
 function buildConvertToInt(wasm:Module module, Scaffold scaffold, bir:ConvertToIntInsn insn) returns wasm:Expression {
     var [repr, val] = buildReprValue(module, scaffold, insn.operand);
+    wasm:Expression result;
     if repr.base == BASE_REPR_FLOAT {
-        return buildStore(module, insn.result, module.unary("i64.trunc_f64_s", val));
+        result = module.unary("i64.trunc_f64_s", val);
     }
-    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold.getComponent(), convertToIntFunction, [val]));
+    else if repr is TaggedRepr && repr.subtype == t:DECIMAL {
+        result = buildConvertDecimalToInt(module, scaffold, val, insn);
+    }
+    else {
+        result = buildRuntimeFunctionCall(module, scaffold.getComponent(), convertToIntFunction, [val]);    
+    }
+    return buildStore(module, insn.result, buildConvertRepr(module, REPR_INT, result, scaffold.getRepr(insn.result)));
+}
+
+function buildConvertDecimalToInt(wasm:Module module, Scaffold scaffold, wasm:Expression decimalVal, bir:ConvertToIntInsn insn) returns wasm:Expression {
+    return buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalToIntFunction, [decimalVal]);
 }
 
 function buildNoPanicArithmeticBinary(wasm:Module module, bir:IntNoPanicArithmeticBinaryInsn insn) returns wasm:Expression {
@@ -111,10 +177,22 @@ function buildNoPanicArithmeticBinary(wasm:Module module, bir:IntNoPanicArithmet
 
 function buildConvertToFloat(wasm:Module module, Scaffold scaffold, bir:ConvertToFloatInsn insn) returns wasm:Expression { 
     var [repr, val] = buildReprValue(module, scaffold, insn.operand);
+    wasm:Expression result;
     if repr.base == BASE_REPR_INT {
-        return buildStore(module, insn.result, module.unary("f64.convert_i64_s", val));
+        result = module.unary("f64.convert_i64_s", val);
     }
-    return buildStore(module, insn.result, buildRuntimeFunctionCall(module, scaffold.getComponent(), convertToFloatFunction, [val]));
+    else if repr is TaggedRepr && repr.subtype == t:DECIMAL {
+        result = buildConvertDecimalToFloat(module, scaffold, val, insn);
+    }
+    else {
+        result = buildRuntimeFunctionCall(module, scaffold.getComponent(), convertToFloatFunction, [val]);
+    }
+    return buildStore(module, insn.result, buildConvertRepr(module, REPR_FLOAT, result, scaffold.getRepr(insn.result)));
+
+}
+
+function buildConvertDecimalToFloat(wasm:Module module, Scaffold scaffold, wasm:Expression decimalVal, bir:ConvertToFloatInsn insn) returns wasm:Expression {
+    return buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalToFloatFunction, [decimalVal]);
 }
 
 function buildFloatArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:FloatArithmeticBinaryInsn insn) returns wasm:Expression {
@@ -135,3 +213,41 @@ function buildFloatNegate(wasm:Module module, bir:FloatNegateInsn insn) returns 
     wasm:Expression operand = buildFloat(module, insn.operand);
     return buildStore(module, insn.result, module.unary("f64.neg", operand));
 }
+
+function buildDecimalArithmeticBinary(wasm:Module module, Scaffold scaffold, bir:DecimalArithmeticBinaryInsn insn) returns wasm:Expression {
+    wasm:Expression lhs = buildDecimal(module, scaffold, insn.operands[0]);
+    wasm:Expression rhs = buildDecimal(module, scaffold, insn.operands[1]);
+    wasm:Expression result = buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalArithmeticFuncs.get(insn.op), [lhs, rhs]);
+    return buildStore(module, insn.result, result);                                  
+}
+
+function buildDecimalNegate(wasm:Module module, Scaffold scaffold, bir:DecimalNegateInsn insn) returns wasm:Expression {
+    wasm:Expression operand = buildDecimal(module, scaffold, insn.operand);
+    wasm:Expression result = buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalNegFunction, [operand]);
+    return buildStore(module, insn.result, result);
+}
+
+function buildConvertToDecimal(wasm:Module module, Scaffold scaffold, bir:ConvertToDecimalInsn insn) returns wasm:Expression {
+    var [repr, val] = buildReprValue(module, scaffold, insn.operand);
+    if repr.base == BASE_REPR_INT {
+        return buildConvertIntToDecimal(module, scaffold, val, insn);
+    }
+    else if repr.base == BASE_REPR_FLOAT {
+        return buildConvertFloatToDecimal(module, scaffold, val, insn);
+    }
+    // convert to decimal from reference
+    wasm:Expression result = buildRuntimeFunctionCall(module, scaffold.getComponent(), convertToDecimalFunction, [val]);
+    return buildStore(module, insn.result, result);   
+}
+
+
+function buildConvertIntToDecimal(wasm:Module module, Scaffold scaffold, wasm:Expression intVal, bir:ConvertToDecimalInsn insn) returns wasm:Expression {
+    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalFromIntFunction, [intVal]);
+    return buildStore(module, insn.result, call);
+}
+
+function buildConvertFloatToDecimal(wasm:Module module, Scaffold scaffold, wasm:Expression floatVal, bir:ConvertToDecimalInsn insn) returns wasm:Expression {
+    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalFromFloatFunction, [floatVal]);
+    return buildStore(module, insn.result, call);
+}
+

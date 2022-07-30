@@ -14,13 +14,11 @@ final RuntimeFunction typeContainsFunction = {
 };
 
 function buildTypeCast(wasm:Module module, Scaffold scaffold, bir:TypeCastInsn insn) returns wasm:Expression {
-    var [_, val] = buildReprValue(module, scaffold, insn.operand);
+    var [sourceRepr, val] = buildReprValue(module, scaffold, insn.operand);
     t:SemType semType = insn.semType;
-    Repr repr = semTypeRepr(semType);
-    wasm:Expression sourceTy = buildRuntimeFunctionCall(module, scaffold.getComponent(), getTypeFunction, [val]);
-    wasm:Expression targetTy = module.addConst({ i32: t:widenToUniformTypes(semType) });
-    return module.addIf(buildIsSubType(module, sourceTy, targetTy), 
-                        buildStore(module, insn.result, buildUntagged(module, scaffold, val, repr)), 
+    Repr targetRepr = scaffold.getRepr(insn.result);
+    return module.addIf(buildTypeTestedValue(module, scaffold, insn.operand, semType), 
+                        buildStore(module, insn.result, buildMaybeUntag(module, scaffold, val, sourceRepr, targetRepr)), 
                         module.throw(BAD_CONVERSION_TAG));
 }
 
@@ -51,9 +49,13 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
                                     module.binary("i64.ge_s", constraintMax, value));
         }
         else {
-            hasType = module.binary("i64.eq", 
-                                    buildLoad(module, operand), 
-                                    module.addConst({ i64 : 0 }));
+            t:IntSubtype subtype = <t:IntSubtype>t:intSubtype(semType);
+            foreach t:Range range in subtype {
+                wasm:Expression cond = module.binary("i32.and", 
+                                                     module.binary("i64.le_s", module.addConst({ i64: range.min}), value),
+                                                     module.binary("i64.ge_s", module.addConst({ i64: range.max}), value));
+                hasType = hasType != () ? module.binary("i32.or", cond, hasType) : cond;
+            }
         }
     }
     else if baseRepr == BASE_REPR_FLOAT {
@@ -61,6 +63,13 @@ function buildTypeTestedValue(wasm:Module module, Scaffold scaffold, bir:Registe
         if sub.allowed {
             foreach float val in sub.values {
                 wasm:Expression cond = module.binary("f64.eq", value, module.addConst({ f64: val }));
+                float NaN = 0.0/0.0;
+                if val == NaN {
+                    cond = module.unary("i32.eqz", module.binary("f64.eq", value, value));
+                }
+                else {
+                    cond = module.binary("f64.eq", value, module.addConst({ f64: val }));
+                }
                 hasType = hasType != () ? module.binary("i32.or", cond, hasType) : cond;
             }
         }
@@ -123,4 +132,20 @@ function buildTypeTest(wasm:Module module, Scaffold scaffold, bir:TypeTestInsn i
 
 function buildIsSubType(wasm:Module module, wasm:Expression super, wasm:Expression sub) returns wasm:Expression {
     return module.binary("i32.eq", module.binary("i32.and", super, sub), super); 
+}
+
+function buildTypeMerge(wasm:Module module, Scaffold scaffold, bir:TypeMergeInsn insn) returns wasm:Expression {
+    bir:Register unnarrowed = unnarrow(insn.operands[0]);
+    var [sourceRepr, value] = buildReprValue(module, scaffold, unnarrowed);
+    wasm:Expression narrowed = buildNarrowRepr(module, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
+    return buildStore(module, insn.result, narrowed);
+}
+
+function unnarrow(bir:Register reg) returns bir:Register {
+    if reg is bir:NarrowRegister {
+        return unnarrow(reg.underlying);
+    }
+    else {
+        return reg;
+    }
 }

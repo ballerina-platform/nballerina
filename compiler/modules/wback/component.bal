@@ -9,11 +9,21 @@ const INHERENT_TYPE = 1;
 
 type Usage TYPE_TEST|INHERENT_TYPE;
 
+// value which is the key is not a decimal is because of a bug in JBallerina
+type DecimalRecord record {
+    readonly string value;
+    string global;
+    wasm:Expression offsetExpr;
+    string byteStr;
+    wasm:Expression[] body;
+};
+
 public class Component {
     final wasm:Module module;
     private ExceptionTag[] exceptionTags = [];
     private string[] globals = [];
     map<StringRecord> segments = {};
+    private table<DecimalRecord> key(value) decimalConsts = table [];
     private int offset = 0;
     private RuntimeModule?[] rtModules = [commonMod];
     private string[] rtFunctions = [];
@@ -53,6 +63,20 @@ public class Component {
         int length = val.toBytes().length();
         StringRecord newRec = buildGlobalString(self.module, self, val, global, surrogate, self.offset, length);
         self.segments[val] = newRec; 
+        self.offset += length;
+        return global;
+    }
+
+    function maybeAddDecimalRecord(decimal val) returns string {
+        DecimalRecord? rec = self.decimalConsts[val.toString()];
+        if rec != () {
+            return rec.global;
+        }
+        int numDecimal = self.decimalConsts.length();
+        string global = "bal$dec" + numDecimal.toString();
+        int length = val.toString().toBytes().length();
+        DecimalRecord newRec = buildGlobalDecimal(self.module, self, val, global, self.offset, length);
+        self.decimalConsts.add(newRec); 
         self.offset += length;
         return global;
     }
@@ -103,7 +127,7 @@ public class Component {
         wasm:Expression? mainBody = self.mainBody;
         string? mainMangledName = self.mainMangledName;
         if mainBody != () && mainMangledName != (){
-            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.offset, self.types, self.subtypeStructs, self.complexTypeDefns), mainBody]);
+            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.decimalConsts, self.offset, self.types, self.subtypeStructs, self.complexTypeDefns), mainBody]);
             module.addFunction(mainMangledName, [], "None", self.mainLocals, extendedBody);
         }
         return module.finish();
@@ -117,11 +141,18 @@ public class Component {
 
 }
 
-function initGlobals(wasm:Module module, map<StringRecord> segments, int offset, wasm:Expression[] types, SubtypeStruct[] structs, table<ComplexTypeDefn> key(semType) complexTypeDefns) returns wasm:Expression {
+function initGlobals(wasm:Module module, map<StringRecord> segments, table<DecimalRecord> key(value) decimalConsts, int offset, wasm:Expression[] types, SubtypeStruct[] structs, table<ComplexTypeDefn> key(semType) complexTypeDefns) returns wasm:Expression {
     wasm:Expression[] body = [];
     wasm:Expression[] offsetExprs = [];
     string[] byteStrs = [];
     foreach StringRecord rec in segments {
+        body.push(...rec.body);
+        offsetExprs.push(rec.offsetExpr);
+        byteStrs.push(rec.byteStr);
+    }
+    string[] keys = decimalConsts.keys();
+    foreach string val in keys {
+        DecimalRecord rec = decimalConsts.get(val);
         body.push(...rec.body);
         offsetExprs.push(rec.offsetExpr);
         byteStrs.push(rec.byteStr);

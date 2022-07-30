@@ -227,6 +227,7 @@ final TaggedRepr REPR_LIST = { subtype: t:LIST, wasm: { base: LIST_TYPE } };
 final TaggedRepr REPR_MAPPING_RW = { subtype: t:MAPPING_RW, wasm: { base: MAP_TYPE } };
 final TaggedRepr REPR_MAPPING = { subtype: t:MAPPING, wasm: { base: MAP_TYPE } };
 final TaggedRepr REPR_ERROR = { subtype: t:ERROR, wasm: { base: ERROR_TYPE } };
+final TaggedRepr REPR_DECIMAL = { subtype: t:DECIMAL, wasm: { base: DECIMAL_TYPE } };
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, wasm: WASM_VOID };
 
 final readonly & record {|
@@ -236,6 +237,7 @@ final readonly & record {|
     { domain: t:FLOAT, repr: REPR_FLOAT },
     { domain: t:INT, repr: REPR_INT },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
+    { domain: t:DECIMAL, repr: REPR_DECIMAL },
     { domain: t:NIL, repr: REPR_NIL },
     { domain: t:ANY, repr: REPR_ANY },
     { domain: t:TOP, repr: REPR_ANY },

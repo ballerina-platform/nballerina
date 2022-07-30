@@ -1,6 +1,8 @@
 (module 
   ;; type
   (type $arrayCompFunc (func (param eqref eqref) (result i32)))
+  ;; import
+  (import "decimal" "comp" (func $_js_decimal_compare (param anyref) (param anyref) (result i32))) 
   ;; $_bal_array_int_compare
   (func $_bal_array_int_compare (param $0 eqref) (param $1 eqref) (result i32)
     (return 
@@ -22,6 +24,13 @@
         (local.get $0)
         (local.get $1)
         (ref.func $_bal_opt_string_compare))))
+  ;; $_bal_array_decimal_compare
+  (func $_bal_array_decimal_compare (param $0 eqref) (param $1 eqref) (result i32)
+    (return 
+      (call $_bal_array_compare 
+        (local.get $0)
+        (local.get $1)
+        (ref.func $_bal_opt_decimal_compare))))
   ;; $_bal_array_boolean_compare
   (func $_bal_array_boolean_compare (param $0 eqref) (param $1 eqref) (result i32)
     (return 
@@ -89,6 +98,14 @@
             (local.get $0))
           (call $_bal_tagged_to_float
             (local.get $1)))))
+    (if
+      (i32.eq 
+        (local.get $2)
+        (i32.const 512))
+      (return
+        (call $_bal_decimal_compare
+          (local.get $0)
+          (local.get $1))))
     (if
       (i32.eq 
         (local.get $2)
@@ -277,6 +294,28 @@
         (call $_bal_string_compare
           (local.get $0)
           (local.get $1)))))
+  ;; $_bal_opt_decimal_compare
+  (func $_bal_opt_decimal_compare (param $0 eqref) (param $1 eqref) (result i32)
+    (local $3 i32)
+    (local $4 i32)
+    (local.set $3
+      (ref.is_null
+        (local.get $0)))
+    (local.set $4
+      (ref.is_null
+        (local.get $1)))
+    (if
+      (i32.or
+        (local.get $3)
+        (local.get $4))
+      (return 
+        (call $_bal_opt_null_check
+          (local.get $0)
+          (local.get $1)))       
+      (return
+        (call $_bal_decimal_compare
+          (local.get $0)
+          (local.get $1)))))
   ;; $_bal_opt_boolean_compare
   (func $_bal_opt_boolean_compare (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32)
@@ -405,6 +444,20 @@
         (i32.const 1))
       (return 
         (i32.const -1))))
+  ;; $_bal_decimal_compare
+  (func $_bal_decimal_compare (param $0 eqref) (param $1 eqref) (result i32) 
+    (return 
+      (call $_js_decimal_compare
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $0))
+            (global.get $rttDecimal)))
+        (struct.get $Decimal $val 
+          (ref.cast
+            (ref.as_data
+              (local.get $1))
+            (global.get $rttDecimal))))))
   ;; $_bal_string_compare
   (func $_bal_string_compare (param $0 eqref) (param $1 eqref) (result i32)
     (return

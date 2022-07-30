@@ -47,6 +47,9 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         else if insn is bir:TypeBranchInsn {
             body.push(buildTypeBranch(module, scaffold, insn));
         }
+        else if insn is bir:TypeMergeInsn {
+            body.push(buildTypeMerge(module, scaffold, insn));
+        }
         else if insn is bir:TypeTestInsn {
             body.push(buildTypeTest(module, scaffold, insn));
         }
@@ -58,6 +61,15 @@ function buildBasicBlock(Scaffold scaffold, wasm:Module module, bir:BasicBlock b
         }
         else if insn is bir:FloatNegateInsn {
             body.push(buildFloatNegate(module, insn));
+        }
+        else if insn is bir:DecimalArithmeticBinaryInsn {
+            body.push(buildDecimalArithmeticBinary(module, scaffold, insn));
+        }        
+        else if insn is bir:DecimalNegateInsn {
+            body.push(buildDecimalNegate(module, scaffold, insn));
+        }
+        else if insn is bir:ConvertToDecimalInsn {
+            body.push(buildConvertToDecimal(module, scaffold, insn));
         }
         else if insn is bir:ListConstructInsn {
             body.push(buildListConstruct(module, scaffold, insn));

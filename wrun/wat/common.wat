@@ -11,11 +11,12 @@
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
   (type $Desc (struct (field $tid i32))) 
-  (type $MappingDesc (struct (field $tid i32) (field $nFields i32) (field $restType eqref) (field $fieldTypes (mut (ref $AnyList))))) 
-  (type $ListDesc (struct (field $tid i32) (field $restType eqref) (field $filler eqref))) 
+  (type $ListDesc (struct (field $tid i32) (field $restType eqref) (field $filler eqref) (field $minLength i32) (field $memberTypes (mut (ref $AnyList))) )) 
+  (type $MappingDesc (struct (field $tid i32) (field $restType eqref) (field $filler eqref) (field $nFields i32) (field $fieldTypes (mut (ref $AnyList))))) 
   (type $Map (struct (field $type i32) (field $desc (mut (ref $MappingDesc))) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
+  (type $Decimal (struct (field $type i32) (field $val (mut anyref)))) 
   (type $List (struct (field $type i32) (field $desc (ref $ListDesc)) (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
   (type $AnyList (array (mut eqref))) 
   (type $Subtype (struct (field $func (ref $subTypeContains))))
@@ -30,6 +31,8 @@
   (type $StringSubtype (struct (field $func (ref $subTypeContains)) (field $charAllowed i32) (field $nonCharAllowed i32) (field $values (mut (ref $AnyList))))) 
   (type $FloatValues (array (mut f64))) 
   (type $FloatSubtype (struct (field $func (ref $subTypeContains)) (field $allowed i32) (field $values (mut (ref $FloatValues))))) 
+  (type $DecimalValues (array (mut (ref null $Decimal)))) 
+  (type $DecimalSubtype (struct (field $func (ref $subTypeContains)) (field $allowed i32) (field $values (mut (ref $DecimalValues))))) 
   (type $ArrMapSubtype (struct (field $func (ref $subTypeContains)) (field $bitSet i32))) 
   (type $SubTypeList (array (mut (ref null $Subtype))))
   (type $ComplexType (struct (field $all i32) (field $some i32) (field $subtypes (mut (ref $SubTypeList))))) 
@@ -43,6 +46,7 @@
   (global $rttFloat (rtt 1 $Float) (rtt.sub $Float (global.get $rttAny)))
   (global $rttList (rtt 1 $List) (rtt.sub $List (global.get $rttAny)))
   (global $rttString (rtt 1 $String) (rtt.sub $String (global.get $rttAny)))
+  (global $rttDecimal (rtt 1 $Decimal) (rtt.sub $Decimal (global.get $rttAny)))
   (global $rttMap (rtt 1 $Map) (rtt.sub $Map (global.get $rttAny)))
   (global $rttError (rtt 1 $Error) (rtt.sub $Error (global.get $rttAny)))
   (global $rttSubtype (rtt 0 $Subtype) (rtt.canon $Subtype))
@@ -52,6 +56,7 @@
   (global $rttIntSubtype (rtt 1 $IntSubtype) (rtt.sub $IntSubtype (global.get $rttSubtype)))
   (global $rttFloatSubtype (rtt 1 $FloatSubtype) (rtt.sub $FloatSubtype (global.get $rttSubtype)))
   (global $rttStringSubtype (rtt 1 $StringSubtype) (rtt.sub $StringSubtype (global.get $rttSubtype)))
+  (global $rttDecimalSubtype (rtt 1 $DecimalSubtype) (rtt.sub $DecimalSubtype (global.get $rttSubtype)))
   (global $rttDesc (rtt 0 $Desc) (rtt.canon $Desc))
   (global $rttMappingDesc (rtt 1 $MappingDesc) (rtt.sub $MappingDesc (global.get $rttDesc)))
   (global $rttListDesc (rtt 1 $ListDesc) (rtt.sub $ListDesc (global.get $rttDesc)))
@@ -70,6 +75,7 @@
   (export "_bal_get_type_children" (func $_bal_get_type_children)) 
   (export "_bal_get_error" (func $_bal_get_error)) 
   (export "_bal_get_string" (func $_bal_get_string))
+  (export "_bal_get_decimal" (func $_bal_get_decimal))
   ;; $toHexString
   (func $toHexString (param $0 i64) (result (ref $String)) 
     (struct.new_with_rtt $String 
@@ -139,6 +145,13 @@
         (ref.as_data 
           (local.get $0)) 
         (global.get $rttString))))
+  ;; $_bal_get_decimal
+  (func $_bal_get_decimal (param $0 eqref) (result anyref) 
+    (struct.get $Decimal $val 
+      (ref.cast 
+        (ref.as_data 
+          (local.get $0)) 
+        (global.get $rttDecimal))))
   ;; $_bal_get_error
   (func $_bal_get_error (param $0 eqref) (result anyref) 
     (return 

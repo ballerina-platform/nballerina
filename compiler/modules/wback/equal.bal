@@ -39,6 +39,18 @@ final RuntimeFunction stringEqFunction = {
     rtModule: stringMod
 };
 
+final RuntimeFunction decimalExactEqFunction = {
+    name: "_bal_decimal_exact_eq",
+    returnType: "i32",
+    rtModule: numberMod
+};
+
+final RuntimeFunction decimalEqFunction = {
+    name: "_bal_decimal_eq",
+    returnType: "i32",
+    rtModule: numberMod
+};
+
 final readonly & map<map<wasm:Op>> integerCmpEqOp = {
     "i32": { "eq": "i32.eq", "ne": "i32.ne" },
     "i64": { "eq": "i64.eq", "ne": "i64.ne" }
@@ -54,6 +66,9 @@ function buildEquality(wasm:Module module, Scaffold scaffold, bir:EqualityInsn i
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
             if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
                 return buildEqualStringString(module, scaffold, op, lhsValue, rhsValue, result);
+            }
+            else if reprIsDecimal(lhsRepr) && reprIsDecimal(rhsRepr) {
+                return buildEqualDecimalDecimal(module, scaffold, exact, op, lhsValue, rhsValue, result);
             }
             else {
                 return buildEqualTaggedTagged(module, scaffold, exact, op, rhsValue, lhsValue, result);
@@ -93,6 +108,10 @@ function reprIsString(Repr repr) returns boolean {
     return repr is TaggedRepr && repr.subtype == t:STRING;
 }
 
+function reprIsDecimal(Repr repr) returns boolean {
+    return repr is TaggedRepr && repr.subtype == t:DECIMAL;
+}
+
 function buildEqualTaggedBoolean(wasm:Module module, Scaffold scaffold, CmpEqOp op, wasm:Expression tagged, wasm:Expression untagged, bir:Register result) returns wasm:Expression {
     wasm:Op operation = op == "eq" ? "i32.eq" : "i32.ne";
     wasm:Expression isBoolean = buildIsExactType(module, scaffold, tagged, TYPE_BOOLEAN);
@@ -128,6 +147,16 @@ function buildEqualFloat(wasm:Module module, Scaffold scaffold, CmpEqOp op, bool
 function buildEqualStringString(wasm:Module module, Scaffold scaffold, CmpEqOp op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
     RuntimeFunction func = stringEqFunction;
     wasm:Expression eq =  buildRuntimeFunctionCall(module, scaffold.getComponent(), func, [lhs, rhs]);
+    if op != "eq" {
+        eq = module.binary("i32.xor", eq, module.addConst({ i32: 1 }));
+    }
+    return buildStore(module, result, eq);
+}
+
+function buildEqualDecimalDecimal(wasm:Module module, Scaffold scaffold, boolean exact, CmpEqOp op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+    wasm:Expression eq;
+    RuntimeFunction rf = exact ? decimalExactEqFunction : decimalEqFunction;
+    eq = buildRuntimeFunctionCall(module, scaffold.getComponent(), rf, [lhs, rhs]);
     if op != "eq" {
         eq = module.binary("i32.xor", eq, module.addConst({ i32: 1 }));
     }
