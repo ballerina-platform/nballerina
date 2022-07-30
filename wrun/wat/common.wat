@@ -11,7 +11,7 @@
   (type $MapFieldArr (array (mut (ref null $MapField)))) 
   (type $MapFields (struct (field $members (mut (ref null $MapFieldArr))) (field $length (mut i32)))) 
   (type $Desc (struct (field $tid i32))) 
-  (type $ListDesc (struct (field $tid i32) (field $restType eqref) (field $filler eqref))) 
+  (type $ListDesc (struct (field $tid i32) (field $restType eqref) (field $filler eqref) (field $minLength i32) (field $memberTypes (mut (ref $AnyList))) )) 
   (type $MappingDesc (struct (field $tid i32) (field $restType eqref) (field $filler eqref) (field $nFields i32) (field $fieldTypes (mut (ref $AnyList))))) 
   (type $Map (struct (field $type i32) (field $desc (mut (ref $MappingDesc))) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 

@@ -20,7 +20,7 @@ let fileName = process.argv[2];
 const wasmBuffer = fs.readFileSync(fileName);
 
 const formatNumberString = (num, separator) => {
-  let parts = num.split("e");
+  let parts = num.toString().split("e");
   if (parts.length == 2) {
       let exponent = parts[1]
       exponent = exponent.replace("+","");

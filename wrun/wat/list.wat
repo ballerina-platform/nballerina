@@ -129,10 +129,11 @@
         (throw $index-too-large))
       (if 
         (i32.eqz
-          (call $_bal_member_type_contains_tagged
-            (struct.get $ListDesc $restType
-              (struct.get $List $desc
-                (local.get $0)))
+          (call $list_desc_allows_tagged_at
+            (struct.get $List $desc
+              (local.get $0))
+            (i32.wrap_i64
+              (local.get $2))
             (local.get $1))) 
         (throw $bad-list-store)) 
       (local.set $3 
@@ -217,6 +218,48 @@
             (i64.add 
               (local.get $2) 
               (i64.const 1)))))))
+  (func $list_desc_allows_tagged_at (param $0 (ref $ListDesc)) (param $1 i32) (param $2 eqref) (result i32)
+    (local $3 i32)
+    (local $4 (ref null $AnyList))
+    (local $5 i32)
+    (local $6 eqref)
+    (local.set $3
+      (struct.get $ListDesc $minLength
+        (local.get $0)))
+    (local.set $4
+      (struct.get $ListDesc $memberTypes
+        (local.get $0)))
+    (local.set $5
+      (array.len $AnyList
+        (ref.as_non_null
+          (local.get $4))))
+    (if
+      (i32.lt_s
+        (local.get $1)
+        (local.get $3))
+      (if
+        (i32.lt_s
+          (local.get $1)
+          (local.get $5))
+        (local.set $6
+          (array.get $AnyList
+            (ref.as_non_null
+              (local.get $4))
+            (local.get $1)))
+        (local.set $6
+          (array.get $AnyList
+            (ref.as_non_null
+              (local.get $4))
+            (i32.sub
+              (local.get $5)
+              (i32.const 1)))))
+      (local.set $6
+        (struct.get $ListDesc $restType
+          (local.get $0))))
+    (return
+      (call $_bal_member_type_contains_tagged
+        (local.get $6)
+        (local.get $2))))
   ;; $_bal_list_eq
   (func $_bal_list_eq (param $0 eqref) (param $1 eqref) (param $2 (ref null $EqStack)) (result i32)
     (local $3 i32)
@@ -304,6 +347,9 @@
     (local $2 (ref null $ArrMapSubtype))
     (local $3 i32)
     (local $4 (ref null $ListDesc))
+    (local $5 (ref null $AnyList))
+    (local $6 i32)
+    (local $7 i32)
     (local.set $2
       (ref.cast
         (ref.as_data
@@ -319,6 +365,37 @@
           (ref.as_data
             (local.get $1))
           (global.get $rttList))))
+    (local.set $5
+      (struct.get $ListDesc $memberTypes
+        (ref.as_non_null
+          (local.get $4))))
+    (local.set $6
+      (array.len $AnyList
+        (ref.as_non_null
+          (local.get $5))))
+    (local.set $7
+      (i32.const 0))
+    (loop $loop$cont
+      (if
+        (i32.lt_u
+          (local.get $7)
+          (local.get $6))
+        (block
+          (if
+            (i32.eqz
+              (call $_bal_member_type_is_subtype_simple
+                (array.get $AnyList
+                  (ref.as_non_null
+                    (local.get $5))
+                  (local.get $7))
+                (local.get $3)))
+            (return 
+              (i32.const 0)))
+          (local.set $7
+            (i32.add  
+              (local.get $7)
+              (i32.const 1)))
+          (br $loop$cont))))
     (return
       (call $_bal_member_type_is_subtype_simple
         (struct.get $ListDesc $restType

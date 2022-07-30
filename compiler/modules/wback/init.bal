@@ -116,7 +116,7 @@ function addInherentTypeDefn(Component component, wasm:Module module, string sym
     defns.add({ global: symbol, semType: semType, tid });
     wasm:Expression[] init;
     if basic == STRUCTURE_LIST {
-        init = [createListDesc(module, component, semType, symbol, tid)];        
+        init = createListDesc(module, component, semType, symbol, tid);        
     }
     else {
         init = createMappingDesc(module, component, semType, symbol, tid);        
@@ -145,14 +145,25 @@ function createMappingDesc(wasm:Module module, Component component, t:SemType se
     return body;
 }
 
-function createListDesc(wasm:Module module, Component component, t:SemType semType, string global, int tid) returns wasm:Expression {  
+function createListDesc(wasm:Module module, Component component, t:SemType semType, string global, int tid) returns wasm:Expression[] {  
     t:ListAtomicType lat = <t:ListAtomicType>t:listAtomicTypeRw(component.getTypeContext(), semType);
+    wasm:Expression[] body = [];
     wasm:Expression struct =  module.structNew(LIST_DESC, [
                                                             module.addConst({ i32: tid }),
                                                             getMemberType(module, component, lat.rest),
-                                                            getFillerDesc(component, module, lat.rest)
+                                                            getFillerDesc(component, module, lat.rest),
+                                                            module.addConst({ i32: lat.members.fixedLength }),
+                                                            module.arrayNewDef(ANY_ARR_TYPE, module.addConst({ i32: lat.members.initial.length() }))
                                                           ]);
-    return module.globalSet(global, struct);
+    body.push(module.globalSet(global, struct));
+    wasm:Expression[] members = from var ty in lat.members.initial select getMemberType(module, component, ty);
+    foreach int i in 0..<members.length() {
+        body.push(module.arraySet(ANY_ARR_TYPE, 
+                                  module.structGet(LIST_DESC, "memberTypes", module.refAs("ref.as_non_null", module.globalGet(global))), 
+                                  module.addConst({ i32: i }),
+                                  members[i]));
+    }
+    return body;
 }
 
 function getMemberType(wasm:Module module, Component component, t:SemType memberType) returns wasm:Expression {
