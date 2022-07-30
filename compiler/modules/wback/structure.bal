@@ -30,6 +30,12 @@ final RuntimeFunction listGetFunction = {
     rtModule: listMod
 };
 
+final RuntimeFunction listFillingGetFunction = {
+    name: "_bal_list_filling_get",
+    returnType: "eqref",
+    rtModule: listMod
+};
+
 final RuntimeFunction mappingConstructFunction = {
     name: "_bal_mapping_construct",
     returnType: { base: "Map" },
@@ -100,7 +106,8 @@ function buildListConstruct(wasm:Module module, Scaffold scaffold, bir:ListConst
 function buildListGet(wasm:Module module, Scaffold scaffold, bir:ListGetInsn insn) returns wasm:Expression {
     wasm:Expression listOperand = buildLoad(module, insn.operands[0]);
     wasm:Expression indexOperand = module.unary("i32.wrap_i64", buildRepr(module, scaffold, insn.operands[1], REPR_INT));
-    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), listGetFunction, [listOperand, indexOperand]);
+    RuntimeFunction rf = insn.fill ? listFillingGetFunction : listGetFunction;
+    wasm:Expression call = buildRuntimeFunctionCall(module, scaffold.getComponent(), rf, [listOperand, indexOperand]);
     Repr repr = semTypeRepr(insn.result.semType);
     if repr !is TaggedRepr {
         return buildStore(module, insn.result, buildUntagged(module, scaffold, call, repr));

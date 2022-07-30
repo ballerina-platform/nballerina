@@ -46,8 +46,8 @@
     (return
       (ref.as_non_null
         (local.get $4))))
-  ;; $_bal_list_get
-  (func $_bal_list_get (param $0 eqref) (param $1 i32) (result eqref) 
+  ;; $_bal_list_filling_get
+  (func $_bal_list_filling_get (param $0 eqref) (param $1 i32) (result eqref) 
     (local $2 (ref null $List))
     (local $3 i64)
     (local.set $2
@@ -85,6 +85,32 @@
               (local.get $2)) 
             (local.get $1)))
         (throw $no-filler-value)) 
+      (throw $index-outof-bound)))
+  ;; $_bal_list_get
+  (func $_bal_list_get (param $0 eqref) (param $1 i32) (result eqref) 
+    (local $2 (ref null $List))
+    (local.set $2
+      (ref.cast 
+        (ref.as_data 
+          (local.get $0)) 
+        (global.get $rttList)))
+    (if 
+      (i32.eqz 
+        (i32.or 
+          (i32.lt_s 
+            (local.get $1) 
+            (i32.const 0))
+          (i32.ge_s 
+            (local.get $1) 
+            (i32.wrap_i64 
+              (call $_bal_casted_list_length 
+                (ref.as_non_null
+                  (local.get $2))))))) 
+      (return 
+        (call $_bal_list_get_cast 
+          (ref.as_non_null
+            (local.get $2)) 
+          (local.get $1))) 
       (throw $index-outof-bound)))
   ;; $_bal_list_set
   (func $_bal_list_set (param $0 (ref $List)) (param $1 eqref) (param $2 i64) 
