@@ -7,4 +7,7 @@ public function main() {
     if l is [int, int] {
         io:println("int, int"); // @output int, int
     }
+    if l is L1 {
+        io:println("int, int"); // @output int, int
+    }
 }
