@@ -117,7 +117,7 @@ function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negLi
             return checkMutableCellSubtyeRelation(cx, combined, negList);
         }
         MATCHING_CELL|_ => {
-            return hasMatchingCellSubtypeRelation(cx, combined, negList);
+            return checkMatchingCellSubtypeRelation(cx, combined, negList);
         }
     }
 }
@@ -162,7 +162,7 @@ function checkMutableCellSubtyeRelation(Context cx, SemType combined, Conjunctio
     return false;
 }
 
-function hasMatchingCellSubtypeRelation(Context cx, SemType posCombined, Conjunction? negList) returns boolean {
+function checkMatchingCellSubtypeRelation(Context cx, SemType posCombined, Conjunction? negList) returns boolean {
     Conjunction? n = negList;
     while true {
         if n == () {

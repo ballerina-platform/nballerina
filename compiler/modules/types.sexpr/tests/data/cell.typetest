@@ -6,6 +6,44 @@
       (cell-b (cell int readonly)))
      (assert< cell-a cell-b))
 
-//(let ((cell-a (cell boolean readonly))
-//      (cell-b (cell int readonly)))
-//     (assert<> cell-a cell-b))    
+(let ((cell-a (cell (| int boolean) readonly))
+      (cell-b (cell (| int boolean) readonly)))
+     (assert= cell-a cell-b))
+          
+(let ((cell-a (cell int readonly))
+      (cell-b (cell int readonly)))
+     (assert= cell-a cell-b))
+
+(let ((cell-a (cell int mutable))
+      (cell-b (cell int mutable)))
+     (assert= cell-a cell-b))
+
+(let ((cell-a (cell (int (0 255)) readonly))
+      (cell-b (cell int readonly)))
+     (assert< cell-a cell-b))
+
+(let ((cell-a (cell (int (0 255)) mutable))
+      (cell-b (cell int mutable)))
+     (assert< cell-a cell-b))
+
+(let ((cell-a (cell boolean readonly))
+      (cell-b (cell int readonly)))
+     (assert<> cell-a cell-b))
+
+(let ((cell-a (cell boolean mutable))
+      (cell-b (cell int mutable)))
+     (assert<> cell-a cell-b))
+
+(let ((cell-a (cell boolean readonly))
+      (cell-b (cell int readonly)))
+     (assert<> cell-a cell-b))
+
+(let ((int-cell (cell int readonly))
+      (boolean-cell (cell boolean readonly))
+      (int-or-boolean-cell (cell (| int boolean) readonly)))
+     (assert= (| int-cell boolean-cell) int-or-boolean-cell))
+
+(let ((int-cell (cell int mutable))
+      (boolean-cell (cell boolean mutable))
+      (int-or-boolean-cell (cell (| int boolean) mutable)))
+     (assert< (| int-cell boolean-cell) int-or-boolean-cell))
