@@ -11,44 +11,11 @@ public type CellAtomicType readonly & record {|
     CellMutability m;
 |};
 
-public class CellDefinition {
-    *Definition;
-    private RecAtom? rec = ();
-    private ComplexSemType? semType = ();
-
-    public function getSemType(Env env) returns ComplexSemType {
-        ComplexSemType? s = self.semType;
-        if s == () {
-            RecAtom rec = env.recCellAtom();
-            self.rec = rec;
-            return self.createSemType(env, rec);
-        }
-        else {
-            return s;
-        }
-    }
-
-    public function define(Env env, SemType t, CellMutability m) returns ComplexSemType {
-        CellAtomicType cellType = {t, m};
-        Atom atom;
-        RecAtom? rec = self.rec;
-        if rec != () {
-            atom = rec;
-            env.setRecCellAtomType(rec, cellType);
-        }
-        else {
-            atom = env.cellAtom(cellType);
-        }
-
-        return self.createSemType(env, atom);
-    }
-
-    private function createSemType(Env env, Atom atom) returns ComplexSemType {
-        BddNode bdd = bddAtom(atom);
-        ComplexSemType s = createComplexSemType(0, [[UT_CELL, bdd]]);
-        self.semType = s;
-        return s;
-    }
+public function cellContaining(Env env, SemType t, CellMutability m) returns SemType {
+    CellAtomicType cellType = {t, m};
+    Atom atom = env.cellAtom(cellType);
+    BddNode bdd = bddAtom(atom);
+    return createComplexSemType(0, [[UT_CELL, bdd]]);
 }
 
 function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -83,7 +50,7 @@ function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negLi
     CellMutability minM;
     if posList == () {
         combined = TOP;
-        minM = 2; // TODO: revisit
+        minM = 2;
     }
     else {
         CellAtomicType cellAtomType = cx.cellAtomType(posList.atom);

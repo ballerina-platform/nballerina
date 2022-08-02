@@ -107,8 +107,7 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
             }
 
             t:SemType semType = semTypeFromSexpr(env, bindings, t);
-            t:CellDefinition d = new;
-            return d.define(env, semType, m);
+            return t:cellContaining(env, semType, m);
         }
     }
 
