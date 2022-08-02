@@ -116,36 +116,27 @@ type BddPath record {|
     Atom[] neg = [];
 |};
 
-function bddPaths(Env env, Bdd b, BddPath[] paths, BddPath accum) {
+function bddPaths(Env env, Bdd b, BddPath[] paths, BddPath accum, function(Env, BddNode, BddNode) returns BddPath intersectionToPath) {
     if b is boolean {
         if b {
             paths.push(accum);
         }
     }
     else {
-        Atom atom = b.atom;
         Bdd leftNode = b.left;
-        // TODO: this check is common for both list and mapping
-        if atom is TypeAtom && leftNode is BddNode {
-            if b.right == false && b.middle is false {
-                var atomicType = atom.atomicType is MappingAtomicType ? mappingIntersectionToAtomicType(env, b, leftNode) : listIntersectionToAtomicType(env, b, leftNode);
-                if atomicType !is () {
-                    TypeAtom tyAtom = { index: atom.index, atomicType };
-                    Bdd bdd = bddAtom(tyAtom);
-                    return paths.push({ bdd, pos: [atom, leftNode.atom], neg: []});
-                }
-            }
+        if leftNode is BddNode {
+            return paths.push(intersectionToPath(env, b, leftNode));
         }
         else {
             BddPath left = accum.clone();
             BddPath right = accum.clone();
             left.pos.push(b.atom);
             left.bdd = bddIntersect(left.bdd, bddAtom(b.atom));
-            bddPaths(env, b.left, paths, left);
-            bddPaths(env, b.middle, paths, accum);
+            bddPaths(env, b.left, paths, left, intersectionToPath);
+            bddPaths(env, b.middle, paths, accum, intersectionToPath);
             right.neg.push(b.atom);
             right.bdd = bddDiff(right.bdd, bddAtom(b.atom));
-            bddPaths(env, b.right, paths, right);
+            bddPaths(env, b.right, paths, right, intersectionToPath);
         }
     }
 }

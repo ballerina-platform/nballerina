@@ -1122,7 +1122,7 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
     }
     else {
         BddPath[] paths = [];
-        bddPaths(cx.env, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), paths, {});
+        bddPaths(cx.env, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), paths, {}, listIntersectionToPath);
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         ListAlternative[] alts = [];
         foreach var { bdd, pos, neg } in paths {
@@ -1235,7 +1235,7 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
     }
     else {
         BddPath[] paths = [];
-        bddPaths(cx.env, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), paths, {});
+        bddPaths(cx.env, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), paths, {}, mappingIntersectionToPath);
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         MappingAlternative[] alts = [];
         foreach var { bdd, pos, neg } in paths {

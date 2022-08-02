@@ -449,7 +449,16 @@ function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean re
     }
 }
 
-function mappingIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns MappingAtomicType? {
+function mappingIntersectionToPath(Env env, BddNode lhs, BddNode rhs) returns BddPath {
+    TypeAtom atom = <TypeAtom>lhs.atom;
+    MappingAtomicType atomicType = mappingIntersectionToAtomicType(env, lhs, rhs);
+    TypeAtom tyAtom = { index: atom.index, atomicType };
+    Bdd bdd = bddAtom(tyAtom);
+    return { bdd, pos: [lhs.atom, rhs.atom], neg: []};
+}
+
+// TODO: better error messages
+function mappingIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns MappingAtomicType {
     MappingAtomicType lhsTy = env.mappingAtomType(lhs.atom);
     MappingAtomicType rhsTy = env.mappingAtomType(rhs.atom);
     if rhs.left is BddNode {
@@ -457,15 +466,16 @@ function mappingIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) retu
             // not a "pure" intersection (I think this shouldn't happen ever)
             // intersection between union and mapping type is empty
             // intersection between negative atom and mapping type is undefined
-            return ();
+            panic error("unexpected intersection");
         }
-        MappingAtomicType? newRhsTy = mappingIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
-        if newRhsTy is () {
-            return ();
-        }
+        MappingAtomicType newRhsTy = mappingIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
         rhsTy = newRhsTy;
     }
-    return intersectMapping(lhsTy, rhsTy).cloneReadOnly();
+    MappingAtomicType? atomicType = intersectMapping(lhsTy, rhsTy).cloneReadOnly();
+    if atomicType is () {
+        panic error("unexpected intersection");
+    }
+    return atomicType;
 }
 
 final UniformTypeOps mappingRoOps = {

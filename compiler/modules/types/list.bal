@@ -236,8 +236,16 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, indices, memberTypes, nRequired, neg);
 }
 
+function listIntersectionToPath(Env env, BddNode lhs, BddNode rhs) returns BddPath {
+    TypeAtom atom = <TypeAtom>lhs.atom;
+    ListAtomicType atomicType = listIntersectionToAtomicType(env, lhs, rhs);
+    TypeAtom tyAtom = { index: atom.index, atomicType };
+    Bdd bdd = bddAtom(tyAtom);
+    return { bdd, pos: [lhs.atom, rhs.atom], neg: []};
+}
+
 // TODO: this is similar to mappingIntersectionToAtomicType may be we can share code
-function listIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns ListAtomicType? {
+function listIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns ListAtomicType {
     ListAtomicType lhsTy = env.listAtomType(lhs.atom);
     ListAtomicType rhsTy = env.listAtomType(rhs.atom);
     if rhs.left is BddNode {
@@ -245,17 +253,14 @@ function listIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns
             // not a "pure" intersection (I think this shouldn't happen ever)
             // intersection between union and mapping type is empty
             // intersection between negative atom and mapping type is undefined
-            return ();
+            panic error("unexpected intersection");
         }
-        ListAtomicType? newRhsTy = listIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
-        if newRhsTy is () {
-            return ();
-        }
+        ListAtomicType newRhsTy = listIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
         rhsTy = newRhsTy;
     }
     var intersection = listIntersectWith(lhsTy.members, lhsTy.rest, rhsTy.members, rhsTy.rest);
     if intersection is () {
-        return ();
+        panic error("unexpected intersection");
     }
     return { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
 }
