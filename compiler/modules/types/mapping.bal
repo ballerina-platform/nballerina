@@ -457,23 +457,17 @@ function mappingIntersectionToPath(Env env, BddNode lhs, BddNode rhs) returns Bd
     return { bdd, pos: [lhs.atom, rhs.atom], neg: []};
 }
 
-// TODO: better error messages
 function mappingIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns MappingAtomicType {
     MappingAtomicType lhsTy = env.mappingAtomType(lhs.atom);
     MappingAtomicType rhsTy = env.mappingAtomType(rhs.atom);
     if rhs.left is BddNode {
-        if rhs.middle !is false || rhs.right !is false {
-            // not a "pure" intersection (I think this shouldn't happen ever)
-            // intersection between union and mapping type is empty
-            // intersection between negative atom and mapping type is undefined
-            panic error("unexpected intersection");
-        }
         MappingAtomicType newRhsTy = mappingIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
         rhsTy = newRhsTy;
     }
     MappingAtomicType? atomicType = intersectMapping(lhsTy, rhsTy).cloneReadOnly();
     if atomicType is () {
-        panic error("unexpected intersection");
+        // this should have been caught before (in resolveTypes) so shouldn't happen ever
+        panic error("empty intersection");
     }
     return atomicType;
 }

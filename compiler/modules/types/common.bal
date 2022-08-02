@@ -122,22 +122,19 @@ function bddPaths(Env env, Bdd b, BddPath[] paths, BddPath accum, function(Env, 
             paths.push(accum);
         }
     }
+    else if b.left is BddNode {
+        paths.push(intersectionToPath(env, b, <BddNode>b.left));
+    }
     else {
-        Bdd leftNode = b.left;
-        if leftNode is BddNode {
-            return paths.push(intersectionToPath(env, b, leftNode));
-        }
-        else {
-            BddPath left = accum.clone();
-            BddPath right = accum.clone();
-            left.pos.push(b.atom);
-            left.bdd = bddIntersect(left.bdd, bddAtom(b.atom));
-            bddPaths(env, b.left, paths, left, intersectionToPath);
-            bddPaths(env, b.middle, paths, accum, intersectionToPath);
-            right.neg.push(b.atom);
-            right.bdd = bddDiff(right.bdd, bddAtom(b.atom));
-            bddPaths(env, b.right, paths, right, intersectionToPath);
-        }
+        BddPath left = accum.clone();
+        BddPath right = accum.clone();
+        left.pos.push(b.atom);
+        left.bdd = bddIntersect(left.bdd, bddAtom(b.atom));
+        bddPaths(env, b.left, paths, left, intersectionToPath);
+        bddPaths(env, b.middle, paths, accum, intersectionToPath);
+        right.neg.push(b.atom);
+        right.bdd = bddDiff(right.bdd, bddAtom(b.atom));
+        bddPaths(env, b.right, paths, right, intersectionToPath);
     }
 }
 

@@ -244,23 +244,17 @@ function listIntersectionToPath(Env env, BddNode lhs, BddNode rhs) returns BddPa
     return { bdd, pos: [lhs.atom, rhs.atom], neg: []};
 }
 
-// TODO: this is similar to mappingIntersectionToAtomicType may be we can share code
 function listIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns ListAtomicType {
     ListAtomicType lhsTy = env.listAtomType(lhs.atom);
     ListAtomicType rhsTy = env.listAtomType(rhs.atom);
     if rhs.left is BddNode {
-        if rhs.middle !is false || rhs.right !is false {
-            // not a "pure" intersection (I think this shouldn't happen ever)
-            // intersection between union and mapping type is empty
-            // intersection between negative atom and mapping type is undefined
-            panic error("unexpected intersection");
-        }
         ListAtomicType newRhsTy = listIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
         rhsTy = newRhsTy;
     }
     var intersection = listIntersectWith(lhsTy.members, lhsTy.rest, rhsTy.members, rhsTy.rest);
     if intersection is () {
-        panic error("unexpected intersection");
+        // this should have been caught before (in resolveTypes), so shouldn't happen ever
+        panic error("empty intersection");
     }
     return { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
 }
