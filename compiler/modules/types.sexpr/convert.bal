@@ -9,6 +9,9 @@ public function semTypeFromSexpr(t:Env env, map<Atom> bindings, Type tySExpr) re
     else if tySExpr is Boolean {
         return t:BOOLEAN;
     }
+    else if tySExpr is String {
+        return t:STRING;
+    }
     else if tySExpr is IntSubtype {
         t:SemType intSubtype = t:NEVER;
         foreach int i in 1 ..< tySExpr.length() {
