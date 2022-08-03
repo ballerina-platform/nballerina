@@ -137,11 +137,20 @@ function transformContent(string line) returns [string, string[]] {
         // this is sufficient to catch current cases but not all possible cases
         newLabels.push("unary-plus");
     }
-    if line.indexOf("?:") is int {
+    if line.indexOf("?:") is int || line.indexOf(" ?") is int {
         newLabels.push("ternary-conditional-expr");
     }
     if line.indexOf("[*]") is int {
         newLabels.push("inferred-array-length");
+    }
+    if line.indexOf("?;") is int {
+        // this is sufficient to catch current cases but not all possible cases
+        int? starIndex = line.indexOf("{");
+        int? endIndex = line.indexOf("}");
+        int targetIndex = <int>line.indexOf("?;");
+        if starIndex is int && endIndex is int && starIndex < targetIndex && targetIndex < endIndex {
+            newLabels.push("optional-field");
+        }
     }
     return [newLine, newLabels];
 }
@@ -182,7 +191,13 @@ function parseCharSeparatedList(string s, string:Char sep) returns string[] {
 map<int[]> skipTest = {
     "list_constructor.balt": [6, 13, 15, 37, 49, 50], // #1003, JBUG, JBUG, BUG, #576, #576
     "negation_is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
-    "is_expr.balt": [38, 39, 54, 84, 87, 88] // JBUG
+    "is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
+    // decimal presentation JBUG #1046
+    "decimal_addition.balt": [1, 2, 11, 12],
+    "decimal_subtraction.balt": [1, 2, 11, 12],
+    "fixed_length_array_member_access_expr.balt": [14], // member access on a list constructor expr #1003
+    // not allowed under current grammar
+    "mapping_constructor_expr.balt": [8, 13, 11, 12] // unicode in the field name 8, 13; variable-name-field 11, 12
 };
 
 function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLabels) returns int|io:Error {
