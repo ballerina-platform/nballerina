@@ -41,7 +41,6 @@ public isolated class Env {
     private final ListAtomicType?[] recListAtoms = [ LIST_SUBTYPE_RO ];
     private final MappingAtomicType?[] recMappingAtoms = [ MAPPING_SUBTYPE_RO ];
     private final FunctionAtomicType?[] recFunctionAtoms = [];
-    private final CellAtomicType?[] recCellAtoms = [];
     // Count of the total number of non-nil members
     // of recListAtoms, recMappingAtoms and recFunctionAtoms
     private int recAtomCount = 2;
@@ -129,14 +128,6 @@ public isolated class Env {
         }
     }
 
-    isolated function recCellAtom() returns RecAtom {
-        lock {
-            int result = self.recCellAtoms.length();
-            self.recCellAtoms.push(());
-            return result;
-        }
-    }
-
     isolated function setRecListAtomType(RecAtom ra, ListAtomicType atomicType) {
         lock {
             self.recListAtoms[ra] = atomicType;
@@ -158,13 +149,6 @@ public isolated class Env {
         }
     }
 
-    isolated function setRecCellAtomType(RecAtom ra, CellAtomicType atomicType) {
-        lock {
-            self.recCellAtoms[ra] = atomicType;
-            self.recAtomCount += 1;
-        }
-    }    
-
     isolated function getRecListAtomType(RecAtom ra) returns ListAtomicType {
         lock {
             return <ListAtomicType>self.recListAtoms[ra];
@@ -182,12 +166,6 @@ public isolated class Env {
             return <FunctionAtomicType>self.recFunctionAtoms[ra];
         }
     }
-
-    isolated function getRecCellAtomType(RecAtom ra) returns CellAtomicType {
-        lock {
-            return <CellAtomicType>self.recCellAtoms[ra];
-        }
-    }    
 }
 
 public type BddMemo record {|
@@ -267,11 +245,10 @@ public class Context {
 
     function cellAtomType(Atom atom) returns CellAtomicType {
         if atom is RecAtom {
-            return self.env.getRecCellAtomType(atom);
+            panic error("cell cannot be a RecAtom");
         }
-        else {
-            return <CellAtomicType>atom.atomicType;
-        }
+        
+        return <CellAtomicType>atom.atomicType;
     }
 }
 

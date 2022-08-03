@@ -73,7 +73,6 @@
       (int-boolean-or-string-cell (cell (| int boolean string) matching)))
      (assert= (| int-cell boolean-cell string-cell) int-boolean-or-string-cell))
 
-
 (let ((int-list (list (int)))
       (boolean-list (list (boolean)))
       (int-or-boolean-list (list ((| int boolean)))))
