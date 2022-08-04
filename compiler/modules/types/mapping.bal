@@ -136,8 +136,7 @@ function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
         boolean? res = m.isEmpty;
         if res == () {
             // we've got a loop
-            // XXX is this right???
-            return true;
+            return false;
         }
         else {
             return res;

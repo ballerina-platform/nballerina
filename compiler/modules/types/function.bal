@@ -41,8 +41,7 @@ function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
         if res == () {
             // we've got a loop
             io:println("got a function loop");
-            // XXX is this right???
-            return true;
+            return false;
         }
         else {
             return res;
