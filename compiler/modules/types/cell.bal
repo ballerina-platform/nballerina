@@ -1,61 +1,39 @@
 // Implementation specific to basic type cell.
 
-public const READONLY_CELL = 0;
-public const MUTABLE_CELL = 1;
-public const MATCHING_CELL = 2;
+public const CELL_MUT_NONE = 0;
+public const CELL_MUT_LIMITED = 1;
+public const CELL_MUT_UNLIMITED = 2;
 
-public type CellMutability READONLY_CELL|MUTABLE_CELL|MATCHING_CELL;
+public type CellMutability CELL_MUT_NONE|CELL_MUT_LIMITED|CELL_MUT_UNLIMITED;
 
 public type CellAtomicType readonly & record {|
     SemType t;
-    CellMutability m;
+    CellMutability mut;
 |};
 
-public function cellContaining(Env env, SemType t, CellMutability m) returns SemType {
-    CellAtomicType cellType = {t, m};
-    Atom atom = env.cellAtom(cellType);
+public function cellContaining(Env env, SemType t, CellMutability mut) returns SemType {
+    CellAtomicType atomicCell = { t, mut };
+    Atom atom = env.cellAtom(atomicCell);
     BddNode bdd = bddAtom(atom);
     return createComplexSemType(0, [[UT_CELL, bdd]]);
 }
 
 function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
-    BddMemo? mm = cx.cellMemo[b];
-    BddMemo m;
-
-    if mm == () {
-        m = {bdd: b};
-        cx.cellMemo.add(m);
-    }
-    else {
-        m = mm;
-        boolean? res = m.isEmpty;
-        if res == () {
-            // we've got a loop
-            // XXX is this right???
-            return true;
-        }
-        else {
-            return res;
-        }
-    }
-
-    boolean isEmpty = bddEvery(cx, b, (), (), cellFormulaIsEmpty);
-    m.isEmpty = isEmpty;
-    return isEmpty;
+    return bddEvery(cx, <Bdd>t, (), (), cellFormulaIsEmpty);
 }
 
 function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
     SemType combined;
-    CellMutability minM;
+    CellMutability minMut;
+
     if posList == () {
         combined = TOP;
-        minM = 2;
+        minMut = CELL_MUT_UNLIMITED;
     }
     else {
         CellAtomicType cellAtomType = cx.cellAtomType(posList.atom);
         combined = cellAtomType.t;
-        minM = cellAtomType.m;
+        minMut = cellAtomType.mut;
 
         Conjunction? p = posList.next;
         while true {
@@ -66,102 +44,102 @@ function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negLi
             cellAtomType = cx.cellAtomType(p.atom);
             combined = intersect(combined, cellAtomType.t);
 
-            CellMutability newM = cellAtomType.m;
-            minM = minM > newM ? newM : minM;
+            minMut = <CellMutability>int:min(minMut, cellAtomType.mut);
             p = p.next;
         }
     }
 
-    if isEmpty(cx, combined) {
+    CellAtomicType combinedAtomicCell = { t: combined, mut: minMut };
+    return !cellInhabited(cx, combinedAtomicCell, negList);
+}
+
+function cellInhabited(Context cx, CellAtomicType atomicCell, Conjunction? negList) returns boolean {
+    SemType pos = atomicCell.t;
+
+    if isEmpty(cx, pos) {
+        return false;
+    }
+
+    match atomicCell.mut {
+        CELL_MUT_NONE => {
+            return cellMutNoneInhabited(cx, pos, negList);
+        }
+        CELL_MUT_LIMITED => {
+            return cellMutLimitedInhabited(cx, pos, negList);
+        }
+        CELL_MUT_UNLIMITED|_ => {
+            return cellMutUnlimitedInhabited(cx, pos, negList);
+        }
+    }
+}
+
+function cellMutNoneInhabited(Context cx, SemType pos, Conjunction? negList) returns boolean {
+    SemType negListUnionResult = cellNegListUnion(cx, negList);
+    return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
+}
+
+function cellNegListUnion(Context cx, Conjunction? negList) returns SemType {
+    SemType negUnion = NEVER;
+    Conjunction? neg = negList;
+
+    while true {
+        if neg == () {
+            break;
+        }
+
+        negUnion = union(negUnion, cx.cellAtomType(neg.atom).t);
+        neg = neg.next;
+    }
+
+    return negUnion;
+}
+
+function cellMutLimitedInhabited(Context cx, SemType pos, Conjunction? negList) returns boolean {
+    if negList == () {
         return true;
     }
 
-    match minM {
-        READONLY_CELL => {
-            return checkReadonlyCellSubptyeRelation(cx, combined, negList);
-        }
-        MUTABLE_CELL => {
-            return checkMutableCellSubtyeRelation(cx, combined, negList);
-        }
-        MATCHING_CELL|_ => {
-            return checkMatchingCellSubtypeRelation(cx, combined, negList);
-        }
-    }
-}
-
-function checkReadonlyCellSubptyeRelation(Context cx, SemType posCombined, Conjunction? negList) returns boolean {
-    SemType? negListUnionResult = negListUnion(cx, negList);
-    return negListUnionResult != () && isEmpty(cx, diff(posCombined, negListUnionResult));
-}
-
-function negListUnion(Context cx, Conjunction? negList) returns SemType? {
-    if negList == () {
-        return ();
+    CellAtomicType negAtomicCell = cx.cellAtomType(negList.atom);
+    if negAtomicCell.mut >= CELL_MUT_LIMITED && isEmpty(cx, diff(pos, negAtomicCell.t)) {
+        return false;
     }
 
-    SemType nUnion = cx.cellAtomType(negList.atom).t;
-    Conjunction? n = negList.next;
+    return cellMutLimitedInhabited(cx, pos, negList.next);
+}
+
+function cellMutUnlimitedInhabited(Context cx, SemType pos, Conjunction? negList) returns boolean {
+    Conjunction? neg = negList;
     while true {
-        if n == () {
+        if neg == () {
             break;
         }
 
-        nUnion = union(nUnion, cx.cellAtomType(n.atom).t);
-        n = n.next;
+        if cx.cellAtomType(neg.atom).mut == CELL_MUT_LIMITED && isSameType(cx, TOP, cx.cellAtomType(neg.atom).t) {
+            return false;
+        }
+        neg = neg.next;
     }
 
-    return nUnion;
+    SemType negListUnionResult = cellNegListUnlimitedUnion(cx, negList);
+    return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
 }
 
-function checkMutableCellSubtyeRelation(Context cx, SemType combined, Conjunction? negList) returns boolean {
-    Conjunction? n = negList;
+function cellNegListUnlimitedUnion(Context cx, Conjunction? negList) returns SemType {
+    SemType negUnion = NEVER;
+    Conjunction? neg = negList;
     while true {
-        if n == () {
+        if neg == () {
             break;
         }
 
-        if cx.cellAtomType(n.atom).m >= 1 && isEmpty(cx, diff(combined, cx.cellAtomType(n.atom).t)) {
-            return true;
+        if cx.cellAtomType(neg.atom).mut == CELL_MUT_UNLIMITED {
+            negUnion = union(negUnion, cx.cellAtomType(neg.atom).t);
         }
-        n = n.next;
+
+        neg = neg.next;
     }
 
-    return false;
-}
-
-function checkMatchingCellSubtypeRelation(Context cx, SemType posCombined, Conjunction? negList) returns boolean {
-    Conjunction? n = negList;
-    while true {
-        if n == () {
-            break;
-        }
-
-        if cx.cellAtomType(n.atom).m == 1 && isSameType(cx, TOP, cx.cellAtomType(n.atom).t) {
-            return true;
-        }
-        n = n.next;
-    }
-
-    SemType? negListUnionResult = negListInfUnion(cx, negList);
-    return negListUnionResult != () && isEmpty(cx, diff(posCombined, negListUnionResult));
-}
-
-function negListInfUnion(Context cx, Conjunction? negList) returns SemType? {
-    SemType? nUnion = ();
-    Conjunction? n = negList;
-    while true {
-        if n == () {
-            break;
-        }
-
-        if cx.cellAtomType(n.atom).m == 2 {
-            nUnion = nUnion == () ? cx.cellAtomType(n.atom).t : union(nUnion, cx.cellAtomType(n.atom).t);
-        }
-
-        n = n.next;
-    }
-
-    return nUnion;
+    return negUnion;
 }
 
 final UniformTypeOps cellOps = {

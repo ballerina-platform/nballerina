@@ -209,7 +209,6 @@ public class Context {
     BddMemoTable listMemo = table [];
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
-    BddMemoTable cellMemo = table [];
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
     final table<FillerMemo> key(semType) fillerMemo = table [];

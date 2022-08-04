@@ -22,4 +22,4 @@ public type IntSubtype ["int", [int, int], [int, int]...];
 public type NonRepeatingTuple ["list", Type[]];
 public type RepeatingTuple ["list", Type[], int];
 public type Cell ["cell", Type, CellMutability];
-public type CellMutability "readonly"|"mutable"|"matching";
+public type CellMutability "none"|"limited"|"unlimited";

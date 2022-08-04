@@ -98,14 +98,14 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
 
             t:CellMutability m;
             match s {
-                "readonly" => {
-                    m = t:READONLY_CELL;
+                "none" => {
+                    m = t:CELL_MUT_NONE;
                 }
-                "mutable" => {
-                    m = t:MUTABLE_CELL;
+                "limited" => {
+                    m = t:CELL_MUT_LIMITED;
                 }
-                "matching"|_ => {
-                    m = t:MATCHING_CELL;
+                "unlimited"|_ => {
+                    m = t:CELL_MUT_UNLIMITED;
                 }
             }
 
