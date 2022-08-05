@@ -1101,7 +1101,7 @@ public function listAtomicTypeApplicableMemberTypes(Context cx, ListAtomicType a
 
 public type ListAlternative record {|
     SemType semType;
-    ListAtomicType[] pos;
+    ListAtomicType? pos;
     ListAtomicType[] neg;
 |};
 
@@ -1114,7 +1114,7 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
             return [
                 {
                     semType: LIST_RW,
-                    pos: [],
+                    pos: (),
                     neg: []
                 }
             ];
@@ -1122,19 +1122,18 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
     }
     else {
         BddPath[] paths = [];
-        bddPaths(cx.env, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), paths, {}, listIntersectionToPath);
+        bddPaths(<Bdd>getComplexSubtypeData(t, UT_LIST_RW), paths, {});
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         ListAlternative[] alts = [];
-        foreach var { bdd, pos, neg } in paths {
-            SemType semType = createUniformSemType(UT_LIST_RW, bdd);
-            if semType != NEVER {
+        foreach var { pos, neg } in paths {
+            var intersection = intersectionListAtoms(cx.env, from var atom in pos select cx.listAtomType(atom));
+            if intersection !is () {
                 alts.push({
-                    semType,
-                    // JBUG parse error without parentheses (33707)
-                    pos: (from var atom in pos select cx.listAtomType(atom)),
-                    neg: (from var atom in neg select cx.listAtomType(atom))
+                    semType: intersection[0],
+                    pos: intersection[1],
+                    neg: from var atom in neg select cx.listAtomType(atom)
                 });
-            }          
+            }
         }
         return alts;
     }
@@ -1214,7 +1213,7 @@ public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomic
 
 public type MappingAlternative record {|
     SemType semType;
-    MappingAtomicType[] pos;
+    MappingAtomicType? pos;
     MappingAtomicType[] neg;
 |};
 
@@ -1227,7 +1226,7 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
             return [
                 {
                     semType: MAPPING_RW,
-                    pos: [],
+                    pos: (),
                     neg: []
                 }
             ];
@@ -1235,19 +1234,18 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
     }
     else {
         BddPath[] paths = [];
-        bddPaths(cx.env, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), paths, {}, mappingIntersectionToPath);
+        bddPaths(<Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), paths, {});
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         MappingAlternative[] alts = [];
-        foreach var { bdd, pos, neg } in paths {
-            SemType semType = createUniformSemType(UT_MAPPING_RW, bdd);
-            if semType != NEVER {
+        foreach var { pos, neg } in paths {
+            var intersection = intersectionMappingAtoms(cx.env, from var atom in pos select cx.mappingAtomType(atom));
+            if intersection !is () {
                 alts.push({
-                    semType,
-                    // JBUG parse error without parentheses (33707)
-                    pos: (from var atom in pos select cx.mappingAtomType(atom)),
-                    neg: (from var atom in neg select cx.mappingAtomType(atom))
+                    semType: intersection[0],
+                    pos: intersection[1],
+                    neg: from var atom in neg select cx.mappingAtomType(atom)
                 });
-            }          
+            }
         }
         return alts;
     }

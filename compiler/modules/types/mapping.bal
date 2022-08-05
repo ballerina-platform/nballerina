@@ -262,6 +262,25 @@ function insertField(TempMappingSubtype m, string name, SemType t) returns TempM
     return { names, types, rest: m.rest };
 }
 
+function intersectionMappingAtoms(Env env, MappingAtomicType[] atoms) returns [SemType, MappingAtomicType]? {
+    if atoms.length() == 0 {
+        return ();
+    }
+    MappingAtomicType atom = atoms[0];
+    foreach int i in 1 ..< atoms.length() {
+        var tmpAtom = intersectMapping(atom, atoms[i]);
+        if tmpAtom is () {
+            return ();
+        }
+        atom = tmpAtom.cloneReadOnly();
+    }
+
+    TypeAtom tyAtom = env.mappingAtom(atom);
+    Bdd bdd = bddAtom(tyAtom);
+    SemType semType = createUniformSemType(UT_MAPPING_RW, bdd);
+    return [semType, atom];
+}
+
 type TempMappingSubtype record {|
     // sorted
     string[] names;
@@ -447,29 +466,6 @@ function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean re
                && bddMappingMemberRequired(cx, b.middle, k, requiredOnPath)
                && bddMappingMemberRequired(cx, b.right, k, requiredOnPath);
     }
-}
-
-function mappingIntersectionToPath(Env env, BddNode lhs, BddNode rhs) returns BddPath {
-    TypeAtom atom = <TypeAtom>lhs.atom;
-    MappingAtomicType atomicType = mappingIntersectionToAtomicType(env, lhs, rhs);
-    TypeAtom tyAtom = { index: atom.index, atomicType };
-    Bdd bdd = bddAtom(tyAtom);
-    return { bdd, pos: [lhs.atom, rhs.atom], neg: []};
-}
-
-function mappingIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns MappingAtomicType {
-    MappingAtomicType lhsTy = env.mappingAtomType(lhs.atom);
-    MappingAtomicType rhsTy = env.mappingAtomType(rhs.atom);
-    if rhs.left is BddNode {
-        MappingAtomicType newRhsTy = mappingIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
-        rhsTy = newRhsTy;
-    }
-    MappingAtomicType? atomicType = intersectMapping(lhsTy, rhsTy).cloneReadOnly();
-    if atomicType is () {
-        // this should have been caught before (in resolveTypes) so shouldn't happen ever
-        panic error("empty intersection");
-    }
-    return atomicType;
 }
 
 final UniformTypeOps mappingRoOps = {

@@ -116,25 +116,22 @@ type BddPath record {|
     Atom[] neg = [];
 |};
 
-function bddPaths(Env env, Bdd b, BddPath[] paths, BddPath accum, function(Env, BddNode, BddNode) returns BddPath intersectionToPath) {
+function bddPaths(Bdd b, BddPath[] paths, BddPath accum) {
     if b is boolean {
         if b {
             paths.push(accum);
         }
-    }
-    else if b.left is BddNode {
-        paths.push(intersectionToPath(env, b, <BddNode>b.left));
     }
     else {
         BddPath left = accum.clone();
         BddPath right = accum.clone();
         left.pos.push(b.atom);
         left.bdd = bddIntersect(left.bdd, bddAtom(b.atom));
-        bddPaths(env, b.left, paths, left, intersectionToPath);
-        bddPaths(env, b.middle, paths, accum, intersectionToPath);
+        bddPaths(b.left, paths, left);
+        bddPaths(b.middle, paths, accum);
         right.neg.push(b.atom);
         right.bdd = bddDiff(right.bdd, bddAtom(b.atom));
-        bddPaths(env, b.right, paths, right, intersectionToPath);
+        bddPaths(b.right, paths, right);
     }
 }
 

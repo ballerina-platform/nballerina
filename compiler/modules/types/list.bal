@@ -236,27 +236,23 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, indices, memberTypes, nRequired, neg);
 }
 
-function listIntersectionToPath(Env env, BddNode lhs, BddNode rhs) returns BddPath {
-    TypeAtom atom = <TypeAtom>lhs.atom;
-    ListAtomicType atomicType = listIntersectionToAtomicType(env, lhs, rhs);
-    TypeAtom tyAtom = { index: atom.index, atomicType };
+function intersectionListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, ListAtomicType]? {
+    if atoms.length() == 0 {
+        return ();
+    }
+    ListAtomicType atom = atoms[0];
+    foreach int i in 1 ..< atoms.length() {
+        ListAtomicType next = atoms[i];
+        var intersection = listIntersectWith(atom.members, atom.rest, next.members, next.rest);
+        if intersection is () {
+            return ();
+        }
+        atom = { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
+    }
+    TypeAtom tyAtom = env.listAtom(atom);
     Bdd bdd = bddAtom(tyAtom);
-    return { bdd, pos: [lhs.atom, rhs.atom], neg: []};
-}
-
-function listIntersectionToAtomicType(Env env, BddNode lhs, BddNode rhs) returns ListAtomicType {
-    ListAtomicType lhsTy = env.listAtomType(lhs.atom);
-    ListAtomicType rhsTy = env.listAtomType(rhs.atom);
-    if rhs.left is BddNode {
-        ListAtomicType newRhsTy = listIntersectionToAtomicType(env, rhs, <BddNode>rhs.left);
-        rhsTy = newRhsTy;
-    }
-    var intersection = listIntersectWith(lhsTy.members, lhsTy.rest, rhsTy.members, rhsTy.rest);
-    if intersection is () {
-        // this should have been caught before (in resolveTypes), so shouldn't happen ever
-        panic error("empty intersection");
-    }
-    return { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
+    SemType semType = createUniformSemType(UT_LIST_RW, bdd);
+    return [semType, atom];
 }
 
 function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
