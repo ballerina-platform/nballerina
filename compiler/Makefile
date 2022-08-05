@@ -1,6 +1,6 @@
 COMPILER_SRC=$(wildcard *.bal) $(wildcard modules/*/*.bal)
-COMPILER_JAR=../build/bin/nballerina.jar
-COMPILER_PACK=../build/bala/wso2-nballerina-any-0.1.0.bala
+COMPILER_JAR=../build/compiler/bin/nballerina.jar
+COMPILER_PACK=../build/pack/bala/wso2-nballerina-any-0.1.0.bala
 BAL?=bal
 BAL_BUILD_FLAGS ?= --offline
 
@@ -15,10 +15,10 @@ test:
 	$(BAL) test $(BAL_TEST_FLAGS)
 
 $(COMPILER_JAR): $(COMPILER_SRC)
-	$(BAL) build --target-dir ../build $(BAL_BUILD_FLAGS)
+	$(BAL) build --target-dir ../build/compiler $(BAL_BUILD_FLAGS)
 
 $(COMPILER_PACK): $(COMPILER_SRC)
-	$(BAL) pack --target-dir ../build $(BAL_BUILD_FLAGS)
+	$(BAL) pack --target-dir ../build/pack $(BAL_BUILD_FLAGS)
 	$(BAL) push $(COMPILER_PACK) --repository=local
 
 clean:
