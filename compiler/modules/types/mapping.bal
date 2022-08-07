@@ -262,7 +262,7 @@ function insertField(TempMappingSubtype m, string name, SemType t) returns TempM
     return { names, types, rest: m.rest };
 }
 
-function intersectionMappingAtoms(Env env, MappingAtomicType[] atoms) returns [SemType, MappingAtomicType]? {
+function intersectMappingAtoms(Env env, MappingAtomicType[] atoms) returns [SemType, MappingAtomicType]? {
     if atoms.length() == 0 {
         return ();
     }

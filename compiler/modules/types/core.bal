@@ -1126,7 +1126,7 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         ListAlternative[] alts = [];
         foreach var { pos, neg } in paths {
-            var intersection = intersectionListAtoms(cx.env, from var atom in pos select cx.listAtomType(atom));
+            var intersection = intersectListAtoms(cx.env, from var atom in pos select cx.listAtomType(atom));
             if intersection !is () {
                 alts.push({
                     semType: intersection[0],
@@ -1238,7 +1238,7 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         MappingAlternative[] alts = [];
         foreach var { pos, neg } in paths {
-            var intersection = intersectionMappingAtoms(cx.env, from var atom in pos select cx.mappingAtomType(atom));
+            var intersection = intersectMappingAtoms(cx.env, from var atom in pos select cx.mappingAtomType(atom));
             if intersection !is () {
                 alts.push({
                     semType: intersection[0],

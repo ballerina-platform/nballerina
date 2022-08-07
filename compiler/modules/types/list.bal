@@ -236,7 +236,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, indices, memberTypes, nRequired, neg);
 }
 
-function intersectionListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, ListAtomicType]? {
+function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, ListAtomicType]? {
     if atoms.length() == 0 {
         return ();
     }
