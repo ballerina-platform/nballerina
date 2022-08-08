@@ -372,7 +372,8 @@ function buildGlobalDecimal(wasm:Module module, Component component, decimal val
                                                                                                     module.addConst({ i32: offset }), 
                                                                                                     module.addConst({i32: length })
                                                                                                 ]);
-    wasm:Expression struct = module.structNew(DECIMAL_TYPE, [module.addConst({ i32: TYPE_DECIMAL }), jsDecimal]);
+    int scale = getScale(val);
+    wasm:Expression struct = module.structNew(DECIMAL_TYPE, [module.addConst({ i32: TYPE_DECIMAL }), jsDecimal, module.addConst({ i32: scale })]);
     body.push(module.globalSet(global, struct));
     return { value, global, body, byteStr, offsetExpr };
 }

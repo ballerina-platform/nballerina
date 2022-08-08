@@ -20,6 +20,7 @@
   ;; export
   (export "overflow" (tag $overflow)) 
   (export "bad-conversion" (tag $bad-conversion)) 
+  (export "_bal_get_decimal_scale" (func $_bal_get_decimal_scale))
   ;; $_bal_float_subtype_contains
   (func $_bal_float_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 (ref null $FloatSubtype))
@@ -693,102 +694,177 @@
   ;; $_bal_decimal_add
   (func $_bal_decimal_add (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
     (local $2 anyref)
+    (local $3 (ref null $Decimal))
+    (local $4 (ref null $Decimal))
+    (local.set $3
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttDecimal)))
+    (local.set $4
+      (ref.cast
+        (ref.as_data
+          (local.get $1))
+        (global.get $rttDecimal)))
     (local.set $2
       (call $_js_decimal_add
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $0))
-            (global.get $rttDecimal)))
+          (ref.as_non_null
+            (local.get $3)))
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $1))
-            (global.get $rttDecimal)))))
+          (ref.as_non_null
+            (local.get $4)))))
     (return
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $2)
+        (call $_bal_decimal_arith_finish
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $3)))
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $4))))
         (global.get $rttDecimal))))
   ;; $_bal_decimal_sub
   (func $_bal_decimal_sub (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
     (local $2 anyref)
+    (local $3 (ref null $Decimal))
+    (local $4 (ref null $Decimal))
+    (local.set $3
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttDecimal)))
+    (local.set $4
+      (ref.cast
+        (ref.as_data
+          (local.get $1))
+        (global.get $rttDecimal)))
     (local.set $2
       (call $_js_decimal_sub
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $0))
-            (global.get $rttDecimal)))
+          (ref.as_non_null
+            (local.get $3)))
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $1))
-            (global.get $rttDecimal)))))
+          (ref.as_non_null
+            (local.get $4)))))
     (return
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $2)
+        (call $_bal_decimal_arith_finish
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $3)))
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $4))))
         (global.get $rttDecimal))))
   ;; $_bal_decimal_mul
   (func $_bal_decimal_mul (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
     (local $2 anyref)
+    (local $3 (ref null $Decimal))
+    (local $4 (ref null $Decimal))
+    (local.set $3
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttDecimal)))
+    (local.set $4
+      (ref.cast
+        (ref.as_data
+          (local.get $1))
+        (global.get $rttDecimal)))
     (local.set $2
       (call $_js_decimal_mul
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $0))
-            (global.get $rttDecimal)))
+          (ref.as_non_null
+            (local.get $3)))
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $1))
-            (global.get $rttDecimal)))))
+          (ref.as_non_null
+            (local.get $4)))))
     (return
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $2)
+        (call $_bal_decimal_mul_finish
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $3)))
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $4))))
         (global.get $rttDecimal))))
   ;; $_bal_decimal_div
   (func $_bal_decimal_div (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
     (local $2 anyref)
+    (local $3 (ref null $Decimal))
+    (local $4 (ref null $Decimal))
+    (local.set $3
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttDecimal)))
+    (local.set $4
+      (ref.cast
+        (ref.as_data
+          (local.get $1))
+        (global.get $rttDecimal)))
     (local.set $2
       (call $_js_decimal_div
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $0))
-            (global.get $rttDecimal)))
+          (ref.as_non_null
+            (local.get $3)))
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $1))
-            (global.get $rttDecimal)))))
+          (ref.as_non_null
+            (local.get $4)))))
     (return
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $2)
+        (call $_bal_decimal_div_finish
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $3)))
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $4))))
         (global.get $rttDecimal))))
   ;; $_bal_decimal_rem
   (func $_bal_decimal_rem (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
     (local $2 anyref)
+    (local $3 (ref null $Decimal))
+    (local $4 (ref null $Decimal))
+    (local.set $3
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttDecimal)))
+    (local.set $4
+      (ref.cast
+        (ref.as_data
+          (local.get $1))
+        (global.get $rttDecimal)))
     (local.set $2
       (call $_js_decimal_rem
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $0))
-            (global.get $rttDecimal)))
+          (ref.as_non_null
+            (local.get $3)))
         (struct.get $Decimal $val 
-          (ref.cast
-            (ref.as_data
-              (local.get $1))
-            (global.get $rttDecimal)))))
+          (ref.as_non_null
+            (local.get $4)))))
     (return
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $2)
+        (call $_bal_decimal_arith_finish
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $3)))
+          (struct.get $Decimal $scale
+            (ref.as_non_null
+              (local.get $4))))
         (global.get $rttDecimal))))
   ;; $_bal_decimal_eq
   (func $_bal_decimal_eq (param $0 eqref) (param $1 eqref) (result i32)
@@ -808,6 +884,28 @@
   ;; $_bal_decimal_exact_eq
   (func $_bal_decimal_exact_eq (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 i32)
+    (local $3 (ref null $Decimal))
+    (local $4 (ref null $Decimal))
+    (local.set $3
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttDecimal)))
+    (local.set $4
+      (ref.cast
+        (ref.as_data
+          (local.get $1))
+        (global.get $rttDecimal)))
+    (if
+      (i32.ne
+        (struct.get $Decimal $scale
+          (ref.as_non_null
+            (local.get $3)))
+        (struct.get $Decimal $scale
+          (ref.as_non_null
+            (local.get $4))))
+      (return
+        (i32.const 0)))
     (return
       (call $_js_decimal_exact_eq
         (struct.get $Decimal $val 
@@ -863,6 +961,7 @@
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $1)
+        (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_from_int
   (func $_bal_decimal_from_int (param $0 i64) (result (ref $Decimal))
@@ -874,21 +973,29 @@
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $1)
+        (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_neg
   (func $_bal_decimal_neg (param $0 eqref) (result (ref $Decimal))
     (local $1 anyref)
+    (local $2 (ref null $Decimal))
+    (local.set $2
+      (ref.cast
+        (ref.as_data
+          (local.get $0))
+        (global.get $rttDecimal)))
     (local.set $1
       (call $_js_decimal_neg
         (struct.get $Decimal $val
-          (ref.cast
-            (ref.as_data
-              (local.get $0))
-            (global.get $rttDecimal)))))
+          (ref.as_non_null
+            (local.get $2)))))
     (return
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $1)
+        (struct.get $Decimal $scale
+          (ref.as_non_null
+            (local.get $2)))
         (global.get $rttDecimal))))
   ;; $_bal_decimal_subtype_contains
   (func $_bal_decimal_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
@@ -973,5 +1080,44 @@
           (br $loop$cont))))
     (return
       (i32.const 0)))
+  ;; $_bal_decimal_arith_finish
+  (func $_bal_decimal_arith_finish (param $0 i32) (param $1 i32) (result i32)
+    (if
+      (i32.gt_u
+        (local.get $0)
+        (local.get $1))
+      (return
+        (local.get $0))
+      (return
+        (local.get $1))))
+  ;; $_bal_decimal_mul_finish
+  (func $_bal_decimal_mul_finish (param $0 i32) (param $1 i32) (result i32)
+    (return
+      (i32.add
+        (local.get $0)
+        (local.get $1))))
+   ;; $_bal_decimal_div_finish
+  (func $_bal_decimal_div_finish (param $0 i32) (param $1 i32) (result i32)
+    (local $2 i32)
+    (local.set $2
+      (i32.sub
+        (local.get $0)
+        (local.get $1)))
+    (if
+      (i32.gt_s
+        (local.get $2)
+        (i32.const 0))
+      (return
+        (local.get $2))
+      (return
+        (i32.const 0))))
+  ;; $_bal_get_decimal_scale
+  (func $_bal_get_decimal_scale (param $0 eqref) (result i32)
+    (return
+      (struct.get $Decimal $scale
+        (ref.cast 
+          (ref.as_data
+            (local.get $0))
+          (global.get $rttDecimal)))))
   ;; end
   ) 

@@ -16,7 +16,7 @@
   (type $Map (struct (field $type i32) (field $desc (mut (ref $MappingDesc))) (field $tableLengthShift (mut i32)) (field $table (mut (ref $HashTable))) (field $fArray (mut (ref $MapFields)))))   
   (type $Surrogate (array (mut i32))) 
   (type $String (struct (field $type i32) (field $val (mut anyref)) (field $surrogate (ref $Surrogate)) (field $hash (mut i32)))) 
-  (type $Decimal (struct (field $type i32) (field $val (mut anyref)))) 
+  (type $Decimal (struct (field $type i32) (field $val (mut anyref)) (field $scale i32))) 
   (type $List (struct (field $type i32) (field $desc (ref $ListDesc)) (field $arr (mut (ref $AnyList))) (field $len (mut i64)))) 
   (type $AnyList (array (mut eqref))) 
   (type $Subtype (struct (field $func (ref $subTypeContains))))
