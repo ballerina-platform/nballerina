@@ -612,7 +612,7 @@ function getInitString(InitModuleContext cx, string str) returns llvm:ConstPoint
 
 // This is relatively uncommon and LLVM will eliminate duplicates for us.
 function getInitDecimal(InitModuleContext cx, decimal d) returns llvm:ConstPointerValue {
-    llvm:ConstPointerValue val = addDecimalDefn(cx.llContext, cx.llMod, cx.decimalCount, d.toString());
+    llvm:ConstPointerValue val = addDecimalDefn(cx.llContext, cx.llMod, cx.decimalCount, d);
     cx.decimalCount += 1;
     return val;
 }
