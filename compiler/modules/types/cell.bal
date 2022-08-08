@@ -53,14 +53,14 @@ function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negLi
     return !cellInhabited(cx, combinedAtomicCell, negList);
 }
 
-function cellInhabited(Context cx, CellAtomicType atomicCell, Conjunction? negList) returns boolean {
-    SemType pos = atomicCell.t;
+function cellInhabited(Context cx, CellAtomicType posCell, Conjunction? negList) returns boolean {
+    SemType pos = posCell.t;
 
     if isEmpty(cx, pos) {
         return false;
     }
 
-    match atomicCell.mut {
+    match posCell.mut {
         CELL_MUT_NONE => {
             return cellMutNoneInhabited(cx, pos, negList);
         }
