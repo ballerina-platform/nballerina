@@ -858,7 +858,7 @@
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $2)
-        (call $_bal_decimal_arith_finish
+        (call $_bal_decimal_rem_finish
           (struct.get $Decimal $scale
             (ref.as_non_null
               (local.get $3)))
@@ -1090,6 +1090,16 @@
         (local.get $0))
       (return
         (local.get $1))))
+  ;; $_bal_decimal_rem_finish
+  (func $_bal_decimal_rem_finish (param $0 i32) (param $1 i32) (result i32)
+    (if
+      (i32.gt_u
+        (local.get $0)
+        (local.get $1))
+      (return
+        (local.get $1))
+      (return
+        (local.get $0))))
   ;; $_bal_decimal_mul_finish
   (func $_bal_decimal_mul_finish (param $0 i32) (param $1 i32) (result i32)
     (return
