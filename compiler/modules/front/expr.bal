@@ -508,12 +508,15 @@ function codeGenNilLift(ExprContext cx, t:SemType? expected, s:Expr[] operands, 
     bir:BasicBlock? ifNilBlock = ();
     bir:BasicBlock currentBlock = bb;
     bir:Operand[] newOperands = [];
+    bir:RegionIndex? firstRegion = ();
     foreach s:Expr operandExpr in operands {
         var { result: operand, block } = check codeGenExpr(cx, currentBlock, expected, operandExpr);
         currentBlock = block;
         newOperands.push(operand);
     }
     bir:BasicBlock nextBlock = currentBlock;
+    StmtContext? sc = cx.sc;
+    bir:RegionIndex[] openedRegions = [];
     foreach int i in 0 ..< newOperands.length() {
         bir:Operand operand = newOperands[i];
         if operand is bir:Register && t:containsNil(operand.semType) {
@@ -533,8 +536,22 @@ function codeGenNilLift(ExprContext cx, t:SemType? expected, s:Expr[] operands, 
                 ifFalseRegister,
                 pos
             };
+            if sc != () {
+                bir:RegionIndex? index = sc.maybeOpenRegion(currentBlock.label, bir:REGION_COND);
+                firstRegion = firstRegion == () ? index : firstRegion;
+                if (index != ()) {
+                    openedRegions.push(index);
+                }
+            }
             currentBlock.insns.push(branchInsn);
             currentBlock = nextBlock;
+        }
+    }
+    if sc != () {
+        openedRegions = openedRegions.reverse();
+        bir:Label exitLabel = openedRegions.length() > 1 ? nextBlock.label + 1 : nextBlock.label + 2;  
+        foreach bir:RegionIndex index in openedRegions {
+            sc.maybeCloseRegion(index, index == firstRegion ? exitLabel : ());
         }
     }
     return { operands: newOperands, nextBlock, ifNilBlock };

@@ -266,6 +266,7 @@ function buildBlocksInRegion(Scaffold scaffold, wasm:Module module, bir:Label la
         if (cur == () && scaffold.regions[index].parent == ()) || cur != () {
             wasm:Expression[]? rendered = scaffold.getRenderedRegion(index);
             if rendered != () {
+                scaffold.setRenderedRegion(index, []);
                 children.push(...rendered);
             }
         }
