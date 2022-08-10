@@ -779,7 +779,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
                 ifContBlock.insns.push(branch);
                 contMerger = { dest: falseMerger.dest, origins: { bindings: ifBindings, label: ifContBlock.label, prev: falseMerger.origins } };
             }
-            cx.maybeCloseRegion(regionIndex, contMerger.dest.label, false);
+            cx.maybeCloseRegion(regionIndex, contMerger.dest.label);
             return codeGenTypeMergeFromMerger(ec, contMerger, ifTrue.endPos);
         }
         else {
@@ -794,14 +794,14 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
                 elseContBlock.insns.push(branch);
                 TypeMergerOrigin? combinedOrigin = { bindings: ifBindings, label: ifContBlock.label, prev: { bindings: elseBindings, label: elseContBlock.label, prev: () } };
                 BindingChain? bindings = codeGenTypeMerge(ec, contBlock, initialBindings, combinedOrigin, ifTrue.endPos);
-                cx.maybeCloseRegion(regionIndex, contBlock.label, false);
+                cx.maybeCloseRegion(regionIndex, contBlock.label);
                 return { block: contBlock, bindings };
             }
             else {
                 // One or both arms are branching outside.
                 bir:BasicBlock? contBlock = ifContBlock ?: elseContBlock;
                 BindingChain? bindings = ifBindings ?: elseBindings;
-                cx.maybeCloseRegion(regionIndex, contBlock?.label, false);
+                cx.maybeCloseRegion(regionIndex, contBlock?.label);
                 return { block: contBlock, bindings };
             }
         }
