@@ -121,9 +121,7 @@ class StmtContext {
             _ = self.code.regions.remove(regionIndex);
             return;
         } 
-        if regionIndex < self.code.regions.length() {
-            self.code.regions[regionIndex].exit = exit;
-        }
+        self.code.regions[regionIndex].exit = exit;
     }
 
     function qNameRange(Position startPos) returns Range {
@@ -761,6 +759,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
             return cx.semanticErr("unreachable code", s:range(errStmt));
         }
         if taken != () {
+            createConditionalRegions(cx, regions);
             bir:RegionIndex[] indexes = [];
             bir:Label?[] exits = [];
             if regions.length() > 0 {
@@ -785,24 +784,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
     }
     else {
         bir:RegionIndex? regionIndex = cx.maybeOpenRegion(startBlock.label, bir:REGION_COND);
-        bir:RegionIndex[] indexes = [];
-        bir:Label?[] exits = [];
-        if regions.length() > 0 {
-            foreach bir:Region region in regions {
-                if region.entry == startBlock.label {
-                    continue;
-                }
-                bir:RegionIndex? index = cx.maybeOpenRegion(region.entry, region.kind, region.exit);                
-                if index != () {
-                    indexes.push(index);
-                    exits.push(region.exit);
-                }
-            }
-        }
-        indexes = indexes.reverse();
-        foreach int i in 0..<indexes.length() {                
-            cx.maybeCloseRegion(indexes[i], exits[i]);
-        }
+        createConditionalRegions(cx, regions, startBlock.label);
         var { block: ifContBlock, bindings: ifBindings } = check codeGenScopeWithTypeMerger(cx, trueMerger, initialBindings, ifTrue);
         if ifFalse == () {
             // Just an if branch
@@ -812,10 +794,6 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
                 ifContBlock.insns.push(branch);
                 contMerger = { dest: falseMerger.dest, origins: { bindings: ifBindings, label: ifContBlock.label, prev: falseMerger.origins } };
             }
-            // indexes = indexes.reverse();
-            // foreach int i in 0..<indexes.length() {          
-            //     cx.maybeCloseRegion(indexes[i], exits[i]);
-            // }
             cx.maybeCloseRegion(regionIndex, contMerger.dest.label, false);
             return codeGenTypeMergeFromMerger(ec, contMerger, ifTrue.endPos);
         }
@@ -842,6 +820,25 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
                 return { block: contBlock, bindings };
             }
         }
+    }
+}
+
+function createConditionalRegions(StmtContext cx, bir:Region[] regions, bir:Label? startLabel = ()) {
+    bir:RegionIndex[] indexes = [];
+    bir:Label?[] exits = [];
+    foreach bir:Region region in regions {
+        if startLabel != () && region.entry == startLabel {
+            continue;
+        }
+        bir:RegionIndex? index = cx.maybeOpenRegion(region.entry, region.kind, region.exit);                
+        if index != () {
+            indexes.push(index);
+            exits.push(region.exit);
+        }
+    }
+    indexes = indexes.reverse();
+    foreach int i in 0..<indexes.length() {                
+        cx.maybeCloseRegion(indexes[i], exits[i]);
     }
 }
 

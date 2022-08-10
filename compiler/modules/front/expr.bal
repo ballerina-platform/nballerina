@@ -337,7 +337,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
 }
 
 function booleanEffectFromCondEffect(ExprContext cx, CondExprEffect effect, Position pos, boolean dummy = false) returns BooleanExprEffect {
-    var { trueMerger, falseMerger } = effect;
+    var { trueMerger, falseMerger, regions } = effect;
     if trueMerger == () || falseMerger == () {
         var [constCond, merger] = typeMergerPairSingleton(effect);
         return constBooleanExprEffect(cx, merger.dest, constCond, VALUE_CONST | VALUE_SINGLE_SHAPE);
@@ -348,35 +348,20 @@ function booleanEffectFromCondEffect(ExprContext cx, CondExprEffect effect, Posi
         addAssignAndBranch(cx, true, trueMerger.dest, result, contBlock.label, pos);
         addAssignAndBranch(cx, false, falseMerger.dest, result, contBlock.label, pos);
         StmtContext? sc = cx.sc;
-        TypeMergerOrigin? origin = trueMerger.origins;
-        if sc != () && !dummy {
-            bir:Region[] regions = effect.regions;
-            if regions.length() > 0 {
-                bir:RegionIndex[] indexes = [];
-                regions[0].exit = contBlock.label;
-                foreach bir:Region region in regions {
-                    bir:RegionIndex? index = sc.maybeOpenRegion(region.entry, region.kind, region.exit);
-                    if index != () {
-                        indexes.push(index);
-                    }
-                }
-                indexes = indexes.reverse();
-                regions = regions.reverse();
-                foreach int i in 0..<indexes.length() {
-                    if i == indexes.length() - 1 {
-                        sc.maybeCloseRegion(indexes[i], contBlock.label);
-                    }
-                    else {
-                        sc.maybeCloseRegion(indexes[i]);
-                    }
+        if sc != () && !dummy && regions.length() > 0 {
+            bir:RegionIndex[] indexes = [];
+            regions[0].exit = contBlock.label;
+            foreach bir:Region region in regions {
+                bir:RegionIndex? index = sc.maybeOpenRegion(region.entry, region.kind, region.exit);
+                if index != () {
+                    indexes.push(index);
                 }
             }
-            else if origin != () {
-                bir:RegionIndex? index = sc.maybeOpenRegion(origin.label, bir:REGION_COND);
-                sc.maybeCloseRegion(index, contBlock.label);
-            }
+            indexes = indexes.reverse();
+            foreach int i in 0..<indexes.length() {
+                sc.maybeCloseRegion(indexes[i], i == indexes.length() - 1 ? contBlock.label : ());
+            }            
         }
-        
         return { block: contBlock, result };
     }
 }
@@ -480,12 +465,9 @@ function codeGenExprForCond(ExprContext cx, bir:BasicBlock bb, s:Expr expr, Prev
     TypeMerger trueMerger = createMerger(cx, block.label, prevs?.trueMerger);
     TypeMerger falseMerger = createMerger(cx, block.label, prevs?.falseMerger);
     bir:CondBranchInsn condBranch = { operand: result, ifTrue: trueMerger.dest.label, ifFalse: falseMerger.dest.label, pos: expr.startPos };
-    StmtContext? sc = cx.sc;
     bir:Region[] regions = prevs != () ? prevs.regions : [];
-    if sc != () {
-        bir:Region region = { entry: block.label, kind: bir:REGION_COND };
-        regions.push(region);
-    }
+    bir:Region region = { entry: block.label, kind: bir:REGION_COND };
+    regions.push(region);
     block.insns.push(condBranch);
     return { trueMerger, falseMerger, regions };
 }
@@ -573,7 +555,7 @@ function codeGenNilLift(ExprContext cx, t:SemType? expected, s:Expr[] operands, 
                 ifFalseRegister,
                 pos
             };
-             if sc != () {
+            if sc != () {
                 bir:RegionIndex? index = sc.maybeOpenRegion(currentBlock.label, bir:REGION_COND);
                 firstRegion = firstRegion == () ? index : firstRegion;
                 if (index != ()) {
@@ -861,7 +843,7 @@ function codeGenLogicalNotExprForCond(ExprContext cx, bir:BasicBlock bb, Positio
 function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLogicalOp op, Position pos, s:Expr left, s:Expr right, PrevTypeMergers? prevs = ()) returns CodeGenError|CondExprEffect {
     boolean isOr = op == "||";
     var lhsEffect = check codeGenExprForCond(cx, bb, left, prevs);
-    var { trueMerger: lhsTrueMerger, falseMerger: lhsFalseMerger } = lhsEffect;
+    var { trueMerger: lhsTrueMerger, falseMerger: lhsFalseMerger, regions } = lhsEffect;
     if lhsTrueMerger == () || lhsFalseMerger == () {
         var [constCond, merger] = typeMergerPairSingleton(lhsEffect);
         if constCond == isOr {
@@ -878,16 +860,8 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     else {
         // When compiling a chain of && or chain of ||, keep growing falseMerger or trueMerger respectively
         [TypeMerger?, TypeMerger?, TypeMerger] [trueMerger, falseMerger, rhsMerger] = isOr ? [lhsTrueMerger, (), lhsFalseMerger] : [(), lhsFalseMerger, lhsTrueMerger];
-        // StmtContext? sc = cx.sc;
-        // if !isOr && sc != () { 
-        //     if lhsEffect.regions.length() > 0 {
-        //         int lastRegion = lhsEffect.regions.length() - 1;
-        //         lhsEffect.regions[lastRegion].exit = lhsFalseMerger.dest.label;
-        //     }
-        // }
         // When switching from a chain of && to chain of || or vice versa we may need a type merge insn
         var { block: rhsBlock, bindings: rhsBindings } = codeGenTypeMergeFromMerger(cx, rhsMerger, pos);
-        bir:Region[] regions = lhsEffect.regions;
         return codeGenExprForCond(cx.exprContext(rhsBindings), rhsBlock, right, { trueMerger, falseMerger, regions });
     }
 }
@@ -1280,21 +1254,22 @@ function codeGenConstCond(ExprContext cx, bir:BasicBlock block, boolean constCon
         return constCond ? { trueMerger: { dest: block } } : { falseMerger: { dest: block } };
     }
     var [takenSide, merger] = typeMergerPairSingleton(prevs);
+    bir:Region[] regions = prevs.regions;
     if takenSide == constCond {
         // `b && false` or `b || true`. Only need one merger, i.e. the previously created merger. Divert current branch into it.
         bir:BranchInsn branch = { dest: merger.dest.label, pos };
         block.insns.push(branch);
-        if prevs.regions.length() > 0 {
-            prevs.regions[0].exit = merger.dest.label;
+        if regions.length() > 0 {
+            regions[0].exit = merger.dest.label;
         }
-        return constCond ? { trueMerger: merger, regions: prevs.regions } : { falseMerger: merger, regions: prevs.regions };
+        return constCond ? { trueMerger: merger, regions } : { falseMerger: merger, regions };
     }
     else {
         // `b && true` or `b || false`. Need two mergers. Only one previously created mergers are available. Other might have been used to evaluate const true/false. Create a new merger.
         TypeMerger newMerger = createMerger(cx, block.label, ());
         bir:BranchInsn branch = { dest: newMerger.dest.label, pos };
         block.insns.push(branch);
-        return constCond ? { trueMerger: newMerger, falseMerger: merger, regions: prevs.regions } : { trueMerger: merger, falseMerger: newMerger, regions: prevs.regions };
+        return constCond ? { trueMerger: newMerger, falseMerger: merger, regions } : { trueMerger: merger, falseMerger: newMerger, regions };
     }
 }
 
