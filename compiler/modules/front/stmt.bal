@@ -121,7 +121,9 @@ class StmtContext {
             _ = self.code.regions.remove(regionIndex);
             return;
         } 
-        self.code.regions[regionIndex].exit = exit;
+        if regionIndex < self.code.regions.length() {
+            self.code.regions[regionIndex].exit = exit;
+        }
     }
 
     function qNameRange(Position startPos) returns Range {
@@ -749,7 +751,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
     ExprContext ec = cx.exprContext(initialBindings);
     var { condition, ifTrue, ifFalse } = stmt;
     CondExprEffect condEffect = check codeGenExprForCond(ec, startBlock, condition);
-    var {trueMerger, falseMerger} = condEffect;
+    var {trueMerger, falseMerger, regions} = condEffect;
     if trueMerger == () || falseMerger == () {
         // this will happen when type of condition is singleton true or singleton false
         var [constCond, merger] = typeMergerPairSingleton(condEffect);
@@ -759,6 +761,21 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
             return cx.semanticErr("unreachable code", s:range(errStmt));
         }
         if taken != () {
+            bir:RegionIndex[] indexes = [];
+            bir:Label?[] exits = [];
+            if regions.length() > 0 {
+                foreach bir:Region region in regions {
+                    bir:RegionIndex? index = cx.maybeOpenRegion(region.entry, region.kind, region.exit);                
+                    if index != () {
+                        indexes.push(index);
+                        exits.push(region.exit);
+                    }
+                }
+            }
+            indexes = indexes.reverse();
+            foreach int i in 0..<indexes.length() {                
+                cx.maybeCloseRegion(indexes[i], exits[i]);
+            }
             return codeGenScopeWithTypeMerger(cx, merger, initialBindings, taken);
         }
         else {
@@ -768,6 +785,24 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
     }
     else {
         bir:RegionIndex? regionIndex = cx.maybeOpenRegion(startBlock.label, bir:REGION_COND);
+        bir:RegionIndex[] indexes = [];
+        bir:Label?[] exits = [];
+        if regions.length() > 0 {
+            foreach bir:Region region in regions {
+                if region.entry == startBlock.label {
+                    continue;
+                }
+                bir:RegionIndex? index = cx.maybeOpenRegion(region.entry, region.kind, region.exit);                
+                if index != () {
+                    indexes.push(index);
+                    exits.push(region.exit);
+                }
+            }
+        }
+        indexes = indexes.reverse();
+        foreach int i in 0..<indexes.length() {                
+            cx.maybeCloseRegion(indexes[i], exits[i]);
+        }
         var { block: ifContBlock, bindings: ifBindings } = check codeGenScopeWithTypeMerger(cx, trueMerger, initialBindings, ifTrue);
         if ifFalse == () {
             // Just an if branch
@@ -777,7 +812,11 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
                 ifContBlock.insns.push(branch);
                 contMerger = { dest: falseMerger.dest, origins: { bindings: ifBindings, label: ifContBlock.label, prev: falseMerger.origins } };
             }
-            cx.maybeCloseRegion(regionIndex, contMerger.dest.label);
+            // indexes = indexes.reverse();
+            // foreach int i in 0..<indexes.length() {          
+            //     cx.maybeCloseRegion(indexes[i], exits[i]);
+            // }
+            cx.maybeCloseRegion(regionIndex, contMerger.dest.label, false);
             return codeGenTypeMergeFromMerger(ec, contMerger, ifTrue.endPos);
         }
         else {
@@ -792,14 +831,14 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
                 elseContBlock.insns.push(branch);
                 TypeMergerOrigin? combinedOrigin = { bindings: ifBindings, label: ifContBlock.label, prev: { bindings: elseBindings, label: elseContBlock.label, prev: () } };
                 BindingChain? bindings = codeGenTypeMerge(ec, contBlock, initialBindings, combinedOrigin, ifTrue.endPos);
-                cx.maybeCloseRegion(regionIndex, contBlock.label);
+                cx.maybeCloseRegion(regionIndex, contBlock.label, false);
                 return { block: contBlock, bindings };
             }
             else {
                 // One or both arms are branching outside.
                 bir:BasicBlock? contBlock = ifContBlock ?: elseContBlock;
                 BindingChain? bindings = ifBindings ?: elseBindings;
-                cx.maybeCloseRegion(regionIndex, contBlock?.label);
+                cx.maybeCloseRegion(regionIndex, contBlock?.label, false);
                 return { block: contBlock, bindings };
             }
         }

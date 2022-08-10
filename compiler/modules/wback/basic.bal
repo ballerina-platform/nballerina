@@ -159,9 +159,18 @@ function buildCall(wasm:Module module, Scaffold scaffold, bir:CallInsn insn) ret
 }
 
 function buildAssign(wasm:Module module, Scaffold scaffold, bir:AssignInsn insn) returns wasm:Expression {
-    return buildStore(module,
-                      insn.result, 
-                      buildWideRepr(module, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType));
+    bir:Operand operand = insn.operand;
+    Repr targetRepr = scaffold.getRepr(insn.result);
+    wasm:Expression assign = buildStore(module,
+                                        insn.result, 
+                                        buildWideRepr(module, scaffold, operand, targetRepr, insn.result.semType));
+    if operand is bir:NarrowRegister {
+        Repr sourceRepr = scaffold.getRepr(operand);
+        if sourceRepr.wasm is wasm:ComplexRefType {
+            return module.addIf(module.unary("i32.eqz", module.refIs("ref.is_null", buildLoad(module, operand))), assign);
+        }
+    }
+    return assign;
 }
 
 function buildErrorConstruct(wasm:Module module, Scaffold scaffold, bir:ErrorConstructInsn insn) returns wasm:Expression {

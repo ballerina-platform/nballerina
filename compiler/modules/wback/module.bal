@@ -82,8 +82,10 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
                     ifTrueExprs = [buildNarrowReg(module, scaffold, lastInsn.ifTrueRegister)];
                     ifFalseExprs = [buildNarrowReg(module, scaffold, lastInsn.ifFalseRegister, true)];
                 }
-                ifTrueExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifTrue, region, index, exit));
-                ifFalseExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifFalse, region, index, exit));
+                if lastInsn.ifTrue != exit {
+                    ifTrueExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifTrue, region, index, exit, true));
+                }
+                ifFalseExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifFalse, region, index, exit, true));
                 wasm:Expression ifBody = module.block(ifTrueExprs);
                 wasm:Expression elseBody = module.block(ifFalseExprs);
                 cur.push(...header);
@@ -256,17 +258,17 @@ function maybePush(bir:Label[] labels, bir:Label[] queue, bir:Label[] processedQ
     }
 }
 
-function buildBlocksInRegion(Scaffold scaffold, wasm:Module module, bir:Label label, bir:Region? cur = () , bir:RegionIndex? rIndex = (), bir:Label? exit = ()) returns wasm:Expression[] {
+function buildBlocksInRegion(Scaffold scaffold, wasm:Module module, bir:Label label, bir:Region? cur = () , bir:RegionIndex? rIndex = (), bir:Label? exit = (), boolean immediate = false) returns wasm:Expression[] {
     wasm:Expression[] children = [];
     bir:RegionIndex? index = scaffold.entryOfRegion(label);
-    if scaffold.isBlockNotProcessed(label) {
+    if scaffold.isBlockNotProcessed(label) || (immediate && scaffold.entryOfRegion(label) == ()) {
         children.push(...buildBasicBlock(scaffold, module, scaffold.blocks[label]));
     }
     if index != () {
         if (cur == () && scaffold.regions[index].parent == ()) || cur != () {
             wasm:Expression[]? rendered = scaffold.getRenderedRegion(index);
             if rendered != () {
-                scaffold.setRenderedRegion(index, []);
+                // scaffold.setRenderedRegion(index, []);
                 children.push(...rendered);
             }
         }
