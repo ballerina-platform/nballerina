@@ -59,11 +59,10 @@
       (call $_bal_casted_list_length 
         (ref.as_non_null
           (local.get $2))))
-    (if 
-      (i32.eqz 
-        (i32.lt_s 
-          (local.get $1) 
-          (i32.const 0))) 
+    (if       
+      (i32.ge_s
+        (local.get $1) 
+        (i32.const 0))
       (if 
         (i32.or
           (i32.lt_u
@@ -79,11 +78,24 @@
                 (local.get $2)))
             (i64.extend_i32_u
               (local.get $1))))
-        (return
-          (call $_bal_list_get_cast 
-            (ref.as_non_null
-              (local.get $2)) 
-            (local.get $1)))
+        (block
+          (if
+            (i32.ge_s
+              (local.get $1)
+              (i32.wrap_i64
+                (local.get $3)))
+            (struct.set $List $len 
+              (ref.as_non_null
+                (local.get $2))
+              (i64.add
+                (i64.extend_i32_u
+                  (local.get $1))
+                (i64.const 1))))
+          (return
+            (call $_bal_list_get_cast 
+              (ref.as_non_null
+                (local.get $2)) 
+              (local.get $1))))
         (throw $no-filler-value)) 
       (throw $index-outof-bound)))
   ;; $_bal_list_get

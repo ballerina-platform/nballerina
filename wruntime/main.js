@@ -1,5 +1,5 @@
 const fs = require('fs');
-var Decimal = require('./decimal');
+var Decimal = require('./third-party/decimal');
 Decimal.set({ precision: 34, toExpPos: 34, defaults: true, rounding: Decimal.ROUND_HALF_EVEN });
 let WasmModule = {
   tags: [],
@@ -45,7 +45,7 @@ const formatDecimal = (str, scale) => {
   let sigLength = significant.length;
   let dotIndex = significant.indexOf(".");
   let exponent;
-  if (sigLength[0] == "-") {
+  if (significant[0] == "-") {
     sigLength -= 1;
   }
   if (dotIndex != -1) {
@@ -62,18 +62,15 @@ const formatDecimal = (str, scale) => {
       }
       else {
           let unsignedE = exponent[0] == "+" ? exponent.substring(1) : exponent;
-          if (parseInt(unsignedE) < aScale) {
-              aScale = aScale - parseInt(unsignedE);
-          }
-          else {
-              aScale = 0;
+          if (aScale > 0) {
+            aScale = aScale + parseInt(unsignedE);
           }
       }
   }
   if (aScale < scale) {
       let adjusted_scale = scale - aScale;
-      if (adjusted_scale > 34) {
-        adjusted_scale = 34 - aScale  > 0 ? 33 - aScale - 1 : 0;
+      if (adjusted_scale > 33) {
+        adjusted_scale = 33 - sigLength;
       }
       let zeros = "0".repeat(adjusted_scale);
       zeros = dotIndex != -1 ? zeros : "." + zeros;
