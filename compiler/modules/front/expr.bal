@@ -1235,12 +1235,9 @@ function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemT
     TypeMerger trueMerger = createNarrowMerger(cx, opBinding, ifTrueRegister, pos, nextBlock.label, prevs?.trueMerger);
     TypeMerger falseMerger = createNarrowMerger(cx, opBinding, ifFalseRegister, pos, nextBlock.label, prevs?.falseMerger);
     bir:TypeBranchInsn insn = { operand: reg, semType: negated ? intersect: semType, ifTrue: trueMerger.dest.label, ifFalse: falseMerger.dest.label, ifTrueRegister, ifFalseRegister, pos };
-    StmtContext? sc = cx.sc;
     bir:Region[] regions = prevs != () ? prevs.regions : [];
-    if sc != () {
-        bir:Region region = { entry: nextBlock.label, kind: bir:REGION_COND };
-        regions.push(region);
-    }
+    bir:Region region = { entry: nextBlock.label, kind: bir:REGION_COND };
+    regions.push(region);
     nextBlock.insns.push(insn);
     return { trueMerger, falseMerger, regions };
 }

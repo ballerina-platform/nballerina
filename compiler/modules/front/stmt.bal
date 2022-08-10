@@ -760,21 +760,6 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
         }
         if taken != () {
             createConditionalRegions(cx, regions);
-            bir:RegionIndex[] indexes = [];
-            bir:Label?[] exits = [];
-            if regions.length() > 0 {
-                foreach bir:Region region in regions {
-                    bir:RegionIndex? index = cx.maybeOpenRegion(region.entry, region.kind, region.exit);                
-                    if index != () {
-                        indexes.push(index);
-                        exits.push(region.exit);
-                    }
-                }
-            }
-            indexes = indexes.reverse();
-            foreach int i in 0..<indexes.length() {                
-                cx.maybeCloseRegion(indexes[i], exits[i]);
-            }
             return codeGenScopeWithTypeMerger(cx, merger, initialBindings, taken);
         }
         else {
