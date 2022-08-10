@@ -266,18 +266,12 @@ function getScale(decimal d) returns int {
     if indexDot != () {
         scale += significant.length() - indexDot - 1;
     }
-    if (significant[0] == "-") {
-        scale -= 1;
-    }
     if signedE != () {
         string? signE = signedE[0] == "+" || signedE[0] == "-" ? signedE[0] : ();
         int|error unsignedE = int:fromString(signE != () ? signedE.substring(1) : signedE);
         if unsignedE is int {
             if signE == "-" {
                 scale += unsignedE;
-            }
-            else {
-                scale = scale - unsignedE > 0 ? scale - unsignedE : 0;
             }
         }
         else {

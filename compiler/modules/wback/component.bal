@@ -195,7 +195,7 @@ function addRttFunctions(wasm:Module module, Component component) returns io:Err
         int index = <int>absPath.lastIndexOf(baseDir);
         string basePath = absPath.substring(0, index + baseDir.length() + 1);
         foreach RuntimeModule mod in filtered {
-            string path = check file:joinPath(basePath, "wrun", "wat", mod.file);
+            string path = check file:joinPath(basePath, "wruntime", "wat", mod.file);
             wasm:Wat[] wat = check io:fileReadLines(path);
             string? identifier = ();
             string[] content = [];
