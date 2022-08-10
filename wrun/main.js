@@ -35,6 +35,57 @@ const formatNumberString = (num, separator) => {
   }
 }
 
+const formatDecimal = (str, scale) => {
+  if (str == "0") {
+    return str;
+  }
+  let aScale = 0;
+  let parts = str.split("E");
+  let significant = parts[0];
+  let sigLength = significant.length;
+  let dotIndex = significant.indexOf(".");
+  let exponent;
+  if (sigLength[0] == "-") {
+    sigLength -= 1;
+  }
+  if (dotIndex != -1) {
+      aScale = significant.length - dotIndex - 1; 
+      sigLength -= 1;
+  }
+  if (sigLength >= 34) {
+    return str;
+  }
+  if (parts.length > 1) {
+      exponent = parts[1];
+      if (parts[1][0] == "-") {
+          aScale += parseInt(exponent.substring(1));
+      }
+      else {
+          let unsignedE = exponent[0] == "+" ? exponent.substring(1) : exponent;
+          if (parseInt(unsignedE) < aScale) {
+              aScale = aScale - parseInt(unsignedE);
+          }
+          else {
+              aScale = 0;
+          }
+      }
+  }
+  if (aScale < scale) {
+      let adjusted_scale = scale - aScale;
+      if (adjusted_scale > 34) {
+        adjusted_scale = 34 - aScale  > 0 ? 33 - aScale - 1 : 0;
+      }
+      let zeros = "0".repeat(adjusted_scale);
+      zeros = dotIndex != -1 ? zeros : "." + zeros;
+      significant = significant + zeros;
+      if (exponent) {
+          return significant + "E" + exponent;
+      }
+      return significant;
+  }  
+  return str;  
+}
+
 const stringImport = {
   create: (offset, length) => {
     var bytes = new Uint8Array(WasmModule.memory.buffer, offset, length);
@@ -120,7 +171,7 @@ const decimalImport = {
     return arg1.equals(arg2);
   },
   exact_eq: (arg1, arg2) => {
-    return arg1.equals(arg2);
+    return arg1.exact_eq(arg2);
   },
   from_float: (arg1) => {
     if (isNaN(arg1)) {
@@ -217,7 +268,9 @@ const getValue = (ref, parent = null) => {
       result = formatNumberString(result.toString(), "e");
       break;
     case TYPE_DECIMAL:
-      result = WasmModule._bal_get_decimal(ref).toString().toUpperCase()
+      result = WasmModule._bal_get_decimal(ref).toString().toUpperCase();
+      scale = WasmModule._bal_get_decimal_scale(ref);
+      result = formatDecimal(result, scale);
       break;
     case TYPE_STRING:
       result = WasmModule._bal_get_string(ref);

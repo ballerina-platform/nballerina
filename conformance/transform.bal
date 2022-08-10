@@ -20,7 +20,7 @@ public type Options record {
 
 public function main(string[] paths, *Options opts) returns error? {
     string? skipList = opts.skipList;
-    string[][] skipLables = skipList != () ? check parseSkipList(skipList) : [];
+    string[][] skipLabels = skipList != () ? check parseSkipList(skipList) : [];
     int skipped = 0;
     int total = 0;
     foreach string path in paths {
@@ -29,7 +29,7 @@ public function main(string[] paths, *Options opts) returns error? {
         string[] parts = check file:splitPath(path);
         string filename = parts[parts.length() - 1];
         string dir = parts[parts.length() - 2];
-        skipped += check outputTest(tests, dir, filename, skipLables);
+        skipped += check outputTest(tests, dir, filename, skipLabels);
     }
     io:println("skipped: ", skipped);
     io:println("updated: ", total - skipped);
@@ -59,7 +59,7 @@ function parseTest(string path) returns BaltTestCase[]|io:Error {
         }
         else if line.startsWith("Labels:") {
             var [_, fBody] = parseField(line);
-            labels = parseCharSeperatedList(fBody, ",");
+            labels = parseCharSeparatedList(fBody, ",");
             s = LABEL;
         }
         else if s is HEADER|LABEL && line.trim() == "" {
@@ -71,7 +71,7 @@ function parseTest(string path) returns BaltTestCase[]|io:Error {
                     header.push(line);
                 }
                 LABEL => {
-                    labels.push(...parseCharSeperatedList(line, ","));
+                    labels.push(...parseCharSeparatedList(line, ","));
                 }
                 CONTENT => {
                     var [contentLine, newLabels] = transformContent(line);
@@ -103,7 +103,7 @@ function addImports(string[] content, boolean useIoLib) returns string [] {
 }
 
 function parseSkipList(string skipListPath) returns string[][]|io:Error {
-    return from string line in check io:fileReadLines(skipListPath) select parseCharSeperatedList(line, " ");
+    return from string line in check io:fileReadLines(skipListPath) select parseCharSeparatedList(line, " ");
 }
 
 function transformContent(string line) returns [string, string[]] {
@@ -137,11 +137,20 @@ function transformContent(string line) returns [string, string[]] {
         // this is sufficient to catch current cases but not all possible cases
         newLabels.push("unary-plus");
     }
-    if line.indexOf("?:") is int {
+    if line.indexOf("?:") is int || line.indexOf(" ?") is int {
         newLabels.push("ternary-conditional-expr");
     }
     if line.indexOf("[*]") is int {
         newLabels.push("inferred-array-length");
+    }
+    if line.indexOf("?;") is int {
+        // this is sufficient to catch current cases but not all possible cases
+        int? starIndex = line.indexOf("{");
+        int? endIndex = line.indexOf("}");
+        int targetIndex = <int>line.indexOf("?;");
+        if starIndex is int && endIndex is int && starIndex < targetIndex && targetIndex < endIndex {
+            newLabels.push("optional-field");
+        }
     }
     return [newLine, newLabels];
 }
@@ -157,7 +166,7 @@ function parseField(string s) returns [string, string] {
     }
 }
 
-function parseCharSeperatedList(string s, string:Char sep) returns string[] {
+function parseCharSeparatedList(string s, string:Char sep) returns string[] {
     string[] labels = [];
     string[] content = [];
     foreach string:Char c in s {
@@ -182,10 +191,16 @@ function parseCharSeperatedList(string s, string:Char sep) returns string[] {
 map<int[]> skipTest = {
     "list_constructor.balt": [6, 13, 15, 37, 49, 50], // #1003, JBUG, JBUG, BUG, #576, #576
     "negation_is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
-    "is_expr.balt": [38, 39, 54, 84, 87, 88] // JBUG
+    "is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
+    // decimal presentation JBUG #1046
+    "decimal_addition.balt": [1, 2, 11, 12],
+    "decimal_subtraction.balt": [1, 2, 11, 12],
+    "fixed_length_array_member_access_expr.balt": [14], // member access on a list constructor expr #1003
+    // not allowed under current grammar
+    "mapping_constructor_expr.balt": [8, 13, 11, 12] // unicode in the field name 8, 13; variable-name-field 11, 12
 };
 
-function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLables) returns int|io:Error {
+function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLabels) returns int|io:Error {
     string[] body = [];
     int skipped = 0;
     int index = 0;
@@ -199,7 +214,7 @@ function outputTest(BaltTestCase[] tests, string dir, string filename, string[][
                 break;
             }
         }
-        if skipTest || !testValid(test, skipLables) {
+        if skipTest || !testValid(test, skipLabels) {
             skipped += 1;
             continue;
         }
@@ -216,8 +231,8 @@ function outputTest(BaltTestCase[] tests, string dir, string filename, string[][
     return skipped;
 }
 
-function testValid(BaltTestCase test, string[][] skipLables) returns boolean {
-    foreach string[] labelGroup in skipLables {
+function testValid(BaltTestCase test, string[][] skipLabels) returns boolean {
+    foreach string[] labelGroup in skipLabels {
         boolean invalid = true;
         foreach string label in labelGroup {
             if test.labels.indexOf(label, 0) == () {

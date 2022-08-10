@@ -749,7 +749,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
     ExprContext ec = cx.exprContext(initialBindings);
     var { condition, ifTrue, ifFalse } = stmt;
     CondExprEffect condEffect = check codeGenExprForCond(ec, startBlock, condition);
-    var {trueMerger, falseMerger} = condEffect;
+    var {trueMerger, falseMerger, regions} = condEffect;
     if trueMerger == () || falseMerger == () {
         // this will happen when type of condition is singleton true or singleton false
         var [constCond, merger] = typeMergerPairSingleton(condEffect);
@@ -759,6 +759,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
             return cx.semanticErr("unreachable code", s:range(errStmt));
         }
         if taken != () {
+            createConditionalRegions(cx, regions);
             return codeGenScopeWithTypeMerger(cx, merger, initialBindings, taken);
         }
         else {
@@ -768,6 +769,7 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
     }
     else {
         bir:RegionIndex? regionIndex = cx.maybeOpenRegion(startBlock.label, bir:REGION_COND);
+        createConditionalRegions(cx, regions, startBlock.label);
         var { block: ifContBlock, bindings: ifBindings } = check codeGenScopeWithTypeMerger(cx, trueMerger, initialBindings, ifTrue);
         if ifFalse == () {
             // Just an if branch
@@ -803,6 +805,25 @@ function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCha
                 return { block: contBlock, bindings };
             }
         }
+    }
+}
+
+function createConditionalRegions(StmtContext cx, bir:Region[] regions, bir:Label? startLabel = ()) {
+    bir:RegionIndex[] indexes = [];
+    bir:Label?[] exits = [];
+    foreach bir:Region region in regions {
+        if startLabel != () && region.entry == startLabel {
+            continue;
+        }
+        bir:RegionIndex? index = cx.maybeOpenRegion(region.entry, region.kind, region.exit);                
+        if index != () {
+            indexes.push(index);
+            exits.push(region.exit);
+        }
+    }
+    indexes = indexes.reverse();
+    foreach int i in 0..<indexes.length() {                
+        cx.maybeCloseRegion(indexes[i], exits[i]);
     }
 }
 

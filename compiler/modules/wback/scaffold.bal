@@ -76,6 +76,11 @@ type SubtypeDefn record {|
     string global;
 |};
 
+type LoopRegionBody record {|
+    readonly bir:RegionIndex index;
+    bir:Label? label;
+|};
+
 class Scaffold {
     private wasm:Module module;
     final bir:BasicBlock[] blocks;
@@ -89,6 +94,7 @@ class Scaffold {
     private map<wasm:Expression[]> renderedRegion = {};
     private bir:Label[] processedBlocks = [];
     private table<RegionBlocks> key(index) regionBlocks = table[];
+    private table<LoopRegionBody> key(index) loopRegionBody = table[];
     private map<bir:RegionIndex> regionEntries = {};
     private bir:Label[] breakBlocks = [];
     private bir:Label[] regionsWithBreak = [];
@@ -177,6 +183,18 @@ class Scaffold {
 
     function setRegionBlocks(RegionBlocks rblocks) {
         self.regionBlocks.add(rblocks);
+    }
+
+    function setLoopRegionBodyBlocks(LoopRegionBody regionBody) {
+        self.loopRegionBody.put(regionBody);
+    }
+
+    function getLoopRegionBodyBlocks(bir:RegionIndex index) returns bir:Label? {
+        LoopRegionBody? regionBody = self.loopRegionBody[index];
+        if regionBody != () {
+            return regionBody.label;
+        }
+        return ();
     }
 
     function getRegionBlocks(bir:RegionIndex index) returns bir:Label[] {

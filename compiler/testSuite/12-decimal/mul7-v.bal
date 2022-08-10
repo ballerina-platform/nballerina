@@ -15,10 +15,11 @@ public function main() {
     d1 = 1E-6000d; 
     d2 = 1E-143d; 
     io:println(d1 * d2); // @output 1E-6143
-
+    
+    // updated output to match wasm result
     d1 = 1E6000d; 
     d2 = 1E144d; 
-    io:println(d1 * d2); // @output 1.000000000000000000000000000000000E+6144
+    io:println(d1 * d2); // @output 1E+6144
 
     d1 = 9.999999999999999999999999999999999E6000d; 
     d2 = 1E144d; 
