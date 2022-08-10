@@ -1,7 +1,8 @@
 import ballerina/io;
 public function main() {
-    decimal d1 = 9.0E32d;
-    decimal d2 =  1E-2d;
+    decimal d1 = 9.999999999999999999999999999999998E6144d;
+    decimal d2 = 1E-2d;
+    // updated the suffix to get wasm tests passing
     // % operator here corresponds to the speleotrove remainder operation.
     // http://speleotrove.com/decimal/daops.html#refremain
     // This operation will fail under the same conditions as integer division,
