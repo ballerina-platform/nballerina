@@ -247,11 +247,15 @@ function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, L
         if intersection is () {
             return ();
         }
-        atom = { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
+        var [members, rest] = intersection;
+        foreach SemType member in members.initial {
+            if isNever(member) {
+                return ();
+            }
+        }
+        atom = { members: members.cloneReadOnly(), rest };
     }
-    TypeAtom tyAtom = env.listAtom(atom);
-    Bdd bdd = bddAtom(tyAtom);
-    SemType semType = createUniformSemType(UT_LIST_RW, bdd);
+    SemType semType = createUniformSemType(UT_LIST_RW, bddAtom(env.listAtom(atom)));
     return [semType, atom];
 }
 
