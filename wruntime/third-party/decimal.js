@@ -2,7 +2,7 @@
   'use strict';
 
 
-  /*
+  /*!
    *  decimal.js v10.3.1
    *  An arbitrary-precision Decimal type for JavaScript.
    *  https://github.com/MikeMcl/decimal.js
@@ -490,14 +490,6 @@
     return this.cmp(y) === 0;
   };
 
-  P.exact_equals = P.exact_eq = function (y) {
-    if (this.stringInit) {
-      if (y.stringInit) {
-        return this.stringInit === y.stringInit;
-      }
-    }
-    return this.cmp(y) === 0;
-  }
 
   /*
    * Return a new Decimal whose value is the value of this Decimal rounded to a whole number in the
@@ -1506,24 +1498,10 @@
    *
    */
   P.negated = P.neg = function () {
-    var org = this;
     var x = new this.constructor(this);
-    if (x.isZero()) {
-      return finalise(x);
-    }
     x.s = -x.s;
-    let initS = org.stringInit;
-    if (initS) {
-      if (initS.charCodeAt(0) === 45) {
-      x.stringInit = initS.slice(1);
-      }
-      else {
-        x.stringInit = "-" + initS;
-      }
-    }
     return finalise(x);
   };
-
 
 
   /*
@@ -1954,43 +1932,10 @@
 
     y.d = r;
     y.e = getBase10Exponent(r, e);
-    if ((y.lt("1E-6143") && y.gt("0"))  || (y.gt("-1E-6143") && y.lt("0"))) {
-      y = new Decimal("0");
-    }
-    let initial = y.toString();
-    let result = external ? finalise(y, Ctor.precision, Ctor.rounding) : y;
-    adjustScale(initial, result);
-    return result;
+
+    return external ? finalise(y, Ctor.precision, Ctor.rounding) : y;
   };
 
-  function adjustScale(initial, y) {
-    if (initial !== y.toString()) {
-      let repr = y.toString();
-      let parts = repr.split("e");
-      let significant = parts[0];
-      let dotIndex = significant.indexOf(".");
-      let sLength = significant.length;
-      let zeros = "";
-      if (dotIndex != -1) {
-        sLength -= 1;
-      }
-      else {
-        zeros = ".";
-      }
-      if (significant[0] === "-") {
-        sLength -= 1; 
-      }
-      for (let index = 0; index < (34 - sLength); index++) {
-        zeros+= "0";
-      } 
-      significant += zeros;
-      repr = significant;
-      if (parts.length == 2) {
-        repr +=  "e" + parts[1];
-      }
-      y.stringInit = repr;
-    }
-  }
 
   /*
    * Return a string representing the value of this Decimal in base 2, round to `sd` significant
@@ -2495,9 +2440,7 @@
     var x = this,
       Ctor = x.constructor,
       str = finiteToString(x, x.e <= Ctor.toExpNeg || x.e >= Ctor.toExpPos);
-    if (x.stringInit) {
-      return x.stringInit;
-    }
+
     return x.isNeg() && !x.isZero() ? '-' + str : str;
   };
 
@@ -2986,10 +2929,9 @@
 
         // To calculate q.e, first get the number of digits of qd[0].
         for (i = 1, k = qd[0]; k >= 10; k /= 10) i++;
-        let initial = q.toString();
         q.e = i + e * logBase - 1;
+
         finalise(q, dp ? pr + q.e + 1 : pr, rm, more);
-        adjustScale(initial, q);
       }
 
       return q;
@@ -4430,7 +4372,7 @@
       } else if (t !== 'string') {
         throw Error(invalidArgument + v);
       }
-      x.stringInit = v;
+
       // Minus sign?
       if ((i = v.charCodeAt(0)) === 45) {
         v = v.slice(1);

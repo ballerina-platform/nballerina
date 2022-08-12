@@ -51,7 +51,7 @@ public function main() {
 
     d1 = 1E-6143d; 
     d2 = 1E6143d; 
-    io:println(d1 * d2); // @output 1.00000000000000000000000000000000
+    io:println(d1 * d2); // @output 1.000000000000000000000000000000000
 
     d1 = 1E-6001d;
     d2 = 1E-143d; 

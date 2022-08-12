@@ -68,11 +68,11 @@ const formatDecimal = (str, scale) => {
       }
   }
   if (aScale < scale) {
-      let adjusted_scale = scale - aScale;
-      if (adjusted_scale > 33) {
-        adjusted_scale = 33 - sigLength;
+      let adjustedScale = scale - aScale;
+      if (adjustedScale > 33) {
+        adjustedScale = 34 - sigLength;
       }
-      let zeros = "0".repeat(adjusted_scale);
+      let zeros = "0".repeat(adjustedScale);
       zeros = dotIndex != -1 ? zeros : "." + zeros;
       significant = significant + zeros;
       if (exponent) {
@@ -168,7 +168,7 @@ const decimalImport = {
     return arg1.equals(arg2);
   },
   exact_eq: (arg1, arg2) => {
-    return arg1.exact_eq(arg2);
+    return arg1.equals(arg2);
   },
   from_float: (arg1) => {
     if (isNaN(arg1)) {
@@ -265,9 +265,17 @@ const getValue = (ref, parent = null) => {
       result = formatNumberString(result.toString(), "e");
       break;
     case TYPE_DECIMAL:
-      result = WasmModule._bal_get_decimal(ref).toString().toUpperCase();
-      scale = WasmModule._bal_get_decimal_scale(ref);
-      result = formatDecimal(result, scale);
+      result = WasmModule._bal_get_decimal(ref);
+      let scale = WasmModule._bal_get_decimal_scale(ref);
+      let lenDecimal = WasmModule._bal_get_decimal_length(ref);
+      let offsetDecimal = WasmModule._bal_get_decimal_offset(ref);
+      if (lenDecimal == 0 && offsetDecimal == 0) {
+        result = formatDecimal(result.toString().toUpperCase(), scale);        
+      }
+      else {
+        var bytes = new Uint8Array(WasmModule.memory.buffer, offsetDecimal, lenDecimal);
+        result = new TextDecoder('utf8').decode(bytes);
+      }
       break;
     case TYPE_STRING:
       result = WasmModule._bal_get_string(ref);
