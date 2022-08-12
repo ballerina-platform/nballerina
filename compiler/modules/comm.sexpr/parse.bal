@@ -1,7 +1,8 @@
-public type Any ()|string|boolean|int|Str|Any[];
+public type Data ()|Symbol|boolean|int|float|decimal|String|Data[];
 
-public type Str record {|
-    string str;
+public type Symbol string;
+public type String readonly & record {|
+    string s;
 |};
 
 const QUOTE       = 0x22;
@@ -20,7 +21,7 @@ class Tokenizer {
         self.pos = 0;
     }
 
-    function next() returns OPEN_PAREN|CLOSE_PAREN|string|Str|int|error {
+    function next() returns OPEN_PAREN|CLOSE_PAREN|string|String|int|error {
         int c = self.nextChar();
         while c is WS {
             c = self.nextChar();
@@ -33,7 +34,7 @@ class Tokenizer {
             while true {
                 int q = self.nextChar();
                 if q == QUOTE {
-                    return { str: check string:fromCodePointInts(quoted) };
+                    return { s: check string:fromCodePointInts(quoted) };
                 }
                 quoted.push(q);
             }
@@ -65,17 +66,17 @@ class Tokenizer {
     }
 }
 
-public function parse(string input) returns Any[]|error {
+public function parse(string input) returns Data[]|error {
     Tokenizer t = new(input);
-    Any[] topLevel = [];
+    Data[] topLevel = [];
     while !t.eof() && t.next() == OPEN_PAREN {
         topLevel.push(check parseList(t));
     }
     return topLevel;
 }
 
-function parseList(Tokenizer t) returns Any|error {
-    Any[] result = [];
+function parseList(Tokenizer t) returns Data|error {
+    Data[] result = [];
     while true {
         match check t.next() {
             OPEN_PAREN => {

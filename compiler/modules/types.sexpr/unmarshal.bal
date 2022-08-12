@@ -90,7 +90,7 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
     int mappingLen = atomSexpr.length();
     // JBUG `atomSexpr is OpenMapping` is always false
     if mappingLen == 3 {
-        fields = from var f in (<OpenMapping>atomSexpr)[1] select [f[0].str, semTypeFromSexpr(env, bindings, f[1])];
+        fields = from var f in (<OpenMapping>atomSexpr)[1] select [f[0].s, semTypeFromSexpr(env, bindings, f[1])];
         rest = <Type>atomSexpr[2];
     }
     else {
@@ -100,3 +100,4 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
     t:MappingDefinition d = new;
     return d.define(env, fields, semTypeFromSexpr(env, bindings, rest));
 }
+

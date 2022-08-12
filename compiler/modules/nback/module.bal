@@ -1,7 +1,10 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.sexpr;
+import wso2/nballerina.bir.sexpr as bsexpr;
 import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
+import ballerina/io;
 
 public function buildModule(bir:Module birMod, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
     llvm:Context llContext = new;
@@ -50,17 +53,35 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard")),
         llInitTypes: createInitTypes(llContext)
     };  
+    bsexpr:Function[] funcs = [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
+        bir:File file = birMod.getPartFile(defn.partIndex);
+        funcs.push(bsexpr:func(defn, code, file));
         check bir:verifyFunctionCode(birMod, defn, code);
         DISubprogram? diFunc = di == () ? () : diFuncs[i];
         Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
     }
+    io:println(sexpr:prettyPrint(funcs, indentAt));
     check birMod.finish();
     return [llMod, createTypeUsage(mod.usedSemTypes)];
+}
+
+function indentAt(int[] index) returns boolean {
+    match index {
+        []|[5]|[5, _]|[6]|[6, 1] => {
+            return true;
+        }
+        [6, 1, var n] => {
+            return n > 1;
+        }
+        _ => {
+            return false;
+        }
+    }
 }
 
 function calculateBuildOrder(bir:BasicBlock[] blocks) returns bir:Label[] {
