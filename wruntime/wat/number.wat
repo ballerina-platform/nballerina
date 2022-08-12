@@ -21,6 +21,8 @@
   (export "overflow" (tag $overflow)) 
   (export "bad-conversion" (tag $bad-conversion)) 
   (export "_bal_get_decimal_scale" (func $_bal_get_decimal_scale))
+  (export "_bal_get_decimal_offset" (func $_bal_get_decimal_offset))
+  (export "_bal_get_decimal_length" (func $_bal_get_decimal_length))
   ;; $_bal_float_subtype_contains
   (func $_bal_float_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
     (local $2 (ref null $FloatSubtype))
@@ -725,6 +727,8 @@
           (struct.get $Decimal $scale
             (ref.as_non_null
               (local.get $4))))
+          (i32.const 0)
+          (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_sub
   (func $_bal_decimal_sub (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
@@ -760,6 +764,8 @@
           (struct.get $Decimal $scale
             (ref.as_non_null
               (local.get $4))))
+        (i32.const 0)
+        (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_mul
   (func $_bal_decimal_mul (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
@@ -795,6 +801,8 @@
           (struct.get $Decimal $scale
             (ref.as_non_null
               (local.get $4))))
+        (i32.const 0)
+        (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_div
   (func $_bal_decimal_div (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
@@ -830,6 +838,8 @@
           (struct.get $Decimal $scale
             (ref.as_non_null
               (local.get $4))))
+        (i32.const 0)
+        (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_rem
   (func $_bal_decimal_rem (param $0 eqref) (param $1 eqref) (result (ref $Decimal))
@@ -865,6 +875,8 @@
           (struct.get $Decimal $scale
             (ref.as_non_null
               (local.get $4))))
+        (i32.const 0)
+        (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_eq
   (func $_bal_decimal_eq (param $0 eqref) (param $1 eqref) (result i32)
@@ -962,6 +974,8 @@
         (i32.const 512)
         (local.get $1)
         (i32.const 0)
+        (i32.const 0)
+        (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_from_int
   (func $_bal_decimal_from_int (param $0 i64) (result (ref $Decimal))
@@ -973,6 +987,8 @@
       (struct.new_with_rtt $Decimal
         (i32.const 512)
         (local.get $1)
+        (i32.const 0)
+        (i32.const 0)
         (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_neg
@@ -996,6 +1012,8 @@
         (struct.get $Decimal $scale
           (ref.as_non_null
             (local.get $2)))
+        (i32.const 0)
+        (i32.const 0)
         (global.get $rttDecimal))))
   ;; $_bal_decimal_subtype_contains
   (func $_bal_decimal_subtype_contains (param $0 eqref) (param $1 eqref) (result i32)
@@ -1125,6 +1143,22 @@
   (func $_bal_get_decimal_scale (param $0 eqref) (result i32)
     (return
       (struct.get $Decimal $scale
+        (ref.cast 
+          (ref.as_data
+            (local.get $0))
+          (global.get $rttDecimal)))))
+  ;; $_bal_get_decimal_offset
+  (func $_bal_get_decimal_offset (param $0 eqref) (result i32)
+    (return
+      (struct.get $Decimal $offset
+        (ref.cast 
+          (ref.as_data
+            (local.get $0))
+          (global.get $rttDecimal)))))
+  ;; $_bal_get_decimal_length
+  (func $_bal_get_decimal_length (param $0 eqref) (result i32)
+    (return
+      (struct.get $Decimal $length
         (ref.cast 
           (ref.as_data
             (local.get $0))
