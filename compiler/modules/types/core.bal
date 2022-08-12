@@ -195,6 +195,11 @@ public type ListFiller readonly & record {|
     Filler[] memberFillers;
 |};
 
+// Used in testing types.regex to create context without a Module
+public function contextFromEnv(Env env) returns Context {
+    return new(env);
+}
+
 // Operations on types require a Context.
 // There can be multiple contexts for the same Env.
 // Whereas an Env is isolated, a Context is not isolated.
