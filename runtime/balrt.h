@@ -269,7 +269,7 @@ typedef struct {
     double floats[];
 } *FloatSubtypePtr;
 
-typedef const char *DecimalConstPtr;
+typedef const uint64_t *DecimalConstPtr;
 
 typedef struct {
     UniformSubtype uniform;
@@ -461,7 +461,6 @@ extern void _bal_print_mangled_name(const char *mangledName, FILE *fp);
 extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 extern NORETURN COLD void _bal_panic_internal(PanicCode code);
 
-extern TaggedPtr _bal_decimal_const(const char *decString);
 extern TaggedPtrPanicCode _bal_decimal_add(TaggedPtr tp1, TaggedPtr tp2);
 extern TaggedPtrPanicCode _bal_decimal_sub(TaggedPtr tp1, TaggedPtr tp2);
 extern TaggedPtrPanicCode _bal_decimal_mul(TaggedPtr tp1, TaggedPtr tp2);

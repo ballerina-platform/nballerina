@@ -9,7 +9,7 @@
 # You can do `make -f ../../sub.mk tdir=$(basename "$PWD") compile` to compile all changed test cases from .bal to .ll
 # You can do `make -f ../../sub.mk tdir=$(basename "$PWD") testll` to test the ll files.
 # Failing tests are listed in fail.txt
-COMPILER_JAR=../../../build/bin/nballerina.jar
+COMPILER_JAR=../../../build/compiler/bin/nballerina.jar
 # This is used in phase 2
 JAVA ?= $(shell ../../findJava.sh)
 bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[vpo].bal)

@@ -14,6 +14,14 @@ public function intConst(int value) returns ComplexSemType {
     return uniformSubtype(UT_INT, t);
 }
 
+public function intRange(int min, int max) returns SemType {
+    if min == int:MIN_VALUE && max == int:MAX_VALUE {
+        return INT;
+    }
+    IntSubtype t = [{ min, max }];
+    return uniformSubtype(UT_INT, t);
+}
+
 function validIntWidth(boolean signed, int bits) returns error? {
     if bits <= 0 {
         return error((bits == 0 ? "zero" : "negative") + " width in bits");

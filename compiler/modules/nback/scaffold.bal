@@ -1,4 +1,5 @@
 import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.lib;
 import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
@@ -15,7 +16,7 @@ const LLVM_VOID = "void";
 final llvm:PointerType LLVM_TAGGED_PTR = heapPointerType("i8");
 final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
 final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
-final llvm:PointerType LLVM_DECIMAL_CONST = llvm:pointerType("i8");
+final llvm:PointerType LLVM_DECIMAL_CONST = llvm:pointerType("i64");
 
 // A Repr is way of representing values.
 // It's a mapping from a SemType to an LLVM type.
@@ -250,7 +251,7 @@ class Scaffold {
         if curDefn != () {
             return curDefn;
         }
-        DecimalDefn newDefn = addDecimalDefn(self.mod.llContext, self.mod.llMod, self.mod.decimalDefns.length(), str);
+        DecimalDefn newDefn = addDecimalDefn(self.mod.llContext, self.mod.llMod, self.mod.decimalDefns.length(), val);
         self.mod.decimalDefns[str] = newDefn;
         return newDefn;
     }
@@ -428,14 +429,13 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
                                       [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
 }
 
-function addDecimalDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue {
-    byte[] bytes = str.toBytes();
-    bytes.push(0);
-    llvm:ConstValue val = context.constString(bytes);
-    llvm:Type ty = llvm:arrayType("i8", bytes.length());
-    llvm:ConstPointerValue ptr = mod.addGlobal(ty,
+function addDecimalDefn(llvm:Context context, llvm:Module mod, int defnIndex, decimal val) returns llvm:ConstPointerValue {
+    var [leastSignificantVal, mostSignificantVal] = lib:toLeDpd(val);
+    llvm:ConstValue lestSignificant = llvm:constInt("i64", leastSignificantVal);
+    llvm:ConstValue mostSignificant = llvm:constInt("i64", mostSignificantVal);
+    llvm:ConstPointerValue ptr = mod.addGlobal(llvm:arrayType("i64", 2),
                                                decimalDefnSymbol(defnIndex),
-                                               initializer = val,
+                                               initializer = context.constArray("i64", [lestSignificant, mostSignificant]),
                                                align = 8,
                                                isConstant = true,
                                                unnamedAddr = true,

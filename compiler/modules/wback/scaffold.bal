@@ -63,6 +63,24 @@ type RegionBlocks record {|
     bir:Label[] labels;
 |};
 
+type ComplexTypeDefn record {|
+    readonly string global;
+    wasm:Expression[] body;
+    readonly t:ComplexSemType semType;
+|};
+
+type SubtypeDefn record {|
+    readonly t:ComplexSemType semType;
+    readonly t:UniformTypeCode typeCode;
+    SubtypeStruct? struct = ();
+    string global;
+|};
+
+type LoopRegionBody record {|
+    readonly bir:RegionIndex index;
+    bir:Label? label;
+|};
+
 class Scaffold {
     private wasm:Module module;
     final bir:BasicBlock[] blocks;
@@ -76,6 +94,7 @@ class Scaffold {
     private map<wasm:Expression[]> renderedRegion = {};
     private bir:Label[] processedBlocks = [];
     private table<RegionBlocks> key(index) regionBlocks = table[];
+    private table<LoopRegionBody> key(index) loopRegionBody = table[];
     private map<bir:RegionIndex> regionEntries = {};
     private bir:Label[] breakBlocks = [];
     private bir:Label[] regionsWithBreak = [];
@@ -91,7 +110,7 @@ class Scaffold {
         self.defn = def;
         self.returnType = def.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
-        self.typeContext = birMod.getTypeContext();
+        self.typeContext = component.getTypeContext();
         self.modId = birMod.getId();
         self.component = component;
         self.initializeReprs(code.registers);
@@ -108,10 +127,6 @@ class Scaffold {
 
     function addExceptionTag(ExceptionTag tag, wasm:Type? kind = ()) {
         self.component.addExceptionTag(tag, kind);
-    }
-
-    function maybeAddStringRecord(string val, int[] surrogate) returns string {
-        return self.component.maybeAddStringRecord(val, surrogate);
     }
 
     function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
@@ -170,6 +185,18 @@ class Scaffold {
         self.regionBlocks.add(rblocks);
     }
 
+    function setLoopRegionBodyBlocks(LoopRegionBody regionBody) {
+        self.loopRegionBody.put(regionBody);
+    }
+
+    function getLoopRegionBodyBlocks(bir:RegionIndex index) returns bir:Label? {
+        LoopRegionBody? regionBody = self.loopRegionBody[index];
+        if regionBody != () {
+            return regionBody.label;
+        }
+        return ();
+    }
+
     function getRegionBlocks(bir:RegionIndex index) returns bir:Label[] {
         return self.regionBlocks.get(index).labels;
     }
@@ -193,7 +220,17 @@ class Scaffold {
     function getRenderedRegion(bir:RegionIndex index) returns wasm:Expression[]? {
         return self.renderedRegion[index.toString()];
     }
+    
+    function getInherentType(t:SemType ty) returns wasm:Expression {
+        UsedSemType used = self.component.getUsedSemType(ty, INHERENT_TYPE);
+        return self.module.globalGet(used.global);
+    }
 
+    function getTypeTest(t:ComplexSemType ty) returns wasm:Expression {
+        UsedSemType used = self.component.getUsedSemType(ty, TYPE_TEST);
+        return self.module.globalGet(used.global);
+    }
+    
 }
 
 final IntRepr REPR_INT = { };
@@ -208,6 +245,7 @@ final TaggedRepr REPR_LIST = { subtype: t:LIST, wasm: { base: LIST_TYPE } };
 final TaggedRepr REPR_MAPPING_RW = { subtype: t:MAPPING_RW, wasm: { base: MAP_TYPE } };
 final TaggedRepr REPR_MAPPING = { subtype: t:MAPPING, wasm: { base: MAP_TYPE } };
 final TaggedRepr REPR_ERROR = { subtype: t:ERROR, wasm: { base: ERROR_TYPE } };
+final TaggedRepr REPR_DECIMAL = { subtype: t:DECIMAL, wasm: { base: DECIMAL_TYPE } };
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, wasm: WASM_VOID };
 
 final readonly & record {|
@@ -217,6 +255,7 @@ final readonly & record {|
     { domain: t:FLOAT, repr: REPR_FLOAT },
     { domain: t:INT, repr: REPR_INT },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
+    { domain: t:DECIMAL, repr: REPR_DECIMAL },
     { domain: t:NIL, repr: REPR_NIL },
     { domain: t:ANY, repr: REPR_ANY },
     { domain: t:TOP, repr: REPR_ANY },

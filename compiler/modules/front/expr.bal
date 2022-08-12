@@ -26,17 +26,59 @@ type ExprEffect record {|
     Binding? binding = ();
 |};
 
-type Binding record {|
+type DeclBinding record {|
     string name;
-    bir:DeclRegister|bir:NarrowRegister reg;
+    bir:DeclRegister reg;
     boolean isFinal;
     boolean used = false;
-    // When this binding represents a narrowing, this refers to the
-    // original binding that was not narrowed.
-    // In the case of the nested narrowing, this points all the way
-    // back to the original explicit binding, not to the previous narrowing.
-    Binding? unnarrowed = ();
 |};
+
+type NarrowBinding record {|
+    string name;
+    bir:NarrowRegister reg;
+    DeclBinding unnarrowed;
+|};
+
+type AssignmentBinding record {|
+    string name;
+    bir:DeclRegister reg; // same as unnarrowed.reg and invalidates.underlying.underling...
+    DeclBinding unnarrowed;
+    bir:NarrowRegister invalidates;
+    Position pos;
+|};
+
+type OccurrenceBinding NarrowBinding|AssignmentBinding;
+type Binding DeclBinding|NarrowBinding|AssignmentBinding;
+
+type BindingChain record {|
+    Binding head;
+    BindingChain? prev;
+|};
+
+// Linked list of incoming branches to a TypeMerger
+type TypeMergerOrigin record {|
+    TypeMergerOrigin? prev;
+    bir:Label label;
+    BindingChain? bindings;
+|};
+
+// A partially constructed potential TypeMergeInsn
+type TypeMerger record {|
+    TypeMergerOrigin? origins = ();
+    bir:BasicBlock dest;
+|};
+
+type TypeMergerPair record {|
+    TypeMerger? trueMerger = ();
+    TypeMerger? falseMerger = ();
+    bir:Region[] regions = [];
+|};
+
+// At least one TypeMerger is non-nil
+type CondExprEffect TypeMergerPair;
+
+// One and only one TypeMerger is non-nil
+type PrevTypeMergers TypeMergerPair;
 
 type BooleanExprEffect record {|
     *ExprEffect;
@@ -63,13 +105,13 @@ class ExprContext {
     final StmtContext? sc;
     final ModuleSymbols mod;
     final s:ModuleLevelDefn defn;
-    final Environment env;
+    final BindingChain? bindings;
     final s:SourceFile file;
     final bir:FunctionCode code;
 
-    function init(ModuleSymbols mod, s:ModuleLevelDefn defn, bir:FunctionCode code, Environment env, StmtContext? sc) {
+    function init(ModuleSymbols mod, s:ModuleLevelDefn defn, bir:FunctionCode code, BindingChain? bindings, StmtContext? sc) {
         self.mod = mod;
-        self.env = env;
+        self.bindings = bindings;
         self.defn = defn;
         self.file = defn.part.file;
         self.sc = sc;
@@ -128,7 +170,7 @@ class ExprContext {
     }
 
     function lookupLocalVarRef(string varName, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
-        return lookupLocalVarRef(self, self.mod, varName, self.env, pos);
+        return lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
     }
 
     function notInConst(s:Expr expr) returns CodeGenError? {
@@ -137,13 +179,14 @@ class ExprContext {
         }
     }
 
-    function exprContextWithBindings(BindingChain bindings) returns ExprContext {
-        return new(self.mod, self.defn, self.code, { bindings, assignments: self.env.assignments }, self.sc);
+    function exprContext(BindingChain? bindings) returns ExprContext {
+        return new(self.mod, self.defn, self.code, bindings, self.sc);
     }
+
 }
 
-function codeGenExprForBoolean(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|BooleanExprEffect {
-    var { result, block } = check codeGenExpr(cx, bb, t:BOOLEAN, expr);
+function codeGenExprForBoolean(ExprContext cx, bir:BasicBlock bb, s:Expr expr, boolean dummy = false) returns CodeGenError|BooleanExprEffect {
+    var { result, block } = check codeGenExpr(cx, bb, t:BOOLEAN, expr, dummy);
     if result is bir:BooleanConstOperand || (result is bir:Register && t:isSubtypeSimple(result.semType, t:BOOLEAN)) {
         return { result, block };
     }
@@ -180,7 +223,7 @@ function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, t:SemType require
     return effect;
 }
 
-function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
+function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr, boolean dummy = false) returns CodeGenError|ExprEffect {
     match expr {
         var { innerExpr } => {
             return codeGenExpr(cx, bb, expected, innerExpr);
@@ -208,7 +251,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
             return codeGenCheckingExpr(cx, bb, expected, checkingKeyword, operand, pos);
         }
         var { opPos: pos, logicalOp: op, left, right } => {
-            return booleanEffectFromCondEffect(cx, check codeGenLogicalBinaryExpr(cx, bb, op, pos, left, right), pos);
+            return booleanEffectFromCondEffect(cx, check codeGenLogicalBinaryExpr(cx, bb, op, pos, left, right), pos, dummy);
         }
         var { opPos: pos, bitwiseOp: op, left, right } => {
             var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, expected, left, right, bb, pos);
@@ -293,8 +336,8 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
     panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
 }
 
-function booleanEffectFromCondEffect(ExprContext cx, CondExprEffect effect, Position pos) returns BooleanExprEffect {
-    var { trueMerger, falseMerger } = effect;
+function booleanEffectFromCondEffect(ExprContext cx, CondExprEffect effect, Position pos, boolean dummy = false) returns BooleanExprEffect {
+    var { trueMerger, falseMerger, regions } = effect;
     if trueMerger == () || falseMerger == () {
         var [constCond, merger] = typeMergerPairSingleton(effect);
         return constBooleanExprEffect(cx, merger.dest, constCond, VALUE_CONST | VALUE_SINGLE_SHAPE);
@@ -304,6 +347,21 @@ function booleanEffectFromCondEffect(ExprContext cx, CondExprEffect effect, Posi
         bir:BasicBlock contBlock = cx.createBasicBlock();
         addAssignAndBranch(cx, true, trueMerger.dest, result, contBlock.label, pos);
         addAssignAndBranch(cx, false, falseMerger.dest, result, contBlock.label, pos);
+        StmtContext? sc = cx.sc;
+        if sc != () && !dummy && regions.length() > 0 {
+            bir:RegionIndex[] indexes = [];
+            regions[0].exit = contBlock.label;
+            foreach bir:Region region in regions {
+                bir:RegionIndex? index = sc.maybeOpenRegion(region.entry, region.kind, region.exit);
+                if index != () {
+                    indexes.push(index);
+                }
+            }
+            indexes = indexes.reverse();
+            foreach int i in 0..<indexes.length() {
+                sc.maybeCloseRegion(indexes[i], i == indexes.length() - 1 ? contBlock.label : ());
+            }            
+        }
         return { block: contBlock, result };
     }
 }
@@ -375,7 +433,7 @@ function codeGenExprForCond(ExprContext cx, bir:BasicBlock bb, s:Expr expr, Prev
     }
     var [value, flags] = booleanOperandValue(operand);
     if (flags & VALUE_SINGLE_SHAPE) != 0 {
-        return codeGenConstCond(cx, block, cx.env.bindings, value, prevs, expr.startPos);
+        return codeGenConstCond(cx, block, value, prevs, expr.startPos);
     }
     bir:Register result;
     if flags != 0 {
@@ -404,11 +462,14 @@ function codeGenExprForCond(ExprContext cx, bir:BasicBlock bb, s:Expr expr, Prev
     else {
         result = <bir:Register>operand;
     }
-    BindingChain? bindings = cx.env.bindings;
-    var [ifTrue, ifFalse, effect] = createMergers(cx, block.label, bindings, bindings, prevs);
-    bir:CondBranchInsn condBranch = { operand: result, ifTrue, ifFalse, pos: expr.startPos };
+    TypeMerger trueMerger = createMerger(cx, block.label, prevs?.trueMerger);
+    TypeMerger falseMerger = createMerger(cx, block.label, prevs?.falseMerger);
+    bir:CondBranchInsn condBranch = { operand: result, ifTrue: trueMerger.dest.label, ifFalse: falseMerger.dest.label, pos: expr.startPos };
+    bir:Region[] regions = prevs != () ? prevs.regions : [];
+    bir:Region region = { entry: block.label, kind: bir:REGION_COND };
+    regions.push(region);
     block.insns.push(condBranch);
-    return effect;
+    return { trueMerger, falseMerger, regions };
 }
 
 function codeGenNilLiftResult(ExprContext cx, ExprEffect nonNilEffect, bir:BasicBlock? ifNilBlock, Position pos) returns ExprEffect {
@@ -466,12 +527,15 @@ function codeGenNilLift(ExprContext cx, t:SemType? expected, s:Expr[] operands, 
     bir:BasicBlock? ifNilBlock = ();
     bir:BasicBlock currentBlock = bb;
     bir:Operand[] newOperands = [];
+    bir:RegionIndex? firstRegion = ();
     foreach s:Expr operandExpr in operands {
         var { result: operand, block } = check codeGenExpr(cx, currentBlock, expected, operandExpr);
         currentBlock = block;
         newOperands.push(operand);
     }
     bir:BasicBlock nextBlock = currentBlock;
+    StmtContext? sc = cx.sc;
+    bir:RegionIndex[] openedRegions = [];
     foreach int i in 0 ..< newOperands.length() {
         bir:Operand operand = newOperands[i];
         if operand is bir:Register && t:containsNil(operand.semType) {
@@ -491,8 +555,22 @@ function codeGenNilLift(ExprContext cx, t:SemType? expected, s:Expr[] operands, 
                 ifFalseRegister,
                 pos
             };
+            if sc != () {
+                bir:RegionIndex? index = sc.maybeOpenRegion(currentBlock.label, bir:REGION_COND);
+                firstRegion = firstRegion == () ? index : firstRegion;
+                if (index != ()) {
+                    openedRegions.push(index);
+                }
+            }
             currentBlock.insns.push(branchInsn);
             currentBlock = nextBlock;
+        }
+    }
+    if sc != () {
+        openedRegions = openedRegions.reverse();
+        bir:Label exitLabel = openedRegions.length() > 1 ? nextBlock.label + 1 : nextBlock.label + 2;  
+        foreach bir:RegionIndex index in openedRegions {
+            sc.maybeCloseRegion(index, index == firstRegion ? exitLabel : ());
         }
     }
     return { operands: newOperands, nextBlock, ifNilBlock };
@@ -758,20 +836,20 @@ function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, 
 
 function codeGenLogicalNotExprForCond(ExprContext cx, bir:BasicBlock bb, Position pos, s:Expr expr, PrevTypeMergers? prevs) returns CodeGenError|CondExprEffect {
     PrevTypeMergers? flipped = prevs == () ? () : { trueMerger: prevs.falseMerger, falseMerger: prevs.trueMerger };
-    var { trueMerger, falseMerger } = check codeGenExprForCond(cx, bb, expr, flipped);
-    return { trueMerger: falseMerger, falseMerger: trueMerger };
+    var { trueMerger, falseMerger, regions } = check codeGenExprForCond(cx, bb, expr, flipped);
+    return { trueMerger: falseMerger, falseMerger: trueMerger, regions };
 }
 
 function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLogicalOp op, Position pos, s:Expr left, s:Expr right, PrevTypeMergers? prevs = ()) returns CodeGenError|CondExprEffect {
     boolean isOr = op == "||";
     var lhsEffect = check codeGenExprForCond(cx, bb, left, prevs);
-    var { trueMerger: lhsTrueMerger, falseMerger: lhsFalseMerger } = lhsEffect;
+    var { trueMerger: lhsTrueMerger, falseMerger: lhsFalseMerger, regions } = lhsEffect;
     if lhsTrueMerger == () || lhsFalseMerger == () {
         var [constCond, merger] = typeMergerPairSingleton(lhsEffect);
         if constCond == isOr {
             // Only to check errors on rhs, result is discarded.
             bir:BasicBlock dummyBlock = cx.createDummyBasicBlock(merger.dest);
-            _ = check codeGenExprForBoolean(cx, dummyBlock, right);
+            _ = check codeGenExprForBoolean(cx, dummyBlock, right, true);
             cx.discardBasicBlocksFromDummy(dummyBlock);
             return lhsEffect;
         }
@@ -783,9 +861,8 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
         // When compiling a chain of && or chain of ||, keep growing falseMerger or trueMerger respectively
         [TypeMerger?, TypeMerger?, TypeMerger] [trueMerger, falseMerger, rhsMerger] = isOr ? [lhsTrueMerger, (), lhsFalseMerger] : [(), lhsFalseMerger, lhsTrueMerger];
         // When switching from a chain of && to chain of || or vice versa we may need a type merge insn
-        var { bindings: rhsBindings } = codeGenTypeMergeFromMerger(cx, rhsMerger, pos);
-        ExprContext rhsCx = rhsBindings != () ? cx.exprContextWithBindings(rhsBindings) : cx;
-        return codeGenExprForCond(rhsCx, rhsMerger.dest, right, { trueMerger, falseMerger });
+        var { block: rhsBlock, bindings: rhsBindings } = codeGenTypeMergeFromMerger(cx, rhsMerger, pos);
+        return codeGenExprForCond(cx.exprContext(rhsBindings), rhsBlock, right, { trueMerger, falseMerger, regions });
     }
 }
 
@@ -1134,11 +1211,10 @@ function codeGenNumericConvert(ExprContext cx, bir:BasicBlock nextBlock, bir:Ope
 function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemType semType, Binding opBinding, boolean negated, Position pos, PrevTypeMergers? prevs) returns CodeGenError|CondExprEffect {
     bir:Register reg = opBinding.reg;
     t:Context tc = cx.mod.tc;
-    BindingChain? bindings = cx.env.bindings;
     t:SemType curSemType = reg.semType;
     t:SemType diff = t:roDiff(tc, curSemType, semType);
     if t:isEmpty(tc, diff) {
-        return codeGenConstCond(cx, nextBlock, bindings, !negated, prevs, pos);
+        return codeGenConstCond(cx, nextBlock, !negated, prevs, pos);
     }
     t:SemType intersect;
     if t:isSubtype(tc, semType, curSemType) {
@@ -1148,62 +1224,54 @@ function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemT
         intersect = t:intersect(curSemType, semType);
     }
     if t:isEmpty(tc, intersect) {
-        return codeGenConstCond(cx, nextBlock, bindings, negated, prevs, pos);
+        return codeGenConstCond(cx, nextBlock, negated, prevs, pos);
     }
     if negated {
         [intersect, diff] = [diff, intersect];
     }
+
     bir:NarrowRegister ifTrueRegister = cx.createNarrowRegister(intersect, reg);
     bir:NarrowRegister ifFalseRegister = cx.createNarrowRegister(diff, reg);
-    BindingChain? trueBinding = narrow(bindings, opBinding, ifTrueRegister);
-    BindingChain? falseBinding = narrow(bindings, opBinding, ifFalseRegister);
-    var [ifTrue, ifFalse, effect] = createMergers(cx, nextBlock.label, trueBinding, falseBinding, prevs);
-    bir:TypeBranchInsn insn = { operand: reg, semType: negated ? intersect: semType , ifTrue, ifFalse, ifTrueRegister, ifFalseRegister, pos };
+    TypeMerger trueMerger = createNarrowMerger(cx, opBinding, ifTrueRegister, pos, nextBlock.label, prevs?.trueMerger);
+    TypeMerger falseMerger = createNarrowMerger(cx, opBinding, ifFalseRegister, pos, nextBlock.label, prevs?.falseMerger);
+    bir:TypeBranchInsn insn = { operand: reg, semType: negated ? intersect: semType, ifTrue: trueMerger.dest.label, ifFalse: falseMerger.dest.label, ifTrueRegister, ifFalseRegister, pos };
+    bir:Region[] regions = prevs != () ? prevs.regions : [];
+    bir:Region region = { entry: nextBlock.label, kind: bir:REGION_COND };
+    regions.push(region);
     nextBlock.insns.push(insn);
-    return effect;
+    return { trueMerger, falseMerger, regions };
 }
 
-// Narrow `binding` with `reg` and add it to `bindings` chain.
-function narrow(BindingChain? bindings, Binding binding, bir:NarrowRegister reg) returns BindingChain {
-    return { head: { name: binding.name, reg, isFinal: binding.isFinal, unnarrowed: binding.unnarrowed ?: binding }, prev: bindings };
+function createNarrowMerger(ExprContext cx, Binding binding, bir:NarrowRegister reg, Position pos, bir:Label originLabel, TypeMerger? merger) returns TypeMerger {
+    return createMergerWithBindings(cx, narrow(cx.bindings, binding, reg, pos), originLabel, merger);
 }
 
-function createMergers(ExprContext cx, bir:Label originLabel, BindingChain? trueBindings, BindingChain? falseBindings, PrevTypeMergers? prevs) returns [bir:Label, bir:Label, CondExprEffect] {
-    var [ifTrue, trueMerger] = createMerger(cx, originLabel, trueBindings, prevs?.trueMerger);
-    var [ifFalse, falseMerger] = createMerger(cx, originLabel, falseBindings, prevs?.falseMerger);
-    return [ifTrue, ifFalse, { trueMerger, falseMerger }];
-}
-
-function createMerger(ExprContext cx, bir:Label originLabel, BindingChain? bindings, TypeMerger? shared) returns [bir:Label, TypeMerger] {
-    bir:BasicBlock nextBlock = maybeCreateBasicBlock(cx, shared?.dest);
-    TypeMerger merger = consMerger(nextBlock, originLabel, bindings, shared?.origins);
-    return [nextBlock.label, merger];
-}
-
-function consMerger(bir:BasicBlock mergerBlock, bir:Label originLabel, BindingChain? originBindings, TypeMergeOrigin? prevOrigins) returns TypeMerger {
-    TypeMergeOrigin? origins = originBindings != () ? { bindings: originBindings, label: originLabel, prev: prevOrigins } : prevOrigins;
-    return { dest: mergerBlock, origins };
-}
-
-function codeGenConstCond(ExprContext cx, bir:BasicBlock block, BindingChain? bindings, boolean constCond, PrevTypeMergers? prevs, Position pos) returns CondExprEffect {
+function codeGenConstCond(ExprContext cx, bir:BasicBlock block, boolean constCond, PrevTypeMergers? prevs, Position pos) returns CondExprEffect {
     if prevs == () {
         return constCond ? { trueMerger: { dest: block } } : { falseMerger: { dest: block } };
     }
     var [takenSide, merger] = typeMergerPairSingleton(prevs);
+    bir:Region[] regions = prevs.regions;
     if takenSide == constCond {
         // `b && false` or `b || true`. Only need one merger, i.e. the previously created merger. Divert current branch into it.
         bir:BranchInsn branch = { dest: merger.dest.label, pos };
         block.insns.push(branch);
-        return constCond ? { trueMerger: merger } : { falseMerger: merger };
+        if regions.length() > 0 {
+            regions[0].exit = merger.dest.label;
+        }
+        return constCond ? { trueMerger: merger, regions } : { falseMerger: merger, regions };
     }
     else {
         // `b && true` or `b || false`. Need two mergers. Only one previously created mergers are available. Other might have been used to evaluate const true/false. Create a new merger.
-        bir:BasicBlock mergeBlock = cx.createBasicBlock();
-        bir:BranchInsn branch = { dest: mergeBlock.label, pos };
+        TypeMerger newMerger = createMerger(cx, block.label, ());
+        bir:BranchInsn branch = { dest: newMerger.dest.label, pos };
         block.insns.push(branch);
-        TypeMerger newMerger = consMerger(mergeBlock, block.label, bindings, ());
-        return constCond ? { trueMerger: newMerger, falseMerger: merger } : { trueMerger: merger, falseMerger: newMerger };
+        return constCond ? { trueMerger: newMerger, falseMerger: merger, regions } : { trueMerger: merger, falseMerger: newMerger, regions };
     }
+}
+
+function createMerger(ExprContext cx, bir:Label originLabel, TypeMerger? merger) returns TypeMerger {
+    return createMergerWithBindings(cx, cx.bindings, originLabel, merger);
 }
 
 function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeDesc td, s:Expr left, boolean negated, Position pos) returns CodeGenError|ExprEffect {
@@ -1348,8 +1416,8 @@ function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallE
     }
 }
 
-function codeGenTypeMergeFromMerger(ExprContext cx, TypeMerger merger, Position pos) returns record {| bir:BasicBlock block; BindingChain? bindings; Assignment[0] assignments = []; |} {
-    BindingChain? trueBindings = codeGenTypeMerge(cx, merger.dest, cx.env.bindings, merger.origins, pos);
+function codeGenTypeMergeFromMerger(ExprContext cx, TypeMerger merger, Position pos) returns record {| bir:BasicBlock block; BindingChain? bindings; |} {
+    BindingChain? trueBindings = codeGenTypeMerge(cx, merger.dest, cx.bindings, merger.origins, pos);
     return { block: merger.dest, bindings: trueBindings };
 }
 
@@ -1357,7 +1425,7 @@ function codeGenTypeMergeFromMerger(ExprContext cx, TypeMerger merger, Position 
 type MergeOriginGroup record {|
     // Same as unnarrowed.number
     readonly int number;
-    Binding unnarrowed;
+    DeclBinding unnarrowed;
     t:SemType union;
     bir:Register[] narrowedRegs;
     bir:Label[] origins;
@@ -1365,43 +1433,46 @@ type MergeOriginGroup record {|
 
 type OriginGroupTable table<MergeOriginGroup> key(number);
 
-function codeGenTypeMerge(ExprContext cx, bir:BasicBlock block, BindingChain? bindingLimit, TypeMergeOrigin? origins, Position pos) returns BindingChain? {
+function codeGenTypeMerge(ExprContext cx, bir:BasicBlock block, BindingChain? bindingLimit, TypeMergerOrigin? origins, Position pos) returns BindingChain? {
     if origins == () {
         return bindingLimit;
     }
     if origins.prev == () {
         return origins.bindings;
     }
-    var [numOrigins, originGroups] = groupOriginsByUnnarrowed(bindingLimit?.head, origins);
+    var [numOrigins, originGroups] = groupOriginsByUnnarrowed(bindingLimit, origins);
     BindingChain? narrowed = bindingLimit;
     foreach var originGroup in originGroups {
         if originGroup.origins.length() < numOrigins {
             continue;
         }
         Binding unnarrowed = originGroup.unnarrowed;
-        Binding existing = <Binding>envLookup(unnarrowed.name, cx.env);
+        Binding existing = <Binding>envLookup(unnarrowed.name, bindingLimit);
         if existing.reg.semType == originGroup.union {
             continue;
         }
         bir:NarrowRegister merged = cx.createNarrowRegister(originGroup.union, unnarrowed.reg, pos);
         bir:TypeMergeInsn insn = { result: merged, pos, operands: originGroup.narrowedRegs.cloneReadOnly(), predecessors: originGroup.origins.cloneReadOnly() };
         block.insns.push(insn);
-        narrowed = narrow(narrowed, unnarrowed, merged);
+        narrowed = narrow(narrowed, unnarrowed, merged, pos);
     }
     return narrowed;
 }
 
 // Bindings form each origin, up to the limit, grouped by the underling reg.
-function groupOriginsByUnnarrowed(Binding? bindingLimit, TypeMergeOrigin? origins) returns [int, OriginGroupTable] {
+// If a group has less origins than numOrigins, some path doesn't narrow, and the group can be ignored.
+function groupOriginsByUnnarrowed(BindingChain? bindingLimit, TypeMergerOrigin? origins) returns [int, OriginGroupTable] {
     int numOrigins = 0;
-    TypeMergeOrigin? origin = origins;
-    final table<MergeOriginGroup> key(number) originGroups = table [];
+    TypeMergerOrigin? origin = origins;
+    final OriginGroupTable originGroups = table [];
     while origin != () {
         BindingChain? bindings = origin.bindings;
         boolean[] added = [];
-        while bindings != () && bindings.head !== bindingLimit {
-            var { reg, unnarrowed } = bindings.head;
-            if unnarrowed != () {
+        while bindings !== bindingLimit {
+            var { head, prev } = <BindingChain>bindings;
+            if head is OccurrenceBinding {
+                bir:Register reg = head.reg;
+                var unnarrowed = head.unnarrowed;
                 int number = unnarrowed.reg.number;
                 if number >= added.length() || !added[number] {
                     MergeOriginGroup? originGroup = originGroups[number];
@@ -1417,7 +1488,7 @@ function groupOriginsByUnnarrowed(Binding? bindingLimit, TypeMergeOrigin? origin
                     added[number] = true;
                 }
             }
-            bindings = bindings.prev;
+            bindings = prev;
         }
         numOrigins += 1;
         origin = origin.prev;
@@ -1840,4 +1911,18 @@ function typeMergerPairSingleton(TypeMergerPair pair) returns [boolean, TypeMerg
         panic err:impossible("empty type merger pair");
     }
     return [constCond, merger];
+}
+
+function createMergerWithBindings(ExprContext cx, BindingChain? bindings, bir:Label originLabel, TypeMerger? merger) returns TypeMerger {
+    TypeMergerOrigin origins = { bindings, label: originLabel, prev: merger?.origins };
+    return { dest: maybeCreateBasicBlock(cx, merger?.dest), origins };
+}
+
+// Narrow `binding` with `reg` and add it to `bindings` chain.
+function narrow(BindingChain? bindings, Binding binding, bir:NarrowRegister reg, Position pos) returns BindingChain {
+    return { head: { name: binding.name, reg, unnarrowed: unnarrowBinding(binding) }, prev: bindings };
+}
+
+function unnarrowBinding(Binding binding) returns DeclBinding {
+    return binding is DeclBinding ? binding : binding.unnarrowed;
 }

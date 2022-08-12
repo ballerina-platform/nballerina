@@ -1,21 +1,48 @@
 import ballerina/io;
 import ballerina/file;
+import wso2/nballerina.bir;
 import wso2/nballerina.print.wasm;
+import wso2/nballerina.types as t;
+
+const TYPE_TEST = 0;
+const INHERENT_TYPE = 1;
+
+type Usage TYPE_TEST|INHERENT_TYPE;
+
+// value which is the key is not a decimal is because of a bug in JBallerina
+type DecimalRecord record {
+    readonly string value;
+    string global;
+    wasm:Expression offsetExpr;
+    string byteStr;
+    wasm:Expression[] body;
+};
 
 public class Component {
     final wasm:Module module;
     private ExceptionTag[] exceptionTags = [];
     private string[] globals = [];
     map<StringRecord> segments = {};
+    private table<DecimalRecord> key(value) decimalConsts = table [];
     private int offset = 0;
     private RuntimeModule?[] rtModules = [commonMod];
     private string[] rtFunctions = [];
     private wasm:Expression? mainBody = ();
     private wasm:Type[] mainLocals = [];
+    private t:Context typeContext;
     private string? mainMangledName = ();
+    table<UsedSemType> key(semType)[2] usedSemTypes = [table [], table[]];
+    table<ComplexTypeDefn> key(semType) complexTypeDefns = table [];
+    table<InherentTypeDefn> key(semType)[2] inherentTypeDefns = [table [], table[]];
+    table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
+    boolean inherentTypesComplete = false;
+    SubtypeStruct[] subtypeStructs = [];
+    wasm:Expression[] types = [];
 
-    function init() {
+    function init(bir:Module birMod) {
         self.module = new;
+        self.typeContext = birMod.getTypeContext();
+        self.rtModules[typeMod.priority] = typeMod;
     }
 
     function addExceptionTag(ExceptionTag tag, wasm:Type? kind = ()) {
@@ -40,6 +67,24 @@ public class Component {
         return global;
     }
 
+    function maybeAddDecimalRecord(decimal val) returns string {
+        DecimalRecord? rec = self.decimalConsts[val.toString()];
+        if rec != () {
+            return rec.global;
+        }
+        int numDecimal = self.decimalConsts.length();
+        string global = "bal$dec" + numDecimal.toString();
+        int length = val.toString().toBytes().length();
+        DecimalRecord newRec = buildGlobalDecimal(self.module, self, val, global, self.offset, length);
+        self.decimalConsts.add(newRec); 
+        self.offset += length;
+        return global;
+    }
+
+    function getTypeContext() returns t:Context {
+        return self.typeContext;
+    }
+    
     function maybeAddRtFunction(string name) {
         if self.rtFunctions.indexOf(name) == () {
             self.rtFunctions.push(name);
@@ -58,14 +103,31 @@ public class Component {
         return self.rtFunctions;
     }
 
+    function getUsedSemType(t:SemType semType, Usage usage) returns UsedSemType {
+        UsedSemType? used = self.usedSemTypes[usage][semType];
+        if used == () {
+            string global = mangleTypeSymbol(self.usedSemTypes[INHERENT_TYPE].length() + self.usedSemTypes[TYPE_TEST].length());
+            UsedSemType t = {
+                global,
+                semType
+            };
+            self.usedSemTypes[usage].add(t);
+            return t;
+        }
+        else {
+            return used;
+        }
+    }
+
     public function finish() returns wasm:Wat[]|io:Error?|file:Error? {
         wasm:Module module = self.module;
         module.addGlobal("bal$err", { base: ERROR_TYPE, initial: "null" }, module.refNull(ERROR_TYPE));
+        self.types.push(...buildTypes(module, self, self.usedSemTypes));
         check addRttFunctions(module, self);
         wasm:Expression? mainBody = self.mainBody;
         string? mainMangledName = self.mainMangledName;
         if mainBody != () && mainMangledName != (){
-            wasm:Expression extendedBody = self.module.block([initStrings(module, self.segments, self.offset), mainBody]);
+            wasm:Expression extendedBody = self.module.block([initGlobals(module, self.segments, self.decimalConsts, self.offset, self.types, self.subtypeStructs, self.complexTypeDefns), mainBody]);
             module.addFunction(mainMangledName, [], "None", self.mainLocals, extendedBody);
         }
         return module.finish();
@@ -79,7 +141,7 @@ public class Component {
 
 }
 
-function initStrings(wasm:Module module, map<StringRecord> segments, int offset) returns wasm:Expression {
+function initGlobals(wasm:Module module, map<StringRecord> segments, table<DecimalRecord> key(value) decimalConsts, int offset, wasm:Expression[] types, SubtypeStruct[] structs, table<ComplexTypeDefn> key(semType) complexTypeDefns) returns wasm:Expression {
     wasm:Expression[] body = [];
     wasm:Expression[] offsetExprs = [];
     string[] byteStrs = [];
@@ -88,8 +150,22 @@ function initStrings(wasm:Module module, map<StringRecord> segments, int offset)
         offsetExprs.push(rec.offsetExpr);
         byteStrs.push(rec.byteStr);
     }
+    string[] keys = decimalConsts.keys();
+    foreach string val in keys {
+        DecimalRecord rec = decimalConsts.get(val);
+        body.push(...rec.body);
+        offsetExprs.push(rec.offsetExpr);
+        byteStrs.push(rec.byteStr);
+    }
     int pages = (offset / 65536) + 1;
     module.setMemory(pages, "memory", byteStrs, offsetExprs);
+    foreach SubtypeStruct struct in structs {
+        body.push(...struct.values);
+    }
+    foreach ComplexTypeDefn defn in complexTypeDefns {
+        body.push(...defn.body);
+    }
+    body.push(...types);
     return module.block(body);
 }
 
@@ -119,7 +195,7 @@ function addRttFunctions(wasm:Module module, Component component) returns io:Err
         int index = <int>absPath.lastIndexOf(baseDir);
         string basePath = absPath.substring(0, index + baseDir.length() + 1);
         foreach RuntimeModule mod in filtered {
-            string path = check file:joinPath(basePath, "wrun", "wat", mod.file);
+            string path = check file:joinPath(basePath, "wruntime", "wat", mod.file);
             wasm:Wat[] wat = check io:fileReadLines(path);
             string? identifier = ();
             string[] content = [];

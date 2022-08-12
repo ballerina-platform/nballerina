@@ -5,11 +5,12 @@ import wso2/nballerina.print.wasm;
 final int TYPE_INT     = t:INT;
 final int TYPE_BOOLEAN = t:BOOLEAN;
 final int TYPE_NIL     = t:NIL;
-final int TYPE_LIST    = t:LIST;
+final int TYPE_LIST    = t:LIST_RW;
 final int TYPE_STRING  = t:STRING;
-final int TYPE_MAP     = t:MAPPING;
+final int TYPE_MAP     = t:MAPPING_RW;
 final int TYPE_FLOAT   = t:FLOAT;
 final int TYPE_ERROR   = t:ERROR;
+final int TYPE_DECIMAL  = t:DECIMAL;
 const int SELF_REFERENCE = 4;
 const int INITIAL_CAPACITY = 4;
 const int MAX_CAPACITY = 4294967295;
@@ -23,9 +24,31 @@ const RuntimeType STRING_TYPE = "String";
 const RuntimeType ANY_TYPE = "Any";
 const RuntimeType FLOAT_TYPE = "Float";
 const RuntimeType ERROR_TYPE = "Error";
+const RuntimeType DECIMAL_TYPE = "Decimal";
+const RuntimeType MAP_TYPE_ARR = "AnyList";
+const RuntimeType MAPPING_DESC = "MappingDesc";
+const RuntimeType LIST_DESC = "ListDesc";
+const RuntimeType INT_SUBTYPE = "IntSubtype";
+const RuntimeType INT_SUBTYPE_RANGES = "IntSubtypeRanges";
+const RuntimeType INT_RANGE = "IntRange";
+const RuntimeType STRING_SUBTYPE = "StringSubtype";
+const RuntimeType FLOAT_VALUES = "FloatValues";
+const RuntimeType FLOAT_SUBTYPE = "FloatSubtype";
+const RuntimeType DECIMAL_SUBTYPE = "DecimalSubtype";
+const RuntimeType DECIMAL_VALUES = "DecimalValues";
+const RuntimeType BOOLEAN_SUBTYPE = "BooleanSubtype";
+const RuntimeType BASE_SUBTYPE = "Subtype";
+const RuntimeType PRECOMPUTED_SUBTYPE = "PrecomputedSubtype";
+const RuntimeType PRECOMPUTED_TIDS = "PrecomputedTids";
+const RuntimeType ARRMAP_SUBTYPE = "ArrMapSubtype";
+const RuntimeType RECORD_SUBTYPE = "RecordSubtype";
+const RuntimeType RECORD_SUBTYPE_FIELDS = "RecordSubtypeFields";
+const RuntimeType RECORD_SUBTYPE_FIELD = "RecordSubtypeField";
+const RuntimeType COMPLEX_TYPE = "ComplexType";
+const RuntimeType SUBTYPE_DATA_LIST = "SubTypeList";
+const RuntimeType EQSTACK = "EqStack";
 
 public type ExceptionTag string;
-public type HelperRuntimeFunction string|RuntimeFunction;
 const ExceptionTag BAD_CONVERSION_TAG = "bad-conversion";
 const ExceptionTag CUSTOM_EXCEPTION_TAG = "custom-exception";
 
@@ -41,7 +64,7 @@ final RuntimeModule commonMod = {
 
 final RuntimeModule stringMod = {
     file: "string.wat",
-    priority: 4
+    priority: 6
 };
 
 type RuntimeFunction readonly & record {|
@@ -74,12 +97,6 @@ final RuntimeFunction getTypeFunction = {
     rtModule: commonMod
 };
 
-final RuntimeFunction stringCompFunction = {
-    name: "_bal_string_compare",
-    returnType: "i32",
-    rtModule: stringMod
-};
-
 final RuntimeFunction stringConcatFunction = {
     name: "_bal_string_concat",
     returnType: { base: STRING_TYPE },
@@ -90,6 +107,12 @@ final RuntimeFunction createStringFunction = {
     name: "_js_string_create",
     returnType: "eqref",
     rtModule: stringMod
+};
+
+final RuntimeFunction createDecimalFunction = {
+    name: "_js_decimal_create",
+    returnType: "eqref",
+    rtModule: numberMod
 };
 
 function buildTaggedBoolean(wasm:Module module, wasm:Expression value) returns wasm:Expression {
@@ -131,7 +154,7 @@ function maybeCast(wasm:Module module, Scaffold scaffold, wasm:Expression tagged
 function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand operand) returns wasm:Expression {
     wasm:Expression op;
     if operand is bir:StringConstOperand {
-        op = buildConstString(module, scaffold, operand.value);
+        op = buildConstString(module, scaffold.getComponent(), operand.value);
     }
     else {
         op = buildLoad(module, operand);
@@ -140,9 +163,26 @@ function buildString(wasm:Module module, Scaffold scaffold, bir:StringOperand op
     return module.refCast(asData, module.globalGet("rttString"));
 }
 
-function buildConstString(wasm:Module module, Scaffold scaffold, string value) returns wasm:Expression {
+function buildConstString(wasm:Module module, Component component, string value) returns wasm:Expression {
     int[] surrogate = buildSurrogateArray(value);
-    string label = scaffold.maybeAddStringRecord(value, surrogate);
+    string label = component.maybeAddStringRecord(value, surrogate);
+    return module.refAs("ref.as_non_null", module.globalGet(label));
+}
+
+function buildDecimal(wasm:Module module, Scaffold scaffold, bir:DecimalOperand operand) returns wasm:Expression {
+    wasm:Expression op;
+    if operand is bir:DecimalConstOperand {
+        op = buildConstDecimal(module, scaffold.getComponent(), operand.value);
+    }
+    else {
+        op = buildLoad(module, operand);
+    }
+    wasm:Expression asData = module.refAs("ref.as_data", op);
+    return module.refCast(asData, module.globalGet("rttDecimal"));
+}
+
+function buildConstDecimal(wasm:Module module, Component component, decimal value) returns wasm:Expression {
+    string label = component.maybeAddDecimalRecord(value);
     return module.refAs("ref.as_non_null", module.globalGet(label));
 }
 
@@ -151,6 +191,13 @@ function buildRuntimeFunctionCall(wasm:Module module, Component component, Runti
     component.maybeAddRtFunction("$" + name);
     component.addRtModule(rtModule);
     return module.call(name, args, returnType);
+}
+
+function buildRefFunc(wasm:Module module, Component component, RuntimeFunction rf) returns wasm:Expression {
+    var { name, rtModule } = rf;
+    component.maybeAddRtFunction("$" + name);
+    component.addRtModule(rtModule);
+    return module.refFunc(name);
 }
 
 function maybeAddRtFunction(string[] rtFunctions, string name) {
@@ -177,6 +224,13 @@ function buildFloat(wasm:Module module, bir:FloatOperand operand) returns wasm:E
     else {
         return buildLoad(module, operand);
     }
+}
+
+function buildMaybeUntag(wasm:Module module, Scaffold scaffold, wasm:Expression value, Repr sourceRepr, Repr targetRepr) returns wasm:Expression {
+    if targetRepr == sourceRepr {
+        return value;
+    }
+    return buildUntagged(module, scaffold, value, targetRepr);
 }
 
 function buildUntagged(wasm:Module module, Scaffold scaffold, wasm:Expression value, Repr targetRepr) returns wasm:Expression {
@@ -212,7 +266,7 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
     else {
         t:SingleValue value = operand.value;
         if value is string {
-            return [REPR_STRING, buildConstString(module, scaffold, value)];
+            return [REPR_STRING, buildConstString(module, scaffold.getComponent(), value)];
         }
         else if value == () {
             return [REPR_NIL, module.refNull()];
@@ -226,8 +280,11 @@ function buildReprValue(wasm:Module module, Scaffold scaffold, bir:Operand opera
         else if value is float {
             return [REPR_FLOAT, module.addConst({ f64: value })];
         }
+        else {
+            decimal _ = value;
+            return [REPR_DECIMAL, buildConstDecimal(module, scaffold.getComponent(), value)];
+        }
     }
-    panic error("type not handled");
 }
 
 function buildInt(wasm:Module module, bir:IntOperand operand) returns wasm:Expression {
@@ -279,7 +336,8 @@ function buildConvertRepr(wasm:Module module, Repr sourceRepr, wasm:Expression v
 
 function buildGlobalString(wasm:Module module, Component component, string val, string global, int[] surrogate, int offset, int length) returns StringRecord {
     wasm:Expression[] body = [];
-    string byteStr = buildStringData(module, val, global);
+    string byteStr = buildMemoryData(module, val, global);
+    module.addGlobal(global, { base: STRING_TYPE, initial: "null" }, module.refNull(STRING_TYPE));
     wasm:Expression offsetExpr = module.addConst({ i32: offset });
     wasm:Expression jsString = buildRuntimeFunctionCall(module, component, createStringFunction, [
                                                                                                     module.addConst({ i32: offset }), 
@@ -304,8 +362,28 @@ function buildGlobalString(wasm:Module module, Component component, string val, 
     return { global, body, byteStr, offsetExpr };
 }
 
+function buildGlobalDecimal(wasm:Module module, Component component, decimal val, string global, int offset, int length) returns DecimalRecord {
+    wasm:Expression[] body = [];
+    string value = val.toString();
+    string byteStr = buildMemoryData(module, value, global);
+    module.addGlobal(global, { base: DECIMAL_TYPE, initial: "null" }, module.refNull(DECIMAL_TYPE));
+    wasm:Expression offsetExpr = module.addConst({ i32: offset });
+    wasm:Expression jsDecimal = buildRuntimeFunctionCall(module, component, createDecimalFunction, [
+                                                                                                    module.addConst({ i32: offset }), 
+                                                                                                    module.addConst({i32: length })
+                                                                                                ]);
+    int scale = getScale(val);
+    wasm:Expression struct = module.structNew(DECIMAL_TYPE, [module.addConst({ i32: TYPE_DECIMAL }), 
+                                                             jsDecimal, 
+                                                             module.addConst({ i32: scale }), 
+                                                             module.addConst({ i32: offset }), 
+                                                             module.addConst({ i32: length })
+                                                            ]);
+    body.push(module.globalSet(global, struct));
+    return { value, global, body, byteStr, offsetExpr };
+}
 
-function buildStringData(wasm:Module module, string val, string global) returns string {
+function buildMemoryData(wasm:Module module, string val, string global) returns string {
     byte[] bytes = val.toBytes();
     string[] hexes = [];
     foreach byte item in bytes {
@@ -314,6 +392,5 @@ function buildStringData(wasm:Module module, string val, string global) returns 
     }
     string byteStr = "\\".'join(...hexes);
     byteStr = byteStr.length() > 0 ? "\\" + byteStr : byteStr;
-    module.addGlobal(global, { base: STRING_TYPE, initial: "null" }, module.refNull(STRING_TYPE));
     return byteStr;
 }

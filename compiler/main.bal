@@ -2,6 +2,7 @@ import wso2/nballerina.bir;
 import wso2/nballerina.nback;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
+import wso2/nballerina.types.regex as r;
 
 import ballerina/io;
 import ballerina/file;
@@ -116,4 +117,8 @@ function basenameExtension(string filename) returns [string, string?] {
         return [filename.substring(0, extIndex), filename.substring(extIndex).toLowerAscii()];
     }
     return [filename, ()];
+}
+
+public function regexTypeRelation(string lhs, string rhs) returns string {
+    return r:typeRelation(lhs, rhs);
 }

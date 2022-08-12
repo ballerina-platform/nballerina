@@ -47,6 +47,18 @@ final readonly & map<int> predicateOpCode = {
     ">=": COMPARE_GE
 };
 
+final RuntimeFunction stringCmpFunction = {
+    name: "_bal_string_compare",
+    returnType: "i32",
+    rtModule: stringMod
+};
+
+final RuntimeFunction decimalCmpFunction = {
+    name: "_bal_decimal_compare",
+    returnType: "i32",
+    rtModule: compareMod
+};
+
 final RuntimeModule compareMod = {
     file: "compare.wat",
     priority: 1
@@ -76,6 +88,12 @@ final RuntimeFunction optStringCompareFunction = {
     rtModule: compareMod
 };
 
+final RuntimeFunction optDecimalCompareFunction = {
+    name: "_bal_opt_decimal_compare",
+    returnType: "i32",
+    rtModule: compareMod
+};
+
 final RuntimeFunction arrayIntCompareFunction = {
     name: "_bal_array_int_compare",
     returnType: "i32",
@@ -100,6 +118,24 @@ final RuntimeFunction arrayStringCompareFunction = {
     rtModule: compareMod
 };
 
+final RuntimeFunction arrayDecimalCompareFunction = {
+    name: "_bal_array_decimal_compare",
+    returnType: "i32",
+    rtModule: compareMod
+};
+
+final RuntimeFunction arrayListCompareFunction = {
+    name: "_bal_array_list_compare",
+    returnType: "i32",
+    rtModule: compareMod
+};
+
+final RuntimeFunction optListCompareFunction = {
+    name: "_bal_opt_list_compare",
+    returnType: "i32",
+    rtModule: compareMod
+};
+
 final RuntimeFunction transformCompareResultFunction = {
     name: "_bal_transform_compare_result",
     returnType: "i32",
@@ -116,7 +152,8 @@ final readonly & table<TaggedCompareFunction> key(utCode) compareFunctions = tab
     { utCode: t:UT_INT, optCompareFunction: optIntCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
     { utCode: t:UT_FLOAT, optCompareFunction: optFloatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
     { utCode: t:UT_BOOLEAN, optCompareFunction: optBooleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
-    { utCode: t:UT_STRING, optCompareFunction: optStringCompareFunction, arrayCompareFunction: arrayStringCompareFunction }
+    { utCode: t:UT_STRING, optCompareFunction: optStringCompareFunction, arrayCompareFunction: arrayStringCompareFunction },
+    { utCode: t:UT_DECIMAL, optCompareFunction: optDecimalCompareFunction, arrayCompareFunction: arrayDecimalCompareFunction }
 ];
 
 function buildCompare(wasm:Module module, Scaffold scaffold, bir:CompareInsn insn) returns wasm:Expression {
@@ -130,6 +167,9 @@ function buildCompare(wasm:Module module, Scaffold scaffold, bir:CompareInsn ins
         int opCode = predicateOpCode.get(insn.op);
         if subtype == t:STRING {
             return buildCompareString(module, scaffold, predicateOpCode.get(insn.op), lhsValue, rhsValue, result);
+        }
+        else if subtype == t:DECIMAL {
+            return buildCompareDecimal(module, scaffold, predicateOpCode.get(insn.op), lhsValue, rhsValue, result);
         }
         else {
             t:UniformTypeBitSet orderTypeMinusNil = subtype & ~t:NIL;
@@ -193,10 +233,20 @@ function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns Ru
     foreach int i in 0 ..< 2 {
         memberType |= t:widenToUniformTypes(t:listMemberType(tc, semTypes[i], t:INT));
     }
-    memberType &= ~t:NIL;
-    t:UniformTypeCode memberTypeCode = <t:UniformTypeCode>t:uniformTypeCode(memberType);
-    TaggedCompareFunction tcf = compareFunctions.get(memberTypeCode);
-    return tcf.arrayCompareFunction;
+    if memberType != t:NIL {
+        memberType &= ~t:NIL;
+        t:UniformTypeCode? memberTypeCode = t:uniformTypeCode(memberType);
+        if memberTypeCode != () {
+            TaggedCompareFunction? tcf = compareFunctions[memberTypeCode];
+            if tcf != () {
+                return tcf.arrayCompareFunction;
+            }
+        }
+        if t:isSubtypeSimple(memberType, t:LIST) {
+            return arrayListCompareFunction;
+        }
+    }
+    return optListCompareFunction;
 }
 
 function buildCompareStore(wasm:Module module, Scaffold scaffold, int expected, wasm:Expression compareResult, bir:Register reg) returns wasm:Expression {
@@ -213,7 +263,12 @@ function buildCompareNumeric(wasm:Module module, wasm:Op op, wasm:Expression lhs
 }
 
 function buildCompareString(wasm:Module module, Scaffold scaffold, int op, wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
-    wasm:Expression value = buildRuntimeFunctionCall(module, scaffold.getComponent(), stringCompFunction, [lhs, rhs]);
+    wasm:Expression value = buildRuntimeFunctionCall(module, scaffold.getComponent(), stringCmpFunction, [lhs, rhs]);
+    return buildCompareStore(module, scaffold, op, value, result);
+}
+
+function buildCompareDecimal(wasm:Module module, Scaffold scaffold, int op,wasm:Expression lhs, wasm:Expression rhs, bir:Register result) returns wasm:Expression {
+    wasm:Expression value = buildRuntimeFunctionCall(module, scaffold.getComponent(), decimalCmpFunction, [lhs, rhs]);
     return buildCompareStore(module, scaffold, op, value, result);
 }
 

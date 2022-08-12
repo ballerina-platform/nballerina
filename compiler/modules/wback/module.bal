@@ -16,7 +16,7 @@ type StringRecord record {
 public function buildModule(bir:Module birMod, Component? wComp, boolean isDefault) returns Component|BuildError {
     bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
     bir:ModuleId modId = birMod.getId();
-    Component component = wComp != () ? wComp : new;
+    Component component = wComp != () ? wComp : new(birMod);
     wasm:Module module = component.module;
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
@@ -80,10 +80,12 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
                 wasm:Expression[] ifFalseExprs = [];
                 if lastInsn is bir:TypeBranchInsn {
                     ifTrueExprs = [buildNarrowReg(module, scaffold, lastInsn.ifTrueRegister)];
-                    ifFalseExprs = [buildNarrowReg(module, scaffold, lastInsn.ifFalseRegister)];
+                    ifFalseExprs = [buildNarrowReg(module, scaffold, lastInsn.ifFalseRegister, true)];
                 }
-                ifTrueExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifTrue, region, index, exit));
-                ifFalseExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifFalse, region, index, exit));
+                if lastInsn.ifTrue != exit {
+                    ifTrueExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifTrue, region, index, exit, true));
+                }
+                ifFalseExprs.push(...buildBlocksInRegion(scaffold, module, lastInsn.ifFalse, region, index, exit, true));
                 wasm:Expression ifBody = module.block(ifTrueExprs);
                 wasm:Expression elseBody = module.block(ifFalseExprs);
                 cur.push(...header);
@@ -102,11 +104,18 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
             wasm:Expression loop;
             string loopLabel = "$block$" + entry.toString() + "$break";
             wasm:Expression[] loopHeader = buildBasicBlock(scaffold, module, entryBb);
-            bir:Label? loopBodyStartBb = getLoopBodyBlockLabel(entryBb);
-            if loopBodyStartBb != () {
-                wasm:Expression[] loopBodyChildren = buildBlocksInRegion(scaffold, module, loopBodyStartBb, region, index, exit);
+            bir:Insn lastInsn = getLastInsn(entryBb);
+            bir:Label? trueBb = getLoopTrueBlockLabel(entryBb);
+            wasm:Expression[] exitChildren = [];
+            if trueBb != () {
+                wasm:Expression[] loopBodyChildren = [];
+                if lastInsn is bir:TypeBranchInsn {
+                    loopBodyChildren = [buildNarrowReg(module, scaffold, lastInsn.ifTrueRegister)];
+                    exitChildren = [buildNarrowReg(module, scaffold, lastInsn.ifFalseRegister)];
+                }
+                loopBodyChildren.push(...buildBlocksInRegion(scaffold, module, trueBb, region, index, exit));
                 wasm:Expression loopBody = module.block(loopBodyChildren);
-                if isForLoop(entry, loopBodyStartBb) {
+                if isForLoop(entry, trueBb) {
                     bir:Label? stepBlock = scaffold.getStepBlock(index);
                     if stepBlock != () {
                         loopBody = module.blockSetName(loopBody, "$block$" + stepBlock.toString() + "$break");
@@ -117,13 +126,21 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
                 }
                 if loopHeader.length() > 0 {
                     wasm:Expression condition = getCondition(loopHeader);
-                    loopHeader.push(module.addIf(condition, loopBody));
+                    bir:Label? bodyBb = scaffold.getLoopRegionBodyBlocks(index);
+                    if bodyBb != () && bodyBb != trueBb {
+                        wasm:Expression[] elseBody = exitChildren;
+                        elseBody.push(...buildBlocksInRegion(scaffold, module, bodyBb, region, index, exit));
+                        loopHeader.push(module.addIf(condition, loopBody, module.block(elseBody)));
+                    }
+                    else {
+                        loopHeader.push(module.addIf(condition, loopBody));
+                    }
                     loopBody = module.block(loopHeader);
                 }
-                bir:Insn lastInsn = getLastInsn(scaffold.blocks[entry]);
                 if lastInsn is bir:CondBranchInsn {
                     if exit != lastInsn.ifFalse {
                         wasm:Expression[] children = [loopBody];
+                        children.push(...exitChildren);
                         children.push(...buildBasicBlock(scaffold, module, scaffold.blocks[lastInsn.ifFalse]));
                         loopBody = module.block(children);
                     }
@@ -137,10 +154,14 @@ function buildFunctionBody(Scaffold scaffold, wasm:Module module) returns wasm:E
                 loop = module.block([loop], "$block$" + exit.toString() + "$break");
             }
             cur.push(loop);
-            if exit != () {
-                wasm:Expression[] exitCode = buildBlocksInRegion(scaffold, module, exit, region, index);
-                cur.push(module.block(exitCode));
+            wasm:Expression[] exitCode = [];
+            if lastInsn is bir:TypeBranchInsn {
+                exitCode.push(buildNarrowReg(module, scaffold, lastInsn.ifFalseRegister, true));
             }
+            if exit != () {
+                exitCode.push(...buildBlocksInRegion(scaffold, module, exit, region, index));
+            }
+            cur.push(module.block(exitCode));
         }
         scaffold.setRenderedRegion(index, cur);
     }
@@ -155,41 +176,57 @@ function preProcessRegions(Scaffold scaffold) {
     bir:BasicBlock[] blocks = scaffold.blocks;
     foreach bir:RegionIndex index in 0..<regions.length() {
         bir:Region region = regions[index];
-        var { entry, exit, parent, kind } = region;
+        var { entry, parent } = region;
         scaffold.setRegionEntry(index, entry);
         bir:Label[] valid = parent != () ? scaffold.getRegionBlocks(parent).slice(1) : [];
         bir:Label[] labels = [];
-        bir:Label[] queue = [entry];
-        bir:Label[] processedQ = [];
-        while queue.length() > 0 {
-            bir:Label cur = queue.remove(0);
-            processedQ.push(cur);
-            if parent != () && valid.indexOf(cur) == () {
-                continue;
-            }
-            bir:Insn lastInsn = getLastInsn(blocks[cur]);
-            if lastInsn is bir:CondBranchInsn|bir:TypeBranchInsn {
-                maybePush([lastInsn.ifTrue, lastInsn.ifFalse], queue, processedQ, exit);
-            }
-            else if lastInsn is bir:BranchInsn {
-                bir:Label dest = lastInsn.dest;
-                maybePush([dest], queue, processedQ, exit);
-                if kind == bir:REGION_LOOP {
-                    if dest == entry {
-                        bir:Label? loopBody = getLoopBodyBlockLabel(blocks[entry]);
-                        if isForLoop(entry, loopBody) {
-                            scaffold.setStepBlock(index, cur);
-                            continue;
-                        }
-                    }
-                    else if dest == exit {
-                        scaffold.setBreakBlock(index, cur);
-                    }
-                }
-            }
-            labels.push(cur);
+        bir:Label[] processedQ = [entry];
+        bir:Insn lastInsn = getLastInsn(blocks[entry]);
+        if lastInsn is bir:CondBranchInsn|bir:TypeBranchInsn {
+            regionBranchBlocks(scaffold, lastInsn.ifTrue, region, index, valid, processedQ, labels);
+            regionBranchBlocks(scaffold, lastInsn.ifFalse, region, index, valid, processedQ, labels);
+        }
+        else if lastInsn is bir:BranchInsn {
+            regionBranchBlocks(scaffold, lastInsn.dest, region, index, valid, processedQ, labels);
         }
         scaffold.setRegionBlocks({ index, labels });
+    }
+}
+
+function regionBranchBlocks(Scaffold scaffold, bir:Label branchEntry, bir:Region region, bir:RegionIndex index, bir:Label[] valid, bir:Label[] processedQ, bir:Label[] labels)  {
+    bir:BasicBlock[] blocks = scaffold.blocks;
+    var { entry, exit, parent, kind } = region;
+    bir:Label[] queue = branchEntry != exit ? [branchEntry] : [];
+    while queue.length() > 0 {
+        bir:Label cur = queue.remove(0);
+        processedQ.push(cur);
+        if parent != () && valid.indexOf(cur) == () {
+            continue;
+        }
+        bir:Insn lastInsn = getLastInsn(blocks[cur]);
+        if lastInsn is bir:CondBranchInsn|bir:TypeBranchInsn {
+            maybePush([lastInsn.ifTrue, lastInsn.ifFalse], queue, processedQ, exit);
+        }
+        else if lastInsn is bir:BranchInsn {
+            bir:Label dest = lastInsn.dest;
+            maybePush([dest], queue, processedQ, exit);
+            if kind == bir:REGION_LOOP {
+                if lastInsn.backward {
+                    scaffold.setLoopRegionBodyBlocks({ index, label: branchEntry });
+                }
+                if dest == entry {
+                    bir:Label? loopBody = getLoopTrueBlockLabel(blocks[entry]);
+                    if isForLoop(entry, loopBody) {
+                        scaffold.setStepBlock(index, cur);
+                        continue;
+                    }
+                }
+                else if dest == exit {
+                    scaffold.setBreakBlock(index, cur);
+                }
+            }
+        }
+        labels.push(cur);
     }
 }
 
@@ -197,7 +234,7 @@ function getLastInsn(bir:BasicBlock bb) returns bir:Insn {
     return bb.insns[bb.insns.length() - 1];
 }
 
-function getLoopBodyBlockLabel(bir:BasicBlock bb) returns bir:Label? {
+function getLoopTrueBlockLabel(bir:BasicBlock bb) returns bir:Label? {
     bir:Insn lastInsn = getLastInsn(bb);
     bir:Label? dest = ();
     if lastInsn is bir:CondBranchInsn|bir:TypeBranchInsn {
@@ -221,16 +258,17 @@ function maybePush(bir:Label[] labels, bir:Label[] queue, bir:Label[] processedQ
     }
 }
 
-function buildBlocksInRegion(Scaffold scaffold, wasm:Module module, bir:Label label, bir:Region? cur = () , bir:RegionIndex? rIndex = (), bir:Label? exit = ()) returns wasm:Expression[] {
+function buildBlocksInRegion(Scaffold scaffold, wasm:Module module, bir:Label label, bir:Region? cur = () , bir:RegionIndex? rIndex = (), bir:Label? exit = (), boolean immediate = false) returns wasm:Expression[] {
     wasm:Expression[] children = [];
     bir:RegionIndex? index = scaffold.entryOfRegion(label);
-    if scaffold.isBlockNotProcessed(label) {
+    if scaffold.isBlockNotProcessed(label) || (immediate && scaffold.entryOfRegion(label) == ()) {
         children.push(...buildBasicBlock(scaffold, module, scaffold.blocks[label]));
     }
     if index != () {
         if (cur == () && scaffold.regions[index].parent == ()) || cur != () {
             wasm:Expression[]? rendered = scaffold.getRenderedRegion(index);
             if rendered != () {
+                // scaffold.setRenderedRegion(index, []);
                 children.push(...rendered);
             }
         }
