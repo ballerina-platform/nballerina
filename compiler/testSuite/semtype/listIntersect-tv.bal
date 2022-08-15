@@ -29,3 +29,9 @@ type A7 3[];
 
 // @type I4 = A7
 type I4 A4 & A5 & A6;
+
+type L7 [2|3, 2|3];
+
+// @type I5 = L7
+// @type I2 < I5
+type I5 L3&L4;
