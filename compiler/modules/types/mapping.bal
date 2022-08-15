@@ -268,11 +268,11 @@ function intersectMappingAtoms(Env env, MappingAtomicType[] atoms) returns [SemT
     }
     MappingAtomicType atom = atoms[0];
     foreach int i in 1 ..< atoms.length() {
-        var intersection = intersectMapping(atom, atoms[i]);
-        if intersection is () {
+        var tmpAtom = intersectMapping(atom, atoms[i]);
+        if tmpAtom is () {
             return ();
         }
-        atom = intersection.cloneReadOnly();
+        atom = tmpAtom.cloneReadOnly();
     }
     SemType semType = createUniformSemType(UT_MAPPING_RW, bddAtom(env.mappingAtom(atom)));
     return [semType, atom];

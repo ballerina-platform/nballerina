@@ -243,11 +243,11 @@ function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, L
     ListAtomicType atom = atoms[0];
     foreach int i in 1 ..< atoms.length() {
         ListAtomicType next = atoms[i];
-        var intersection = listIntersectWith(atom.members, atom.rest, next.members, next.rest);
-        if intersection is () {
+        var tmpAtom = listIntersectWith(atom.members, atom.rest, next.members, next.rest);
+        if tmpAtom is () {
             return ();
         }
-        var [members, rest] = intersection;
+        var [members, rest] = tmpAtom;
         foreach SemType member in members.initial {
             if isNever(member) {
                 return ();
