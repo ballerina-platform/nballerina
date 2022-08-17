@@ -6,6 +6,7 @@ import wso2/nballerina.comm.err;
 type ModuleDefns table<s:ModuleLevelDefn> key(name);
 
 // This is the module-level symbol table.
+// TODO: add list of semtypes to check here
 type ModuleSymbols record {|
     ModuleDefns defns = table [];
     map<Import>[] partPrefixes = [];

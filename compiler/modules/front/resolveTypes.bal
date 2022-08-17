@@ -28,6 +28,10 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
     foreach var defn in mod.defns {
         check resolveDefn(mod, defn);
     }
+    if !mod.tc.env.isReady() {
+        // TODO: this is probably the place we need to check
+        panic error("unexpected");
+    }
 }
 
 function resolveDefn(ModuleSymbols mod, s:ModuleLevelDefn defn) returns ResolveTypeError? {
@@ -151,6 +155,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                    || (accumType !is t:UniformTypeBitSet && env.isReady() && t:isEmpty(mod.tc, accumType)) {
                     return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPos[i - 1]));
                 }
+                // TODO: add check to module symbols if env.isReady() == false
             }
         }
         return accumType;
@@ -170,6 +175,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return d.define(env, initial = members, rest = rest);
         }
         else {
+            // TODO: add check to module symbols
             return defn.getSemType(env);
         }   
     }    
@@ -191,6 +197,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return t;
         }
         else {
+            // TODO: add check to module symbols
             return defn.getSemType(env);
         }   
     }
@@ -225,6 +232,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return d.define(env, fields, rest);
         }
         else {
+            // TODO: add check to module symbols
             return defn.getSemType(env);
         }
     }
