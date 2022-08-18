@@ -236,6 +236,29 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, indices, memberTypes, nRequired, neg);
 }
 
+function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, ListAtomicType]? {
+    if atoms.length() == 0 {
+        return ();
+    }
+    ListAtomicType atom = atoms[0];
+    foreach int i in 1 ..< atoms.length() {
+        ListAtomicType next = atoms[i];
+        var tmpAtom = listIntersectWith(atom.members, atom.rest, next.members, next.rest);
+        if tmpAtom is () {
+            return ();
+        }
+        var [members, rest] = tmpAtom;
+        foreach SemType member in members.initial {
+            if isNever(member) {
+                return ();
+            }
+        }
+        atom = { members: members.cloneReadOnly(), rest };
+    }
+    SemType semType = createUniformSemType(UT_LIST_RW, bddAtom(env.listAtom(atom)));
+    return [semType, atom];
+}
+
 function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
     if listLengthsDisjoint(members1, rest1, members2, rest2) {
         return ();

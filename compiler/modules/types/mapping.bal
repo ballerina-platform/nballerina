@@ -260,6 +260,22 @@ function insertField(TempMappingSubtype m, string name, SemType t) returns TempM
     return { names, types, rest: m.rest };
 }
 
+function intersectMappingAtoms(Env env, MappingAtomicType[] atoms) returns [SemType, MappingAtomicType]? {
+    if atoms.length() == 0 {
+        return ();
+    }
+    MappingAtomicType atom = atoms[0];
+    foreach int i in 1 ..< atoms.length() {
+        var tmpAtom = intersectMapping(atom, atoms[i]);
+        if tmpAtom is () {
+            return ();
+        }
+        atom = tmpAtom.cloneReadOnly();
+    }
+    SemType semType = createUniformSemType(UT_MAPPING_RW, bddAtom(env.mappingAtom(atom)));
+    return [semType, atom];
+}
+
 type TempMappingSubtype record {|
     // sorted
     string[] names;
@@ -462,4 +478,3 @@ final UniformTypeOps mappingRwOps = {
     complement: bddSubtypeComplement,
     isEmpty: mappingSubtypeIsEmpty
 };
-
