@@ -180,7 +180,11 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             if restTd != () {
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
-            return d.define(env, initial = members, rest = rest);
+            t:SemType ty = d.define(env, initial = members, rest = rest);
+            if !env.isReady() {
+                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
+            }
+            return ty;
         }
         else {
             t:SemType ty = defn.getSemType(env);
@@ -246,7 +250,11 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             else {
                 rest = t:NEVER;
             }
-            return d.define(env, fields, rest);
+            t:SemType ty = d.define(env, fields, rest);
+            if !env.isReady() {
+                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
+            }
+            return ty;
         }
         else {
             t:SemType ty = defn.getSemType(env);
