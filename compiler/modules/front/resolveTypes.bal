@@ -29,13 +29,12 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
         check resolveDefn(mod, defn);
     }
     if !mod.tc.env.isReady() {
-        // TODO: better error name
-        panic error("unexpected");
+        // This should never happen
+        panic error("type environment is not ready");
     }
     foreach var [ty, loc] in mod.possiblyEmptyTypes {
         if t:isEmpty(mod.tc, ty) {
-            // TODO: better error name
-            return err:semantic("empty type", loc);
+            return err:semantic("empty or infinite type", loc);
         }
     }
 }
@@ -163,9 +162,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
             }
         }
-        if !env.isReady() {
-            mod.possiblyEmptyTypes.push([accumType, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
-        }
+        deferIsEmptyCheck(mod,modDefn, td, accumType);
         return accumType;
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
@@ -181,16 +178,12 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
             t:SemType ty = d.define(env, initial = members, rest = rest);
-            if !env.isReady() {
-                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
-            }
+            deferIsEmptyCheck(mod,modDefn, td, ty);
             return ty;
         }
         else {
             t:SemType ty = defn.getSemType(env);
-            if !env.isReady() {
-                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
-            }
+            deferIsEmptyCheck(mod,modDefn, td, ty);
             return ty;
         }
     } 
@@ -209,16 +202,12 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                     t = d.define(env, [t], length);
                 }
             }
-            if !env.isReady() {
-                mod.possiblyEmptyTypes.push([t, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
-            }
+            deferIsEmptyCheck(mod,modDefn, td, t);
             return t;
         }
         else {
             t:SemType ty = defn.getSemType(env);
-            if !env.isReady() {
-                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
-            }
+            deferIsEmptyCheck(mod,modDefn, td, ty);
             return ty;
         }   
     }
@@ -251,16 +240,12 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 rest = t:NEVER;
             }
             t:SemType ty = d.define(env, fields, rest);
-            if !env.isReady() {
-                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
-            }
+            deferIsEmptyCheck(mod,modDefn, td, ty);
             return ty;
         }
         else {
             t:SemType ty = defn.getSemType(env);
-            if !env.isReady() {
-                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
-            }
+            deferIsEmptyCheck(mod,modDefn, td, ty);
             return ty;
         }
     }
@@ -363,6 +348,14 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         return t:tableContaining(t);
     }
     panic error("unimplemented type-descriptor");
+}
+
+// This defer isEmpty check if Env is not ready. But if Env is ready caller must validate type
+function deferIsEmptyCheck(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc td, t:SemType ty) {
+    final t:Env env = mod.tc.env;
+    if !env.isReady() {
+        mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
+    }
 }
 
 function resolveBuiltinTypeDesc(t:Context tc, s:SubsetBuiltinTypeDesc td) returns t:SemType {

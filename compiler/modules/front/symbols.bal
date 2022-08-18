@@ -12,7 +12,6 @@ type ModuleSymbols record {|
     map<Import>[] partPrefixes = [];
     t:Context tc;
     boolean allowAllTypes = false;
-    // TODO: better name here
     [t:SemType, d:Location][] possiblyEmptyTypes = [];
 |};
 
