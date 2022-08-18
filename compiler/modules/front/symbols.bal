@@ -2,16 +2,18 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 type ModuleDefns table<s:ModuleLevelDefn> key(name);
 
 // This is the module-level symbol table.
-// TODO: add list of semtypes to check here
 type ModuleSymbols record {|
     ModuleDefns defns = table [];
     map<Import>[] partPrefixes = [];
     t:Context tc;
     boolean allowAllTypes = false;
+    // TODO: better name here
+    [t:SemType, d:Location][] possiblyEmptyTypes = [];
 |};
 
 type Import record {|

@@ -29,8 +29,14 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
         check resolveDefn(mod, defn);
     }
     if !mod.tc.env.isReady() {
-        // TODO: this is probably the place we need to check
+        // TODO: better error name
         panic error("unexpected");
+    }
+    foreach var [ty, loc] in mod.possiblyEmptyTypes {
+        if t:isEmpty(mod.tc, ty) {
+            // TODO: better error name
+            return err:semantic("empty type", loc);
+        }
     }
 }
 
@@ -155,8 +161,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                    || (accumType !is t:UniformTypeBitSet && env.isReady() && t:isEmpty(mod.tc, accumType)) {
                     return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPos[i - 1]));
                 }
-                // TODO: add check to module symbols if env.isReady() == false
             }
+        }
+        if !env.isReady() {
+            mod.possiblyEmptyTypes.push([accumType, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
         }
         return accumType;
     }
@@ -175,10 +183,13 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return d.define(env, initial = members, rest = rest);
         }
         else {
-            // TODO: add check to module symbols
-            return defn.getSemType(env);
-        }   
-    }    
+            t:SemType ty = defn.getSemType(env);
+            if !env.isReady() {
+                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
+            }
+            return ty;
+        }
+    } 
     if td is s:ArrayTypeDesc {
         t:ListDefinition? defn = td.defn;
         if defn == () {
@@ -194,11 +205,17 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                     t = d.define(env, [t], length);
                 }
             }
+            if !env.isReady() {
+                mod.possiblyEmptyTypes.push([t, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
+            }
             return t;
         }
         else {
-            // TODO: add check to module symbols
-            return defn.getSemType(env);
+            t:SemType ty = defn.getSemType(env);
+            if !env.isReady() {
+                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
+            }
+            return ty;
         }   
     }
     if td is s:MappingTypeDesc {
@@ -232,8 +249,11 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return d.define(env, fields, rest);
         }
         else {
-            // TODO: add check to module symbols
-            return defn.getSemType(env);
+            t:SemType ty = defn.getSemType(env);
+            if !env.isReady() {
+                mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
+            }
+            return ty;
         }
     }
     if td is s:TypeDescRef {
