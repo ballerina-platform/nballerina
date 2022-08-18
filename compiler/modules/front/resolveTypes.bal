@@ -162,7 +162,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
             }
         }
-        deferIsEmptyCheck(mod,modDefn, td, accumType);
+        deferIsEmptyCheck(mod, modDefn, td, accumType);
         return accumType;
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
@@ -178,12 +178,12 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
             t:SemType ty = d.define(env, initial = members, rest = rest);
-            deferIsEmptyCheck(mod,modDefn, td, ty);
+            deferIsEmptyCheck(mod, modDefn, td, ty);
             return ty;
         }
         else {
             t:SemType ty = defn.getSemType(env);
-            deferIsEmptyCheck(mod,modDefn, td, ty);
+            deferIsEmptyCheck(mod, modDefn, td, ty);
             return ty;
         }
     } 
@@ -202,12 +202,12 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                     t = d.define(env, [t], length);
                 }
             }
-            deferIsEmptyCheck(mod,modDefn, td, t);
+            deferIsEmptyCheck(mod, modDefn, td, t);
             return t;
         }
         else {
             t:SemType ty = defn.getSemType(env);
-            deferIsEmptyCheck(mod,modDefn, td, ty);
+            deferIsEmptyCheck(mod, modDefn, td, ty);
             return ty;
         }   
     }
@@ -240,12 +240,12 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 rest = t:NEVER;
             }
             t:SemType ty = d.define(env, fields, rest);
-            deferIsEmptyCheck(mod,modDefn, td, ty);
+            deferIsEmptyCheck(mod, modDefn, td, ty);
             return ty;
         }
         else {
             t:SemType ty = defn.getSemType(env);
-            deferIsEmptyCheck(mod,modDefn, td, ty);
+            deferIsEmptyCheck(mod, modDefn, td, ty);
             return ty;
         }
     }
