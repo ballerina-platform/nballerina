@@ -95,7 +95,6 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
         ["cell"] => {
             Type t = <Type>atomSexpr[1];
             string s = <string>atomSexpr[2];
-
             t:CellMutability m;
             match s {
                 "none" => {
@@ -108,7 +107,6 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
                     m = t:CELL_MUT_UNLIMITED;
                 }
             }
-
             t:SemType semType = semTypeFromSexpr(env, bindings, t);
             return t:cellContaining(env, semType, m);
         }

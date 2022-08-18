@@ -246,8 +246,9 @@ public class Context {
         if atom is RecAtom {
             panic error("cell cannot be a RecAtom");
         }
-        
-        return <CellAtomicType>atom.atomicType;
+        else {
+            return <CellAtomicType>atom.atomicType;
+        }
     }
 }
 
