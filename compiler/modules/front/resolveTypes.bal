@@ -30,11 +30,11 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
     }
     if !mod.tc.env.isReady() {
         // This should never happen
-        panic error("type environment is not ready");
+        panic err:impossible("type environment is not ready");
     }
     foreach var [ty, loc] in mod.possiblyEmptyTypes {
         if t:isEmpty(mod.tc, ty) {
-            return err:semantic("empty or infinite type", loc);
+            return err:semantic("invalid recursive type (contains no finite shapes)", loc);
         }
     }
 }
@@ -162,8 +162,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
             }
         }
-        deferIsEmptyCheck(mod, modDefn, td, accumType);
-        return accumType;
+        return check nonEmptyType(mod, modDefn, td, accumType);
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
     if td is s:TupleTypeDesc {
@@ -177,14 +176,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             if restTd != () {
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
-            t:SemType ty = d.define(env, initial = members, rest = rest);
-            deferIsEmptyCheck(mod, modDefn, td, ty);
-            return ty;
+            return check nonEmptyType(mod, modDefn, td, d.define(env, initial = members, rest = rest));
         }
         else {
-            t:SemType ty = defn.getSemType(env);
-            deferIsEmptyCheck(mod, modDefn, td, ty);
-            return ty;
+            return check nonEmptyType(mod, modDefn, td, defn.getSemType(env));
         }
     } 
     if td is s:ArrayTypeDesc {
@@ -202,14 +197,11 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                     t = d.define(env, [t], length);
                 }
             }
-            deferIsEmptyCheck(mod, modDefn, td, t);
-            return t;
+            return check nonEmptyType(mod, modDefn, td, t);
         }
         else {
-            t:SemType ty = defn.getSemType(env);
-            deferIsEmptyCheck(mod, modDefn, td, ty);
-            return ty;
-        }   
+            return check nonEmptyType(mod, modDefn, td, defn.getSemType(env));
+        }
     }
     if td is s:MappingTypeDesc {
         t:MappingDefinition? defn = td.defn;
@@ -239,14 +231,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             else {
                 rest = t:NEVER;
             }
-            t:SemType ty = d.define(env, fields, rest);
-            deferIsEmptyCheck(mod, modDefn, td, ty);
-            return ty;
+            return check nonEmptyType(mod, modDefn, td, d.define(env, fields, rest));
         }
         else {
-            t:SemType ty = defn.getSemType(env);
-            deferIsEmptyCheck(mod, modDefn, td, ty);
-            return ty;
+            return check nonEmptyType(mod, modDefn, td, defn.getSemType(env));
         }
     }
     if td is s:TypeDescRef {
@@ -350,12 +338,16 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     panic error("unimplemented type-descriptor");
 }
 
-// This defer isEmpty check if Env is not ready. But if Env is ready caller must validate type
-function deferIsEmptyCheck(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc td, t:SemType ty) {
+function nonEmptyType(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc td, t:SemType ty) returns t:SemType|ResolveTypeError {
     final t:Env env = mod.tc.env;
+    d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
     if !env.isReady() {
-        mod.possiblyEmptyTypes.push([ty, s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos })]);
+        mod.possiblyEmptyTypes.push([ty, loc]);
     }
+    else if t:isEmpty(mod.tc, ty) {
+        return err:semantic("invalid recursive type (contains no finite shapes)", loc);
+    }
+    return ty;
 }
 
 function resolveBuiltinTypeDesc(t:Context tc, s:SubsetBuiltinTypeDesc td) returns t:SemType {
