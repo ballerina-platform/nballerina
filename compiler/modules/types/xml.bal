@@ -38,14 +38,14 @@ public function xmlSequence(SemType constituentType) returns SemType {
     if constituentType == NEVER {
         return xmlSequence(xmlSingleton(XML_PRIMITIVE_NEVER));
     }
-    if constituentType is UniformTypeBitSet {
+    if constituentType is BasicTypeBitSet {
         return constituentType;
     }   
     else {
         var ro = <XmlSubtype|boolean>getComplexSubtypeData(constituentType, UT_XML_RO);
         ro = ro is boolean ? ro : makeSequence(true, ro);
         
-        var rw = <XmlSubtype|boolean>getComplexSubtypeData(constituentType, UT_XML_RW);
+        var rw = <XmlSubtype|boolean>getComplexSubtypeData(constituentType, BT_XML);
         rw = rw is boolean ? rw : makeSequence(false, rw);
         
         return createXmlSemtype(ro, rw);
@@ -76,7 +76,7 @@ function createXmlSubtypeOrEmpty(int primitives, Bdd sequence) returns XmlSubtyp
 }
 
 function createXmlSemtype(XmlSubtype|boolean ro, XmlSubtype|boolean rw) returns ComplexSemType {
-    UniformSubtype[] subtypes = [];
+    BasicSubtype[] subtypes = [];
     int all = 0;
     if ro is boolean {
         if ro {
@@ -88,13 +88,13 @@ function createXmlSemtype(XmlSubtype|boolean ro, XmlSubtype|boolean rw) returns 
     }
     if rw is boolean {
         if rw {
-            all |= 1 << UT_XML_RW;
+            all |= 1 << BT_XML;
         }
     }
     else {
-        subtypes.push([UT_XML_RW, rw]);
+        subtypes.push([BT_XML, rw]);
     }
-    return createComplexSemType(<UniformTypeBitSet>all, subtypes);  
+    return createComplexSemType(<BasicTypeBitSet>all, subtypes);  
 }
 
 function xmlSubtypeUnion(boolean isRo, SubtypeData d1, SubtypeData d2) returns SubtypeData {
@@ -189,7 +189,7 @@ function xmlSubtypeComplementRo(SubtypeData d) returns SubtypeData => xmlSubtype
 
 function xmlSubtypeComplementRw(SubtypeData d) returns SubtypeData => xmlSubtypeComplement(false, d);
 
-final UniformTypeOps xmlRoOps = {
+final BasicTypeOps xmlRoOps = {
     union: xmlSubtypeUnionRo,
     intersect: xmlSubtypeIntersect,
     diff: xmlSubtypeDiff,
@@ -197,7 +197,7 @@ final UniformTypeOps xmlRoOps = {
     isEmpty: xmlRoSubtypeIsEmpty
 };
 
-final UniformTypeOps xmlRwOps = {
+final BasicTypeOps xmlRwOps = {
     union: xmlSubtypeUnionRw,
     intersect: xmlSubtypeIntersect,
     diff: xmlSubtypeDiff,

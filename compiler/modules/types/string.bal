@@ -29,7 +29,7 @@ public function stringConst(string value) returns ComplexSemType {
         char = { allowed: true, values: [] };
         nonChar = { allowed: true, values: [value] };
     }
-    return uniformSubtype(UT_STRING, { char, nonChar });
+    return basicSubtype(BT_STRING, { char, nonChar });
 }
 
 function stringChar() returns SemType {
@@ -37,7 +37,7 @@ function stringChar() returns SemType {
         char: { allowed: false, values: [] }, 
         nonChar: { allowed: true, values: [] }
     };
-    return uniformSubtype(UT_STRING, st);
+    return basicSubtype(BT_STRING, st);
 }
 
 function stringSubtypeSingleValue(SubtypeData d) returns string? {
@@ -203,7 +203,7 @@ function createStringSubtype(CharStringSubtype char, NonCharStringSubtype nonCha
     return { char, nonChar };
 }
 
-final UniformTypeOps stringOps = {
+final BasicTypeOps stringOps = {
     union: stringSubtypeUnion,
     intersect: stringSubtypeIntersect,
     diff: stringSubtypeDiff,

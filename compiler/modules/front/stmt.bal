@@ -520,7 +520,7 @@ type EqualMatchTest record {|
 type UniformTypeMatchTest record {|
     int clauseIndex;
     Position pos;
-    t:UniformTypeBitSet bitSet;
+    t:BasicTypeBitSet bitSet;
 |};
 
 function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain? initialBindings, s:MatchStmt stmt) returns CodeGenError|StmtEffect {
@@ -911,7 +911,7 @@ function codeGenLExpr(StmtContext cx, bir:BasicBlock startBlock, BindingChain? i
 
 function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, BindingChain? initialBindings, s:MemberAccessLExpr|s:FieldAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
     var { result: reg, block: block1 } = check codeGenLExpr(cx, startBlock, initialBindings, lValue.container);
-    t:UniformTypeBitSet indexType;
+    t:BasicTypeBitSet indexType;
     if t:isSubtypeSimple(reg.semType, t:MAPPING) {
         indexType = t:STRING;
     } 

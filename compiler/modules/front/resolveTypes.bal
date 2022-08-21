@@ -74,8 +74,8 @@ function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Type
 }
 
 function isSubsetUnionType(t:SemType ty) returns boolean {
-    return (ty is t:UniformTypeBitSet
-            && ((t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) && ty != t:NEVER)
+    return (ty is t:BasicTypeBitSet
+            && ((t:isSubtypeSimple(ty, <t:BasicTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) && ty != t:NEVER)
                 || (ty == t:ANY || ty == t:TOP)));
 }
 
@@ -148,7 +148,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 // To solve this, we would need to build a list of intersections to be checked later.
                 // But this is very unlikely to be a problem in practice.
                 if t:isNever(accumType)
-                   || (accumType !is t:UniformTypeBitSet && env.isReady() && t:isEmpty(mod.tc, accumType)) {
+                   || (accumType !is t:BasicTypeBitSet && env.isReady() && t:isEmpty(mod.tc, accumType)) {
                     return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPos[i - 1]));
                 }
             }

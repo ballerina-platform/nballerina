@@ -239,7 +239,7 @@ function validInitReturnType(s:FunctionDefn defn) returns err:Semantic? {
     if t:intersect(returnType, t:NIL) != t:NIL {
         return err:semantic(`return type of ${defn.name} function must allow nil`, s:defnLocation(defn));
     }
-    if !t:isSubtypeSimple(returnType, t:uniformTypeUnion((1 << t:UT_NIL) | (1 << t:UT_ERROR))) {
+    if !t:isSubtypeSimple(returnType, t:basicTypeUnion((1 << t:BT_NIL) | (1 << t:BT_ERROR))) {
         return err:semantic(`return type of ${defn.name} function must be a subtype of ${"error?"}`, s:defnLocation(defn));
     }
 }

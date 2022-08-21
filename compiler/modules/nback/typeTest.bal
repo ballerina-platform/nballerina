@@ -84,7 +84,7 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
     BaseRepr baseRepr = repr.base;
     if baseRepr == BASE_REPR_TAGGED { 
         llvm:PointerValue tagged = <llvm:PointerValue>value;
-        t:UniformTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), operand.semType, semType);
+        t:BasicTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), operand.semType, semType);
         if bitSet != () {
             hasType = buildHasTagInSet(builder, tagged, bitSet);
         }
@@ -181,8 +181,8 @@ function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
 
 // If we can perform the type test by testing whether the value belongs to a UniformTypeBitSet, then return that bit set.
 // Otherwise return nil.
-function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType targetType) returns t:UniformTypeBitSet? {
-    t:UniformTypeBitSet bitSet = t:widenToUniformTypes(targetType);
+function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType targetType) returns t:BasicTypeBitSet? {
+    t:BasicTypeBitSet bitSet = t:widenToBasicTypes(targetType);
     // For example, let L be a subtype of list, and support sourceType is L? and targetType is L
     // Then bitSet is t:LIST and (sourceType & bitSet) is L which is (non-proper) subtype of the targetType.
     // If a value was in bitSet and in sourceType but not in target
@@ -195,13 +195,13 @@ function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType t
     return ();
 }
 
-function buildHasTagInSet(llvm:Builder builder, llvm:PointerValue tagged, t:UniformTypeBitSet bitSet) returns llvm:Value {
-    t:UniformTypeCode? utCode = t:uniformTypeCode(bitSet);
+function buildHasTagInSet(llvm:Builder builder, llvm:PointerValue tagged, t:BasicTypeBitSet bitSet) returns llvm:Value {
+    t:BasicTypeCode? utCode = t:basicTypeCode(bitSet);
     if utCode != () {
         return buildHasTag(builder, tagged, utCode << TAG_SHIFT);
     }
-    t:UniformTypeBitSet roBitSet = <t:UniformTypeBitSet>(bitSet & t:UT_READONLY);
-    utCode = t:uniformTypeCode(roBitSet);
+    t:BasicTypeBitSet roBitSet = <t:BasicTypeBitSet>(bitSet & t:UT_READONLY);
+    utCode = t:basicTypeCode(roBitSet);
     if utCode != () && bitSet == (roBitSet | 0xF) {
         return buildTestTag(builder, tagged, utCode, TAG_BASIC_TYPE_MASK);
     }

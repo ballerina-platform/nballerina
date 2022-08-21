@@ -15,7 +15,7 @@ public function cellContaining(Env env, SemType t, CellMutability mut) returns S
     CellAtomicType atomicCell = { t, mut };
     Atom atom = env.cellAtom(atomicCell);
     BddNode bdd = bddAtom(atom);
-    return createComplexSemType(0, [[UT_CELL, bdd]]);
+    return createComplexSemType(0, [[BT_CELL, bdd]]);
 }
 
 function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -132,7 +132,7 @@ function cellNegListUnlimitedUnion(Context cx, Conjunction? negList) returns Sem
     return negUnion;
 }
 
-final UniformTypeOps cellOps = {
+final BasicTypeOps cellOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

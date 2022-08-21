@@ -39,7 +39,7 @@ type InherentTypeDefn record {|
 
 type SubtypeDefn record {|
     readonly t:ComplexSemType semType;
-    readonly t:UniformTypeCode typeCode;
+    readonly t:BasicTypeCode typeCode;
     llvm:ConstPointerValue ptr;
     llvm:StructType? structType;
 |};
@@ -261,7 +261,7 @@ function fillableStructureBasicType(t:Context tc, t:SemType semType) returns Str
 }
 
 function getMemberType(InitModuleContext cx, t:SemType memberType) returns llvm:ConstValue {
-    if memberType is t:UniformTypeBitSet {
+    if memberType is t:BasicTypeBitSet {
         return llvm:constInt(LLVM_MEMBER_TYPE, (memberType << 1)|1);
     }
     else {
@@ -299,7 +299,7 @@ function addComplexTypeDefn(InitModuleContext cx, string symbol, t:ComplexSemTyp
     int someBits = 0;
     llvm:ConstValue[] llSubtypes = [];
     foreach var [code, subtype] in some {
-        if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:UT_TABLE_RW {
+        if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:BT_TABLE {
             // these cannot occur for now, so ignore them
             continue;
         }
@@ -319,7 +319,7 @@ type SubtypeStruct record {|
     llvm:Value[] values;
 |};
 
-function getUniformSubtype(InitModuleContext cx, t:UniformTypeCode typeCode, t:ComplexSemType semType) returns llvm:ConstPointerValue {
+function getUniformSubtype(InitModuleContext cx, t:BasicTypeCode typeCode, t:ComplexSemType semType) returns llvm:ConstPointerValue {
     llvm:ConstPointerValue ptr;
     SubtypeDefn? existingDefn = cx.subtypeDefns[typeCode, semType];
     if existingDefn != () {
@@ -355,21 +355,21 @@ function finishSubtypeDefns(InitModuleContext cx) {
     }
 }
 
-function createSubtypeStruct(InitModuleContext cx, t:UniformTypeCode typeCode, t:ComplexSemType semType) returns SubtypeStruct {
+function createSubtypeStruct(InitModuleContext cx, t:BasicTypeCode typeCode, t:ComplexSemType semType) returns SubtypeStruct {
     match typeCode {
-        t:UT_BOOLEAN => {
+        t:BT_BOOLEAN => {
             return createBooleanSubtypeStruct(cx, semType);
         }
-        t:UT_INT => {
+        t:BT_INT => {
             return createIntSubtypeStruct(cx, semType);
         }
-        t:UT_FLOAT => {
+        t:BT_FLOAT => {
             return createFloatSubtypeStruct(cx, semType);
         }
-        t:UT_DECIMAL => {
+        t:BT_DECIMAL => {
             return createDecimalSubtypeStruct(cx, semType);
         }
-        t:UT_STRING => {
+        t:BT_STRING => {
             return createStringSubtypeStruct(cx, semType);
         }
         t:UT_LIST_RW => {
@@ -467,7 +467,7 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
     t:ListAtomicType? lat = t:listAtomicTypeRw(cx.tc, semType);
     if lat != () {
         t:SemType rest = lat.rest;
-        if rest is t:UniformTypeBitSet && lat.members.fixedLength == 0 {
+        if rest is t:BasicTypeBitSet && lat.members.fixedLength == 0 {
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_ARRAY);
         }
     }
@@ -479,9 +479,9 @@ function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semTy
     if mat != () {
         t:SemType rest = mat.rest;
         if rest == t:NEVER {
-            t:UniformTypeBitSet[] fieldTypes = [];
+            t:BasicTypeBitSet[] fieldTypes = [];
             foreach var ty in mat.types {
-                if ty is t:UniformTypeBitSet {
+                if ty is t:BasicTypeBitSet {
                     fieldTypes.push(ty);
                 }
                 else {
@@ -493,7 +493,7 @@ function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semTy
                 return createRecordSubtypeStruct(cx, mat.names, fieldTypes);     
             }
         }
-        else if rest is t:UniformTypeBitSet && mat.names.length() == 0 {
+        else if rest is t:BasicTypeBitSet && mat.names.length() == 0 {
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_MAP);
         }
     }
@@ -508,14 +508,14 @@ function createPrecomputedSubtypeStruct(InitModuleContext cx, StructureBasicType
     };
 }
 
-function createArrayMapSubtypeStruct(InitModuleContext cx, t:UniformTypeBitSet bitSet, TypeKindArrayOrMap arrayOrMap) returns SubtypeStruct {
+function createArrayMapSubtypeStruct(InitModuleContext cx, t:BasicTypeBitSet bitSet, TypeKindArrayOrMap arrayOrMap) returns SubtypeStruct {
     return {
         types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET],
         values: [getSubtypeContainsFunc(cx, arrayOrMap), llvm:constInt("i32", bitSet)]
     };
 }
 
-function createRecordSubtypeStruct(InitModuleContext cx, string[] fieldNames, t:UniformTypeBitSet[] fieldTypes) returns SubtypeStruct {
+function createRecordSubtypeStruct(InitModuleContext cx, string[] fieldNames, t:BasicTypeBitSet[] fieldTypes) returns SubtypeStruct {
     // 0, fieldCount, fields
     final llvm:StructType llFieldType = llvm:structType([LLVM_TAGGED_PTR, LLVM_BITSET]);
     final int nFields = fieldNames.length();

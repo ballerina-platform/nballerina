@@ -123,7 +123,7 @@ public class ListDefinition {
         else {
             rwBdd = bddAtom(rw);
         }
-        ComplexSemType s = createComplexSemType(0, [[UT_LIST_RO, roBdd], [UT_LIST_RW, rwBdd]]);
+        ComplexSemType s = createComplexSemType(0, [[UT_LIST_RO, roBdd], [BT_LIST, rwBdd]]);
         self.semType = s;
         return s;
     }       
@@ -600,7 +600,7 @@ function nextBoundary(int cur, Range r, int? next) returns int? {
     return next;
 }
 
-final UniformTypeOps listRoOps = {
+final BasicTypeOps listRoOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
@@ -608,7 +608,7 @@ final UniformTypeOps listRoOps = {
     isEmpty: listRoSubtypeIsEmpty
 };
 
-final UniformTypeOps listRwOps = {
+final BasicTypeOps listRwOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

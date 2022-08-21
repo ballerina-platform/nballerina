@@ -11,7 +11,7 @@ public type Range readonly & record {|
 
 public function intConst(int value) returns ComplexSemType {
     IntSubtype t = [{ min: value, max: value }];
-    return uniformSubtype(UT_INT, t);
+    return basicSubtype(BT_INT, t);
 }
 
 public function intRange(int min, int max) returns SemType {
@@ -19,7 +19,7 @@ public function intRange(int min, int max) returns SemType {
         return INT;
     }
     IntSubtype t = [{ min, max }];
-    return uniformSubtype(UT_INT, t);
+    return basicSubtype(BT_INT, t);
 }
 
 function validIntWidth(boolean signed, int bits) returns error? {
@@ -47,13 +47,13 @@ public function intWidthSigned(int bits) returns SemType {
         return INT;
     }
     IntSubtype t = [{ min: -(1 << (bits - 1)), max: (1 << (bits - 1)) - 1 }];
-    return uniformSubtype(UT_INT, t);
+    return basicSubtype(BT_INT, t);
 }
 
 public function intWidthUnsigned(int bits) returns SemType {
     checkpanic validIntWidth(false, bits);
     IntSubtype t = [{ min: 0, max: (1 << bits) - 1 }];
-    return uniformSubtype(UT_INT, t);
+    return basicSubtype(BT_INT, t);
 }
 
 // Widen to UnsignedN
@@ -292,7 +292,7 @@ function rangeListComplement(Range[] v) returns Range[] {
     return result;
 }
 
-final UniformTypeOps intOps = {
+final BasicTypeOps intOps = {
     union: intSubtypeUnion,
     intersect: intSubtypeIntersect,
     diff: intSubtypeDiff,

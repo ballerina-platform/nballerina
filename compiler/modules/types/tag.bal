@@ -1,33 +1,23 @@
-// Inherently immutable
-public const UT_NIL        = 0x00;
-public const UT_BOOLEAN    = 0x01;
+// Always immutable
+public const BT_NIL        = 0x00;
+public const BT_BOOLEAN    = 0x01;
+public const BT_INT        = 0x02;
+public const BT_FLOAT      = 0x03;
+public const BT_DECIMAL    = 0x04;
+public const BT_STRING     = 0x05;
+public const BT_ERROR      = 0x06;
+public const BT_TYPEDESC   = 0x07;
+public const BT_HANDLE     = 0x08;
+public const BT_FUNCTION   = 0x09;
 
-// Selectively immutable; immutable half
-public const UT_LIST_RO    = 0x02;
-public const UT_MAPPING_RO = 0x03;
-public const UT_TABLE_RO   = 0x04;
-public const UT_XML_RO     = 0x05;
-public const UT_OBJECT_RO  = 0x06;
+// Always mutable
+public const BT_FUTURE     = 0xA;
+public const BT_STREAM     = 0xB;
 
-// Rest of inherently immutable
-public const UT_INT        = 0x07;
-public const UT_FLOAT      = 0x08;
-public const UT_DECIMAL    = 0x09;
-public const UT_STRING     = 0x0A;
-public const UT_ERROR      = 0x0B;
-public const UT_FUNCTION   = 0x0C;
-public const UT_TYPEDESC   = 0x0D;
-public const UT_HANDLE     = 0x0E;
-
-public const UT_CELL       = 0x0F;
-
-// Inherently mutable
-public const UT_FUTURE     = 0x10;
-public const UT_STREAM     = 0x11;
-
-// Selectively immutable; mutable half
-public const UT_LIST_RW    = 0x12;
-public const UT_MAPPING_RW = 0x13;
-public const UT_TABLE_RW   = 0x14;
-public const UT_XML_RW     = 0x15;
-public const UT_OBJECT_RW  = 0x16;
+// Selectively immutable
+public const BT_LIST    = 0xC;
+public const BT_MAPPING = 0xD;
+public const BT_TABLE   = 0xE;
+public const BT_XML     = 0xF;
+public const BT_OBJECT  = 0x10;
+public const BT_CELL    = 0x11;

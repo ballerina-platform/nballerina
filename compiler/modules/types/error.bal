@@ -12,14 +12,14 @@ public function errorDetail(SemType detail) returns SemType {
         }
     }
     else {
-        return uniformSubtype(UT_ERROR, sd);
+        return basicSubtype(BT_ERROR, sd);
     }
 }
 
 // distinctId must be >= 0
 public function errorDistinct(int distinctId) returns SemType {
     BddNode bdd = bddAtom(-distinctId - 1);
-    return uniformSubtype(UT_ERROR, bdd);
+    return basicSubtype(BT_ERROR, bdd);
 }
 
 // Similar to mappingSubtypeRoIsEmpty,
@@ -47,7 +47,7 @@ function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return isEmpty;    
 }
 
-final UniformTypeOps errorOps = {
+final BasicTypeOps errorOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

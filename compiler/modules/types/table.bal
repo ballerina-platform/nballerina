@@ -7,9 +7,9 @@ public type RwTableSubtype record {|
 
 public function tableContaining(SemType memberType) returns SemType {
     Bdd ro = <Bdd>subtypeData(memberType, UT_MAPPING_RO);
-    Bdd rw = <Bdd>subtypeData(memberType, UT_MAPPING_RW);
-    SemType roSemtype = createUniformSemType(UT_TABLE_RO, ro);
-    SemType rwSemtype = createUniformSemType(UT_TABLE_RW, createRwTableSubtype(ro, rw));
+    Bdd rw = <Bdd>subtypeData(memberType, BT_MAPPING);
+    SemType roSemtype = createBasicSemType(UT_TABLE_RO, ro);
+    SemType rwSemtype = createBasicSemType(BT_TABLE, createRwTableSubtype(ro, rw));
     return union(roSemtype, rwSemtype);
 }
 
@@ -48,7 +48,7 @@ function createRwTableSubtype(Bdd ro, Bdd rw) returns SubtypeData {
     return { ro, rw };
 }
 
-final UniformTypeOps tableRoOps = {
+final BasicTypeOps tableRoOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
@@ -56,7 +56,7 @@ final UniformTypeOps tableRoOps = {
     isEmpty: mappingRoSubtypeIsEmpty
 };
 
-final UniformTypeOps tableRwOps = {
+final BasicTypeOps tableRwOps = {
     union: rwTableSubtypeUnion,
     intersect: rwTableSubtypeIntersect,
     diff: rwTableSubtypeDiff,

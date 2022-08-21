@@ -87,7 +87,7 @@ public class MappingDefinition {
         else {
             rwBdd = bddAtom(rw);
         }
-        SemType s = createComplexSemType(0, [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
+        SemType s = createComplexSemType(0, [[UT_MAPPING_RO, roBdd], [BT_MAPPING, rwBdd]]);
         self.semType = s; 
         return s;
     }       
@@ -447,7 +447,7 @@ function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean re
     }
 }
 
-final UniformTypeOps mappingRoOps = {
+final BasicTypeOps mappingRoOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
@@ -455,7 +455,7 @@ final UniformTypeOps mappingRoOps = {
     isEmpty: mappingRoSubtypeIsEmpty
 };
 
-final UniformTypeOps mappingRwOps = {
+final BasicTypeOps mappingRwOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
