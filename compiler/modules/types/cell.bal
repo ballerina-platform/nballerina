@@ -12,6 +12,9 @@ public type CellAtomicType readonly & record {|
 |};
 
 public function cellContaining(Env env, SemType t, CellMutability mut) returns SemType {
+    if t === NEVER { // TODO: Fix properly
+        return NEVER;
+    }
     CellAtomicType atomicCell = { t, mut };
     Atom atom = env.cellAtom(atomicCell);
     BddNode bdd = bddAtom(atom);

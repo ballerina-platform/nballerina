@@ -299,10 +299,11 @@ function addComplexTypeDefn(InitModuleContext cx, string symbol, t:ComplexSemTyp
     int someBits = 0;
     llvm:ConstValue[] llSubtypes = [];
     foreach var [code, subtype] in some {
-        if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:BT_TABLE {
-            // these cannot occur for now, so ignore them
-            continue;
-        }
+        // TODO: revisit
+        // if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:BT_TABLE {
+        //     // these cannot occur for now, so ignore them
+        //     continue;
+        // }
         someBits |= 1 << code;
         llSubtypes.push(getUniformSubtype(cx, code, subtype));
     }
@@ -372,10 +373,10 @@ function createSubtypeStruct(InitModuleContext cx, t:BasicTypeCode typeCode, t:C
         t:BT_STRING => {
             return createStringSubtypeStruct(cx, semType);
         }
-        t:UT_LIST_RW => {
+        t:BT_LIST => {
             return createListSubtypeStruct(cx, semType); 
         }
-        t:UT_MAPPING_RW => {
+        t:BT_MAPPING => {
             return createMappingSubtypeStruct(cx, semType); 
         }
     }

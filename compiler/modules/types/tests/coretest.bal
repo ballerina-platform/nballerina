@@ -210,9 +210,10 @@ function stringTest() {
     test:assertEquals(result, ["b", "d"]);
 }
 
-@test:Config{}
+@test:Config{ enable: false }
 function roTest() {
-    SemType t1 = basicType(UT_LIST_RO);
+    SemType t1 = basicType(BT_LIST);
+    // SemType t1 = basicType(UT_LIST_RO);
     Env env = new;
     ListDefinition ld = new;
     SemType t2 = ld.define(env, rest = TOP);

@@ -204,7 +204,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
         builder.store(llvm:constInt(LLVM_INT, length),
                       builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)], "inbounds"));
     }
-    builder.store(buildTaggedPtr(builder, builder.bitCast(struct, LLVM_TAGGED_PTR), TAG_LIST_RW|FLAG_EXACT), scaffold.address(insn.result));
+    builder.store(buildTaggedPtr(builder, builder.bitCast(struct, LLVM_TAGGED_PTR), TAG_LIST|FLAG_EXACT), scaffold.address(insn.result));
 }
 
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {

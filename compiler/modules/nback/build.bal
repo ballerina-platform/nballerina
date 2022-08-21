@@ -18,9 +18,9 @@ const int TAG_INT      = t:BT_INT << TAG_SHIFT;
 const int TAG_FLOAT    = t:BT_FLOAT << TAG_SHIFT;
 const int TAG_DECIMAL  = t:BT_DECIMAL << TAG_SHIFT;
 const int TAG_STRING   = t:BT_STRING << TAG_SHIFT;
-const int TAG_ERROR   = t:BT_ERROR << TAG_SHIFT;
+const int TAG_ERROR    = t:BT_ERROR << TAG_SHIFT;
 
-const int TAG_LIST_RW  = t:BT_LIST << TAG_SHIFT;
+const int TAG_LIST     = t:BT_LIST << TAG_SHIFT;
 
 const int TAG_BASIC_TYPE_MASK = 0xf << TAG_SHIFT;
 
@@ -48,7 +48,7 @@ type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|P
 
 final llvm:StructType LLVM_TAGGED_WITH_PANIC_CODE = llvm:structType([LLVM_TAGGED_PTR, LLVM_INT]);
 
-final t:BasicTypeBitSet POTENTIALLY_EXACT = t:basicTypeUnion(t:LIST_RW|t:MAPPING_RW);
+final t:BasicTypeBitSet POTENTIALLY_EXACT = t:basicTypeUnion(t:LIST|t:MAPPING);
 
 type RuntimeFunction readonly & record {|
     string name;

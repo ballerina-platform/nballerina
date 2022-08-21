@@ -10,6 +10,9 @@ const int UT_MASK = (1 << BT_COUNT) - 1;
 const int UT_COUNT_RO = 0x10;
 public const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
 
+const int UT_COUNT__ALWAYS_RO = 0xA;
+public const int UT_ALWAYS_READONLY = (1 << UT_COUNT__ALWAYS_RO) - 1;
+
 const int UT_RW_MASK = UT_MASK & ~UT_READONLY;
 
 
@@ -35,8 +38,8 @@ type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType;
 public isolated class Env {
     private final table<TypeAtom> key(atomicType) atomTable = table [];
     // Set up index 0 for use by bddFixReadOnly
-    private final ListAtomicType?[] recListAtoms = [ LIST_SUBTYPE_RO ];
-    private final MappingAtomicType?[] recMappingAtoms = [ MAPPING_SUBTYPE_RO ];
+    private final ListAtomicType?[] recListAtoms = [];
+    private final MappingAtomicType?[] recMappingAtoms = [];
     private final FunctionAtomicType?[] recFunctionAtoms = [];
     // Count of the total number of non-nil members
     // of recListAtoms, recMappingAtoms and recFunctionAtoms
@@ -212,6 +215,11 @@ public class Context {
 
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
+    SemType? readonlyMemo = ();
+    SemType? listRoMemo = ();
+    SemType? listRwMemo = ();
+    SemType? mappingRoMemo = ();
+    SemType? mappingRwMemo = ();
 
     function init(Env env) {
         self.env = env;
@@ -1019,24 +1027,20 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
     return ();   
 }
 
-final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
+Env tmpEnv = new;
+final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: cellContaining(tmpEnv, TOP, CELL_MUT_LIMITED) };
 
-final readonly & ListMemberTypes LIST_MEMBER_TYPES_ALL = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
-final readonly & ListMemberTypes LIST_MEMBER_TYPES_READONLY = [[{ min: 0, max: int:MAX_VALUE }], [READONLY]];
+final readonly & ListMemberTypes LIST_MEMBER_TYPES_ALL = [[{ min: 0, max: int:MAX_VALUE }], [cellContaining(tmpEnv, TOP, CELL_MUT_LIMITED)]];
 final readonly & ListMemberTypes LIST_MEMBER_TYPES_NONE = [[], []];
 
 public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
     if t is BasicTypeBitSet {
-        if t == LIST_RO {
-            return LIST_MEMBER_TYPES_READONLY;
-        }
-        return (t & LIST_RW) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE;
+        return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE;
     }
     else {
         Range[] ranges = [];
         SemType[] types = [];
-        Range[] allRanges = distinctRanges(bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), []), 
-                                           bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), []));
+        Range[] allRanges = bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), []);
         foreach Range r in allRanges {
             SemType m = listMemberType(cx, t, intConst(r.min));
             if m != NEVER {
@@ -1050,7 +1054,7 @@ public function listAllMemberTypes(Context cx, SemType t) returns ListMemberType
 
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is BasicTypeBitSet {
-        return t == LIST || t == LIST_RW ? LIST_ATOMIC_TOP : ();
+        return t == LIST ? LIST_ATOMIC_TOP : ();
     }
     else {
         Env env = cx.env;
@@ -1087,8 +1091,7 @@ public function listMemberType(Context cx, SemType t, SemType k) returns SemType
         if keyData == false {
             return NEVER;
         }
-        return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), <IntSubtype|true>keyData, TOP),
-                     bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), <IntSubtype|true>keyData, TOP));
+        return bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), <IntSubtype|true>keyData, TOP);
     }
 }
 
@@ -1116,13 +1119,13 @@ public type ListAlternative record {|
 
 public function listAlternativesRw(Context cx, SemType t) returns ListAlternative[] {
     if t is BasicTypeBitSet {
-        if (t & LIST_RW) == 0 {
+        if (t & LIST) == 0 {
             return [];
         }
         else {
             return [
                 {
-                    semType: LIST_RW,
+                    semType: createListRw(cx),
                     pos: [],
                     neg: []
                 }
@@ -1149,12 +1152,11 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
     }
 }
 
-final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: TOP };
-final MappingAtomicType MAPPING_ATOMIC_READONLY = { names: [], types: [], rest: READONLY };
+final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: cellContaining(tmpEnv, TOP, CELL_MUT_LIMITED) };
 
 public function mappingAtomicTypeRw(Context cx, SemType t) returns MappingAtomicType? {
     if t is BasicTypeBitSet {
-        return t == MAPPING || t == MAPPING_RW ? MAPPING_ATOMIC_TOP : ();
+        return t == MAPPING ? MAPPING_ATOMIC_TOP : ();
     }
     else {
         Env env = cx.env;
@@ -1189,8 +1191,7 @@ public function mappingMemberType(Context cx, SemType t, SemType k) returns SemT
         if keyData == false {
             return NEVER;
         }
-        return union(bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), <StringSubtype|true>keyData, TOP),
-                     bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP));
+        return bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
     }
 }
 
@@ -1200,8 +1201,7 @@ public function mappingMemberRequired(Context cx, SemType t, SemType k) returns 
     }
     else {
         StringSubtype stringSubType = <StringSubtype>getComplexSubtypeData(k, BT_STRING);
-        return bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), stringSubType, false)
-               && bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), stringSubType, false);
+        return bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), stringSubType, false);
     }
 }
 
@@ -1229,13 +1229,13 @@ public type MappingAlternative record {|
 
 public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlternative[] {
     if t is BasicTypeBitSet {
-        if (t & MAPPING_RW) == 0 {
+        if (t & MAPPING) == 0 {
             return [];
         }
         else {
             return [
                 {
-                    semType: MAPPING_RW,
+                    semType: createMappingRw(cx),
                     pos: [],
                     neg: []
                 }
@@ -1566,6 +1566,63 @@ public function createAnydata(Context context) returns SemType {
     return ad;
 }
 
+public function createReadonly(Context context) returns SemType {
+    SemType? memo = context.readonlyMemo;
+    if memo != () {
+        return memo;
+    }
+    SemType LIST_SUBTYPE_RO = createListRo(context);
+    SemType MAPPING_SUBTYPE_RO = createMappingRo(context);
+    // TODO: add table, xml and object
+    SemType ro  = union(basicTypeUnion(UT_ALWAYS_READONLY), union(LIST_SUBTYPE_RO, MAPPING_SUBTYPE_RO));
+    context.readonlyMemo = ro;
+    return ro;
+}
+
+public function createListRo(Context context) returns SemType {
+    SemType? memo = context.listRoMemo;
+    Env env = context.env;
+    if memo != () {
+        return memo;
+    }
+    SemType LIST_SUBTYPE_RO = (new ListDefinition()).define(env, rest = cellContaining(env, ANY, CELL_MUT_NONE));
+    context.readonlyMemo = LIST_SUBTYPE_RO;
+    return LIST_SUBTYPE_RO;
+}
+
+public function createListRw(Context context) returns SemType {
+    SemType? memo = context.listRoMemo;
+    Env env = context.env;
+    if memo != () {
+        return memo;
+    }
+    SemType LIST_SUBTYPE_RW = (new ListDefinition()).define(env, rest = cellContaining(env, ANY, CELL_MUT_LIMITED));
+    context.readonlyMemo = LIST_SUBTYPE_RW;
+    return LIST_SUBTYPE_RW;
+}
+
+public function createMappingRo(Context context) returns SemType {
+    SemType? memo = context.mappingRoMemo;
+    Env env = context.env;
+    if memo != () {
+        return memo;
+    }
+    SemType MAPPING_SUBTYPE_RO = (new MappingDefinition()).define(env, [], cellContaining(env, ANY, CELL_MUT_NONE));
+    context.mappingRoMemo = MAPPING_SUBTYPE_RO;
+    return MAPPING_SUBTYPE_RO;
+}
+
+public function createMappingRw(Context context) returns SemType {
+    SemType? memo = context.mappingRoMemo;
+    Env env = context.env;
+    if memo != () {
+        return memo;
+    }
+    SemType MAPPING_SUBTYPE_RW = (new MappingDefinition()).define(env, [], cellContaining(env, ANY, CELL_MUT_LIMITED));
+    context.mappingRoMemo = MAPPING_SUBTYPE_RW;
+    return MAPPING_SUBTYPE_RW;
+}
+
 final readonly & BasicTypeOps[] ops;
 
 function init() {
@@ -1582,10 +1639,10 @@ function init() {
         functionOps, // function
         {}, // future
         {}, // stream
-        listRwOps, // list
-        mappingRwOps, // mapping
+        listOps, // list
+        mappingOps, // mapping
         tableOps, // table
-        xmlRwOps, // xml
+        xmlOps, // xml
         {}, // object
         cellOps // cell
     ];
