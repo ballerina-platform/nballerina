@@ -14,24 +14,17 @@ public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) retur
     return i is int ? mat.types[i] : mat.rest;
 }
 
-// This is mapping index 0
-// Used by bddFixReadOnly
-final MappingAtomicType MAPPING_SUBTYPE_RO = { names: [], types: [], rest: READONLY };
-
 public class MappingDefinition {
     *Definition;
-    private RecAtom? roRec = ();
-    private RecAtom? rwRec = ();
+    private RecAtom? rec = ();
     private SemType? semType = ();
 
     public function getSemType(Env env) returns SemType {
         SemType? s = self.semType;
         if s == () {
-            RecAtom ro = env.recMappingAtom();
-            RecAtom rw = env.recMappingAtom();
-            self.roRec = ro;
-            self.rwRec = rw;
-            return self.createSemType(env, ro, rw);
+            RecAtom rec = env.recMappingAtom();
+            self.rec = rec;
+            return self.createSemType(env, rec);
         }
         else {
             return s;
@@ -40,60 +33,35 @@ public class MappingDefinition {
 
     public function define(Env env, Field[] fields, SemType rest) returns SemType {
         var [names, types] = splitFields(fields);
-        MappingAtomicType rwType = {
+        SemType[] cellTypes = from SemType t in types select cellContaining(env, t, CELL_MUT_LIMITED);
+        SemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
+        MappingAtomicType atomicType = {
             names: names.cloneReadOnly(),
-            types: types.cloneReadOnly(),
-            rest
+            types: cellTypes.cloneReadOnly(),
+            rest: restCell
         };
-        Atom rw;
-        RecAtom? rwRec = self.rwRec;
-        if rwRec != () {
-            rw = rwRec;
-            env.setRecMappingAtomType(rwRec, rwType);
+        Atom atom;
+        RecAtom? rec = self.rec;
+        if rec != () {
+            atom = rec;
+            env.setRecMappingAtomType(rec, atomicType);
         }
         else {
-            rw = env.mappingAtom(rwType);
+            atom = env.mappingAtom(atomicType);
         }
-        Atom ro;
-        MappingAtomicType roType = readOnlyMappingAtomicType(rwType);
-        if roType === rwType {
-            RecAtom? roRec = self.roRec;
-            if roRec == () {
-                // share the definitions
-                ro = rw;
-            }
-            else {
-                ro = roRec;
-                env.setRecMappingAtomType(roRec, rwType);
-            }
-        }
-        else {
-            ro = env.mappingAtom(roType);
-            RecAtom? roRec = self.roRec;
-            if roRec != () {
-                env.setRecMappingAtomType(roRec, roType);
-            }
-        }
-        return self.createSemType(env, ro, rw);
+        return self.createSemType(env, atom);
     }
-    
-    private function createSemType(Env env, Atom ro, Atom rw) returns SemType {
-        BddNode roBdd = bddAtom(ro);
-        BddNode rwBdd;
-        if atomCmp(ro, rw) == 0 {
-            // share the BDD
-            rwBdd = roBdd;
-        }
-        else {
-            rwBdd = bddAtom(rw);
-        }
-        SemType s = createComplexSemType(0, [[UT_MAPPING_RO, roBdd], [BT_MAPPING, rwBdd]]);
+
+    private function createSemType(Env env, Atom atom) returns SemType {
+        BddNode bdd = bddAtom(atom);
+        SemType s = createComplexSemType(0, [[BT_MAPPING, bdd]]);
         self.semType = s; 
         return s;
-    }       
+    } 
 }
 
 function readOnlyMappingAtomicType(MappingAtomicType ty) returns MappingAtomicType {
+    // TODO: fix
     if typeListIsReadOnly(ty.types) && isReadOnly(ty.rest) {
         return ty;
     }
@@ -101,7 +69,7 @@ function readOnlyMappingAtomicType(MappingAtomicType ty) returns MappingAtomicTy
         names: ty.names,
         types: readOnlyTypeList(ty.types),
         rest: intersect(ty.rest, READONLY)
-    };   
+    };
 }
 
 function splitFields(Field[] fields) returns [string[], SemType[]] {
@@ -447,19 +415,10 @@ function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean re
     }
 }
 
-final BasicTypeOps mappingRoOps = {
-    union: bddSubtypeUnion,
-    intersect: bddSubtypeIntersect,
-    diff: bddSubtypeDiff,
-    complement: bddSubtypeComplement,
-    isEmpty: mappingRoSubtypeIsEmpty
-};
-
-final BasicTypeOps mappingRwOps = {
+final BasicTypeOps mappingOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
     isEmpty: mappingSubtypeIsEmpty
 };
-

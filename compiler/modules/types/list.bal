@@ -51,14 +51,9 @@ public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns 
     return [ranges, types];
 }
 
-// This is atom index 0
-// Used by bddFixReadOnly
-final ListAtomicType LIST_SUBTYPE_RO = { members: { initial: [], fixedLength: 0 }, rest: READONLY };
-
 public class ListDefinition {
     *Definition;
-    private RecAtom? roRec = ();
-    private RecAtom? rwRec = ();
+    private RecAtom? rec = ();
 
     // The SemType is created lazily so that we have the possibility
     // to share the Bdd between the RO and RW cases.
@@ -67,11 +62,9 @@ public class ListDefinition {
     public function getSemType(Env env) returns ComplexSemType {
         ComplexSemType? s = self.semType;
         if s == () {
-            RecAtom ro = env.recListAtom();
-            RecAtom rw = env.recListAtom();
-            self.roRec = ro;
-            self.rwRec = rw;
-            return self.createSemType(env, ro, rw);
+            RecAtom rec = env.recListAtom();
+            self.rec = rec;
+            return self.createSemType(env, rec);
         }
         else {
             return s;
@@ -79,54 +72,28 @@ public class ListDefinition {
     }
 
     public function define(Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER) returns ComplexSemType {
-        FixedLengthArray members = fixedLengthNormalize({ initial, fixedLength });
-        ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
-        Atom rw;
-        RecAtom? rwRec = self.rwRec;
-        if rwRec != () {
-            rw = rwRec;
-            env.setRecListAtomType(rwRec, rwType);
+        SemType[] initialCell = from SemType t in initial select cellContaining(env, t, CELL_MUT_LIMITED);
+        SemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
+        FixedLengthArray cellMembers = fixedLengthNormalize({ initial: initialCell, fixedLength });
+        ListAtomicType atomicType = { members: cellMembers.cloneReadOnly(), rest:restCell };
+        Atom atom;
+        RecAtom? rec = self.rec;
+        if rec != () {
+            atom = rec;
+            env.setRecListAtomType(rec, atomicType);
         }
         else {
-            rw = env.listAtom(rwType);
+            atom = env.listAtom(atomicType);
         }
-        Atom ro;
-        ListAtomicType roType = readOnlyListAtomicType(rwType);
-        if roType === rwType {
-            RecAtom? roRec = self.roRec;
-            if roRec == () {
-                // share the definitions
-                ro = rw;
-            }
-            else {
-                ro = roRec;
-                env.setRecListAtomType(roRec, rwType);
-            }
-        }
-        else {
-            ro = env.listAtom(roType);
-            RecAtom? roRec = self.roRec;
-            if roRec != () {
-                env.setRecListAtomType(roRec, roType);
-            }
-        }
-        return self.createSemType(env, ro, rw);
+        return self.createSemType(env, atom);
     }
 
-    private function createSemType(Env env, Atom ro, Atom rw) returns ComplexSemType {
-        BddNode roBdd = bddAtom(ro);
-        BddNode rwBdd;
-        if atomCmp(ro, rw) == 0 {
-            // share the BDD
-            rwBdd = roBdd;
-        }
-        else {
-            rwBdd = bddAtom(rw);
-        }
-        ComplexSemType s = createComplexSemType(0, [[UT_LIST_RO, roBdd], [BT_LIST, rwBdd]]);
+    private function createSemType(Env env, Atom atom) returns ComplexSemType {
+        BddNode bdd = bddAtom(atom);
+        ComplexSemType s = createComplexSemType(0, [[BT_LIST, bdd]]);
         self.semType = s;
         return s;
-    }       
+    }
 }
 
 function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
@@ -147,6 +114,7 @@ function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
 }
     
 function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
+    // TODO: fix
     if typeListIsReadOnly(ty.members.initial) && isReadOnly(ty.rest) {
         return ty;
     }
@@ -600,15 +568,7 @@ function nextBoundary(int cur, Range r, int? next) returns int? {
     return next;
 }
 
-final BasicTypeOps listRoOps = {
-    union: bddSubtypeUnion,
-    intersect: bddSubtypeIntersect,
-    diff: bddSubtypeDiff,
-    complement: bddSubtypeComplement,
-    isEmpty: listRoSubtypeIsEmpty
-};
-
-final BasicTypeOps listRwOps = {
+final BasicTypeOps listOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

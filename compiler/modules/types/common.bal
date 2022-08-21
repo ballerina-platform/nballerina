@@ -14,6 +14,7 @@ function typeListIsReadOnly(SemType[] list) returns boolean {
 }
 
 function readOnlyTypeList(SemType[] mt) returns readonly & SemType[] {
+    // TODO: fix
     SemType[] types = [];
     foreach var s in mt {
         SemType t;
