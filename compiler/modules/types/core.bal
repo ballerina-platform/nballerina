@@ -249,7 +249,7 @@ public class Context {
     }
 }
 
-type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype|XmlSubtype|RwTableSubtype|BddNode;
+type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype|XmlSubtype|BddNode;
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData ProperSubtypeData|boolean;
 
@@ -1558,7 +1558,7 @@ public function createAnydata(Context context) returns SemType {
     }
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType tableTy = tableContaining(mapDef.getSemType(env));
+    SemType tableTy = tableContaining(env, mapDef.getSemType(env));
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, rest = ad);
     _ = mapDef.define(env, [], ad);
@@ -1584,7 +1584,7 @@ function init() {
         {}, // stream
         listRwOps, // list
         mappingRwOps, // mapping
-        tableRwOps, // table
+        tableOps, // table
         xmlRwOps, // xml
         {}, // object
         cellOps // cell

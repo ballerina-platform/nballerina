@@ -324,7 +324,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             d:Location loc =  d:location(modDefn.part.file, { startPos: td.startPos, endPos: td.endPos });
             return err:semantic("type parameter for table is not a record", loc=loc);
         }
-        return t:tableContaining(t);
+        return t:tableContaining(env, t);
     }
     panic error("unimplemented type-descriptor");
 }
