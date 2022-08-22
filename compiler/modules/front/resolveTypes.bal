@@ -32,10 +32,15 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
         // This should never happen
         panic err:impossible("type environment is not ready");
     }
-    foreach var [ty, loc] in mod.possiblyEmptyTypes {
-        if t:isEmpty(mod.tc, ty) {
-            return err:semantic("invalid recursive type (contains no finite shapes)", loc);
-        }
+    foreach var { semType, modDefn, startPos, endPos } in mod.deferredEmptinessChecks {
+        check testTypeForFiniteShape(mod.tc, semType, modDefn, startPos, endPos);
+    }
+}
+
+function testTypeForFiniteShape(t:Context tc, t:SemType semType, s:ModuleLevelDefn modDefn, Position startPos, Position endPos) returns ResolveTypeError? {
+    if t:isEmpty(tc, semType) {
+        d:Location loc = s:locationInDefn(modDefn, { startPos, endPos });
+        return err:semantic("invalid recursive type (contains no finite shapes)", loc);
     }
 }
 
@@ -338,16 +343,14 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     panic error("unimplemented type-descriptor");
 }
 
-function nonEmptyType(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc td, t:SemType ty) returns t:SemType|ResolveTypeError {
-    final t:Env env = mod.tc.env;
-    d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
-    if !env.isReady() {
-        mod.possiblyEmptyTypes.push([ty, loc]);
+function nonEmptyType(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc td, t:SemType semType) returns t:SemType|ResolveTypeError {
+    if !mod.tc.env.isReady() {
+        mod.deferredEmptinessChecks.push({ semType, modDefn, startPos: td.startPos, endPos: td.endPos });
     }
-    else if t:isEmpty(mod.tc, ty) {
-        return err:semantic("invalid recursive type (contains no finite shapes)", loc);
+    else {
+        check testTypeForFiniteShape(mod.tc, semType, modDefn, td.startPos, td.endPos);
     }
-    return ty;
+    return semType;
 }
 
 function resolveBuiltinTypeDesc(t:Context tc, s:SubsetBuiltinTypeDesc td) returns t:SemType {

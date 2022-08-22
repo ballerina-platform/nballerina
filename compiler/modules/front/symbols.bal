@@ -2,7 +2,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.comm.err;
-import wso2/nballerina.comm.diagnostic as d;
 
 type ModuleDefns table<s:ModuleLevelDefn> key(name);
 
@@ -12,7 +11,14 @@ type ModuleSymbols record {|
     map<Import>[] partPrefixes = [];
     t:Context tc;
     boolean allowAllTypes = false;
-    [t:SemType, d:Location][] possiblyEmptyTypes = [];
+    DeferredEmptinessCheck[] deferredEmptinessChecks = [];
+|};
+
+type DeferredEmptinessCheck record {|
+    t:SemType semType;
+    s:ModuleLevelDefn modDefn;
+    Position startPos;
+    Position endPos;
 |};
 
 type Import record {|
