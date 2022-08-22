@@ -31,7 +31,7 @@ type TypeAtom readonly & record {|
     AtomicType atomicType;
 |};
 
-type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType|CellAtomicType;
+type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType;
 
 
 // All the SemTypes used in any type operation (e.g. isSubtype) must have been created using the Env.
@@ -65,10 +65,6 @@ public isolated class Env {
     }
 
     isolated function mappingAtom(MappingAtomicType atomicType) returns TypeAtom {
-        return self.typeAtom(atomicType);
-    }
-
-    isolated function cellAtom(CellAtomicType atomicType) returns TypeAtom {
         return self.typeAtom(atomicType);
     }
 
@@ -254,15 +250,6 @@ public class Context {
 
     function functionAtomType(Atom atom) returns FunctionAtomicType {
         return self.env.getRecFunctionAtomType(<RecAtom>atom);
-    }
-
-    function cellAtomType(Atom atom) returns CellAtomicType {
-        if atom is RecAtom {
-            panic error("cell cannot be a RecAtom");
-        }
-        else {
-            return <CellAtomicType>atom.atomicType;
-        }
     }
 
     function cellAtomType(Atom atom) returns CellAtomicType {
@@ -1143,8 +1130,8 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
         else {
             return [
                 {
-                    semType: createListRw(cx),
-                    pos: [],
+                    semType: LIST_RW,
+                    pos: (),
                     neg: []
                 }
             ];
@@ -1155,9 +1142,9 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
         bddPaths(<Bdd>getComplexSubtypeData(t, BT_LIST), paths, {});
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         ListAlternative[] alts = [];
-        foreach var { bdd, pos, neg } in paths {
-            SemType semType = createBasicSemType(BT_LIST, bdd);
-            if semType != NEVER {
+        foreach var { pos, neg } in paths {
+            var intersection = intersectListAtoms(cx.env, from var atom in pos select cx.listAtomType(atom));
+            if intersection !is () {
                 alts.push({
                     semType: intersection[0],
                     pos: intersection[1],
@@ -1169,7 +1156,7 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
     }
 }
 
-final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: cellContaining(tmpEnv, TOP, CELL_MUT_LIMITED) };
+final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest:TOP };
 
 public function mappingAtomicTypeRw(Context cx, SemType t) returns MappingAtomicType? {
     if t is BasicTypeBitSet {
@@ -1252,8 +1239,8 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
         else {
             return [
                 {
-                    semType: createMappingRw(cx),
-                    pos: [],
+                    semType: MAPPING_RW,
+                    pos: (),
                     neg: []
                 }
             ];
@@ -1264,9 +1251,9 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
         bddPaths(<Bdd>getComplexSubtypeData(t, BT_MAPPING), paths, {});
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         MappingAlternative[] alts = [];
-        foreach var { bdd, pos, neg } in paths {
-            SemType semType = createBasicSemType(BT_MAPPING, bdd);
-            if semType != NEVER {
+        foreach var { pos, neg } in paths {
+            var intersection = intersectMappingAtoms(cx.env, from var atom in pos select cx.mappingAtomType(atom));
+            if intersection !is () {
                 alts.push({
                     semType: intersection[0],
                     pos: intersection[1],

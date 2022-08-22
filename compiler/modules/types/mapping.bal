@@ -240,7 +240,7 @@ function intersectMappingAtoms(Env env, MappingAtomicType[] atoms) returns [SemT
         }
         atom = tmpAtom.cloneReadOnly();
     }
-    SemType semType = createUniformSemType(UT_MAPPING_RW, bddAtom(env.mappingAtom(atom)));
+    SemType semType = createBasicSemType(BT_MAPPING, bddAtom(env.mappingAtom(atom)));
     return [semType, atom];
 }
 

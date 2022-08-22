@@ -223,7 +223,7 @@ function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, L
         }
         atom = { members: members.cloneReadOnly(), rest };
     }
-    SemType semType = createUniformSemType(UT_LIST_RW, bddAtom(env.listAtom(atom)));
+    SemType semType = createBasicSemType(BT_LIST, bddAtom(env.listAtom(atom)));
     return [semType, atom];
 }
 
