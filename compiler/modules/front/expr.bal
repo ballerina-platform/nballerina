@@ -1593,19 +1593,19 @@ function arithmeticOperandPair(bir:Operand lhs, bir:Operand rhs) returns Arithme
 
 function arithmeticOperand(bir:Operand operand) returns ArithmeticOperand? {
     if operand is bir:Register {
-        t:BasicTypeCode? utc = t:basicTypeCode(t:widenToBasicTypes(operand.semType));
+        t:BasicTypeCode? btc = t:basicTypeCode(t:widenToBasicTypes(operand.semType));
         // JBUG should be able to do this with a single return
-        if utc == t:BT_INT {
-            return [utc, operand];
+        if btc == t:BT_INT {
+            return [btc, operand];
         }
-        if utc == t:BT_FLOAT {
-            return [utc, operand];
+        if btc == t:BT_FLOAT {
+            return [btc, operand];
         }
-        if utc == t:BT_DECIMAL {
-            return [utc, operand];
+        if btc == t:BT_DECIMAL {
+            return [btc, operand];
         }
-        if utc == t:BT_STRING {
-            return [utc, operand];
+        if btc == t:BT_STRING {
+            return [btc, operand];
         }
         return ();
     }
@@ -1640,8 +1640,8 @@ function operandLangLibModuleName(bir:Operand operand) returns LangLibModuleName
     else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
         return "map";
     }
-    t:BasicTypeCode? utc = t:basicTypeCode(t:widenToBasicTypes(semType));
-    match utc {
+    t:BasicTypeCode? btc = t:basicTypeCode(t:widenToBasicTypes(semType));
+    match btc {
         t:BT_BOOLEAN => { return "boolean"; }
         t:BT_INT => { return "int"; }
         t:BT_FLOAT => { return "float"; }

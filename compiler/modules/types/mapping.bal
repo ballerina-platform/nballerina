@@ -33,12 +33,10 @@ public class MappingDefinition {
 
     public function define(Env env, Field[] fields, SemType rest) returns SemType {
         var [names, types] = splitFields(fields);
-        SemType[] cellTypes = from SemType t in types select cellContaining(env, t, CELL_MUT_LIMITED);
-        SemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
         MappingAtomicType atomicType = {
             names: names.cloneReadOnly(),
-            types: cellTypes.cloneReadOnly(),
-            rest: restCell
+            types: types.cloneReadOnly(),
+            rest
         };
         Atom atom;
         RecAtom? rec = self.rec;
@@ -54,22 +52,10 @@ public class MappingDefinition {
 
     private function createSemType(Env env, Atom atom) returns SemType {
         BddNode bdd = bddAtom(atom);
-        SemType s = createComplexSemType(0, [[BT_MAPPING, bdd]]);
+        SemType s = basicSubtype(BT_MAPPING, bdd);
         self.semType = s; 
         return s;
     } 
-}
-
-function readOnlyMappingAtomicType(MappingAtomicType ty) returns MappingAtomicType {
-    // TODO: fix
-    if typeListIsReadOnly(ty.types) && isReadOnly(ty.rest) {
-        return ty;
-    }
-    return {
-        names: ty.names,
-        types: readOnlyTypeList(ty.types),
-        rest: intersect(ty.rest, READONLY)
-    };
 }
 
 function splitFields(Field[] fields) returns [string[], SemType[]] {
@@ -85,10 +71,6 @@ function splitFields(Field[] fields) returns [string[], SemType[]] {
 
 isolated function fieldName(Field f) returns string {
     return f[0];
-}
-
-function mappingRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return mappingSubtypeIsEmpty(cx, bddFixReadOnly(<Bdd>t));
 }
 
 function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {

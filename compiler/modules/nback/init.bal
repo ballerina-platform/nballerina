@@ -299,17 +299,16 @@ function addComplexTypeDefn(InitModuleContext cx, string symbol, t:ComplexSemTyp
     int someBits = 0;
     llvm:ConstValue[] llSubtypes = [];
     foreach var [code, subtype] in some {
-        // TODO: revisit
-        // if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:BT_TABLE {
-        //     // these cannot occur for now, so ignore them
-        //     continue;
-        // }
+        if code == t:BT_TABLE {
+            // these cannot occur for now, so ignore them
+            continue;
+        }
         someBits |= 1 << code;
-        llSubtypes.push(getUniformSubtype(cx, code, subtype));
+        llSubtypes.push(getBasicSubtype(cx, code, subtype));
     }
-    llvm:ConstValue subtypeArray = cx.llContext.constArray(cx.llTypes.uniformSubtypePtr, llSubtypes);
+    llvm:ConstValue subtypeArray = cx.llContext.constArray(cx.llTypes.basicSubtypePtr, llSubtypes);
     llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt(LLVM_BITSET, all), llvm:constInt(LLVM_BITSET, someBits), subtypeArray]);
-    llvm:StructType llType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(cx.llTypes.uniformSubtypePtr, llSubtypes.length())]);
+    llvm:StructType llType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(cx.llTypes.basicSubtypePtr, llSubtypes.length())]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true, linkage=linkage);
     cx.complexTypeDefns.add({ llType, ptr, semType });
     return ptr;
@@ -320,7 +319,7 @@ type SubtypeStruct record {|
     llvm:Value[] values;
 |};
 
-function getUniformSubtype(InitModuleContext cx, t:BasicTypeCode typeCode, t:ComplexSemType semType) returns llvm:ConstPointerValue {
+function getBasicSubtype(InitModuleContext cx, t:BasicTypeCode typeCode, t:ComplexSemType semType) returns llvm:ConstPointerValue {
     llvm:ConstPointerValue ptr;
     SubtypeDefn? existingDefn = cx.subtypeDefns[typeCode, semType];
     if existingDefn != () {
@@ -342,7 +341,7 @@ function getUniformSubtype(InitModuleContext cx, t:BasicTypeCode typeCode, t:Com
         SubtypeDefn newDefn = { typeCode, semType, ptr, structType: cx.inherentTypesComplete ? () : llStructTy };
         cx.subtypeDefns.add(newDefn);
     }
-    return cx.llContext.constBitCast(ptr, cx.llTypes.uniformSubtypePtr); 
+    return cx.llContext.constBitCast(ptr, cx.llTypes.basicSubtypePtr); 
 }
 
 function finishSubtypeDefns(InitModuleContext cx) {

@@ -1561,69 +1561,12 @@ public function createAnydata(Context context) returns SemType {
     }
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType tableTy = tableContaining(env, mapDef.getSemType(env));
+    SemType tableTy = tableContaining(mapDef.getSemType(env));
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, rest = ad);
     _ = mapDef.define(env, [], ad);
     context.anydataMemo = ad;
     return ad;
-}
-
-public function createReadonly(Context context) returns SemType {
-    SemType? memo = context.readonlyMemo;
-    if memo != () {
-        return memo;
-    }
-    SemType LIST_SUBTYPE_RO = createListRo(context);
-    SemType MAPPING_SUBTYPE_RO = createMappingRo(context);
-    // TODO: add table, xml and object
-    SemType ro  = union(basicTypeUnion(UT_ALWAYS_READONLY), union(LIST_SUBTYPE_RO, MAPPING_SUBTYPE_RO));
-    context.readonlyMemo = ro;
-    return ro;
-}
-
-public function createListRo(Context context) returns SemType {
-    SemType? memo = context.listRoMemo;
-    Env env = context.env;
-    if memo != () {
-        return memo;
-    }
-    SemType LIST_SUBTYPE_RO = (new ListDefinition()).define(env, rest = cellContaining(env, ANY, CELL_MUT_NONE));
-    context.readonlyMemo = LIST_SUBTYPE_RO;
-    return LIST_SUBTYPE_RO;
-}
-
-public function createListRw(Context context) returns SemType {
-    SemType? memo = context.listRoMemo;
-    Env env = context.env;
-    if memo != () {
-        return memo;
-    }
-    SemType LIST_SUBTYPE_RW = (new ListDefinition()).define(env, rest = cellContaining(env, ANY, CELL_MUT_LIMITED));
-    context.readonlyMemo = LIST_SUBTYPE_RW;
-    return LIST_SUBTYPE_RW;
-}
-
-public function createMappingRo(Context context) returns SemType {
-    SemType? memo = context.mappingRoMemo;
-    Env env = context.env;
-    if memo != () {
-        return memo;
-    }
-    SemType MAPPING_SUBTYPE_RO = (new MappingDefinition()).define(env, [], cellContaining(env, ANY, CELL_MUT_NONE));
-    context.mappingRoMemo = MAPPING_SUBTYPE_RO;
-    return MAPPING_SUBTYPE_RO;
-}
-
-public function createMappingRw(Context context) returns SemType {
-    SemType? memo = context.mappingRoMemo;
-    Env env = context.env;
-    if memo != () {
-        return memo;
-    }
-    SemType MAPPING_SUBTYPE_RW = (new MappingDefinition()).define(env, [], cellContaining(env, ANY, CELL_MUT_LIMITED));
-    context.mappingRoMemo = MAPPING_SUBTYPE_RW;
-    return MAPPING_SUBTYPE_RW;
 }
 
 final readonly & BasicTypeOps[] ops;

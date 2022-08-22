@@ -127,7 +127,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             "handle" => { return t:HANDLE; }
             "json" => { return t:createJson(mod.tc); }
             "never" => { return t:NEVER; }
-            "readonly" => { return t:createReadonly(mod.tc); }
+            "readonly" => { return t:READONLY; }
             "typedesc" => { return t:TYPEDESC; }
             "xml" => { return t:XML; }
         }
@@ -324,7 +324,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             d:Location loc =  d:location(modDefn.part.file, { startPos: td.startPos, endPos: td.endPos });
             return err:semantic("type parameter for table is not a record", loc=loc);
         }
-        return t:tableContaining(env, t);
+        return t:tableContaining(t);
     }
     panic error("unimplemented type-descriptor");
 }

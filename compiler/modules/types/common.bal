@@ -4,31 +4,6 @@ public type Definition object {
     public function getSemType(Env env) returns SemType;
 };
 
-function typeListIsReadOnly(SemType[] list) returns boolean {
-    foreach var t in list {
-        if !isReadOnly(t) {
-            return false;
-        }
-    }
-    return true;
-}
-
-function readOnlyTypeList(SemType[] mt) returns readonly & SemType[] {
-    // TODO: fix
-    SemType[] types = [];
-    foreach var s in mt {
-        SemType t;
-        if isReadOnly(s) {
-            t = s;
-        }
-        else {
-            t = intersect(s, READONLY);
-        }
-        types.push(t);
-    }
-    return types.cloneReadOnly(); 
-}
-
 type Conjunction record {
     Atom atom;
     Conjunction? next;

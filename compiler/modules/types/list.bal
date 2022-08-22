@@ -55,8 +55,6 @@ public class ListDefinition {
     *Definition;
     private RecAtom? rec = ();
 
-    // The SemType is created lazily so that we have the possibility
-    // to share the Bdd between the RO and RW cases.
     private ComplexSemType? semType = ();
 
     public function getSemType(Env env) returns ComplexSemType {
@@ -72,10 +70,8 @@ public class ListDefinition {
     }
 
     public function define(Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER) returns ComplexSemType {
-        SemType[] initialCell = from SemType t in initial select cellContaining(env, t, CELL_MUT_LIMITED);
-        SemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
-        FixedLengthArray cellMembers = fixedLengthNormalize({ initial: initialCell, fixedLength });
-        ListAtomicType atomicType = { members: cellMembers.cloneReadOnly(), rest:restCell };
+        FixedLengthArray cellMembers = fixedLengthNormalize({ initial, fixedLength });
+        ListAtomicType atomicType = { members: cellMembers.cloneReadOnly(), rest };
         Atom atom;
         RecAtom? rec = self.rec;
         if rec != () {
@@ -90,7 +86,7 @@ public class ListDefinition {
 
     private function createSemType(Env env, Atom atom) returns ComplexSemType {
         BddNode bdd = bddAtom(atom);
-        ComplexSemType s = createComplexSemType(0, [[BT_LIST, bdd]]);
+        ComplexSemType s = basicSubtype(BT_LIST, bdd);
         self.semType = s;
         return s;
     }
@@ -112,26 +108,10 @@ function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
     }
     return { initial: initial.slice(0, i + 2), fixedLength: array.fixedLength };
 }
-    
-function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
-    // TODO: fix
-    if typeListIsReadOnly(ty.members.initial) && isReadOnly(ty.rest) {
-        return ty;
-    }
-    return {
-        members: { initial: readOnlyTypeList(ty.members.initial), fixedLength: ty.members.fixedLength },
-        rest: intersect(ty.rest, READONLY)
-
-    };
-}
 
 public function tuple(Env env, SemType... members) returns SemType {
     ListDefinition def = new;
     return def.define(env, members);
-}
-
-function listRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return listSubtypeIsEmpty(cx, bddFixReadOnly(<Bdd>t));
 }
 
 function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {

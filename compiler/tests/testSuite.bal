@@ -199,14 +199,6 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
         t:SemType left = resolveTestSemtype(tc, m, test.left);
         t:SemType right = resolveTestSemtype(tc, m, test.right);
 
-        // TODO: revisit
-        if test.left is s:TypeProjection && test.right !is s:TypeProjection {
-            right = t:cellContaining(env, right, t:CELL_MUT_LIMITED);
-        }
-        if test.left !is s:TypeProjection && test.right is s:TypeProjection {
-            left = t:cellContaining(env, left, t:CELL_MUT_LIMITED);
-        }
-
         string lhsStr = test.left.toString();
         string rhsStr = test.right.toString();
         

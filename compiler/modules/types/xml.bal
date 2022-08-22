@@ -39,12 +39,12 @@ public function xmlSequence(SemType constituentType) returns SemType {
     }   
     else {        
         var xmlSubtype = <XmlSubtype|boolean>getComplexSubtypeData(constituentType, BT_XML);
-        xmlSubtype = xmlSubtype is boolean ? xmlSubtype : makeSequence(xmlSubtype);
+        xmlSubtype = xmlSubtype is boolean ? xmlSubtype : makeXmlSequence(xmlSubtype);
         return createXmlSemtype(xmlSubtype);
     }
 }
 
-function makeSequence(XmlSubtype d) returns XmlSubtype|boolean {
+function makeXmlSequence(XmlSubtype d) returns XmlSubtype|boolean {
     int primitives = XML_PRIMITIVE_NEVER | d.primitives;
     int atom = d.primitives & XML_PRIMITIVE_SINGLETON;
     Bdd sequence = bddUnion(bddAtom(atom), d.sequence);

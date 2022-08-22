@@ -1,7 +1,7 @@
 // Implementation specific to basic type error.
 
 public function errorDetail(SemType detail) returns SemType {
-    SubtypeData sd = subtypeData(detail, BT_MAPPING);
+    SubtypeData sd = subtypeData(detail, BT_MAPPING); // FIX_RO: type should be MAPPING_RO
     if sd is boolean {
         if sd {
             return ERROR;

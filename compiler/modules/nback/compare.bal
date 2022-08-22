@@ -139,17 +139,17 @@ final RuntimeFunction arrayDecimalCompareFunction = {
 };
 
 type TaggedCompareFunction readonly & record {|
-    t:BasicTypeBitSet utCode;
+    t:BasicTypeBitSet btCode;
     RuntimeFunction optCompareFunction;
     RuntimeFunction arrayCompareFunction;
 |};
 
-final readonly & table<TaggedCompareFunction> key(utCode) compareFunctions = table [
-    { utCode: t:BT_INT, optCompareFunction: optIntCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
-    { utCode: t:BT_FLOAT, optCompareFunction: optFloatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
-    { utCode: t:BT_BOOLEAN, optCompareFunction: optBooleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
-    { utCode: t:BT_STRING, optCompareFunction: optStringCompareFunction, arrayCompareFunction: arrayStringCompareFunction },
-    { utCode: t:BT_DECIMAL, optCompareFunction: optDecimalCompareFunction, arrayCompareFunction: arrayDecimalCompareFunction }
+final readonly & table<TaggedCompareFunction> key(btCode) compareFunctions = table [
+    { btCode: t:BT_INT, optCompareFunction: optIntCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
+    { btCode: t:BT_FLOAT, optCompareFunction: optFloatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
+    { btCode: t:BT_BOOLEAN, optCompareFunction: optBooleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
+    { btCode: t:BT_STRING, optCompareFunction: optStringCompareFunction, arrayCompareFunction: arrayStringCompareFunction },
+    { btCode: t:BT_DECIMAL, optCompareFunction: optDecimalCompareFunction, arrayCompareFunction: arrayDecimalCompareFunction }
 ];
 
 function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
@@ -185,7 +185,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                 }
             }
             else {
-                // Single uniform type code here should be guaranteed by comparability of operands
+                // Single basic type code here should be guaranteed by comparability of operands
                 var orderTypeMinusNilCode = <t:BasicTypeCode>t:basicTypeCode(orderTypeMinusNil);
                 RuntimeFunction compareFunc = compareFunctions.get(orderTypeMinusNilCode).optCompareFunction;
                 buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, compareFunc);
