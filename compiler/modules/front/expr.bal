@@ -902,12 +902,16 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
 }
 
 function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boolean {
-    foreach t:ListAtomicType a in alt.pos {
-        int minLength = a.members.fixedLength;
+    t:ListAtomicType? pos = alt.pos;
+    if pos !is () {
+        int minLength = pos.members.fixedLength;
         // This doesn't account for filling. See spec issue #1064
-        if a.rest == t:NEVER ? len != minLength : len < minLength {     
+        if pos.rest == t:NEVER ? len != minLength : len < minLength {
             return false;
         }
+    }
+    if alt.neg.length() != 0 {
+        panic error("unexpected negative atom in list alternative");
     }
     return true;
 }
@@ -976,10 +980,11 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
 }
 
 function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] fieldNames) returns boolean {
-    foreach t:MappingAtomicType a in alt.pos {
+    t:MappingAtomicType? pos = alt.pos;
+    if pos !is () {
         // SUBSET won't be right with record defaults
-        if a.rest == t:NEVER {
-            if a.names != fieldNames {
+        if pos.rest == t:NEVER {
+            if pos.names != fieldNames {
                 return false;
             }
         }
@@ -987,7 +992,7 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
         // Both a.names and fieldNames are ordered
         int i = 0;
         int len = fieldNames.length();
-        foreach string name in a.names {
+        foreach string name in pos.names {
             while true {
                 if i >= len {
                     return false;
@@ -1002,6 +1007,9 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
                 i += 1;
             }
         }
+    }
+    if alt.neg.length() != 0 {
+        panic error("unexpected negative atom in mapping alternative");
     }
     return true;
 }

@@ -31,7 +31,7 @@ type TypeAtom readonly & record {|
     AtomicType atomicType;
 |};
 
-type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType;
+type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType|CellAtomicType;
 
 
 // All the SemTypes used in any type operation (e.g. isSubtype) must have been created using the Env.
@@ -65,6 +65,10 @@ public isolated class Env {
     }
 
     isolated function mappingAtom(MappingAtomicType atomicType) returns TypeAtom {
+        return self.typeAtom(atomicType);
+    }
+
+    isolated function cellAtom(CellAtomicType atomicType) returns TypeAtom {
         return self.typeAtom(atomicType);
     }
 
@@ -199,6 +203,11 @@ public type ListFiller readonly & record {|
     Filler[] memberFillers;
 |};
 
+// Used in testing types.regex to create context without a Module
+public function contextFromEnv(Env env) returns Context {
+    return new(env);
+}
+
 // Operations on types require a Context.
 // There can be multiple contexts for the same Env.
 // Whereas an Env is isolated, a Context is not isolated.
@@ -245,6 +254,15 @@ public class Context {
 
     function functionAtomType(Atom atom) returns FunctionAtomicType {
         return self.env.getRecFunctionAtomType(<RecAtom>atom);
+    }
+
+    function cellAtomType(Atom atom) returns CellAtomicType {
+        if atom is RecAtom {
+            panic error("cell cannot be a RecAtom");
+        }
+        else {
+            return <CellAtomicType>atom.atomicType;
+        }
     }
 
     function cellAtomType(Atom atom) returns CellAtomicType {
@@ -1113,7 +1131,7 @@ public function listAtomicTypeApplicableMemberTypes(Context cx, ListAtomicType a
 
 public type ListAlternative record {|
     SemType semType;
-    ListAtomicType[] pos;
+    ListAtomicType? pos;
     ListAtomicType[] neg;
 |};
 
@@ -1141,12 +1159,11 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
             SemType semType = createBasicSemType(BT_LIST, bdd);
             if semType != NEVER {
                 alts.push({
-                    semType,
-                    // JBUG parse error without parentheses (33707)
-                    pos: (from var atom in pos select cx.listAtomType(atom)),
-                    neg: (from var atom in neg select cx.listAtomType(atom))
+                    semType: intersection[0],
+                    pos: intersection[1],
+                    neg: from var atom in neg select cx.listAtomType(atom)
                 });
-            }          
+            }
         }
         return alts;
     }
@@ -1223,7 +1240,7 @@ public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomic
 
 public type MappingAlternative record {|
     SemType semType;
-    MappingAtomicType[] pos;
+    MappingAtomicType? pos;
     MappingAtomicType[] neg;
 |};
 
@@ -1251,12 +1268,11 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
             SemType semType = createBasicSemType(BT_MAPPING, bdd);
             if semType != NEVER {
                 alts.push({
-                    semType,
-                    // JBUG parse error without parentheses (33707)
-                    pos: (from var atom in pos select cx.mappingAtomType(atom)),
-                    neg: (from var atom in neg select cx.mappingAtomType(atom))
+                    semType: intersection[0],
+                    pos: intersection[1],
+                    neg: from var atom in neg select cx.mappingAtomType(atom)
                 });
-            }          
+            }
         }
         return alts;
     }

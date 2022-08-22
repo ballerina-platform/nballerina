@@ -27,7 +27,9 @@ clean:
 $(TARGETS): $(TDIR)
 
 $(TDIR): $(TRANSFORMED_TESTS)
-	mkdir -p out/$@
-	$(MAKE) -C out/$@ -f ../../balt-sub.mk tdir=$@ balt_dir=../../tests/$@ $(MAKECMDGOALS)
+	if [ -d "tests/$@" ]; then \
+		mkdir -p out/$@ && \
+		$(MAKE) -C out/$@ -f ../../balt-sub.mk tdir=$@ balt_dir=../../tests/$@ $(MAKECMDGOALS); \
+	fi
 
 .PHONY: $(TARGETS) $(TDIR)
