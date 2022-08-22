@@ -9,11 +9,14 @@ public function semTypeFromSexpr(t:Env env, map<Atom> bindings, Type tySExpr) re
     else if tySExpr is Boolean {
         return t:BOOLEAN;
     }
-    else if tySExpr is IntSubtype  {
+    else if tySExpr is String {
+        return t:STRING;
+    }
+    else if tySExpr is IntSubtype {
         t:SemType intSubtype = t:NEVER;
         foreach int i in 1 ..< tySExpr.length() {
             // JBUG #36911 cast to anydata is needed
-            var [min, max] =  <[int, int]>(<anydata[]>tySExpr)[i];
+            var [min, max] = <[int, int]>(<anydata[]>tySExpr)[i];
             intSubtype = t:union(intSubtype, t:intRange(min, max));
         }
         return intSubtype;
@@ -26,7 +29,7 @@ public function semTypeFromSexpr(t:Env env, map<Atom> bindings, Type tySExpr) re
                 // This should ideally be enforced at cloneWithType but we can't currently due to JBUG
                 panic error("not constructor should only take one type as the parameter");
             }
-            return t:complement(semTypeFromSexpr(env, bindings, tySExpr[1])); 
+            return t:complement(semTypeFromSexpr(env, bindings, tySExpr[1]));
         }
         if op == "&" {
             t:SemType intersect = t:TOP;
@@ -35,7 +38,7 @@ public function semTypeFromSexpr(t:Env env, map<Atom> bindings, Type tySExpr) re
                 var part = <Type>(<anydata[]>tySExpr)[i];
                 intersect = t:intersect(intersect, semTypeFromSexpr(env, bindings, part));
             }
-            return intersect; 
+            return intersect;
         }
         else { // op == "|"
             t:SemType union = t:NEVER;
@@ -84,6 +87,31 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
             return d.define(env, rest = semTypeFromSexpr(env, bindings, <Type>members));
         }
     }
+
+    match atomSexpr {
+        // JBUG #37176 can't merge this with above match-stmt
+        // JBUG #37136 cannot use ["cell", var t, var m]
+        // JBUG ["cell"] matches ["cell", var t, var m]
+        ["cell"] => {
+            Type t = <Type>atomSexpr[1];
+            string s = <string>atomSexpr[2];
+            t:CellMutability m;
+            match s {
+                "none" => {
+                    m = t:CELL_MUT_NONE;
+                }
+                "limited" => {
+                    m = t:CELL_MUT_LIMITED;
+                }
+                "unlimited"|_ => {
+                    m = t:CELL_MUT_UNLIMITED;
+                }
+            }
+            t:SemType semType = semTypeFromSexpr(env, bindings, t);
+            return t:cellContaining(env, semType, m);
+        }
+    }
+
     // atomSexpr is an array starting with "mapping"
     Type rest;
     t:Field[] fields;

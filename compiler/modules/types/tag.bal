@@ -19,6 +19,8 @@ public const UT_FUNCTION   = 0x0C;
 public const UT_TYPEDESC   = 0x0D;
 public const UT_HANDLE     = 0x0E;
 
+public const UT_CELL       = 0x0F;
+
 // Inherently mutable
 public const UT_FUTURE     = 0x10;
 public const UT_STREAM     = 0x11;
@@ -29,4 +31,3 @@ public const UT_MAPPING_RW = 0x13;
 public const UT_TABLE_RW   = 0x14;
 public const UT_XML_RW     = 0x15;
 public const UT_OBJECT_RW  = 0x16;
-

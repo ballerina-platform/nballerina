@@ -17,7 +17,7 @@ const int UT_RW_MASK = UT_MASK & ~UT_READONLY;
 
 public type UniformTypeCode
     UT_NIL|UT_BOOLEAN|UT_INT|UT_FLOAT|UT_DECIMAL
-    |UT_STRING|UT_ERROR|UT_FUNCTION|UT_TYPEDESC|UT_HANDLE
+    |UT_STRING|UT_ERROR|UT_FUNCTION|UT_TYPEDESC|UT_HANDLE|UT_CELL
     |UT_XML_RO|UT_LIST_RO|UT_MAPPING_RO|UT_TABLE_RO|UT_OBJECT_RO
     |UT_XML_RW|UT_LIST_RW|UT_MAPPING_RW|UT_TABLE_RW|UT_OBJECT_RW
     |UT_STREAM|UT_FUTURE;
@@ -31,7 +31,7 @@ type TypeAtom readonly & record {|
     AtomicType atomicType;
 |};
 
-type AtomicType ListAtomicType|MappingAtomicType;
+type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType;
 
 
 // All the SemTypes used in any type operation (e.g. isSubtype) must have been created using the Env.
@@ -65,6 +65,10 @@ public isolated class Env {
     }
 
     isolated function mappingAtom(MappingAtomicType atomicType) returns TypeAtom {
+        return self.typeAtom(atomicType);
+    }
+
+    isolated function cellAtom(CellAtomicType atomicType) returns TypeAtom {
         return self.typeAtom(atomicType);
     }
 
@@ -241,6 +245,15 @@ public class Context {
 
     function functionAtomType(Atom atom) returns FunctionAtomicType {
         return self.env.getRecFunctionAtomType(<RecAtom>atom);
+    }
+
+    function cellAtomType(Atom atom) returns CellAtomicType {
+        if atom is RecAtom {
+            panic error("cell cannot be a RecAtom");
+        }
+        else {
+            return <CellAtomicType>atom.atomicType;
+        }
     }
 }
 
@@ -1579,7 +1592,7 @@ function init() {
         functionOps,  // function
         {}, // typedesc
         {}, // handle
-        {}, // unused
+        cellOps, // cell
         {}, // RW future
         {}, // RW stream
         listRwOps, // RW list
