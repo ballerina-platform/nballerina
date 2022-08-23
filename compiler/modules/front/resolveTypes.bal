@@ -32,14 +32,21 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
         // This should never happen
         panic err:impossible("type environment is not ready");
     }
-    foreach var { semType, modDefn, startPos, endPos } in mod.deferredEmptinessChecks {
-        check testTypeForFiniteShape(mod.tc, semType, modDefn, startPos, endPos);
+    foreach var { semType, modDefn, td } in mod.deferredEmptinessChecks.sort("descending", deferredEmptinessCheckStartPos) {
+        check testTypeForFiniteShape(mod.tc, semType, modDefn, td);
     }
 }
 
-function testTypeForFiniteShape(t:Context tc, t:SemType semType, s:ModuleLevelDefn modDefn, Position startPos, Position endPos) returns ResolveTypeError? {
+isolated function deferredEmptinessCheckStartPos(DeferredEmptinessCheck emptinessCheck) returns Position {
+    return emptinessCheck.td.startPos;
+}
+
+function testTypeForFiniteShape(t:Context tc, t:SemType semType, s:ModuleLevelDefn modDefn, s:TypeDesc td) returns ResolveTypeError? {
     if t:isEmpty(tc, semType) {
-        d:Location loc = s:locationInDefn(modDefn, { startPos, endPos });
+        d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
+        if td is s:BinaryTypeDesc && td.op is "&" {
+            return err:semantic("intersection with recursive type is empty", loc);
+        }
         return err:semantic("invalid recursive type (contains no finite shapes)", loc);
     }
 }
@@ -345,10 +352,23 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
 
 function nonEmptyType(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc td, t:SemType semType) returns t:SemType|ResolveTypeError {
     if !mod.tc.env.isReady() {
-        mod.deferredEmptinessChecks.push({ semType, modDefn, startPos: td.startPos, endPos: td.endPos });
+        mod.deferredEmptinessChecks.push({ semType, modDefn, td });
     }
     else {
-        check testTypeForFiniteShape(mod.tc, semType, modDefn, td.startPos, td.endPos);
+        boolean pendingChild = false;
+        foreach DeferredEmptinessCheck emptinessCheck in mod.deferredEmptinessChecks {
+            s:TypeDesc checkTd = emptinessCheck.td;
+            if checkTd.startPos >= td.startPos && checkTd.endPos <= td.endPos {
+                pendingChild = true;
+                break;
+            }
+        }
+        if !pendingChild {
+            check testTypeForFiniteShape(mod.tc, semType, modDefn, td);
+        }
+        else {
+            mod.deferredEmptinessChecks.push({ semType, modDefn, td });
+        }
     }
     return semType;
 }

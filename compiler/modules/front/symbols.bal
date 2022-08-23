@@ -17,8 +17,7 @@ type ModuleSymbols record {|
 type DeferredEmptinessCheck record {|
     t:SemType semType;
     s:ModuleLevelDefn modDefn;
-    Position startPos;
-    Position endPos;
+    s:TypeDesc td;
 |};
 
 type Import record {|
