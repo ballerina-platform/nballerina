@@ -12,6 +12,7 @@ type ModuleSymbols record {|
     t:Context tc;
     boolean allowAllTypes = false;
     DeferredEmptinessCheck[] deferredEmptinessChecks = [];
+    int[] emptySourceTypeIndices = [];
 |};
 
 type DeferredEmptinessCheck record {|

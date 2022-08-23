@@ -22,11 +22,11 @@ public type UniformTypeCode
     |UT_XML_RW|UT_LIST_RW|UT_MAPPING_RW|UT_TABLE_RW|UT_OBJECT_RW
     |UT_STREAM|UT_FUTURE;
 
-type Atom RecAtom|TypeAtom;
+public type Atom RecAtom|TypeAtom;
 
-type RecAtom int;
+public type RecAtom int;
 
-type TypeAtom readonly & record {|
+public type TypeAtom readonly & record {|
     int index;
     AtomicType atomicType;
 |};

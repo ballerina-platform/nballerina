@@ -32,22 +32,36 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
         // This should never happen
         panic err:impossible("type environment is not ready");
     }
-    foreach var { semType, modDefn, td } in mod.deferredEmptinessChecks.sort("descending", deferredEmptinessCheckStartPos) {
-        check testTypeForFiniteShape(mod.tc, semType, modDefn, td);
+    foreach var { semType, modDefn, td } in mod.deferredEmptinessChecks {
+        // XXX When we can give multiple errors we should check all the deferred emptiness checks
+        check testTypeForFiniteShape(mod, semType, modDefn, td);
+    }
+    if mod.emptySourceTypeIndices.length() != 0 {
+        panic err:impossible("there are non recursive infinite types");
     }
 }
 
-isolated function deferredEmptinessCheckStartPos(DeferredEmptinessCheck emptinessCheck) returns Position {
-    return emptinessCheck.td.startPos;
-}
-
-function testTypeForFiniteShape(t:Context tc, t:SemType semType, s:ModuleLevelDefn modDefn, s:TypeDesc td) returns ResolveTypeError? {
-    if t:isEmpty(tc, semType) {
+function testTypeForFiniteShape(ModuleSymbols mod, t:SemType semType, s:ModuleLevelDefn modDefn, s:TypeDesc td) returns ResolveTypeError? {
+    if t:isEmpty(mod.tc, semType) {
         d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
         if td is s:BinaryTypeDesc && td.op is "&" {
-            return err:semantic("intersection with recursive type is empty", loc);
+            return err:semantic("intersection must not be empty", loc);
         }
-        return err:semantic("invalid recursive type (contains no finite shapes)", loc);
+        // We are only deffering intersections(already handled), lists and mappings
+        t:ComplexSemType t = <t:ComplexSemType>semType;
+        t:BddNode subtypeDataList = <t:BddNode>t.subtypeDataList[0];
+        t:Atom atom = subtypeDataList.atom;
+        if atom is t:RecAtom {
+            int baseTypeIndex = atom;
+            int? index = mod.emptySourceTypeIndices.indexOf(baseTypeIndex);
+            if index is int {
+                _ = mod.emptySourceTypeIndices.remove(index);
+            }
+            return err:semantic("invalid recursive type (contains no finite shapes)", loc);
+        }
+        else {
+            mod.emptySourceTypeIndices.push(atom.index);
+        }
     }
 }
 
@@ -355,20 +369,7 @@ function nonEmptyType(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc t
         mod.deferredEmptinessChecks.push({ semType, modDefn, td });
     }
     else {
-        boolean pendingChild = false;
-        foreach DeferredEmptinessCheck emptinessCheck in mod.deferredEmptinessChecks {
-            s:TypeDesc checkTd = emptinessCheck.td;
-            if checkTd.startPos >= td.startPos && checkTd.endPos <= td.endPos {
-                pendingChild = true;
-                break;
-            }
-        }
-        if !pendingChild {
-            check testTypeForFiniteShape(mod.tc, semType, modDefn, td);
-        }
-        else {
-            mod.deferredEmptinessChecks.push({ semType, modDefn, td });
-        }
+        check testTypeForFiniteShape(mod, semType, modDefn, td);
     }
     return semType;
 }
