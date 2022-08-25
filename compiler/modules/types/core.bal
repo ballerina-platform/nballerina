@@ -5,16 +5,10 @@ import wso2/nballerina.comm.lib;
 // JBUG #28334 type-descriptor is not needed
 public const int BT_COUNT = BT_OBJECT + 1;
 
-const int UT_MASK = (1 << BT_COUNT) - 1;
+const int BT_MASK = (1 << BT_COUNT) - 1;
 
-const int UT_COUNT_RO = 0x10;
-public const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
-
-const int UT_COUNT__ALWAYS_RO = 0xA;
-public const int UT_ALWAYS_READONLY = (1 << UT_COUNT__ALWAYS_RO) - 1;
-
-const int UT_RW_MASK = UT_MASK & ~UT_READONLY;
-
+const int BT_COUNT_RO = 0xA;
+public const int BT_READONLY = (1 << BT_COUNT_RO) - 1;
 
 public type BasicTypeCode
     BT_NIL|BT_BOOLEAN|BT_INT|BT_FLOAT|BT_DECIMAL
@@ -410,9 +404,10 @@ public final BasicTypeBitSet STREAM = basicType(BT_STREAM);
 public final BasicTypeBitSet FUTURE = basicType(BT_FUTURE);
 
 // this is SubtypeData|error
-public final BasicTypeBitSet TOP = basicTypeUnion(UT_MASK);
-public final BasicTypeBitSet ANY = basicTypeUnion(UT_MASK & ~(1 << BT_ERROR));
-public final BasicTypeBitSet READONLY = basicTypeUnion(UT_READONLY);
+public final BasicTypeBitSet TOP = basicTypeUnion(BT_MASK);
+public final BasicTypeBitSet ANY = basicTypeUnion(BT_MASK & ~(1 << BT_ERROR));
+public final SemType XML_RO = createXmlSemtype(xmlRoSubtype);
+public final SemType READONLY = union(basicTypeUnion(BT_READONLY), XML_RO);
 public final BasicTypeBitSet SIMPLE_OR_STRING = basicTypeUnion((1 << BT_NIL) | (1 << BT_BOOLEAN) | (1 << BT_INT) | (1 << BT_FLOAT) | (1 << BT_DECIMAL) | (1 << BT_STRING));
 public final BasicTypeBitSet NON_BEHAVIOURAL = basicTypeUnion((1 << BT_NIL) | (1 << BT_BOOLEAN) | (1 << BT_INT) | (1 << BT_FLOAT)| (1 << BT_DECIMAL) | (1 << BT_STRING)
                                                                  | (1 << BT_XML) | (1 << BT_LIST) | (1 << BT_MAPPING) | (1 << BT_TABLE));
@@ -597,7 +592,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
             if t1 == 0 {
                 return t1;
             }
-            if t1 == UT_MASK {
+            if t1 == BT_MASK {
                 return t2;
             }
             all2 = t2.all;
@@ -613,7 +608,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
             if t2 == 0 {
                 return t2;
             }
-            if t2 == UT_MASK {
+            if t2 == BT_MASK {
                 return t1;
             }
             all2 = t2;
@@ -690,7 +685,7 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
         all1 = t1.all;
         some1 = t1.some;
         if t2 is BasicTypeBitSet {
-            if t2 == UT_MASK {
+            if t2 == BT_MASK {
                 return <BasicTypeBitSet>0;
             }
             all2 = t2;
@@ -714,7 +709,7 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if cx == () || code < UT_COUNT_RO {
+        if cx == () || code < BT_COUNT_RO {
             // normal diff or read-only basic type
             if data1 == () {
                 var complement = ops[code].complement;
@@ -1399,17 +1394,6 @@ public function singleton(Context cx, SingleValue value) returns SemType {
     }
     //cx.singletonMemo.add({ value, semType });
     return semType;
-}
-
-public function isReadOnly(SemType t) returns boolean {
-    BasicTypeBitSet bits;
-    if t is BasicTypeBitSet {
-        bits = t;
-    }
-    else {
-        bits = t.all | t.some;
-    }
-    return (bits & UT_RW_MASK) == 0;
 }
 
 public type SingleValueBasicTypeCode BT_STRING|BT_INT|BT_FLOAT|BT_BOOLEAN|BT_NIL|BT_DECIMAL;

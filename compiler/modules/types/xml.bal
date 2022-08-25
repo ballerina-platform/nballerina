@@ -23,8 +23,10 @@ const int XML_PRIMITIVE_RO_SINGLETON = XML_PRIMITIVE_TEXT | XML_PRIMITIVE_ELEMEN
 const int XML_PRIMITIVE_RO_MASK = XML_PRIMITIVE_NEVER | XML_PRIMITIVE_RO_SINGLETON;
 const int XML_PRIMITIVE_RW_MASK = XML_PRIMITIVE_ELEMENT_RW | XML_PRIMITIVE_PI_RW | XML_PRIMITIVE_COMMENT_RW;
 const int XML_PRIMITIVE_SINGLETON = XML_PRIMITIVE_RO_SINGLETON | XML_PRIMITIVE_RW_MASK;
+const int XML_PRIMITIVE_ALL_MASK = XML_PRIMITIVE_RO_MASK | XML_PRIMITIVE_RW_MASK;
 
-final XmlSubtype xmlRwTop = { primitives: XML_PRIMITIVE_RW_MASK, sequence: bddAtom(XML_PRIMITIVE_SINGLETON) };
+final XmlSubtype xmlRoSubtype = { primitives: XML_PRIMITIVE_RO_MASK, sequence: bddAtom(XML_PRIMITIVE_TEXT) };
+final XmlSubtype xmlTopSubType = { primitives: XML_PRIMITIVE_ALL_MASK, sequence: bddAtom(XML_PRIMITIVE_SINGLETON) };
 
 function xmlSingleton(int primitives) returns SemType {
     return createXmlSemtype(createXmlSubtype(primitives, false));
@@ -52,8 +54,8 @@ function makeXmlSequence(XmlSubtype d) returns XmlSubtype|boolean {
 }
 
 function createXmlSubtype(int primitives, Bdd sequence) returns XmlSubtype|boolean {
-    int p = primitives & XML_PRIMITIVE_RW_MASK;
-    if sequence == true && p == XML_PRIMITIVE_RW_MASK {
+    int p = primitives & XML_PRIMITIVE_ALL_MASK;
+    if sequence == true && p == XML_PRIMITIVE_ALL_MASK {
         return true;
     }
     return createXmlSubtypeOrEmpty(p, sequence);
@@ -102,25 +104,25 @@ function xmlSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
 }
 
 function xmlSubtypeComplement(SubtypeData d) returns SubtypeData {
-    XmlSubtype top = xmlRwTop;
+    XmlSubtype top = xmlTopSubType;
     return xmlSubtypeDiff(top, d);
 }
 
-function xmlRwSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
+function xmlSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
     XmlSubtype sd = <XmlSubtype>d;
     if sd.primitives != 0 {
         return false;
     }
-    return xmlBddEmptyRw(cx, sd.sequence);
+    return xmlBddEmpty(cx, sd.sequence);
 }
 
-function xmlBddEmptyRw(Context cx, Bdd bdd) returns boolean {
-    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmptyRw);
+function xmlBddEmpty(Context cx, Bdd bdd) returns boolean {
+    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmpty);
 }
 
-function xmlFormulaIsEmptyRw(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    int rwOnlyBits = collectAllBits(pos) & XML_PRIMITIVE_RW_MASK;
-    return hasTotalNegative(rwOnlyBits, neg);
+function xmlFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+    int allPosBits = collectAllBits(pos) & XML_PRIMITIVE_ALL_MASK;
+    return hasTotalNegative(allPosBits, neg);
 }
 
 function collectAllBits(Conjunction? con) returns int {
@@ -153,5 +155,5 @@ final BasicTypeOps xmlOps = {
     intersect: xmlSubtypeIntersect,
     diff: xmlSubtypeDiff,
     complement: xmlSubtypeComplement,
-    isEmpty: xmlRwSubtypeIsEmpty
+    isEmpty: xmlSubtypeIsEmpty
 };

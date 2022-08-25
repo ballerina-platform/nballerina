@@ -200,7 +200,7 @@ function buildHasTagInSet(llvm:Builder builder, llvm:PointerValue tagged, t:Basi
     if utCode != () {
         return buildHasTag(builder, tagged, utCode << TAG_SHIFT);
     }
-    t:BasicTypeBitSet roBitSet = <t:BasicTypeBitSet>(bitSet & t:UT_READONLY);
+    t:BasicTypeBitSet roBitSet = <t:BasicTypeBitSet>(bitSet & t:BT_READONLY);
     utCode = t:basicTypeCode(roBitSet);
     if utCode != () && bitSet == (roBitSet | 0xF) {
         return buildTestTag(builder, tagged, utCode, TAG_BASIC_TYPE_MASK);
