@@ -7,8 +7,8 @@ public const int BT_COUNT = BT_OBJECT + 1;
 
 const int BT_MASK = (1 << BT_COUNT) - 1;
 
-const int BT_COUNT_RO = 0xA;
-public const int BT_READONLY = (1 << BT_COUNT_RO) - 1;
+const int BT_COUNT_INHERENTLY_IMMUTABLE = 0xA;
+public const int BT_INHERENTLY_IMMUTABLE = (1 << BT_COUNT_INHERENTLY_IMMUTABLE) - 1;
 
 public type BasicTypeCode
     BT_NIL|BT_BOOLEAN|BT_INT|BT_FLOAT|BT_DECIMAL
@@ -214,11 +214,7 @@ public class Context {
 
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
-    SemType? readonlyMemo = ();
-    SemType? listRoMemo = ();
-    SemType? listRwMemo = ();
-    SemType? mappingRoMemo = ();
-    SemType? mappingRwMemo = ();
+    SemType? readOnlyMemo = ();
 
     function init(Env env) {
         self.env = env;
@@ -406,8 +402,6 @@ public final BasicTypeBitSet FUTURE = basicType(BT_FUTURE);
 // this is SubtypeData|error
 public final BasicTypeBitSet TOP = basicTypeUnion(BT_MASK);
 public final BasicTypeBitSet ANY = basicTypeUnion(BT_MASK & ~(1 << BT_ERROR));
-public final SemType XML_RO = createXmlSemtype(xmlRoSubtype);
-public final SemType READONLY = union(basicTypeUnion(BT_READONLY), XML_RO);
 public final BasicTypeBitSet SIMPLE_OR_STRING = basicTypeUnion((1 << BT_NIL) | (1 << BT_BOOLEAN) | (1 << BT_INT) | (1 << BT_FLOAT) | (1 << BT_DECIMAL) | (1 << BT_STRING));
 public final BasicTypeBitSet NON_BEHAVIOURAL = basicTypeUnion((1 << BT_NIL) | (1 << BT_BOOLEAN) | (1 << BT_INT) | (1 << BT_FLOAT)| (1 << BT_DECIMAL) | (1 << BT_STRING)
                                                                  | (1 << BT_XML) | (1 << BT_LIST) | (1 << BT_MAPPING) | (1 << BT_TABLE));
@@ -418,6 +412,7 @@ public final SemType XML_ELEMENT = xmlSingleton(XML_PRIMITIVE_ELEMENT_RO | XML_P
 public final SemType XML_COMMENT = xmlSingleton(XML_PRIMITIVE_COMMENT_RO | XML_PRIMITIVE_COMMENT_RW);
 public final SemType XML_TEXT = xmlSequence(xmlSingleton(XML_PRIMITIVE_TEXT));
 public final SemType XML_PI = xmlSingleton(XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_PI_RW);
+public final SemType XML_RO = createXmlSemType(xmlRoSubtype);
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
@@ -653,15 +648,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
-public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
-    return maybeRoDiff(t1, t2, cx);
-}
-
 public function diff(SemType t1, SemType t2) returns SemType {
-    return maybeRoDiff(t1, t2, ());
-}
-
-function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicTypeBitSet all1;
     BasicTypeBitSet all2;
     BasicTypeBitSet some1;
@@ -709,41 +696,17 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if cx == () || code < BT_COUNT_RO {
-            // normal diff or read-only basic type
-            if data1 == () {
-                var complement = ops[code].complement;
-                data = complement(<SubtypeData>data2);
-            }
-            else if data2 == () {
-                data = data1;
-            }
-            else {
-                var diff = ops[code].diff;
-                data = diff(data1, data2);
-            }
+        if data1 == () {
+            var complement = ops[code].complement;
+            data = complement(<SubtypeData>data2);
         }
-        else {
-            // read-only diff for mutable basic type
-            if data1 == () {
-                // data1 was all
-                data = true;
-            }
             else if data2 == () {
-                // data2 was none
-                data = data1;
-            }
-            else {
-                var diff = ops[code].diff;
-                var isEmpty = ops[code].isEmpty;
-                if isEmpty(cx, diff(data1, data2)) {
-                    data = false;
-                }
-                else {
-                    data = data1;
-                }
-            }
+            data = data1;
         }
+            else {
+            var diff = ops[code].diff;
+            data = diff(data1, data2);
+        }     
         // JBUG `data` is not narrowed properly if you swap the order by doing `if data == true {} else if data != false {}`
         if data !is boolean {
             subtypes.push([code, data]);
@@ -1518,6 +1481,16 @@ public function singleNumericType(SemType semType) returns BasicTypeBitSet? {
 
 public function typeContext(Env env) returns Context {
     return new(env);
+}
+
+public function createReadOnly(Context context) returns SemType {
+    SemType? memo = context.readOnlyMemo;
+    if memo != () {
+        return memo;
+    }
+    SemType ro = union(basicTypeUnion(BT_INHERENTLY_IMMUTABLE), XML_RO);
+    context.readOnlyMemo = ro;
+    return ro;
 }
 
 public function createJson(Context context) returns SemType {

@@ -176,7 +176,7 @@ function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
     if t:mappingAtomicTypeRw(tc, targetType) == () && t:listAtomicTypeRw(tc, targetType) == () {
         return tagged;
     }
-    return <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, structureExactifyFunction, [tagged, scaffold.getExactify(t:diff(targetType, t:READONLY))]);
+    return <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, structureExactifyFunction, [tagged, scaffold.getExactify(t:diff(targetType, t:createReadOnly(tc)))]);
 }
 
 // If we can perform the type test by testing whether the value belongs to a UniformTypeBitSet, then return that bit set.
@@ -196,14 +196,9 @@ function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType t
 }
 
 function buildHasTagInSet(llvm:Builder builder, llvm:PointerValue tagged, t:BasicTypeBitSet bitSet) returns llvm:Value {
-    t:BasicTypeCode? utCode = t:basicTypeCode(bitSet);
-    if utCode != () {
-        return buildHasTag(builder, tagged, utCode << TAG_SHIFT);
-    }
-    t:BasicTypeBitSet roBitSet = <t:BasicTypeBitSet>(bitSet & t:BT_READONLY);
-    utCode = t:basicTypeCode(roBitSet);
-    if utCode != () && bitSet == (roBitSet | 0xF) {
-        return buildTestTag(builder, tagged, utCode, TAG_BASIC_TYPE_MASK);
+    t:BasicTypeCode? btCode = t:basicTypeCode(bitSet);
+    if btCode != () {
+        return buildHasTag(builder, tagged, btCode << TAG_SHIFT);
     }
     return builder.iCmp("ne",
                         builder.iBitwise("and",

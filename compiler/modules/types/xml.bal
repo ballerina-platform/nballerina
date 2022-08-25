@@ -25,11 +25,11 @@ const int XML_PRIMITIVE_RW_MASK = XML_PRIMITIVE_ELEMENT_RW | XML_PRIMITIVE_PI_RW
 const int XML_PRIMITIVE_SINGLETON = XML_PRIMITIVE_RO_SINGLETON | XML_PRIMITIVE_RW_MASK;
 const int XML_PRIMITIVE_ALL_MASK = XML_PRIMITIVE_RO_MASK | XML_PRIMITIVE_RW_MASK;
 
-final XmlSubtype xmlRoSubtype = { primitives: XML_PRIMITIVE_RO_MASK, sequence: bddAtom(XML_PRIMITIVE_TEXT) };
+final XmlSubtype xmlRoSubtype = { primitives: XML_PRIMITIVE_RO_MASK, sequence: bddAtom(XML_PRIMITIVE_RO_SINGLETON) };
 final XmlSubtype xmlTopSubType = { primitives: XML_PRIMITIVE_ALL_MASK, sequence: bddAtom(XML_PRIMITIVE_SINGLETON) };
 
 function xmlSingleton(int primitives) returns SemType {
-    return createXmlSemtype(createXmlSubtype(primitives, false));
+    return createXmlSemType(createXmlSubtype(primitives, false));
 }
 
 public function xmlSequence(SemType constituentType) returns SemType {
@@ -42,7 +42,7 @@ public function xmlSequence(SemType constituentType) returns SemType {
     else {        
         var xmlSubtype = <XmlSubtype|boolean>getComplexSubtypeData(constituentType, BT_XML);
         xmlSubtype = xmlSubtype is boolean ? xmlSubtype : makeXmlSequence(xmlSubtype);
-        return createXmlSemtype(xmlSubtype);
+        return createXmlSemType(xmlSubtype);
     }
 }
 
@@ -68,18 +68,13 @@ function createXmlSubtypeOrEmpty(int primitives, Bdd sequence) returns XmlSubtyp
     return { primitives, sequence };
 }
 
-function createXmlSemtype(XmlSubtype|boolean xmlSubtype) returns ComplexSemType {
-    BasicSubtype[] subtypes = [];
-    int all = 0;
+function createXmlSemType(XmlSubtype|boolean xmlSubtype) returns SemType {
     if xmlSubtype is boolean {
-        if xmlSubtype {
-            all = 1 << BT_XML;
-        }
+        return xmlSubtype ? XML : NEVER;
     }
     else {
-        subtypes.push([BT_XML, xmlSubtype]);
+        return basicSubtype(BT_XML, xmlSubtype);  
     }
-    return createComplexSemType(<BasicTypeBitSet>all, subtypes);  
 }
 
 function xmlSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
@@ -121,21 +116,21 @@ function xmlBddEmpty(Context cx, Bdd bdd) returns boolean {
 }
 
 function xmlFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    int allPosBits = collectAllBits(pos) & XML_PRIMITIVE_ALL_MASK;
-    return hasTotalNegative(allPosBits, neg);
+    int allPosBits = xmlCollectAllPrimitives(pos) & XML_PRIMITIVE_ALL_MASK;
+    return xmlHasTotalNegative(allPosBits, neg);
 }
 
-function collectAllBits(Conjunction? con) returns int {
-    int allBits = 0;
+function xmlCollectAllPrimitives(Conjunction? con) returns int {
+    int bits = 0;
     Conjunction? current = con;
     while current != () {
-        allBits |= <int>current.atom;
+        bits &= <int>current.atom;
         current = current.next;
     }
-    return allBits;
+    return bits;
 }
 
-function hasTotalNegative(int allBits, Conjunction? con) returns boolean {
+function xmlHasTotalNegative(int allBits, Conjunction? con) returns boolean {
     if allBits == 0 {
         return true;
     }
