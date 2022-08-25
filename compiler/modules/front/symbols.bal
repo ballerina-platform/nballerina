@@ -11,14 +11,12 @@ type ModuleSymbols record {|
     map<Import>[] partPrefixes = [];
     t:Context tc;
     boolean allowAllTypes = false;
-    DeferredEmptinessCheck[] deferredEmptinessChecks = [];
-    int[] emptySourceTypeIndices = [];
+    map<DeferredEmptinessCheck[]> deferredEmptinessChecks = {};
 |};
 
 type DeferredEmptinessCheck record {|
     t:SemType semType;
     s:ModuleLevelDefn modDefn;
-    s:TypeDesc td;
 |};
 
 type Import record {|

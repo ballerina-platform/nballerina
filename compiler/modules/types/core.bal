@@ -24,12 +24,16 @@ public type UniformTypeCode
 
 public type Atom RecAtom|TypeAtom;
 
-public type RecAtom int;
+type RecAtom int;
 
-public type TypeAtom readonly & record {|
+type TypeAtom readonly & record {|
     int index;
     AtomicType atomicType;
 |};
+
+public function isAtomRecursive(Atom atom) returns boolean {
+    return atom is RecAtom;
+}
 
 type AtomicType ListAtomicType|MappingAtomicType;
 

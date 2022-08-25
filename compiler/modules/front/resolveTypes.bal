@@ -28,40 +28,52 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
     foreach var defn in mod.defns {
         check resolveDefn(mod, defn);
     }
+    check finishEmptinessChecks(mod);
+}
+
+function finishEmptinessChecks(ModuleSymbols mod) returns ResolveTypeError? {
     if !mod.tc.env.isReady() {
         // This should never happen
         panic err:impossible("type environment is not ready");
     }
-    foreach var { semType, modDefn, td } in mod.deferredEmptinessChecks {
+    // TODO: use lambda here
+    map<DeferredEmptinessCheck[]> deferredEmptinessChecks = mod.deferredEmptinessChecks;
+    foreach var [name, emptinessChecks] in deferredEmptinessChecks.entries() {
         // XXX When we can give multiple errors we should check all the deferred emptiness checks
-        check testTypeForFiniteShape(mod, semType, modDefn, td);
+        foreach var { semType, modDefn } in emptinessChecks {
+            check nonEmptyTypeDeferred(mod, semType, modDefn);
+            if !mod.deferredEmptinessChecks.hasKey(name) {
+                break;
+            }
+        }
     }
-    if mod.emptySourceTypeIndices.length() != 0 {
-        panic err:impossible("there are non recursive empty types");
+    if mod.deferredEmptinessChecks.length() != 0 {
+        DeferredEmptinessCheck[] emptinessChecks = deferredEmptinessChecks.get(mod.deferredEmptinessChecks.keys()[0]);
+        var { modDefn } = emptinessChecks[0];
+        s:TypeDesc td = modDefn is s:FunctionDefn ? modDefn.typeDesc : <s:TypeDesc>modDefn.td;
+        d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
+        return err:semantic("there are non recursive empty types", loc);
     }
 }
 
-function testTypeForFiniteShape(ModuleSymbols mod, t:SemType semType, s:ModuleLevelDefn modDefn, s:TypeDesc td) returns ResolveTypeError? {
+function nonEmptyTypeDeferred(ModuleSymbols mod, t:SemType semType, s:ModuleLevelDefn modDefn) returns ResolveTypeError? {
     if t:isEmpty(mod.tc, semType) {
+        s:TypeDesc td = modDefn is s:FunctionDefn ? modDefn.typeDesc : <s:TypeDesc>modDefn.td;
         d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
         if td is s:BinaryTypeDesc && td.op is "&" {
             return err:semantic("intersection must not be empty", loc);
         }
-        // We are only deffering intersections(already handled), lists and mappings
+        // We are only defering intersections(already handled), lists and mappings
         t:ComplexSemType t = <t:ComplexSemType>semType;
         t:BddNode subtypeDataList = <t:BddNode>t.subtypeDataList[0];
-        t:Atom atom = subtypeDataList.atom;
-        if atom is t:RecAtom {
-            int baseTypeIndex = atom;
-            int? index = mod.emptySourceTypeIndices.indexOf(baseTypeIndex);
-            if index is int {
-                _ = mod.emptySourceTypeIndices.remove(index);
-            }
+        boolean isRecursive = t:isAtomRecursive(subtypeDataList.atom);
+        if isRecursive {
+            _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name);
             return err:semantic("invalid recursive type (contains no finite shapes)", loc);
         }
-        else {
-            mod.emptySourceTypeIndices.push(atom.index);
-        }
+    }
+    else {
+        _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name);
     }
 }
 
@@ -370,10 +382,15 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
 
 function nonEmptyType(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc td, t:SemType semType) returns t:SemType|ResolveTypeError {
     if !mod.tc.env.isReady() {
-        mod.deferredEmptinessChecks.push({ semType, modDefn, td });
+        if mod.deferredEmptinessChecks.hasKey(modDefn.name) {
+            mod.deferredEmptinessChecks.get(modDefn.name).push({ semType, modDefn });
+        }
+        else {
+            mod.deferredEmptinessChecks[modDefn.name] = [{ semType, modDefn }];
+        }
     }
     else {
-        check testTypeForFiniteShape(mod, semType, modDefn, td);
+        check nonEmptyTypeDeferred(mod, semType, modDefn);
     }
     return semType;
 }
