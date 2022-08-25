@@ -36,23 +36,22 @@ function finishEmptinessChecks(ModuleSymbols mod) returns ResolveTypeError? {
         // This should never happen
         panic err:impossible("type environment is not ready");
     }
-    // TODO: use lambda here
     map<DeferredEmptinessCheck[]> deferredEmptinessChecks = mod.deferredEmptinessChecks;
     foreach var [name, emptinessChecks] in deferredEmptinessChecks.entries() {
-        // XXX When we can give multiple errors we should check all the deferred emptiness checks
         foreach var { semType, modDefn } in emptinessChecks {
+            // XXX When we can give multiple errors we should check all the deferred emptiness checks
             check nonEmptyTypeDeferred(mod, semType, modDefn);
             if !mod.deferredEmptinessChecks.hasKey(name) {
                 break;
             }
         }
-    }
-    if mod.deferredEmptinessChecks.length() != 0 {
-        DeferredEmptinessCheck[] emptinessChecks = deferredEmptinessChecks.get(mod.deferredEmptinessChecks.keys()[0]);
-        var { modDefn } = emptinessChecks[0];
-        s:TypeDesc td = modDefn is s:FunctionDefn ? modDefn.typeDesc : <s:TypeDesc>modDefn.td;
-        d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
-        return err:semantic("there are non recursive empty types", loc);
+        // This should never happen
+        if mod.deferredEmptinessChecks.hasKey(name) {
+            DeferredEmptinessCheck[] remainingChecks = deferredEmptinessChecks.get(name);
+            var { modDefn } = remainingChecks[0];
+            d:Location loc = s:locationInDefn(modDefn, { startPos: modDefn.startPos, endPos: modDefn.endPos });
+            return err:semantic("non recursive empty type", loc);
+        }
     }
 }
 
@@ -61,14 +60,14 @@ function nonEmptyTypeDeferred(ModuleSymbols mod, t:SemType semType, s:ModuleLeve
         s:TypeDesc td = modDefn is s:FunctionDefn ? modDefn.typeDesc : <s:TypeDesc>modDefn.td;
         d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
         if td is s:BinaryTypeDesc && td.op is "&" {
+            _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name); // Currently this has no effect
             return err:semantic("intersection must not be empty", loc);
         }
         // We are only defering intersections(already handled), lists and mappings
         t:ComplexSemType t = <t:ComplexSemType>semType;
         t:BddNode subtypeDataList = <t:BddNode>t.subtypeDataList[0];
-        boolean isRecursive = t:isAtomRecursive(subtypeDataList.atom);
-        if isRecursive {
-            _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name);
+        if t:isAtomRecursive(subtypeDataList.atom) {
+            _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name); // Currently this has no effect
             return err:semantic("invalid recursive type (contains no finite shapes)", loc);
         }
     }

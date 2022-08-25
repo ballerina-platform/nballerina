@@ -31,10 +31,6 @@ type TypeAtom readonly & record {|
     AtomicType atomicType;
 |};
 
-public function isAtomRecursive(Atom atom) returns boolean {
-    return atom is RecAtom;
-}
-
 type AtomicType ListAtomicType|MappingAtomicType;
 
 
@@ -1592,4 +1588,8 @@ function init() {
         xmlRwOps, // RW xml
         {} // RW object
    ];
+}
+
+public function isAtomRecursive(Atom atom) returns boolean {
+    return atom is RecAtom;
 }
