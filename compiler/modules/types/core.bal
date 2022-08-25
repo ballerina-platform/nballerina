@@ -648,7 +648,15 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
+public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
+    return maybeRoDiff(t1, t2, cx);
+}
+
 public function diff(SemType t1, SemType t2) returns SemType {
+    return maybeRoDiff(t1, t2, ());
+}
+
+function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {    
     BasicTypeBitSet all1;
     BasicTypeBitSet all2;
     BasicTypeBitSet some1;
@@ -696,6 +704,8 @@ public function diff(SemType t1, SemType t2) returns SemType {
     BasicSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
+        if cx == () || code < BT_COUNT_INHERENTLY_IMMUTABLE {
+            // normal diff or read-only basic type
         if data1 == () {
             var complement = ops[code].complement;
             data = complement(<SubtypeData>data2);
@@ -706,6 +716,28 @@ public function diff(SemType t1, SemType t2) returns SemType {
             else {
             var diff = ops[code].diff;
             data = diff(data1, data2);
+        }
+        }
+        else {
+            // read-only diff for mutable basic type
+            if data1 == () {
+                // data1 was all
+                data = true;
+            }
+            else if data2 == () {
+                // data2 was none
+                data = data1;
+            }
+            else {
+                var diff = ops[code].diff;
+                var isEmpty = ops[code].isEmpty;
+                if isEmpty(cx, diff(data1, data2)) {
+                    data = false;
+                }
+                else {
+                    data = data1;
+                }
+            }
         }     
         // JBUG `data` is not narrowed properly if you swap the order by doing `if data == true {} else if data != false {}`
         if data !is boolean {
