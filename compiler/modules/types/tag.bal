@@ -1,4 +1,4 @@
-// Always immutable
+// Inherently immutable
 public const BT_NIL        = 0x00;
 public const BT_BOOLEAN    = 0x01;
 public const BT_INT        = 0x02;
@@ -10,7 +10,7 @@ public const BT_TYPEDESC   = 0x07;
 public const BT_HANDLE     = 0x08;
 public const BT_FUNCTION   = 0x09;
 
-// Always mutable
+// Inherently mutable
 public const BT_FUTURE     = 0xA;
 public const BT_STREAM     = 0xB;
 

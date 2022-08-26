@@ -463,9 +463,7 @@ final IntRepr REPR_INT = { alwaysInImmediateRange: false, constraints: () };
 final IntRepr REPR_BYTE = { alwaysInImmediateRange: true, constraints: { min: 0, max: 255, all: true } };
 
 final TaggedRepr REPR_NIL = { subtype: t:NIL, alwaysImmediate: true };
-final TaggedRepr REPR_LIST_RW = { subtype: t:LIST_RW, alwaysImmediate: false };
 final TaggedRepr REPR_LIST = { subtype: t:LIST, alwaysImmediate: false };
-final TaggedRepr REPR_MAPPING_RW = { subtype: t:MAPPING_RW, alwaysImmediate: false };
 final TaggedRepr REPR_MAPPING = { subtype: t:MAPPING, alwaysImmediate: false };
 final TaggedRepr REPR_ERROR = { subtype: t:ERROR, alwaysImmediate: false };
 final TaggedRepr REPR_DECIMAL = { subtype: t:DECIMAL, alwaysImmediate: false };
@@ -483,9 +481,7 @@ final readonly & record {|
     { domain: t:DECIMAL, repr: REPR_DECIMAL },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },
-    { domain: t:LIST_RW, repr: REPR_LIST_RW },
     { domain: t:LIST, repr: REPR_LIST },
-    { domain: t:MAPPING_RW, repr: REPR_MAPPING_RW },
     { domain: t:MAPPING, repr: REPR_MAPPING },
     { domain: t:ERROR, repr: REPR_ERROR },
     { domain: t:ANY, repr: REPR_ANY },

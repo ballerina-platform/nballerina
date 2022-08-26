@@ -183,13 +183,13 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
 
 
 function createListDescType(t:Context tc, t:SemType semType) returns llvm:StructType {
-    t:ListAtomicType lat = <t:ListAtomicType>t:listAtomicTypeRw(tc, semType);
+    t:ListAtomicType lat = <t:ListAtomicType>t:listAtomicType(tc, semType);
     return createLlListDescType(lat.members.initial.length());
 }
 
 function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
     t:Context tc = cx.tc;
-    t:ListAtomicType atomic = <t:ListAtomicType>t:listAtomicTypeRw(tc, semType);
+    t:ListAtomicType atomic = <t:ListAtomicType>t:listAtomicType(tc, semType);
     FunctionRef[] functionRefs = getListDescFunctionRefs(cx, atomic);
     llvm:Value[] initStructValues = [
         llvm:constInt(LLVM_TID, tid),
@@ -208,13 +208,13 @@ function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) re
 }
 
 function createMappingDescType(t:Context tc, t:SemType semType) returns llvm:StructType {
-    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, semType);
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(tc, semType);
     // tid, fieldCount, restField, individualFields...
     return llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, llStructureDescPtrType, llvm:arrayType(LLVM_MEMBER_TYPE, mat.names.length())]);
 }
 
 function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {  
-    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(cx.tc, semType);
     llvm:ConstValue[] llFields = from var ty in mat.types select getMemberType(cx, ty);
     return cx.llContext.constStruct([
         llvm:constInt(LLVM_TID, tid),
@@ -247,12 +247,12 @@ function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:
 function fillableStructureBasicType(t:Context tc, t:SemType semType) returns StructureBasicType? {
     StructureBasicType? basic = structureBasicType(semType);
     if basic == STRUCTURE_LIST {
-        if t:listAtomicTypeRw(tc, semType) != () {
+        if t:listAtomicType(tc, semType) != () {
             return basic;
         }
     }
     if basic == STRUCTURE_MAPPING {
-        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, semType);
+        t:MappingAtomicType? mat = t:mappingAtomicType(tc, semType);
         if  mat != () && mat.names.length() == 0 {
             return basic;
         }
@@ -464,7 +464,7 @@ function createStringSubtypeStruct(InitModuleContext cx, t:ComplexSemType semTyp
 }
 
 function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
-    t:ListAtomicType? lat = t:listAtomicTypeRw(cx.tc, semType);
+    t:ListAtomicType? lat = t:listAtomicType(cx.tc, semType);
     if lat != () {
         t:SemType rest = lat.rest;
         if rest is t:BasicTypeBitSet && lat.members.fixedLength == 0 {
@@ -475,7 +475,7 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
 }
 
 function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
-    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.tc, semType);
+    t:MappingAtomicType? mat = t:mappingAtomicType(cx.tc, semType);
     if mat != () {
         t:SemType rest = mat.rest;
         if rest == t:NEVER {

@@ -212,8 +212,7 @@ function stringTest() {
 
 @test:Config{ enable: false }
 function roTest() {
-    SemType t1 = basicType(BT_LIST);
-    // SemType t1 = basicType(UT_LIST_RO);
+    SemType t1 = basicType(BT_LIST); // FIX_RO: type should be LIST_RO
     Env env = new;
     ListDefinition ld = new;
     SemType t2 = ld.define(env, rest = TOP);

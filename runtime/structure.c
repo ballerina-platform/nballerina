@@ -6,7 +6,7 @@ static bool tidListContains(const Tid *start, const Tid *end, Tid tid);
 
 static inline TaggedPtr listConstruct(ListDescPtr desc, int64_t capacity) {
     return ptrAddFlags(_bal_list_construct_8(desc, capacity),
-                       ((uint64_t)TAG_LIST_RW << TAG_SHIFT)|EXACT_FLAG);
+                       ((uint64_t)TAG_LIST << TAG_SHIFT)|EXACT_FLAG);
 }
 
 Fillability _bal_structure_create_filler(MemberType memberType, StructureDescPtr fillerDesc, TaggedPtr *valuePtr) {
@@ -17,10 +17,10 @@ Fillability _bal_structure_create_filler(MemberType memberType, StructureDescPtr
         bitSet = ctp->all | ctp->some;
         if (fillerDesc != 0) {
             switch (bitSet) {
-                case (1 << TAG_LIST_RW):
+                case (1 << TAG_LIST):
                     *valuePtr = listConstruct((ListDescPtr)fillerDesc, 0);
                     return FILL_EACH;
-                case (1 << TAG_MAPPING_RW):
+                case (1 << TAG_MAPPING):
                     *valuePtr = _bal_mapping_construct((MappingDescPtr)fillerDesc, 0);
                     return FILL_EACH;
             }

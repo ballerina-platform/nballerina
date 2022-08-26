@@ -31,8 +31,8 @@ bool READONLY _bal_exact_eq(TaggedPtr tp1, TaggedPtr tp2) {
             }
         case TAG_DECIMAL:
             return _bal_decimal_exact_eq(tp1, tp2);
-        case TAG_LIST_RW:
-        case TAG_MAPPING_RW:
+        case TAG_LIST:
+        case TAG_MAPPING:
             {
                 // This is needed to ignore the exact bit.
                 return taggedToPtr(tp1) == taggedToPtr(tp2);

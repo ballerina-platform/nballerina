@@ -872,19 +872,19 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
 
 function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListConstructorExpr expr) returns [t:SemType, t:ListAtomicType]|ResolveTypeError {
     // SUBSET always have contextually expected type for list constructor
-    t:SemType expectedListType = t:intersect(expectedType, t:LIST_RW);
+    t:SemType expectedListType = t:intersect(expectedType, t:LIST);
     t:Context tc = cx.mod.tc;
     if t:isEmpty(tc, expectedListType) {
         // don't think this can happen 
         return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
-    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, expectedListType);
+    t:ListAtomicType? lat = t:listAtomicType(tc, expectedListType);
     if lat != () {
         return [expectedListType, lat];
     }
     int len = expr.members.length();
     t:ListAlternative[] alts =
-        from var alt in t:listAlternativesRw(tc, expectedListType)
+        from var alt in t:listAlternatives(tc, expectedListType)
         where listAlternativeAllowsLength(alt, len)
         select alt;
     if alts.length() == 0 {
@@ -894,7 +894,7 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
         return cx.semanticErr("ambiguous inherent type for list constructor", s:range(expr));
     }
     t:SemType semType = alts[0].semType;
-    lat = t:listAtomicTypeRw(tc, semType);
+    lat = t:listAtomicType(tc, semType);
     if lat is () {
         return cx.semanticErr("applicable type for list constructor is not atomic", s:range(expr));
     }
@@ -950,19 +950,19 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
 }
 
 function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns [t:SemType, t:MappingAtomicType]|ResolveTypeError {
-    t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING_RW);
+    t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING);
     t:Context tc = cx.mod.tc;
     if t:isEmpty(tc, expectedMappingType) {
         // XXX can this happen?
         return cx.semanticErr("mapping not allowed in this context", s:range(expr));
     }
-    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, expectedMappingType);
+    t:MappingAtomicType? mat = t:mappingAtomicType(tc, expectedMappingType);
     if mat != () { // easy case
         return [expectedMappingType, mat]; 
     }
     string[] fieldNames = from var f in expr.fields order by f.name select f.name;
     t:MappingAlternative[] alts =
-        from var alt in t:mappingAlternativesRw(tc, expectedMappingType)
+        from var alt in t:mappingAlternatives(tc, expectedMappingType)
         where mappingAlternativeAllowsFields(alt, fieldNames)
         select alt;
     if alts.length() == 0 {
@@ -972,7 +972,7 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
         return cx.semanticErr("ambiguous inherent type for mapping constructor", s:range(expr));
     }
     t:SemType semType = alts[0].semType;
-    mat = t:mappingAtomicTypeRw(tc, semType);
+    mat = t:mappingAtomicType(tc, semType);
     if mat is () {
         return cx.semanticErr("applicable type for mapping constructor is not atomic", s:range(expr));
     }
@@ -1521,7 +1521,7 @@ function instantiateArrayFunctionSignature(t:Context tc, bir:FunctionSignature s
 }
 
 function arraySupertype(t:Context tc, t:SemType listType) returns [t:SemType, t:SemType] {
-    t:ListAtomicType? atomic = t:listAtomicTypeRw(tc, listType);
+    t:ListAtomicType? atomic = t:listAtomicType(tc, listType);
     if atomic != () && atomic.members.fixedLength == 0 {
         // simple case
         return [atomic.rest, listType];

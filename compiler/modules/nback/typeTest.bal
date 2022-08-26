@@ -173,7 +173,7 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
 
 function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {
     t:Context tc = scaffold.typeContext();
-    if t:mappingAtomicTypeRw(tc, targetType) == () && t:listAtomicTypeRw(tc, targetType) == () {
+    if t:mappingAtomicType(tc, targetType) == () && t:listAtomicType(tc, targetType) == () {
         return tagged;
     }
     return <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, structureExactifyFunction, [tagged, scaffold.getExactify(t:diff(targetType, t:createReadOnly(tc)))]);

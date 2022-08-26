@@ -252,7 +252,7 @@ function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns Ru
 }
 
 function isPotentiallyExactIntArray(t:Context tc, t:SemType semType) returns boolean {
-    t:ListAtomicType? atomic = t:listAtomicTypeRw(tc, semType);
+    t:ListAtomicType? atomic = t:listAtomicType(tc, semType);
     return atomic == () ? false : t:listAtomicSimpleArrayMemberType(atomic) == t:INT;
 }
 

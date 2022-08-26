@@ -1,4 +1,4 @@
-// Always immutable
+// Inherently immutable
 #define TAG_NIL        0x00
 #define TAG_BOOLEAN    0x01
 #define TAG_INT        0x02
@@ -10,7 +10,7 @@
 #define TAG_HANDLE     0x08
 #define TAG_FUNCTION   0x09
 
-// Always mutable
+// Inherently mutable
 #define TAG_FUTURE     0xA
 #define TAG_STREAM     0xB
 

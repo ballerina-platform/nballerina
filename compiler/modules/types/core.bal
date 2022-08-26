@@ -380,14 +380,8 @@ public final BasicTypeBitSet FLOAT = basicType(BT_FLOAT);
 public final BasicTypeBitSet DECIMAL = basicType(BT_DECIMAL);
 public final BasicTypeBitSet STRING = basicType(BT_STRING);
 public final BasicTypeBitSet ERROR = basicType(BT_ERROR);
-// public final BasicTypeBitSet LIST_RO = basicType(UT_LIST_RO);
-public final BasicTypeBitSet LIST_RW = basicType(BT_LIST);
 public final BasicTypeBitSet LIST = basicType(BT_LIST);
-// public final BasicTypeBitSet MAPPING_RO = basicType(UT_MAPPING_RO);
-public final BasicTypeBitSet MAPPING_RW = basicType(BT_MAPPING);
 public final BasicTypeBitSet MAPPING = basicType(BT_MAPPING);
-// public final BasicTypeBitSet TABLE_RO = basicType(UT_TABLE_RO);
-public final BasicTypeBitSet TABLE_RW = basicType(BT_TABLE);
 public final BasicTypeBitSet TABLE = basicType(BT_TABLE);
 
 // matches all functions
@@ -821,22 +815,6 @@ public function basicTypeCode(BasicTypeBitSet bitSet) returns BasicTypeCode? {
     return <BasicTypeCode>lib:numberOfTrailingZeros(bitSet);
 }
 
-const int RW_ONLY = (1 << BT_FUTURE)|(1 << BT_STREAM);
-
-// This changes every x_RW bit in bitSet to an x_RO bit.
-// This is potentially useful when we are interested in the basic type of a value.
-// (not used currently)
-public function rwToRo(BasicTypeBitSet bitSet) returns BasicTypeBitSet {
-    // save the bits that have 0x10 set but do not have _RO counterparts
-    int rwOnly = bitSet & RW_ONLY;
-    // clear those bits out
-    int roBitSet = bitSet & ~RW_ONLY;
-    // turn every _RO bit into a _RW bit
-    roBitSet |= roBitSet >> 0x10;
-    // add back in the saved bits
-    return <BasicTypeBitSet>(roBitSet|rwOnly);
-}
-
 public function comparable(Context cx, SemType t1, SemType t2) returns boolean {
     SemType semType = diff(union(t1, t2), NIL);
     if isSubtypeSimple(semType, SIMPLE_OR_STRING) {
@@ -927,11 +905,11 @@ function computeFiller(Context cx, SemType t) returns Filler? {
     if wrapped != () {
         return wrapped;
     }
-    MappingAtomicType? mat = mappingAtomicTypeRw(cx, t);
+    MappingAtomicType? mat = mappingAtomicType(cx, t);
     if mat != () && mat.names.length() == 0 {
         return mat;
     }
-    ListAtomicType? lat = listAtomicTypeRw(cx, t);
+    ListAtomicType? lat = listAtomicType(cx, t);
     if lat != () {
         Filler[] memberFillers = [];
         foreach var memberType in lat.members.initial {
@@ -1022,10 +1000,10 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
     return ();   
 }
 
-Env tmpEnv = new;
-final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: cellContaining(tmpEnv, TOP, CELL_MUT_LIMITED) };
+final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
 
-final readonly & ListMemberTypes LIST_MEMBER_TYPES_ALL = [[{ min: 0, max: int:MAX_VALUE }], [cellContaining(tmpEnv, TOP, CELL_MUT_LIMITED)]];
+
+final readonly & ListMemberTypes LIST_MEMBER_TYPES_ALL = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
 final readonly & ListMemberTypes LIST_MEMBER_TYPES_NONE = [[], []];
 
 public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
@@ -1047,7 +1025,7 @@ public function listAllMemberTypes(Context cx, SemType t) returns ListMemberType
     }
 }
 
-public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
+public function listAtomicType(Context cx, SemType t) returns ListAtomicType? {
     if t is BasicTypeBitSet {
         return t == LIST ? LIST_ATOMIC_TOP : ();
     }
@@ -1112,7 +1090,7 @@ public type ListAlternative record {|
     ListAtomicType[] neg;
 |};
 
-public function listAlternativesRw(Context cx, SemType t) returns ListAlternative[] {
+public function listAlternatives(Context cx, SemType t) returns ListAlternative[] {
     if t is BasicTypeBitSet {
         if (t & LIST) == 0 {
             return [];
@@ -1120,7 +1098,7 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
         else {
             return [
                 {
-                    semType: LIST_RW,
+                    semType: LIST,
                     pos: (),
                     neg: []
                 }
@@ -1148,7 +1126,7 @@ public function listAlternativesRw(Context cx, SemType t) returns ListAlternativ
 
 final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest:TOP };
 
-public function mappingAtomicTypeRw(Context cx, SemType t) returns MappingAtomicType? {
+public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
     if t is BasicTypeBitSet {
         return t == MAPPING ? MAPPING_ATOMIC_TOP : ();
     }
@@ -1221,7 +1199,7 @@ public type MappingAlternative record {|
     MappingAtomicType[] neg;
 |};
 
-public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlternative[] {
+public function mappingAlternatives(Context cx, SemType t) returns MappingAlternative[] {
     if t is BasicTypeBitSet {
         if (t & MAPPING) == 0 {
             return [];
@@ -1229,7 +1207,7 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
         else {
             return [
                 {
-                    semType: MAPPING_RW,
+                    semType: MAPPING,
                     pos: (),
                     neg: []
                 }

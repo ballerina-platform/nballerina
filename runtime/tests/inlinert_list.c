@@ -19,7 +19,7 @@ TaggedPtr constructListWithDesc(ListDescPtr desc) {
     ListPtr ptr = _bal_alloc(sizeof(ListDescPtr) + sizeof(GenericArray) + sizeof(TaggedPtrArray));
     ptr->desc = desc;
     ptr->tpArray = *arr;
-    return ptrAddShiftedTag(ptr, ((uint64_t)TAG_LIST_RO|TAG_LIST_RW) << TAG_SHIFT);
+    return ptrAddShiftedTag(ptr, ((uint64_t)TAG_LIST) << TAG_SHIFT);
 }
 
 TaggedPtr constructIntList() {
