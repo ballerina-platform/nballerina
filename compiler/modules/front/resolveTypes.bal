@@ -28,48 +28,40 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
     foreach var defn in mod.defns {
         check resolveDefn(mod, defn);
     }
-    check finishEmptinessChecks(mod);
+    check finishDeferredEmptinessChecks(mod);
 }
 
-function finishEmptinessChecks(ModuleSymbols mod) returns ResolveTypeError? {
+function finishDeferredEmptinessChecks(ModuleSymbols mod) returns ResolveTypeError? {
     if !mod.tc.env.isReady() {
-        // This should never happen
         panic err:impossible("type environment is not ready");
     }
-    map<DeferredEmptinessCheck[]> deferredEmptinessChecks = mod.deferredEmptinessChecks;
-    foreach var [name, emptinessChecks] in deferredEmptinessChecks.entries() {
-        foreach var { semType, modDefn } in emptinessChecks {
-            // XXX When we can give multiple errors we should check all the deferred emptiness checks
-            check nonEmptyTypeDeferred(mod, semType, modDefn);
-            if !mod.deferredEmptinessChecks.hasKey(name) {
-                break;
-            }
-        }
-        // This should never happen
-        if mod.deferredEmptinessChecks.hasKey(name) {
-            DeferredEmptinessCheck[] remainingChecks = deferredEmptinessChecks.get(name);
-            var { modDefn } = remainingChecks[0];
-            d:Location loc = s:locationInDefn(modDefn, { startPos: modDefn.startPos, endPos: modDefn.endPos });
+    foreach var { semType, modDefn, td } in mod.deferredEmptinessChecks {
+        // XXX When we can give multiple errors we should check all the deferred emptiness checks
+        check finishEmptinessCheck(mod, semType, modDefn, td);
+    }
+    foreach var [checked, loc] in mod.recursiveEmptinessChecked {
+        if !checked {
             return err:semantic("non recursive empty type", loc);
         }
     }
 }
 
-function nonEmptyTypeDeferred(ModuleSymbols mod, t:SemType semType, s:ModuleLevelDefn modDefn) returns ResolveTypeError? {
+function finishEmptinessCheck(ModuleSymbols mod, t:SemType semType, s:ModuleLevelDefn modDefn, s:TypeDesc td) returns ResolveTypeError? {
     if t:isEmpty(mod.tc, semType) {
-        s:TypeDesc td = modDefn is s:FunctionDefn ? modDefn.typeDesc : <s:TypeDesc>modDefn.td;
         d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
         if td is s:BinaryTypeDesc && td.op is "&" {
-            _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name); // Currently this has no effect
             return err:semantic("intersection must not be empty", loc);
         }
-        if t:isSemTypeRecursive(semType) {
-            _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name); // Currently this has no effect
+        var [isRecursive, index] = t:isSemTypeRecursive(semType);
+        if isRecursive {
+            if index is int {
+                mod.recursiveEmptinessChecked[index.toString()] = [true, loc];
+            }
             return err:semantic("invalid recursive type (contains no finite shapes)", loc);
         }
-    }
-    else {
-        _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name);
+        else if index is int && !mod.recursiveEmptinessChecked.hasKey(index.toString()) {
+            mod.recursiveEmptinessChecked[index.toString()] = [false, loc];
+        }
     }
 }
 
@@ -378,15 +370,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
 
 function nonEmptyType(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc td, t:SemType semType) returns t:SemType|ResolveTypeError {
     if !mod.tc.env.isReady() {
-        if mod.deferredEmptinessChecks.hasKey(modDefn.name) {
-            mod.deferredEmptinessChecks.get(modDefn.name).push({ semType, modDefn });
-        }
-        else {
-            mod.deferredEmptinessChecks[modDefn.name] = [{ semType, modDefn }];
-        }
+        mod.deferredEmptinessChecks.push({ semType, modDefn, td });
     }
     else {
-        check nonEmptyTypeDeferred(mod, semType, modDefn);
+        check finishEmptinessCheck(mod, semType, modDefn, td);
     }
     return semType;
 }
