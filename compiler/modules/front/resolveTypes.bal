@@ -63,10 +63,7 @@ function nonEmptyTypeDeferred(ModuleSymbols mod, t:SemType semType, s:ModuleLeve
             _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name); // Currently this has no effect
             return err:semantic("intersection must not be empty", loc);
         }
-        // We are only defering intersections(already handled), lists and mappings
-        t:ComplexSemType t = <t:ComplexSemType>semType;
-        t:BddNode subtypeDataList = <t:BddNode>t.subtypeDataList[0];
-        if t:isAtomRecursive(subtypeDataList.atom) {
+        if t:isSemTypeRecursive(semType) {
             _ = mod.deferredEmptinessChecks.removeIfHasKey(modDefn.name); // Currently this has no effect
             return err:semantic("invalid recursive type (contains no finite shapes)", loc);
         }

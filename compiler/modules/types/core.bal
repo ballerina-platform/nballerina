@@ -22,7 +22,7 @@ public type UniformTypeCode
     |UT_XML_RW|UT_LIST_RW|UT_MAPPING_RW|UT_TABLE_RW|UT_OBJECT_RW
     |UT_STREAM|UT_FUTURE;
 
-public type Atom RecAtom|TypeAtom;
+type Atom RecAtom|TypeAtom;
 
 type RecAtom int;
 
@@ -1590,6 +1590,14 @@ function init() {
    ];
 }
 
-public function isAtomRecursive(Atom atom) returns boolean {
-    return atom is RecAtom;
+public function isSemTypeRecursive(SemType semType) returns boolean {
+    // Only list and mapping can be recursive
+    if semType !is ComplexSemType || semType.subtypeDataList.length() == 0 {
+        return false;
+    }
+    ProperSubtypeData subTypeData = semType.subtypeDataList[0];
+    if subTypeData !is BddNode {
+        return false;
+    }
+    return subTypeData.atom is RecAtom;
 }
