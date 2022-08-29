@@ -22,10 +22,8 @@ public function errorDistinct(int distinctId) returns SemType {
     return basicSubtype(BT_ERROR, bdd);
 }
 
-// Similar to mappingSubtypeRoIsEmpty,
-// except that we use bddEveryPositive to ignore the distinct ids
 function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = bddFixReadOnly(<Bdd>t);
+    Bdd b = <Bdd>t;
     BddMemo? mm = cx.mappingMemo[b];
     BddMemo m;
     if mm == () {
