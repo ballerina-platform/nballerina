@@ -37,7 +37,7 @@ public isolated class Env {
     private final FunctionAtomicType?[] recFunctionAtoms = [];
     // Count of the total number of non-nil members
     // of recListAtoms, recMappingAtoms and recFunctionAtoms
-    private int recAtomCount = 2;
+    private int recAtomCount = 0;
 
     public isolated function init() {
     }
@@ -732,7 +732,7 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
                     data = data1;
                 }
             }
-        }     
+        }
         // JBUG `data` is not narrowed properly if you swap the order by doing `if data == true {} else if data != false {}`
         if data !is boolean {
             subtypes.push([code, data]);

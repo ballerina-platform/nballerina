@@ -70,8 +70,8 @@ public class ListDefinition {
     }
 
     public function define(Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER) returns ComplexSemType {
-        FixedLengthArray cellMembers = fixedLengthNormalize({ initial, fixedLength });
-        ListAtomicType atomicType = { members: cellMembers.cloneReadOnly(), rest };
+        FixedLengthArray members = fixedLengthNormalize({ initial, fixedLength });
+        ListAtomicType atomicType = { members: members.cloneReadOnly(), rest };
         Atom atom;
         RecAtom? rec = self.rec;
         if rec != () {
