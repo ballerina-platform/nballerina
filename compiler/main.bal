@@ -9,6 +9,11 @@ import ballerina/file;
 
 type CompileError err:Diagnostic|io:Error|file:Error;
 
+public enum Backend {
+   BACK_LLVM = "llvm",
+   BACK_TEXT = "text"
+}
+
 public type Options record {
     boolean testJsonTypes = false;
     boolean showTypes = false;
@@ -16,6 +21,7 @@ public type Options record {
     // outDir also implies treating each file as a separate module
     string? outDir = ();
     string? expectOutDir = ();
+    string back = BACK_LLVM;
     string? gc = ();
     string? htmlError = ();
     *OutputOptions;
@@ -60,7 +66,16 @@ public function main(string[] filenames, *Options opts) returns error? {
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            CompileError? err;
+            if opts.back == BACK_LLVM {
+                err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            }
+            else if opts.back == BACK_TEXT {
+                err = printBir(filename, basename);
+            } 
+            else {
+                panic error("argument to --back must be 'llvm' or 'text'");
+            }
             if err is err:Internal {
                 panic error(d:toString(err.detail()), err);
             }

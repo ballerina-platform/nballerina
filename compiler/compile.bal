@@ -2,6 +2,7 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
+import wso2/nballerina.tback;
 
 import ballerina/file;
 import ballerina/io;
@@ -76,6 +77,19 @@ function compileBalFile(string filename, string basename, string? outputBasename
     front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
     check mod.validMain();
     check generateInitModule(cx, mod);
+}
+
+function printBir(string filename, string basename) returns CompileError? {
+    front:ScannedModule scanned = check front:scanModule([ {filename} ], DEFAULT_ROOT_MODULE_ID);
+    ResolvedImport[] resolvedImports = [];
+    // pr-todo: dump imported files
+    // foreach var mod in scanned.getImports() {
+    //     ResolvedImport ri = check resolveImport(cx, mod);
+    //     resolvedImports.push(ri);
+    // }
+    final t:Env env = new;
+    front:ResolvedModule mod = check front:resolveModule(scanned, env, resolvedImports);
+    io:print(check tback:toBirText(mod));
 }
 
 function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename) returns front:ResolvedModule|CompileError {

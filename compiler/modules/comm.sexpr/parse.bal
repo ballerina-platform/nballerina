@@ -1,7 +1,8 @@
-public type Any ()|string|boolean|int|Str|Any[];
+public type Data ()|Symbol|boolean|int|float|decimal|String|Data[];
 
-public type Str record {|
-    string str;
+public type Symbol string;
+public type String record {|
+    string s;
 |};
 
 const QUOTE       = 0x22;
@@ -12,7 +13,7 @@ type WS 0x09|0x0A|0x0D|0x20; // TAB|LF|CR|SPACE
 type DIGIT 0x30|0x31|0x32|0x33|0x34|0x35|0x36|0x37|0x38|0x39; // 0-9
 
 class Tokenizer {
-    int[] src;  
+    int[] src;
     int pos;
 
     function init(string src) {
@@ -20,7 +21,7 @@ class Tokenizer {
         self.pos = 0;
     }
 
-    function next() returns OPEN_PAREN|CLOSE_PAREN|string|Str|int|error {
+    function next() returns OPEN_PAREN|CLOSE_PAREN|string|String|int|error {
         int c = self.nextChar();
         while c is WS {
             c = self.nextChar();
@@ -33,7 +34,7 @@ class Tokenizer {
             while true {
                 int q = self.nextChar();
                 if q == QUOTE {
-                    return { str: check string:fromCodePointInts(quoted) };
+                    return { s: check string:fromCodePointInts(quoted) };
                 }
                 quoted.push(q);
             }
@@ -59,23 +60,24 @@ class Tokenizer {
     }
 
     private function nextChar() returns int {
+        // pr-todo: this failes if there are traling spaces
         int c = self.src[self.pos]; // Assuming s-expr is valid, eof will not be reached here.
         self.pos += 1;
         return c;
     }
 }
 
-public function parse(string input) returns Any[]|error {
+public function parse(string input) returns Data[]|error {
     Tokenizer t = new(input);
-    Any[] topLevel = [];
+    Data[] topLevel = [];
     while !t.eof() && t.next() == OPEN_PAREN {
         topLevel.push(check parseList(t));
     }
     return topLevel;
 }
 
-function parseList(Tokenizer t) returns Any|error {
-    Any[] result = [];
+function parseList(Tokenizer t) returns Data|error {
+    Data[] result = [];
     while true {
         match check t.next() {
             OPEN_PAREN => {

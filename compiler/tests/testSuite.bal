@@ -1,11 +1,15 @@
 import ballerina/test;
 import ballerina/file;
 import wso2/nballerina.front;
+import wso2/nballerina.bir;
+import wso2/nballerina.tback;
 import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 
 import wso2/nballerina.comm.err;
+import nballerina.comm.sexpr;
+import nballerina.bir.sexpr as bsexpr ;
 import wso2/nballerina.comm.diagnostic as d;
 
 type TestSuiteCases map<[string, string]>;
@@ -282,4 +286,66 @@ function testListAllMemberTypesProjection(t:Context tc, t:SemType t) {
             test:assertFail(string `All projection for member index ${r.min} is not equal to individual projection`);
         }
     }
+}
+
+function birCompleated() returns TestSuiteCases {
+    TestSuiteCases cases = {
+        "01-function/call08-v.bal": ["./testSuite/01-function/call08-v.bal", ""],
+        "01-function/call14-v.bal": ["./testSuite/01-function/call14-v.bal", ""],
+        "01-function/call06-v.bal": ["./testSuite/01-function/call06-v.bal", ""],
+        "01-function/1-v.bal": ["./testSuite/01-function/1-v.bal", ""],
+        "01-loop/while09-v.bal": ["./testSuite/01-loop/while09-v.bal", ""],
+        "01-int/add6-v.bal": ["./testSuite/01-int/add6-v.bal", ""],
+        "01-int/order06-v.bal": ["./testSuite/01-int/order06-v.bal", ""],
+        "01-int/order04-v.bal": ["./testSuite/01-int/order04-v.bal", ""],
+        "01-int/div5-v.bal": ["./testSuite/01-int/div5-v.bal", ""],
+        "01-int/div3-p.bal": ["./testSuite/01-int/div3-p.bal", ""],
+        "01-int/add4-v.bal": ["./testSuite/01-int/add4-v.bal", ""],
+        "01-int/unary-v.bal": ["./testSuite/01-int/unary-v.bal", ""],
+        "01-int/div4-v.bal": ["./testSuite/01-int/div4-v.bal", ""],
+        "01-int/order05-v.bal": ["./testSuite/01-int/order05-v.bal", ""],
+        "01-int/add5-v.bal": ["./testSuite/01-int/add5-v.bal", ""],
+        "01-int/add7-v.bal": ["./testSuite/01-int/add7-v.bal", ""],
+        "01-int/order07-v.bal": ["./testSuite/01-int/order07-v.bal", ""],
+        "01-int/order03-v.bal": ["./testSuite/01-int/order03-v.bal", ""],
+        "01-int/div2-v.bal": ["./testSuite/01-int/div2-v.bal", ""],
+        "01-int/equal2-v.bal": ["./testSuite/01-int/equal2-v.bal", ""],
+        "01-int/add9-v.bal": ["./testSuite/01-int/add9-v.bal", ""],
+        "01-int/const1-v.bal": ["./testSuite/01-int/const1-v.bal", ""],
+        "01-int/add8-v.bal": ["./testSuite/01-int/add8-v.bal", ""],
+        "01-int/rem3-v.bal": ["./testSuite/01-int/rem3-v.bal", ""],
+        "01-int/sub2-v.bal": ["./testSuite/01-int/sub2-v.bal", ""],
+        "01-int/order08-v.bal": ["./testSuite/01-int/order08-v.bal", ""],
+        "01-int/mul2-v.bal": ["./testSuite/01-int/mul2-v.bal", ""],
+        "01-int/const2-v.bal": ["./testSuite/01-int/const2-v.bal", ""],
+        "01-boolean/equal1-v.bal": ["./testSuite/01-boolean/equal1-v.bal", ""],
+        "01-boolean/equal3-v.bal": ["./testSuite/01-boolean/equal3-v.bal", ""],
+        "01-boolean/order2-v.bal": ["./testSuite/01-boolean/order2-v.bal", ""],
+        "01-boolean/order1-v.bal": ["./testSuite/01-boolean/order1-v.bal", ""],
+        "01-ifelse/8-v.bal": ["./testSuite/01-ifelse/8-v.bal", ""],
+        "01-ifelse/2-v.bal": ["./testSuite/01-ifelse/2-v.bal", ""],
+        "01-ifelse/6-v.bal": ["./testSuite/01-ifelse/6-v.bal", ""],
+        "01-ifelse/3-v.bal": ["./testSuite/01-ifelse/3-v.bal", ""],
+        "01-nil/rel-v.bal": ["./testSuite/01-nil/rel-v.bal", ""],
+        "01-nil/equal-v.bal": ["./testSuite/01-nil/equal-v.bal", ""]
+    };
+    return cases;
+}
+
+function listSubset01SourcesVPO() returns TestSuiteCases|error => (check listSourcesVPO()).filter(t => t[0].indexOf("testSuite/01-") != ());
+
+@test:Config {
+    dataProvider: listSubset01SourcesVPO
+}
+function testBirRoundtrip(string filename, string kind) returns error? {
+    front:ScannedModule scanned = check front:scanModule([{ filename }], DEFAULT_ROOT_MODULE_ID);
+    ResolvedImport[] resolvedImports = [];
+    final t:Env env = new;
+    front:ResolvedModule mod = check front:resolveModule(scanned, env, resolvedImports);
+    string birText = check tback:toBirText(mod);
+    sexpr:Data reparsed = check sexpr:parse(birText);
+    bir:Module marshaled = bsexpr:moduleFromSexpr(check reparsed.cloneWithType());
+    string roundtripBirText = check tback:toBirText(marshaled);
+    test:assertEquals(birText, roundtripBirText);
+    // check io:fileWriteLines("passing.txt", ["\"" + filename.substring(64) + "\": [\"" + filename.substring(52) + "\", \"\"]"], io:APPEND);
 }
