@@ -31,7 +31,6 @@ type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType;
 // All the SemTypes used in any type operation (e.g. isSubtype) must have been created using the Env.
 public isolated class Env {
     private final table<TypeAtom> key(atomicType) atomTable = table [];
-    // Set up index 0 for use by bddFixReadOnly
     private final ListAtomicType?[] recListAtoms = [];
     private final MappingAtomicType?[] recMappingAtoms = [];
     private final FunctionAtomicType?[] recFunctionAtoms = [];
@@ -650,7 +649,7 @@ public function diff(SemType t1, SemType t2) returns SemType {
     return maybeRoDiff(t1, t2, ());
 }
 
-function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {    
+function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicTypeBitSet all1;
     BasicTypeBitSet all2;
     BasicTypeBitSet some1;
@@ -700,17 +699,17 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
         SubtypeData data;
         if cx == () || code < BT_COUNT_INHERENTLY_IMMUTABLE {
             // normal diff or read-only basic type
-        if data1 == () {
-            var complement = ops[code].complement;
-            data = complement(<SubtypeData>data2);
-        }
+            if data1 == () {
+                var complement = ops[code].complement;
+                data = complement(<SubtypeData>data2);
+            }
             else if data2 == () {
-            data = data1;
-        }
+                data = data1;
+            }
             else {
-            var diff = ops[code].diff;
-            data = diff(data1, data2);
-        }
+                var diff = ops[code].diff;
+                data = diff(data1, data2);
+            }
         }
         else {
             // read-only diff for mutable basic type
@@ -1001,7 +1000,6 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 }
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
-
 
 final readonly & ListMemberTypes LIST_MEMBER_TYPES_ALL = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
 final readonly & ListMemberTypes LIST_MEMBER_TYPES_NONE = [[], []];
