@@ -1,0 +1,7 @@
+[
+    ["proper_subtype", ["&", "readonly", ["rec", "json", ["|", "nil", "int", "string", ["tuple", ["ref", "json"], "int"], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]],
+    ["rec", "json", ["|", "nil", "int", "string", ["&", "readonly", ["tuple", ["ref", "json"], ["ref", "json"]]],
+                                                  ["&", "readonly", ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]]],
+    ["proper_subtype", ["error", ["record", ["e", ["list", "int"]]]], ["error", ["map", "readonly"]]],
+    ["equivalent", "error", ["error", ["map", "readonly"]]]
+]
