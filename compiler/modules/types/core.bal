@@ -1590,19 +1590,14 @@ function init() {
    ];
 }
 
-public function isSemTypeRecursive(SemType semType) returns [boolean, int?] {
+public function isSemTypeRecursive(SemType semType) returns boolean {
     // Only list and mapping can be recursive
     if semType !is ComplexSemType || semType.subtypeDataList.length() == 0 {
-        return [false, ()];
+        return false;
     }
     ProperSubtypeData subTypeData = semType.subtypeDataList[0];
     if subTypeData !is BddNode {
-        return [false, ()];
+        return false;
     }
-    Atom atom = subTypeData.atom;
-    int index = atom is RecAtom ? atom : atom.index;
-    if atom is RecAtom && subTypeData.left is true && subTypeData.middle is false && subTypeData.right is false {
-        return [true, index];
-    }
-    return [false, index];
+    return subTypeData.atom is RecAtom && subTypeData.left is true && subTypeData.middle is false && subTypeData.right is false;
 }

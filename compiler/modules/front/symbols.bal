@@ -12,14 +12,21 @@ type ModuleSymbols record {|
     map<Import>[] partPrefixes = [];
     t:Context tc;
     boolean allowAllTypes = false;
-    ResolveType[] deferredEmptinessChecks = [];
-    map<[boolean, d:Location]> recursiveEmptinessChecked = {};
+    ResolvedType[] deferredEmptinessChecks = [];
+    table<AtomicEmptyType> key(startPos, endPos) atomicEmptyTypeRecursionCheck = table [];
 |};
 
-type ResolveType record {|
+type ResolvedType record {|
     t:SemType semType;
     s:ModuleLevelDefn modDefn;
     s:TypeDesc td;
+|};
+
+type AtomicEmptyType record {|
+    readonly d:Position startPos;
+    readonly d:Position endPos;
+    s:ModuleLevelDefn modDefn;
+    boolean recursive;
 |};
 
 type Import record {|

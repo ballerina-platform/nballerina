@@ -39,29 +39,30 @@ function finishDeferredEmptinessChecks(ModuleSymbols mod) returns ResolveTypeErr
         // XXX When we can give multiple errors we should check all the deferred emptiness checks
         check finishEmptinessCheck(mod, semType, modDefn, td);
     }
-    foreach var [checked, loc] in mod.recursiveEmptinessChecked {
-        if !checked {
+    foreach var { startPos, endPos, modDefn, recursive } in mod.atomicEmptyTypeRecursionCheck {
+        if !recursive {
+            d:Location loc = s:locationInDefn(modDefn, { startPos, endPos });
             return err:semantic("non recursive empty type", loc);
         }
     }
 }
 
 function finishEmptinessCheck(ModuleSymbols mod, t:SemType semType, s:ModuleLevelDefn modDefn, s:TypeDesc td) returns ResolveTypeError? {
-    if t:isEmpty(mod.tc, semType) {
-        d:Location loc = s:locationInDefn(modDefn, { startPos: td.startPos, endPos: td.endPos });
-        if td is s:BinaryTypeDesc && td.op is "&" {
-            return err:semantic("intersection must not be empty", loc);
-        }
-        var [isRecursive, index] = t:isSemTypeRecursive(semType);
-        if isRecursive {
-            if index is int {
-                mod.recursiveEmptinessChecked[index.toString()] = [true, loc];
-            }
-            return err:semantic("invalid recursive type (contains no finite shapes)", loc);
-        }
-        else if index is int && !mod.recursiveEmptinessChecked.hasKey(index.toString()) {
-            mod.recursiveEmptinessChecked[index.toString()] = [false, loc];
-        }
+    if !t:isEmpty(mod.tc, semType) {
+        return;
+    }
+    d:Position startPos = td.startPos;
+    d:Position endPos = td.endPos;
+    d:Location loc = s:locationInDefn(modDefn, { startPos, endPos });
+    if td is s:BinaryTypeDesc && td.op is "&" {
+        return err:semantic("intersection must not be empty", loc);
+    }
+    if t:isSemTypeRecursive(semType) {
+        mod.atomicEmptyTypeRecursionCheck.put({ startPos, endPos, modDefn, recursive: true });
+        return err:semantic("invalid recursive type (contains no finite shapes)", loc);
+    }
+    else if mod.atomicEmptyTypeRecursionCheck[startPos, endPos] is () {
+        mod.atomicEmptyTypeRecursionCheck.add({ startPos, endPos, modDefn, recursive: false });
     }
 }
 
