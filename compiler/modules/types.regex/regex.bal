@@ -50,11 +50,11 @@ function stringToList(string str, int index) returns StringAsList {
 }
 
 function defineReadonlyListType(t:ListDefinition defn, t:Env env, t:SemType[] members) returns t:SemType {
-    return t:intersect(defn.define(env, members), t:LIST_RO);
+    return defn.define(env, members); // FIX_RO: intersect with LIST_RO
 }
 
 function getReadonlyListType(t:ListDefinition defn, t:Env env) returns t:SemType {
-    return t:intersect(defn.getSemType(env), t:LIST_RO);
+    return defn.getSemType(env); // FIX_RO: intersect with LIST_RO
 }
 
 function stringListToSemType(t:Env env, StringAsList stringList) returns t:SemType {
