@@ -686,10 +686,8 @@ static READONLY inline CompareResult optDecimalCompare(TaggedPtr tp1, TaggedPtr 
 
 // Precondition is that they are comparable
 static READONLY inline CompareResult taggedPtrCompare(TaggedPtr tp1, TaggedPtr tp2) {
-    //  `& 0xF` turns LIST into LIST_RO
-    // FIX_RO: fix logic for LIST_RO
-    int tag1 = getTag(tp1) & 0xA;
-    int tag2 = getTag(tp2) & 0xA;
+    int tag1 = getTag(tp1);
+    int tag2 = getTag(tp2);
     if (tag1 != tag2) {
         // This can only happen if one is nil
         return COMPARE_UN;
@@ -705,6 +703,8 @@ static READONLY inline CompareResult taggedPtrCompare(TaggedPtr tp1, TaggedPtr t
             return intCompare(_bal_decimal_cmp(tp1, tp2), 0);
         case TAG_STRING:
             return intCompare(_bal_string_cmp(tp1, tp2), 0);
+        case TAG_LIST:
+            return _bal_opt_list_compare(tp1, tp2);
         default:
             // This is NIL case
             return COMPARE_EQ;
