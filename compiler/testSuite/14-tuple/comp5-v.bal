@@ -8,8 +8,10 @@ public function main() {
     A arr4 = [3, [1, 2]];
 
     io:println(arr1 < arr2); // @output false
+    io:println(arr1 < arr3); // @output true
     io:println(arr1 < arr4); // @output false
 
+    io:println(arr1 > arr2); // @output true
     io:println(arr1 > arr3); // @output false
     io:println(arr1 > arr4); // @output true
 }
