@@ -37,17 +37,15 @@ function finishDeferredEmptinessChecks(ModuleSymbols mod) returns ResolveTypeErr
     }
     foreach var { semType, modDefn, td } in mod.deferredEmptinessChecks {
         // XXX When we can give multiple errors we should check all the deferred emptiness checks
-        check finishEmptinessCheck(mod, semType, modDefn, td);
+        check nonEmptyTypeNoDefer(mod, semType, modDefn, td);
     }
-    foreach var { startPos, endPos, modDefn, recursive } in mod.atomicEmptyTypeRecursionCheck {
-        if !recursive {
-            d:Location loc = s:locationInDefn(modDefn, { startPos, endPos });
-            return err:semantic("non recursive empty type", loc);
-        }
+    d:Location? emptyLoc = mod.emptyNonRecursiveTypeLocation;
+    if emptyLoc !is () {
+        return err:semantic("intersection must not be empty", emptyLoc);
     }
 }
 
-function finishEmptinessCheck(ModuleSymbols mod, t:SemType semType, s:ModuleLevelDefn modDefn, s:TypeDesc td) returns ResolveTypeError? {
+function nonEmptyTypeNoDefer(ModuleSymbols mod, t:SemType semType, s:ModuleLevelDefn modDefn, s:TypeDesc td) returns ResolveTypeError? {
     if !t:isEmpty(mod.tc, semType) {
         return;
     }
@@ -58,12 +56,9 @@ function finishEmptinessCheck(ModuleSymbols mod, t:SemType semType, s:ModuleLeve
         return err:semantic("intersection must not be empty", loc);
     }
     if t:isSemTypeRecursive(semType) {
-        mod.atomicEmptyTypeRecursionCheck.put({ startPos, endPos, modDefn, recursive: true });
         return err:semantic("invalid recursive type (contains no finite shapes)", loc);
     }
-    else if mod.atomicEmptyTypeRecursionCheck[startPos, endPos] is () {
-        mod.atomicEmptyTypeRecursionCheck.add({ startPos, endPos, modDefn, recursive: false });
-    }
+    mod.emptyNonRecursiveTypeLocation = loc;
 }
 
 function resolveDefn(ModuleSymbols mod, s:ModuleLevelDefn defn) returns ResolveTypeError? {
@@ -374,7 +369,7 @@ function nonEmptyType(ModuleSymbols mod, s:ModuleLevelDefn modDefn, s:TypeDesc t
         mod.deferredEmptinessChecks.push({ semType, modDefn, td });
     }
     else {
-        check finishEmptinessCheck(mod, semType, modDefn, td);
+        check nonEmptyTypeNoDefer(mod, semType, modDefn, td);
     }
     return semType;
 }

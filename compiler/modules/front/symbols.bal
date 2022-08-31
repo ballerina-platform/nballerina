@@ -13,20 +13,14 @@ type ModuleSymbols record {|
     t:Context tc;
     boolean allowAllTypes = false;
     ResolvedType[] deferredEmptinessChecks = [];
-    table<AtomicEmptyType> key(startPos, endPos) atomicEmptyTypeRecursionCheck = table [];
+    // We need only one to give an error
+    d:Location? emptyNonRecursiveTypeLocation = ();
 |};
 
 type ResolvedType record {|
     t:SemType semType;
     s:ModuleLevelDefn modDefn;
     s:TypeDesc td;
-|};
-
-type AtomicEmptyType record {|
-    readonly d:Position startPos;
-    readonly d:Position endPos;
-    s:ModuleLevelDefn modDefn;
-    boolean recursive;
 |};
 
 type Import record {|
