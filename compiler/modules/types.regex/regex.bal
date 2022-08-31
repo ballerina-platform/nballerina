@@ -49,12 +49,20 @@ function stringToList(string str, int index) returns StringAsList {
     return [str[index], stringToList(str, index + 1)];
 }
 
+function defineReadonlyListType(t:ListDefinition defn, t:Env env, t:SemType[] members) returns t:SemType {
+    return t:intersect(defn.define(env, members), t:LIST_RO);
+}
+
+function getReadonlyListType(t:ListDefinition defn, t:Env env) returns t:SemType {
+    return t:intersect(defn.getSemType(env), t:LIST_RO);
+}
+
 function stringListToSemType(t:Env env, StringAsList stringList) returns t:SemType {
     if stringList is () {
         return t:NIL;
     }
     t:ListDefinition definition = new;
-    return definition.define(env, [t:stringConst(stringList[0]), stringListToSemType(env, stringList[1])]);
+    return defineReadonlyListType(definition, env, [t:stringConst(stringList[0]), stringListToSemType(env, stringList[1])]);
 }
 
 public function regexToSemType(t:Env env, string regex) returns t:SemType {
@@ -76,7 +84,7 @@ function regexToSemTypeInner(t:Env env, string regex, int index, int end, t:SemT
         else {
             string:Char char = regex[index];
             t:ListDefinition defn = new;
-            return defn.define(env, [t:stringConst(char), regexToSemTypeInner(env, regex, index + 1, end, restTy)]);
+            return defineReadonlyListType(defn, env, [t:stringConst(char), regexToSemTypeInner(env, regex, index + 1, end, restTy)]);
         }
     }
 }
@@ -84,7 +92,7 @@ function regexToSemTypeInner(t:Env env, string regex, int index, int end, t:SemT
 function starToSemType(t:Env env, string regex, Star pattern, int end, t:SemType restTy) returns t:SemType {
     t:SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, end, restTy);
     t:ListDefinition defn = new;
-    t:SemType ty = t:union(rest, defn.getSemType(env));
+    t:SemType ty = t:union(rest, getReadonlyListType(defn, env));
     PatternRange range = pattern.range;
     _ = starToSemTypeInner(env, regex, range.startIndex, range.startIndex, range.endIndex, ty, defn);
     return ty;
@@ -105,11 +113,11 @@ function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, 
         string:Char char = regex[index];
         if index == endIndex {
             // last character in the pattern
-            return defn.define(env, [t:stringConst(char), recTy]);
+            return defineReadonlyListType(defn, env, [t:stringConst(char), recTy]);
         }
         else {
-            return defn.define(env, [t:stringConst(char),
-                                     starToSemTypeInner(env, regex, index + 1, startIndex, endIndex, recTy, recListDefn)]);
+            return defineReadonlyListType(defn, env, [t:stringConst(char),
+                                                      starToSemTypeInner(env, regex, index + 1, startIndex, endIndex, recTy, recListDefn)]);
         }
     }
     else {
@@ -118,7 +126,7 @@ function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, 
             t:Context cx = t:contextFromEnv(env);
             t:ListMemberTypes memberTypes = t:listAllMemberTypes(cx, unionType); // unionType is [T1, T2] | [T3, T4] == [S1, S2]
             t:SemType[] memberSemTypes = memberTypes[1];
-            return defn.define(env, memberSemTypes);
+            return defineReadonlyListType(defn, env, memberSemTypes);
         }
         return unionType;
     }
