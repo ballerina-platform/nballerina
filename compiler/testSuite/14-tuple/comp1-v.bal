@@ -18,12 +18,8 @@ public function main() {
 
 
     io:println(a < c); //@output false
-    io:println(a <= c); //@output false
-    io:println(a > c); //@output true
     io:println(a >= c); //@output true
 
-    io:println(c < a); //@output true
     io:println(c <= a); //@output true
     io:println(c > a); //@output false
-    io:println(c >= a); //@output false
 }
