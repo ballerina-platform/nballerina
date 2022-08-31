@@ -117,7 +117,7 @@ function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, 
         }
         else {
             return defineReadonlyListType(defn, env, [t:stringConst(char),
-                                                        starToSemTypeInner(env, regex, index + 1, startIndex, endIndex, recTy, recListDefn)]);
+                                                      starToSemTypeInner(env, regex, index + 1, startIndex, endIndex, recTy, recListDefn)]);
         }
     }
     else {
