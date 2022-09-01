@@ -617,7 +617,7 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
     ArithmeticOperand? arith = arithmeticOperand(operand);
     bir:TmpRegister result;
     bir:Insn insn;
-    if arith is [t:UT_INT, bir:IntOperand] {
+    if arith is [t:BT_INT, bir:IntOperand] {
         bir:IntOperand intOperand = arith[1];
         var [value, flags] = intOperandValue(intOperand);
         if flags != 0 {
@@ -628,7 +628,7 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
         result = cx.createTmpRegister(t:INT, pos);
         insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [singletonIntOperand(cx.mod.tc, 0), intOperand], result };
     }
-    else if arith is [t:UT_FLOAT, bir:FloatOperand] {
+    else if arith is [t:BT_FLOAT, bir:FloatOperand] {
         bir:FloatOperand floatOperand = arith[1];
         var [value, flags] = floatOperandValue(floatOperand);
         t:SemType resultType = t:FLOAT;
@@ -644,7 +644,7 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
         result = cx.createTmpRegister(resultType, pos);
         insn = <bir:FloatNegateInsn> { operand: <bir:Register>floatOperand, result, pos };
     }
-    else if arith is [t:UT_DECIMAL, bir:DecimalOperand] {
+    else if arith is [t:BT_DECIMAL, bir:DecimalOperand] {
         bir:DecimalOperand decimalOperand = arith[1];
         var [value, flags] = decimalOperandValue(decimalOperand);
         t:SemType resultType = t:DECIMAL;
@@ -872,19 +872,19 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
 
 function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListConstructorExpr expr) returns [t:SemType, t:ListAtomicType]|ResolveTypeError {
     // SUBSET always have contextually expected type for list constructor
-    t:SemType expectedListType = t:intersect(expectedType, t:LIST_RW);
+    t:SemType expectedListType = t:intersect(expectedType, t:LIST);
     t:Context tc = cx.mod.tc;
     if t:isEmpty(tc, expectedListType) {
         // don't think this can happen 
         return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
-    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, expectedListType);
+    t:ListAtomicType? lat = t:listAtomicType(tc, expectedListType);
     if lat != () {
         return [expectedListType, lat];
     }
     int len = expr.members.length();
     t:ListAlternative[] alts =
-        from var alt in t:listAlternativesRw(tc, expectedListType)
+        from var alt in t:listAlternatives(tc, expectedListType)
         where listAlternativeAllowsLength(alt, len)
         select alt;
     if alts.length() == 0 {
@@ -894,7 +894,7 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
         return cx.semanticErr("ambiguous inherent type for list constructor", s:range(expr));
     }
     t:SemType semType = alts[0].semType;
-    lat = t:listAtomicTypeRw(tc, semType);
+    lat = t:listAtomicType(tc, semType);
     if lat is () {
         return cx.semanticErr("applicable type for list constructor is not atomic", s:range(expr));
     }
@@ -950,19 +950,19 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
 }
 
 function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns [t:SemType, t:MappingAtomicType]|ResolveTypeError {
-    t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING_RW);
+    t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING);
     t:Context tc = cx.mod.tc;
     if t:isEmpty(tc, expectedMappingType) {
         // XXX can this happen?
         return cx.semanticErr("mapping not allowed in this context", s:range(expr));
     }
-    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, expectedMappingType);
+    t:MappingAtomicType? mat = t:mappingAtomicType(tc, expectedMappingType);
     if mat != () { // easy case
         return [expectedMappingType, mat]; 
     }
     string[] fieldNames = from var f in expr.fields order by f.name select f.name;
     t:MappingAlternative[] alts =
-        from var alt in t:mappingAlternativesRw(tc, expectedMappingType)
+        from var alt in t:mappingAlternatives(tc, expectedMappingType)
         where mappingAlternativeAllowsFields(alt, fieldNames)
         select alt;
     if alts.length() == 0 {
@@ -972,7 +972,7 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
         return cx.semanticErr("ambiguous inherent type for mapping constructor", s:range(expr));
     }
     t:SemType semType = alts[0].semType;
-    mat = t:mappingAtomicTypeRw(tc, semType);
+    mat = t:mappingAtomicType(tc, semType);
     if mat is () {
         return cx.semanticErr("applicable type for mapping constructor is not atomic", s:range(expr));
     }
@@ -1111,7 +1111,7 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
     t:SemType operandExpectedType = expected == () ? toType : t:intersect(toType, expected);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, operandExpectedType, tcExpr.operand);
     t:SemType fromType = operandSemType(cx.mod.tc, operand);
-    t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
+    t:BasicTypeBitSet? toNumType = t:singleNumericType(toType);
     if toNumType != () && !t:isSubtypeSimple(t:intersect(fromType, t:NUMBER), toNumType) {
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
         // do numeric conversion now
@@ -1133,7 +1133,7 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
     return { result, block: nextBlock };
 }
 
-function codeGenNumericConvert(ExprContext cx, bir:BasicBlock nextBlock, bir:Operand operand, t:UniformTypeBitSet toNumType, Position pos) returns CodeGenError|ExprEffect {
+function codeGenNumericConvert(ExprContext cx, bir:BasicBlock nextBlock, bir:Operand operand, t:BasicTypeBitSet toNumType, Position pos) returns CodeGenError|ExprEffect {
     t:SemType fromType = operandSemType(cx.mod.tc, operand);
     t:SemType resultType = t:union(t:diff(fromType, t:NUMBER), toNumType);
     var [shape, flags] = operandValue(operand);
@@ -1521,7 +1521,7 @@ function instantiateArrayFunctionSignature(t:Context tc, bir:FunctionSignature s
 }
 
 function arraySupertype(t:Context tc, t:SemType listType) returns [t:SemType, t:SemType] {
-    t:ListAtomicType? atomic = t:listAtomicTypeRw(tc, listType);
+    t:ListAtomicType? atomic = t:listAtomicType(tc, listType);
     if atomic != () && atomic.members.fixedLength == 0 {
         // simple case
         return [atomic.rest, listType];
@@ -1561,51 +1561,51 @@ function instantiateType(t:SemType ty, t:SemType memberType, t:SemType container
     }
 }
 
-type IntOperandPair readonly & [t:UT_INT, [bir:IntOperand, bir:IntOperand]];
-type FloatOperandPair readonly & [t:UT_FLOAT, [bir:FloatOperand, bir:FloatOperand]];
-type DecimalOperandPair readonly & [t:UT_DECIMAL, [bir:DecimalOperand, bir:DecimalOperand]];
-type StringOperandPair readonly & [t:UT_STRING, [bir:StringOperand, bir:StringOperand]];
+type IntOperandPair readonly & [t:BT_INT, [bir:IntOperand, bir:IntOperand]];
+type FloatOperandPair readonly & [t:BT_FLOAT, [bir:FloatOperand, bir:FloatOperand]];
+type DecimalOperandPair readonly & [t:BT_DECIMAL, [bir:DecimalOperand, bir:DecimalOperand]];
+type StringOperandPair readonly & [t:BT_STRING, [bir:StringOperand, bir:StringOperand]];
 
 type ArithmeticOperandPair IntOperandPair|DecimalOperandPair|FloatOperandPair|StringOperandPair;
 
-type ArithmeticOperand readonly & ([t:UT_STRING, bir:StringOperand]
-                                   |[t:UT_FLOAT, bir:FloatOperand]
-                                   |[t:UT_DECIMAL, bir:DecimalOperand]
-                                   |[t:UT_INT, bir:IntOperand]);
+type ArithmeticOperand readonly & ([t:BT_STRING, bir:StringOperand]
+                                   |[t:BT_FLOAT, bir:FloatOperand]
+                                   |[t:BT_DECIMAL, bir:DecimalOperand]
+                                   |[t:BT_INT, bir:IntOperand]);
 
 function arithmeticOperandPair(bir:Operand lhs, bir:Operand rhs) returns ArithmeticOperandPair? {
     ArithmeticOperand? l = arithmeticOperand(lhs);
     ArithmeticOperand? r = arithmeticOperand(rhs);
-    if l is [t:UT_INT, bir:IntOperand] && r is [t:UT_INT, bir:IntOperand] {
-        return [t:UT_INT, [l[1], r[1]]];
+    if l is [t:BT_INT, bir:IntOperand] && r is [t:BT_INT, bir:IntOperand] {
+        return [t:BT_INT, [l[1], r[1]]];
     }
-    if l is [t:UT_FLOAT, bir:FloatOperand] && r is [t:UT_FLOAT, bir:FloatOperand] {
-        return [t:UT_FLOAT, [l[1], r[1]]];
+    if l is [t:BT_FLOAT, bir:FloatOperand] && r is [t:BT_FLOAT, bir:FloatOperand] {
+        return [t:BT_FLOAT, [l[1], r[1]]];
     }
-    if l is [t:UT_DECIMAL, bir:DecimalOperand] && r is [t:UT_DECIMAL, bir:DecimalOperand] {
-        return [t:UT_DECIMAL, [l[1], r[1]]];
+    if l is [t:BT_DECIMAL, bir:DecimalOperand] && r is [t:BT_DECIMAL, bir:DecimalOperand] {
+        return [t:BT_DECIMAL, [l[1], r[1]]];
     }
-    if l is [t:UT_STRING, bir:StringOperand] && r is [t:UT_STRING, bir:StringOperand] {
-        return [t:UT_STRING, [l[1], r[1]]];
+    if l is [t:BT_STRING, bir:StringOperand] && r is [t:BT_STRING, bir:StringOperand] {
+        return [t:BT_STRING, [l[1], r[1]]];
     }
     return ();
 }
 
 function arithmeticOperand(bir:Operand operand) returns ArithmeticOperand? {
     if operand is bir:Register {
-        t:UniformTypeCode? utc = t:uniformTypeCode(t:widenToUniformTypes(operand.semType));
+        t:BasicTypeCode? btc = t:basicTypeCode(t:widenToBasicTypes(operand.semType));
         // JBUG should be able to do this with a single return
-        if utc == t:UT_INT {
-            return [utc, operand];
+        if btc == t:BT_INT {
+            return [btc, operand];
         }
-        if utc == t:UT_FLOAT {
-            return [utc, operand];
+        if btc == t:BT_FLOAT {
+            return [btc, operand];
         }
-        if utc == t:UT_DECIMAL {
-            return [utc, operand];
+        if btc == t:BT_DECIMAL {
+            return [btc, operand];
         }
-        if utc == t:UT_STRING {
-            return [utc, operand];
+        if btc == t:BT_STRING {
+            return [btc, operand];
         }
         return ();
     }
@@ -1616,16 +1616,16 @@ function arithmeticOperand(bir:Operand operand) returns ArithmeticOperand? {
 
 function arithmeticConstOperand(bir:ConstOperand operand) returns ArithmeticOperand? {
     if operand is bir:StringOperand {
-        return [t:UT_STRING, operand];
+        return [t:BT_STRING, operand];
     }
     else if operand is bir:IntOperand {
-        return [t:UT_INT, operand];
+        return [t:BT_INT, operand];
     }
     else if operand is bir:FloatConstOperand {
-        return [t:UT_FLOAT, operand];
+        return [t:BT_FLOAT, operand];
     }
     else if operand is bir:DecimalConstOperand {
-        return [t:UT_DECIMAL, operand];
+        return [t:BT_DECIMAL, operand];
     }
     else {
         return ();
@@ -1640,14 +1640,14 @@ function operandLangLibModuleName(bir:Operand operand) returns LangLibModuleName
     else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
         return "map";
     }
-    t:UniformTypeCode? utc = t:uniformTypeCode(t:widenToUniformTypes(semType));
-    match utc {
-        t:UT_BOOLEAN => { return "boolean"; }
-        t:UT_INT => { return "int"; }
-        t:UT_FLOAT => { return "float"; }
-        t:UT_DECIMAL => { return "decimal"; }
-        t:UT_STRING => { return "string"; }
-        t:UT_ERROR => { return "error"; }
+    t:BasicTypeCode? btc = t:basicTypeCode(t:widenToBasicTypes(semType));
+    match btc {
+        t:BT_BOOLEAN => { return "boolean"; }
+        t:BT_INT => { return "int"; }
+        t:BT_FLOAT => { return "float"; }
+        t:BT_DECIMAL => { return "decimal"; }
+        t:BT_STRING => { return "string"; }
+        t:BT_ERROR => { return "error"; }
     }
     return ();
 }

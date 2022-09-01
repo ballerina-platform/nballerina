@@ -49,7 +49,7 @@ void testByteList() {
     assert(lp->tpArray.capacity == capacity);
     assert(lp->tpArray.members != NULL);
 
-    TaggedPtr tp = ptrAddFlags(lp, ((uint64_t)TAG_LIST_RW << TAG_SHIFT)|EXACT_FLAG);
+    TaggedPtr tp = ptrAddFlags(lp, ((uint64_t)TAG_LIST << TAG_SHIFT)|EXACT_FLAG);
 
     PanicCode err;
     err = _bal_list_byte_array_set_int(tp, 4, 256);
@@ -81,7 +81,7 @@ void testListSet(int64_t capacity, int64_t length) {
 
     ListPtr lp = _bal_list_construct_8(&DESC_STRING, capacity);
     assert(lp->tpArray.capacity == capacity);
-    TaggedPtr taggedLp = ptrAddFlags(lp, ((uint64_t)TAG_LIST_RW << TAG_SHIFT)|EXACT_FLAG);
+    TaggedPtr taggedLp = ptrAddFlags(lp, ((uint64_t)TAG_LIST << TAG_SHIFT)|EXACT_FLAG);
     for (i = 0; i < length; i++) {
         _bal_list_generic_set_tagged(taggedLp, i, strs[i]);
     }

@@ -686,9 +686,8 @@ static READONLY inline CompareResult optDecimalCompare(TaggedPtr tp1, TaggedPtr 
 
 // Precondition is that they are comparable
 static READONLY inline CompareResult taggedPtrCompare(TaggedPtr tp1, TaggedPtr tp2) {
-    //  `& 0xF` turns LIST_RW into LIST_RO
-    int tag1 = getTag(tp1) & 0xF;
-    int tag2 = getTag(tp2) & 0xF;
+    int tag1 = getTag(tp1);
+    int tag2 = getTag(tp2);
     if (tag1 != tag2) {
         // This can only happen if one is nil
         return COMPARE_UN;
@@ -704,7 +703,7 @@ static READONLY inline CompareResult taggedPtrCompare(TaggedPtr tp1, TaggedPtr t
             return intCompare(_bal_decimal_cmp(tp1, tp2), 0);
         case TAG_STRING:
             return intCompare(_bal_string_cmp(tp1, tp2), 0);
-        case TAG_LIST_RO:
+        case TAG_LIST:
             return _bal_opt_list_compare(tp1, tp2);
         default:
             // This is NIL case
@@ -828,8 +827,8 @@ static READONLY inline bool taggedPtrEq(TaggedPtr tp1, TaggedPtr tp2, EqStack *s
             }
         case TAG_DECIMAL:
             return _bal_decimal_cmp(tp1, tp2) == 0;
-        case TAG_LIST_RW:
-        case TAG_MAPPING_RW:
+        case TAG_LIST:
+        case TAG_MAPPING:
             {  
                 EqStack stack;
                 for (EqStack *sp = stackPtr; sp; sp = sp->next) {
@@ -840,7 +839,7 @@ static READONLY inline bool taggedPtrEq(TaggedPtr tp1, TaggedPtr tp2, EqStack *s
                 stack.p1 = tp1;
                 stack.p2 = tp2;
                 stack.next = stackPtr;
-                return (tag1 == TAG_LIST_RW
+                return (tag1 == TAG_LIST
                         ? _bal_list_eq_internal(tp1, tp2, &stack)
                         : _bal_mapping_eq_internal(tp1, tp2, &stack));
             }

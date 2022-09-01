@@ -6,7 +6,7 @@ public type BooleanSubtype readonly & record {|
 
 public function booleanConst(boolean value) returns ComplexSemType {
     BooleanSubtype t = { value };
-    return uniformSubtype(UT_BOOLEAN, t);
+    return basicSubtype(BT_BOOLEAN, t);
 }
 
 function booleanSubtypeSingleValue(SubtypeData d) returns boolean? {
@@ -49,7 +49,7 @@ function booleanSubtypeComplement(SubtypeData d) returns SubtypeData {
     return t;
 }
 
-final UniformTypeOps booleanOps = {
+final BasicTypeOps booleanOps = {
     union: booleanSubtypeUnion,
     intersect: booleanSubtypeIntersect,
     diff: booleanSubtypeDiff,

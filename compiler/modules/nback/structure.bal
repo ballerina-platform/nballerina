@@ -172,7 +172,7 @@ final readonly & map<ListRepr> SPECIALIZED_LIST_REPRS = {
 };
 
 function listTypeToSpecializedListRepr(t:Context tc, t:SemType listType) returns ListRepr? {
-    return listAtomicTypeToSpecializedListRepr(t:listAtomicTypeRw(tc, listType));
+    return listAtomicTypeToSpecializedListRepr(t:listAtomicType(tc, listType));
 }
 
 function listAtomicTypeToSpecializedListRepr(t:ListAtomicType? atomic) returns ListRepr? {
@@ -182,7 +182,7 @@ function listAtomicTypeToSpecializedListRepr(t:ListAtomicType? atomic) returns L
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
     final int length = insn.operands.length();
     t:SemType listType = insn.result.semType;
-    var atomic = <t:ListAtomicType>t:listAtomicTypeRw(scaffold.typeContext(), listType);
+    var atomic = <t:ListAtomicType>t:listAtomicType(scaffold.typeContext(), listType);
     ListRepr repr = listAtomicTypeToSpecializedListRepr(atomic) ?: GENERIC_LIST_REPR;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(listType);
     llvm:PointerValue struct = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, repr.construct,
@@ -204,7 +204,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
         builder.store(llvm:constInt(LLVM_INT, length),
                       builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)], "inbounds"));
     }
-    builder.store(buildTaggedPtr(builder, builder.bitCast(struct, LLVM_TAGGED_PTR), TAG_LIST_RW|FLAG_EXACT), scaffold.address(insn.result));
+    builder.store(buildTaggedPtr(builder, builder.bitCast(struct, LLVM_TAGGED_PTR), TAG_LIST|FLAG_EXACT), scaffold.address(insn.result));
 }
 
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
@@ -365,7 +365,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     llvm:PointerValue m = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, mappingConstructFunction,
                                                                       [inherentType, llvm:constInt(LLVM_INT, insn.operands.length())]);
     t:Context tc = scaffold.typeContext();
-    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, mappingType);  
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(tc, mappingType);  
     foreach var [fieldName, operand] in mappingOrderFields(mat, insn.fieldNames, insn.operands) {
         _ = buildVoidRuntimeFunctionCall(builder, scaffold, mappingInitMemberFunction,
                                          [
@@ -441,7 +441,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
 // its inherent type, then for any field name k in K, if M has a field k, then the type that M requires for k must be
 // equal to t:mappingMemberType(cx, M, K).
 function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand, t:SemType resultType) returns boolean {
-    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
+    t:MappingAtomicType? mat = t:mappingAtomicType(tc, mappingType);
     if mat == () {
         return false;
     }
@@ -458,7 +458,7 @@ function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:Strin
 }
 
 function isListMemberTypeExact(t:Context tc, t:SemType listType, bir:IntOperand indexOperand, t:SemType resultType) returns boolean {
-    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, listType);
+    t:ListAtomicType? lat = t:listAtomicType(tc, listType);
     if lat == () {
         return false;
     }
@@ -520,7 +520,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
 // In this case, we cannot optimize based on the exactness of the mapping value, and so
 // we have to do the same was what we would do if the mapping value was inexact.
 function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, t:SemType keyType, t:SemType newMemberType) returns boolean {
-    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
+    t:MappingAtomicType? mat = t:mappingAtomicType(tc, mappingType);
     // JBUG == doesn't work
     if mat is () {
         // inherent type is atomic, so if mapping type isn't, they cannot be equal
@@ -535,7 +535,7 @@ function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, t:SemTyp
 }
 
 function isListSetAlwaysInexact(t:Context tc, t:SemType listType, t:SemType indexType, t:SemType newMemberType) returns boolean {
-    t:ListAtomicType? lat = t:listAtomicTypeRw(tc, listType);
+    t:ListAtomicType? lat = t:listAtomicType(tc, listType);
     // JBUG == doesn't work
     if lat is () || t:singleIntShape(indexType) != () {
         // inherent type is atomic, so if list type isn't, they cannot be equal
@@ -553,7 +553,7 @@ function isListSetAlwaysInexact(t:Context tc, t:SemType listType, t:SemType inde
 function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand) returns int? {
     string? k = t:singleStringShape(keyOperand.semType);
     if k is string {
-        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
+        t:MappingAtomicType? mat = t:mappingAtomicType(tc, mappingType);
         if mat != () && mat.rest == t:NEVER {
             return mat.names.indexOf(k);
         }

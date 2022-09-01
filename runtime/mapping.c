@@ -179,7 +179,7 @@ TaggedPtr _bal_mapping_construct(MappingDescPtr desc, int64_t capacity) {
     mp->desc = desc;
     initGenericArray(&(mp->gArray), capacity, MAP_FIELD_SHIFT);
     initTable(mp, capacity);
-    return ptrAddFlags(mp, ((uint64_t)TAG_MAPPING_RW << TAG_SHIFT)|EXACT_FLAG);
+    return ptrAddFlags(mp, ((uint64_t)TAG_MAPPING << TAG_SHIFT)|EXACT_FLAG);
 }
 
 READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key) {
@@ -260,7 +260,7 @@ PanicCode _bal_mapping_indexed_set(TaggedPtr mapping, int64_t i, TaggedPtr value
 }
 
 bool _bal_record_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
-    if ((getTag(p) & UT_MASK) != TAG_MAPPING_RW) {
+    if ((getTag(p) & UT_MASK) != TAG_MAPPING) {
         return false;
     }
     MappingPtr mp = taggedToPtr(p);
@@ -285,7 +285,7 @@ bool _bal_record_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
 }
 
 bool _bal_map_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
-    if ((getTag(p) & UT_MASK) != TAG_MAPPING_RW) {
+    if ((getTag(p) & UT_MASK) != TAG_MAPPING) {
         return false;
     }
     MappingPtr mp = taggedToPtr(p);

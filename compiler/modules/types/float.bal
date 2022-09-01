@@ -7,7 +7,7 @@ public type FloatSubtype readonly & record {|
 
 public function floatConst(float value) returns ComplexSemType {
     FloatSubtype st = { allowed: true, values: [value] };
-    return uniformSubtype(UT_FLOAT, st);
+    return basicSubtype(BT_FLOAT, st);
 }
 
 function floatSubtypeSingleValue(SubtypeData d) returns float? {
@@ -67,7 +67,7 @@ function createFloatSubtype(boolean allowed, float[] values) returns SubtypeData
     return res;
 }
 
-final UniformTypeOps floatOps = {
+final BasicTypeOps floatOps = {
     union: floatSubtypeUnion,
     intersect: floatSubtypeIntersect,
     diff: floatSubtypeDiff,

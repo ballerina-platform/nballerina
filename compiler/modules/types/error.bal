@@ -1,7 +1,7 @@
 // Implementation specific to basic type error.
 
 public function errorDetail(SemType detail) returns SemType {
-    SubtypeData sd = subtypeData(detail, UT_MAPPING_RO);
+    SubtypeData sd = subtypeData(detail, BT_MAPPING); // FIX_RO: type should be MAPPING_RO
     if sd is boolean {
         if sd {
             return ERROR;
@@ -12,20 +12,18 @@ public function errorDetail(SemType detail) returns SemType {
         }
     }
     else {
-        return uniformSubtype(UT_ERROR, sd);
+        return basicSubtype(BT_ERROR, sd);
     }
 }
 
 // distinctId must be >= 0
 public function errorDistinct(int distinctId) returns SemType {
     BddNode bdd = bddAtom(-distinctId - 1);
-    return uniformSubtype(UT_ERROR, bdd);
+    return basicSubtype(BT_ERROR, bdd);
 }
 
-// Similar to mappingSubtypeRoIsEmpty,
-// except that we use bddEveryPositive to ignore the distinct ids
 function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = bddFixReadOnly(<Bdd>t);
+    Bdd b = <Bdd>t;
     BddMemo? mm = cx.mappingMemo[b];
     BddMemo m;
     if mm == () {
@@ -47,7 +45,7 @@ function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return isEmpty;    
 }
 
-final UniformTypeOps errorOps = {
+final BasicTypeOps errorOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

@@ -84,7 +84,7 @@ static void printTaggedInner(FILE *fp, TaggedPtr p, int style, struct PrintStack
                 fputs(")", fp);
             }
             break;
-        case TAG_LIST_RW:
+        case TAG_LIST:
             if (stackContains(stackPtr, p)) {
                 fputs("...", fp);
             }
@@ -104,7 +104,7 @@ static void printTaggedInner(FILE *fp, TaggedPtr p, int style, struct PrintStack
                 fputs("]", fp);
             }
             break;
-        case TAG_MAPPING_RW:
+        case TAG_MAPPING:
             if (stackContains(stackPtr, p)) {
                 fputs("...", fp);
             }

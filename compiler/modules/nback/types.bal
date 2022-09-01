@@ -78,25 +78,25 @@ public type TypeUsage readonly & record {|
 |};
 
 type InitTypes readonly & record {|
-    llvm:StructType uniformSubtype;
-    llvm:PointerType uniformSubtypePtr;
+    llvm:StructType basicSubtype;
+    llvm:PointerType basicSubtypePtr;
     llvm:FunctionType subtypeContainsFunction;
     llvm:PointerType subtypeContainsFunctionPtr;
 |};
 
-// struct UniformSubtype { bool (*contains)(struct UniformSubtype *, TaggedPtr); }
-// struct UniformSubtype *p;
+// struct BasicSubtype { bool (*contains)(struct BasicSubtype *, TaggedPtr); }
+// struct BasicSubtype *p;
 // (p->contains)(p, taggedPtr);
-// struct FooSubtype { bool (*contains)(struct UniformSubtype *, TaggedPtr); int32_t bitSet; }
-// extern bool _bal_record_subtype_contains(struct UniformSubtype *, TaggedPtr);
+// struct FooSubtype { bool (*contains)(struct BasicSubtype *, TaggedPtr); int32_t bitSet; }
+// extern bool _bal_record_subtype_contains(struct BasicSubtype *, TaggedPtr);
 // struct FooSubtype subtype1 = { _bal_record_subtype_contains, 256 };
 function createInitTypes(llvm:Context cx) returns InitTypes {
-    llvm:StructType uniformSubtype = cx.structCreateNamed("UniformSubtype");
-    llvm:PointerType uniformSubtypePtr = llvm:pointerType(uniformSubtype);
-    llvm:FunctionType subtypeContainsFunction = llvm:functionType(LLVM_BOOLEAN, [uniformSubtypePtr, LLVM_TAGGED_PTR]);
+    llvm:StructType basicSubtype = cx.structCreateNamed("BasicSubtype");
+    llvm:PointerType basicSubtypePtr = llvm:pointerType(basicSubtype);
+    llvm:FunctionType subtypeContainsFunction = llvm:functionType(LLVM_BOOLEAN, [basicSubtypePtr, LLVM_TAGGED_PTR]);
     llvm:PointerType subtypeContainsFunctionPtr = llvm:pointerType(subtypeContainsFunction);
-    cx.structSetBody(uniformSubtype, [subtypeContainsFunctionPtr]);
-    return { uniformSubtype, uniformSubtypePtr, subtypeContainsFunction, subtypeContainsFunctionPtr };
+    cx.structSetBody(basicSubtype, [subtypeContainsFunctionPtr]);
+    return { basicSubtype, basicSubtypePtr, subtypeContainsFunction, subtypeContainsFunctionPtr };
 }
 
 function createLlListDescType(int nMemberTypes = 0) returns llvm:StructType {

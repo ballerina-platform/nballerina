@@ -13,7 +13,7 @@ public class FunctionDefinition {
    
     public function init(Env env) {
         self.atom = env.recFunctionAtom();
-        self.semType = uniformSubtype(UT_FUNCTION, bddAtom(self.atom));
+        self.semType = basicSubtype(BT_FUNCTION, bddAtom(self.atom));
     }
 
     public function getSemType(Env env) returns SemType {
@@ -107,7 +107,7 @@ function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) ret
     }
 }
 
-UniformTypeOps functionOps =  {  
+BasicTypeOps functionOps =  {  
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

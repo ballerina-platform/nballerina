@@ -52,7 +52,7 @@ function parseType(t:Context tc, Binding? b, json j, Path path) returns t:SemTyp
         Json => { return t:createJson(tc); }
         Any => { return t:ANY; }
         Never => { return t:NEVER; }
-        ReadOnly => { return t:READONLY; }
+        ReadOnly => { return t:createReadOnly(tc); }
         true => { return t:booleanConst(true); }
         false => { return t:booleanConst(false); }
         // Should be able to use match patterns here

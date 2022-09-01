@@ -2,7 +2,7 @@
 
 // Based on listMemberType
 public function listProj(Context cx, SemType t, SemType k) returns SemType {
-    if t is UniformTypeBitSet {
+    if t is BasicTypeBitSet {
         return (t & LIST) != 0 ? TOP : NEVER;
     }
     else {
@@ -10,8 +10,7 @@ public function listProj(Context cx, SemType t, SemType k) returns SemType {
         if keyData == false {
             return NEVER;
         }
-        return union(listProjBdd(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), (), ()),
-                     listProjBdd(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), (), ()));
+        return listProjBdd(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, BT_LIST), (), ());
     }
 }
 
