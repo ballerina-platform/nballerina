@@ -686,8 +686,8 @@ static READONLY inline CompareResult optDecimalCompare(TaggedPtr tp1, TaggedPtr 
 
 // Precondition is that they are comparable
 static READONLY inline CompareResult taggedPtrCompare(TaggedPtr tp1, TaggedPtr tp2) {
-    int tag1 = getTag(tp1);
-    int tag2 = getTag(tp2);
+    int tag1 = getTag(tp1) & UT_MASK;
+    int tag2 = getTag(tp2) & UT_MASK;
     if (tag1 != tag2) {
         // This can only happen if one is nil
         return COMPARE_UN;
