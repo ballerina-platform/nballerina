@@ -118,6 +118,7 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.listMemo[b];
     BddMemo m;
+    Bdd[]? originalKeys = ();
     if mm == () {
         m = { bdd: b };
         cx.listMemo.add(m);
@@ -125,18 +126,24 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     else {
         m = mm;
         boolean? res = m.isEmpty;
-        if res == () {
-            // we've got a loop
-            // XXX is this right???
-            return true;
-        }
-        else {
+        if res is boolean {
             return res;
         }
+        // we've got a loop
+        m.isEmpty = true;
+        originalKeys = cx.listMemo.keys();
     }
     boolean isEmpty = bddEvery(cx, b, (), (), listFormulaIsEmpty);
+    if originalKeys !is () && isEmpty != m.isEmpty {
+        // our guess (t is empty) is wrong we need to remove all the types we have proven to be empty base on it
+        foreach Bdd key in cx.listMemo.keys() {
+            if cx.listMemo.get(key).isEmpty is true && originalKeys.indexOf(key) is () {
+                _ = cx.listMemo.remove(key);
+            }
+        }
+    }
     m.isEmpty = isEmpty;
-    return isEmpty;    
+    return isEmpty;
 }
 
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
