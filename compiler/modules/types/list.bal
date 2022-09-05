@@ -114,36 +114,46 @@ public function tuple(Env env, SemType... members) returns SemType {
     return def.define(env, members);
 }
 
+// listMemo is P
+// memoStack is N
 function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.listMemo[b];
-    BddMemo m;
-    Bdd[]? originalKeys = ();
-    if mm == () {
-        m = { bdd: b };
-        cx.listMemo.add(m);
+    if mm !is () {
+        // if mm.isEmpty is () that means it is being computed
+        return mm.isEmpty is () ? true : <boolean>mm.isEmpty;
     }
     else {
-        m = mm;
-        boolean? res = m.isEmpty;
-        if res is boolean {
-            return res;
+        // this is completely new to us so put in in the computing stack and continue
+        BddMemo m = { bdd: b };
+        int initialStackSize = cx.memoStack.length();
+        cx.memoStack.push(m);
+        cx.listMemo.add(m);
+        boolean isEmpty = bddEvery(cx, b, (), (), listFormulaIsEmpty);
+        if !isEmpty {
+            // move t to P and clear the stack
+            // TODO: make the update universal
+            m.isEmpty = isEmpty;
         }
-        // we've got a loop
-        m.isEmpty = true;
-        originalKeys = cx.listMemo.keys();
-    }
-    boolean isEmpty = bddEvery(cx, b, (), (), listFormulaIsEmpty);
-    if originalKeys !is () && isEmpty != m.isEmpty {
-        // our guess (t is empty) is wrong we need to remove all the types we have proven to be empty base on it
-        foreach Bdd key in cx.listMemo.keys() {
-            if cx.listMemo.get(key).isEmpty is true && originalKeys.indexOf(key) is () {
-                _ = cx.listMemo.remove(key);
+        else {
+            // t is no longer being computed
+            // setting this to true (i.e isEmpty) causes the regex test to fail why?
+            _ = cx.listMemo.remove(b);
+            // Having or not having the fallowing don't break any thing: (however will give faster lookup) but is this
+            // correct if we need to do the above
+            foreach int i in initialStackSize ..< cx.memoStack.length() {
+                BddMemo each = cx.memoStack[i];
+                // for cases that are not empty it means they are not empty independent of type being computed. But is the correct for types being computed (i.e false)
+                // currently don't cause a problem (no test failures) to include false as well
+                if each.isEmpty is false {
+                    cx.listMemo.add(cx.memoStack[i]);
+                }
             }
+            // m.isEmpty = isEmpty;
         }
+        cx.memoStack.setLength(initialStackSize);
+        return isEmpty;
     }
-    m.isEmpty = isEmpty;
-    return isEmpty;
 }
 
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {

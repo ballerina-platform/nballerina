@@ -204,7 +204,12 @@ public function contextFromEnv(Env env) returns Context {
 // Each strand should create its own Context. 
 public class Context {
     public final Env env;
+    // NOTE: this corresponds to P (i.e what we know for sure)
     BddMemoTable listMemo = table [];
+    // TODO: rename this
+    BddMemo[] memoStack = [];
+
+
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
@@ -248,6 +253,16 @@ public class Context {
         else {
             return <CellAtomicType>atom.atomicType;
         }
+    }
+
+    function isInStack(Bdd b) returns boolean {
+        foreach BddMemo each in self.memoStack {
+            // TODO: see why === didn't work at all
+            if each.bdd == b {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
