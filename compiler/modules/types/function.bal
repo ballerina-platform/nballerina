@@ -31,15 +31,23 @@ function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     BddMemo? mm = cx.listMemo[b];
     BddMemo m;
     int initialStackSize = cx.memoStack.length();
-    if mm == () {
-        // this is completely new to us so put it in the computing stack and continue
-        m = { bdd: b };
+    if mm == () || mm.isEmpty == () {
+        // this is new to us so put it in the computing stack and continue
+        if mm == () {
+            m = { bdd: b, isEmpty: "computing" };
+            cx.listMemo.add(m);
+        }
+        else {
+            m = cx.listMemo.get(b);
+            m.isEmpty = "computing";
+        }
         cx.memoStack.push(m);
-        cx.listMemo.add(m);
+
+
     }
     else {
         m = mm;
-        boolean? res = m.isEmpty;
+        var res = m.isEmpty;
         if res is boolean {
             // This is a type is know for sure
             return res;

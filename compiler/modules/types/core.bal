@@ -163,7 +163,8 @@ public isolated class Env {
 
 public type BddMemo record {|
     readonly Bdd bdd;
-    boolean? isEmpty = ();
+    // isEmpty = () means removed from the cache
+    (boolean|"computing")? isEmpty = ();
 |};
 
 type BddMemoTable table<BddMemo> key(bdd);
@@ -256,7 +257,8 @@ public class Context {
 
 function reduceStackLength(Context cx, int newLength) {
     foreach int i in newLength ..< cx.memoStack.length() {
-        _ = cx.listMemo.remove(cx.memoStack[i].bdd);
+        BddMemo m = cx.listMemo.get(cx.memoStack[i].bdd);
+        m.isEmpty = ();
     }
     cx.memoStack.setLength(newLength);
 }
