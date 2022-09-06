@@ -114,13 +114,6 @@ public function tuple(Env env, SemType... members) returns SemType {
     return def.define(env, members);
 }
 
-//function reduceStackLength(Context cx, int newLength) {
-//    foreach int i in newLength ..< cx.memoStack.length() {
-//        _ = cx.listMemo.remove(cx.memoStack[i].b);
-//    }
-//}
-
-
 // listMemo is P
 // memoStack is N
 // maintain invariant that isEmpty is () iff it is on the memoStack
@@ -131,28 +124,38 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     BddMemo m;
     int initialStackSize = cx.memoStack.length();
     if mm == () {
-        if cx.isInStack(b) {
-            // this is a type we are computing(ie. type is in N). So we assume it is empty
-            return true;
-        }
         // this is completely new to us so put it in the computing stack and continue
         m = { bdd: b };
         cx.memoStack.push(m);
+        cx.listMemo.add(m);
     }
     else {
-        // Everything in listMemo is know for sure so can't be optional
         m = mm;
-        boolean res = <boolean>m.isEmpty;
-        return res;
+        boolean? res = m.isEmpty;
+        if res is boolean {
+            // This is a type is know for sure
+            return res;
+        }
+        // this is a type we are computing(ie. type is in N). So we assume it is empty
+        return true;
     }
     boolean isEmpty = bddEvery(cx, b, (), (), listFormulaIsEmpty);
     if !isEmpty || initialStackSize == 0 {
         // if initialStackSize == 0 we should not have any pending types
         // is isEmpty is false (i.e type is non-empty) it safe to move it to P (only something that is empty can change to non-empty)
-        cx.listMemo.add({ bdd:b, isEmpty });
-        cx.memoStack.setLength(initialStackSize);
+        // in both cases type is no longer pending so we move it from N to P and clear the stack (up to level when we pushed t)
+        m.isEmpty = isEmpty;
+        reduceStackLength(cx, initialStackSize);
     }
     return isEmpty;    
+}
+
+function reduceStackLength(Context cx, int newLength) {
+    foreach int i in newLength ..< cx.memoStack.length() {
+        // can there be cases where we don't have the key
+        _ = cx.listMemo.remove(cx.memoStack[i].bdd);
+    }
+    cx.memoStack.setLength(newLength);
 }
 
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
