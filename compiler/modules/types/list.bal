@@ -150,14 +150,6 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return isEmpty;    
 }
 
-function reduceStackLength(Context cx, int newLength) {
-    foreach int i in newLength ..< cx.memoStack.length() {
-        // can there be cases where we don't have the key
-        _ = cx.listMemo.remove(cx.memoStack[i].bdd);
-    }
-    cx.memoStack.setLength(newLength);
-}
-
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
     FixedLengthArray members;
     SemType rest;

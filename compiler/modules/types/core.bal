@@ -204,14 +204,12 @@ public function contextFromEnv(Env env) returns Context {
 // Each strand should create its own Context. 
 public class Context {
     public final Env env;
-    // NOTE: this corresponds to P (i.e what we know for sure)
-    BddMemoTable listMemo = table [];
-    // TODO: rename this
+
     BddMemo[] memoStack = [];
-
-
+    BddMemoTable listMemo = table [];
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
+
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
     final table<FillerMemo> key(semType) fillerMemo = table [];
@@ -254,16 +252,13 @@ public class Context {
             return <CellAtomicType>atom.atomicType;
         }
     }
+}
 
-    function isInStack(Bdd b) returns boolean {
-        foreach BddMemo each in self.memoStack {
-            // TODO: see why === didn't work at all
-            if each.bdd == b {
-                return true;
-            }
-        }
-        return false;
+function reduceStackLength(Context cx, int newLength) {
+    foreach int i in newLength ..< cx.memoStack.length() {
+        _ = cx.listMemo.remove(cx.memoStack[i].bdd);
     }
+    cx.memoStack.setLength(newLength);
 }
 
 type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype|XmlSubtype|BddNode;

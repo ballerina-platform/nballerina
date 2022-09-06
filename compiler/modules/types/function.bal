@@ -1,6 +1,5 @@
 // Implementation specific to basic type function.
 
-import ballerina/io;
 
 // Function subtype is [args, ret]
 // Represents args as tuple type
@@ -29,28 +28,35 @@ public class FunctionDefinition {
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
-    BddMemo? mm = cx.functionMemo[b];
+    BddMemo? mm = cx.listMemo[b];
     BddMemo m;
+    int initialStackSize = cx.memoStack.length();
     if mm == () {
+        // this is completely new to us so put it in the computing stack and continue
         m = { bdd: b };
-        cx.functionMemo.add(m);
+        cx.memoStack.push(m);
+        cx.listMemo.add(m);
     }
     else {
         m = mm;
         boolean? res = m.isEmpty;
-        if res == () {
-            // we've got a loop
-            io:println("got a function loop");
-            // XXX is this right???
-            return true;
-        }
-        else {
+        if res is boolean {
+            // This is a type is know for sure
             return res;
         }
+        // this is a type we are computing(ie. type is in N). So we assume it is empty
+        return true;
     }
     boolean isEmpty = bddEvery(cx, b, (), (), functionFormulaIsEmpty);
-    m.isEmpty = isEmpty;
+    if !isEmpty || initialStackSize == 0 {
+        // if initialStackSize == 0 we should not have any pending types
+        // is isEmpty is false (i.e type is non-empty) it safe to move it to P (only something that is empty can change to non-empty)
+        // in both cases type is no longer pending so we move it from N to P and clear the stack (up to level when we pushed t)
+        m.isEmpty = isEmpty;
+        reduceStackLength(cx, initialStackSize);
+    }
     return isEmpty;    
+
 }
 
 function functionFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
