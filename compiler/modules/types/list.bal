@@ -115,12 +115,15 @@ public function tuple(Env env, SemType... members) returns SemType {
 }
 
 function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
-    BddMemo? mm = cx.listMemo[b];
+    return memoSubtypeIsEmpty(cx, cx.listMemo, listFormulaIsEmpty, <Bdd>t);
+}
+
+function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddPredicate predicate, Bdd b) returns boolean {
+    BddMemo? mm = memoTable[b];
     BddMemo m;
     if mm == () {
         m = { bdd: b };
-        cx.listMemo.add(m);
+        memoTable.add(m);
     }
     else {
         m = mm;
@@ -134,9 +137,9 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
             return res;
         }
     }
-    boolean isEmpty = bddEvery(cx, b, (), (), listFormulaIsEmpty);
+    boolean isEmpty = bddEvery(cx, b, (), (), predicate);
     m.isEmpty = isEmpty;
-    return isEmpty;    
+    return isEmpty;
 }
 
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
