@@ -13,10 +13,10 @@ function and(Atom atom, Conjunction? next) returns Conjunction {
     return { atom, next };
 }
 
-type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;
+type BddIsEmptyPredicate function(Context cx, Bdd b) returns boolean;
 
 // Memoization logic
-function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddPredicate predicate, Bdd b) returns boolean {
+function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate predicate, Bdd b) returns boolean {
     BddMemo? mm = memoTable[b];
     if mm != () {
         boolean? res = mm.isEmpty;
@@ -29,10 +29,12 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddPredicate pre
     }
     BddMemo m = { bdd: b };
     memoTable.add(m);
-    boolean isEmpty = bddEvery(cx, b, (), (), predicate);
+    boolean isEmpty = predicate(cx, b);
     m.isEmpty = isEmpty;
     return isEmpty;
 }
+
+type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;
 
 // A Bdd represents a disjunction of conjunctions of atoms, where each atom is either positive or
 // negative (negated). Each path from the root to a leaf that is true represents one of the conjunctions

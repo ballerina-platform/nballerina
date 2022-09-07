@@ -115,7 +115,11 @@ public function tuple(Env env, SemType... members) returns SemType {
 }
 
 function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return memoSubtypeIsEmpty(cx, cx.listMemo, listFormulaIsEmpty, <Bdd>t);
+    return memoSubtypeIsEmpty(cx, cx.listMemo, listBddIsEmpty, <Bdd>t);
+}
+
+function listBddIsEmpty(Context cx, Bdd b) returns boolean {
+    return bddEvery(cx, b, (), (), listFormulaIsEmpty);
 }
 
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {

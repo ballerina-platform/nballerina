@@ -23,26 +23,11 @@ public function errorDistinct(int distinctId) returns SemType {
 }
 
 function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
-    BddMemo? mm = cx.mappingMemo[b];
-    BddMemo m;
-    if mm == () {
-        m = { bdd: b };
-        cx.mappingMemo.add(m);
-    }
-    else {
-        m = mm;
-        boolean? res = m.isEmpty;
-        if res == () {
-            return true;
-        }
-        else {
-            return res;
-        }
-    }
-    boolean isEmpty = bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty);
-    m.isEmpty = isEmpty;
-    return isEmpty;    
+    return memoSubtypeIsEmpty(cx, cx.mappingMemo, errorBddIsEmpty, <Bdd>t);
+}
+
+function errorBddIsEmpty(Context cx, Bdd b) returns boolean {
+    return bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty);
 }
 
 final BasicTypeOps errorOps = {
@@ -52,5 +37,3 @@ final BasicTypeOps errorOps = {
     complement: bddSubtypeComplement,
     isEmpty: errorSubtypeIsEmpty
 };
-
-

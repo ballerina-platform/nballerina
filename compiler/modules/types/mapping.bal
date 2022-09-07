@@ -74,7 +74,11 @@ isolated function fieldName(Field f) returns string {
 }
 
 function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return memoSubtypeIsEmpty(cx, cx.mappingMemo, mappingFormulaIsEmpty, <Bdd>t);
+    return memoSubtypeIsEmpty(cx, cx.mappingMemo, mappingBddIsEmpty, <Bdd>t);
+}
+
+function mappingBddIsEmpty(Context cx, Bdd b) returns boolean {
+    return bddEvery(cx, b, (), (), mappingFormulaIsEmpty);
 }
 
 // This works the same as the tuple case, except that instead of
