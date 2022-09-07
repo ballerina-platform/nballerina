@@ -1,7 +1,5 @@
 // Implementation specific to basic type function.
 
-import ballerina/io;
-
 // Function subtype is [args, ret]
 // Represents args as tuple type
 public type FunctionAtomicType readonly & SemType[2];
@@ -28,29 +26,7 @@ public class FunctionDefinition {
 }
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
-    BddMemo? mm = cx.functionMemo[b];
-    BddMemo m;
-    if mm == () {
-        m = { bdd: b };
-        cx.functionMemo.add(m);
-    }
-    else {
-        m = mm;
-        boolean? res = m.isEmpty;
-        if res == () {
-            // we've got a loop
-            io:println("got a function loop");
-            // XXX is this right???
-            return true;
-        }
-        else {
-            return res;
-        }
-    }
-    boolean isEmpty = bddEvery(cx, b, (), (), functionFormulaIsEmpty);
-    m.isEmpty = isEmpty;
-    return isEmpty;    
+    return memoSubtypeIsEmpty(cx, cx.functionMemo, functionFormulaIsEmpty, <Bdd>t);
 }
 
 function functionFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {

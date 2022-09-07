@@ -74,28 +74,7 @@ isolated function fieldName(Field f) returns string {
 }
 
 function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
-    BddMemo? mm = cx.mappingMemo[b];
-    BddMemo m;
-    if mm == () {
-        m = { bdd: b };
-        cx.mappingMemo.add(m);
-    }
-    else {
-        m = mm;
-        boolean? res = m.isEmpty;
-        if res == () {
-            // we've got a loop
-            // XXX is this right???
-            return true;
-        }
-        else {
-            return res;
-        }
-    }
-    boolean isEmpty = bddEvery(cx, b, (), (), mappingFormulaIsEmpty);
-    m.isEmpty = isEmpty;
-    return isEmpty;    
+    return memoSubtypeIsEmpty(cx, cx.mappingMemo, mappingFormulaIsEmpty, <Bdd>t);
 }
 
 // This works the same as the tuple case, except that instead of

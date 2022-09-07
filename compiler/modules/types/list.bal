@@ -118,24 +118,6 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return memoSubtypeIsEmpty(cx, cx.listMemo, listFormulaIsEmpty, <Bdd>t);
 }
 
-function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddPredicate predicate, Bdd b) returns boolean {
-    BddMemo? mm = memoTable[b];
-    if mm != () {
-        boolean? res = mm.isEmpty;
-        if res is boolean {
-            return res;
-        }
-        // we've got a loop
-        // XXX is this right???
-        return true;
-    }
-    BddMemo m = { bdd: b };
-    memoTable.add(m);
-    boolean isEmpty = bddEvery(cx, b, (), (), predicate);
-    m.isEmpty = isEmpty;
-    return isEmpty;
-}
-
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
     FixedLengthArray members;
     SemType rest;

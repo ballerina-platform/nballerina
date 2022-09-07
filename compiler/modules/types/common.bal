@@ -15,6 +15,25 @@ function and(Atom atom, Conjunction? next) returns Conjunction {
 
 type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;
 
+// Memoization logic
+function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddPredicate predicate, Bdd b) returns boolean {
+    BddMemo? mm = memoTable[b];
+    if mm != () {
+        boolean? res = mm.isEmpty;
+        if res is boolean {
+            return res;
+        }
+        // we've got a loop
+        // XXX is this right???
+        return true;
+    }
+    BddMemo m = { bdd: b };
+    memoTable.add(m);
+    boolean isEmpty = bddEvery(cx, b, (), (), predicate);
+    m.isEmpty = isEmpty;
+    return isEmpty;
+}
+
 // A Bdd represents a disjunction of conjunctions of atoms, where each atom is either positive or
 // negative (negated). Each path from the root to a leaf that is true represents one of the conjunctions
 // We walk the tree, accumulating the positive and negative conjunctions for a path as we go.
