@@ -16,20 +16,72 @@ function and(Atom atom, Conjunction? next) returns Conjunction {
 type BddIsEmptyPredicate function(Context cx, Bdd b) returns boolean;
 
 // Memoization logic
+// Castagna's paper does not deal with this fully.
+// Although he calls it memoization, it is not, strictly speaking, just memoization,
+// since it is not just an optimization, but required for correct handling of
+// recursive types.
+// The handling of recursive types depends on our types being defined inductively,
+// rather than coinductively. This means that each shape that is a member of the
+// set denoted by the type is finite.
+// There is a tricky problem here with memoizing results that rely on assumptions
+// that subsequently turn out to be false.
+// Memoization/caching is discussed in section 7.1.2 of the Frisch thesis.
+// Frisch's approach is to undo memoizations that turn out to be wrong.
+// I did not succeed in fully understanding his approach.
+// Here we adopt a different approach to the problem:
+// we avoid memoizing when the memoization might turn out to be wrong.
 function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns boolean {
     BddMemo? mm = memoTable[b];
+    BddMemo m;
     if mm != () {
         MemoEmpty res = mm.empty;
         if res is boolean {
             return res;
         }
-        // we've got a loop
-        // XXX is this right???
-        return true;
+        else if res != () {
+            // We've got a loop.
+            // If we didn't use "memoization" here, then we would get an infinite recursion.
+            // If we can only find shapes in the type by going this loop,
+            // then the type contains no finite shapes; this would imply the type is empty,
+            // since our types are defined inductively.
+            // So we provisionally assume this type is empty.
+            // If on this assumption, we do not find anything that shows the type is non-empty,
+            // then our type contains no finite shapes and so is in fact empty,
+            // We need to keep track of when we are relying on this assumption
+            // in order to avoid incorrect memoization.
+            if res == "active" {
+                mm.empty = "provisional";
+                // maintain invariant
+                cx.provisionalEmptyCount += 1;
+            }
+      
+            return true;
+        }
+        // nil case is same as not having a memo, so fall through
+        m = mm;
     }
-    BddMemo m = { bdd: b };
-    memoTable.add(m);
+    else {
+        m = { bdd: b };
+        memoTable.add(m);
+    }
+    m.empty = "active";
     boolean isEmpty = isEmptyPredicate(cx, b);
+    if cx.provisionalEmptyCount > 0 {
+        if m.empty == "provisional" {
+            // m.empty will below be set to boolean or ()
+            // so this maintains the invariant
+            cx.provisionalEmptyCount -= 1;
+        }
+        if isEmpty && cx.provisionalEmptyCount > 0 {
+            // Not safe to memoize here,
+            // because the emptiness computation relied on an assumption
+            // that may turn out to be false.
+            // Note that it is only unsafe to memoize in the isEmpty case
+            // because we are assuming that something is empty.
+            m.empty = ();
+            return isEmpty;
+        }
+    }
     m.empty = isEmpty;
     return isEmpty;
 }
