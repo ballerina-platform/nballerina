@@ -16,10 +16,10 @@ function and(Atom atom, Conjunction? next) returns Conjunction {
 type BddIsEmptyPredicate function(Context cx, Bdd b) returns boolean;
 
 // Memoization logic
-function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate predicate, Bdd b) returns boolean {
+function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns boolean {
     BddMemo? mm = memoTable[b];
     if mm != () {
-        boolean? res = mm.isEmpty;
+        MemoEmpty res = mm.empty;
         if res is boolean {
             return res;
         }
@@ -29,8 +29,8 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     }
     BddMemo m = { bdd: b };
     memoTable.add(m);
-    boolean isEmpty = predicate(cx, b);
-    m.isEmpty = isEmpty;
+    boolean isEmpty = isEmptyPredicate(cx, b);
+    m.empty = isEmpty;
     return isEmpty;
 }
 

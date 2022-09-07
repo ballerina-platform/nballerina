@@ -161,9 +161,11 @@ public isolated class Env {
     }
 }
 
-public type BddMemo record {|
+type MemoEmpty boolean?;
+
+type BddMemo record {|
     readonly Bdd bdd;
-    boolean? isEmpty = ();
+    MemoEmpty empty = ();
 |};
 
 type BddMemoTable table<BddMemo> key(bdd);
