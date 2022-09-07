@@ -59,7 +59,8 @@ public function main(string[] filenames, *Options opts) returns error? {
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            LlvmEmitter emitter = new(check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            CompileError? err = compileBalFile({ filename }, basename, emitter);
             if err is err:Internal {
                 panic error(d:toString(err.detail()), err);
             }

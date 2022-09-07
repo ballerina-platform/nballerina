@@ -188,7 +188,7 @@ function errorLine(string path) returns int|io:Error? {
 // This outputs nothing
 function testCompileFile(string filename) returns CompileError? {
     var [basename, _] = basenameExtension(filename);
-    return compileBalFile(filename, basename, (), {}, {});
+    return compileBalFile({ filename }, basename, new LlvmEmitter());
 }
 
 function testSubtypes(front:SourcePart[] sources, string[] expected) returns error? {

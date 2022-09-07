@@ -18,33 +18,56 @@ type Job record {|
     ProcessedImport|JOB_IN_PROGRESS? result;
 |};
 
-class CompileContext {
+type Emitter object {
+   // Build and write the output to a file.
+   function emitModule(bir:Module birMod) returns CompileError?;
+   // Called after all calls to emitModule.
+   function finalize(t:Env env, map<bir:FunctionSignature> potentialEntryFuncs) returns CompileError?;
+};
+
+class LlvmEmitter {
+    *Emitter;
     private final nback:Options nbackOptions;
     private final string? outputBasename;
+    final OutputOptions outputOptions;
+
     private final nback:ProgramModule[] programModules = [];
 
-
-    final t:Env env = new;
-    final string basename;
-    final OutputOptions outputOptions;
-    
-    final table<Job> key(id) jobs = table [];
-
-    function init(string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) {
-        self.basename = basename;
+    function init(string? outputBasename = (), nback:Options nbackOptions = {}, OutputOptions outOptions = {}) {
         self.outputBasename = outputBasename;
         self.outputOptions = outOptions;
         self.nbackOptions = nbackOptions;
     }
 
-    function buildModule(bir:ModuleId id, bir:Module birMod) returns LlvmModule|CompileError {
+    function emitModule(bir:Module birMod) returns CompileError? {
         var [llMod, typeUsage] = check nback:buildModule(birMod, self.nbackOptions);
+        bir:ModuleId id = birMod.getId();
+        string? outFilename = self.outputFilename(id.names.slice(1));
+        if outFilename != () {
+            check outputModule(llMod, outFilename, self.outputOptions);
+        }
         self.programModules.push({ id, typeUsage });
-        return llMod;
     }
 
-    function buildInitModule(map<bir:FunctionSignature> publicFuncs) returns LlvmModule|CompileError {
-        return nback:buildInitModule(self.env, self.programModules.reverse(), publicFuncs);
+    function finalize(t:Env env, map<bir:FunctionSignature> potentialEntryFuncs) returns CompileError? {
+        LlvmModule initMod = check nback:buildInitModule(env, self.programModules.reverse(), potentialEntryFuncs);
+        string? initOutFilename = self.outputFilename(["_init"]);
+        if initOutFilename != () {
+            check outputModule(initMod, initOutFilename, self.outputOptions);
+        }
+    }
+
+    private function outputFilename(string[] names) returns string? => outputFilename(self.outputBasename, names, ".ll");
+}
+
+class CompileContext {
+    final t:Env env = new;
+    final string basename;
+
+    final table<Job> key(id) jobs = table [];
+
+    function init(string basename) {
+        self.basename = basename;
     }
 
     function job(bir:ModuleId id) returns Job {
@@ -58,44 +81,38 @@ class CompileContext {
             return j;
         }
     }
+}
 
-    function outputFilename(string suffix = "") returns string? {
-        string? basename = self.outputBasename;
-        if basename == () {
-            return ();
-        }
-        else {
-            return basename + suffix + OUTPUT_EXTENSION;
-        }
+function outputFilename(string? outputBasename, string[] names, string ext) returns string? {
+    if outputBasename == () {
+        return ();
     }
+    return ".".join(outputBasename, ...names) + ext;
 }
 
 // basename is filename without extension
-function compileBalFile(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
-    CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions);
-    front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
-    check mod.validMain();
-    check generateInitModule(cx, mod);
+function compileBalFile(front:SourcePart entrySrc, string basename, Emitter emitter) returns CompileError? {
+    CompileContext cx = new(basename);
+    front:ResolvedModule entryMod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [entrySrc], emitter);
+    check entryMod.validMain();
+    check emitter.finalize(cx.env, filterFuncs(entryMod.getExports()));
 }
 
-function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename) returns front:ResolvedModule|CompileError {
+function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, Emitter emitter) returns front:ResolvedModule|CompileError {
     front:ScannedModule scanned = check front:scanModule(sourceParts, id);
     // Fallowing doesn't properly pass the error back to the calling function if we get an error the import
     // ResolvedImport[] resolvedImports = from var mod in scanned.getImports() select check resolveImport(cx, mod);
     ResolvedImport[] resolvedImports = [];
     foreach var mod in scanned.getImports() {
-        ResolvedImport ri = check resolveImport(cx, mod);
+        ResolvedImport ri = check resolveImport(cx, mod, emitter);
         resolvedImports.push(ri);
     }
     front:ResolvedModule mod = check front:resolveModule(scanned, cx.env, resolvedImports);
-    LlvmModule llMod = check cx.buildModule(id, mod);
-    if outFilename != () {
-        check outputModule(llMod, outFilename, cx.outputOptions);
-    }
+    check emitter.emitModule(mod);
     return mod;
 }
 
-function resolveImport(CompileContext cx, bir:ModuleId id) returns CompileError|ResolvedImport {
+function resolveImport(CompileContext cx, bir:ModuleId id, Emitter emitter) returns CompileError|ResolvedImport {
     if id == DEFAULT_ROOT_MODULE_ID {
         // SUBSET fixed root module name
         return IMPORT_CYCLE_ERROR;
@@ -115,17 +132,17 @@ function resolveImport(CompileContext cx, bir:ModuleId id) returns CompileError|
         }
     }
     job.result = JOB_IN_PROGRESS;
-    var processed = check processImport(cx, id);
+    var processed = check processImport(cx, id, emitter);
     job.result = processed;
     return processed;
 }
 
-function processImport(CompileContext cx, bir:ModuleId id) returns CompileError|ProcessedImport {
+function processImport(CompileContext cx, bir:ModuleId id, Emitter emitter) returns CompileError|ProcessedImport {
     var parts = check subModuleSourceParts(cx.basename, id);
     if parts.length() == 0 {
         return "no module parts found";
     }
-    front:ResolvedModule mod = check processModule(cx, id, parts, cx.outputFilename("." + subModuleSuffix(id)));
+    front:ResolvedModule mod = check processModule(cx, id, parts, emitter);
     return mod.getExports();
 }
 
@@ -149,14 +166,6 @@ function subModuleSourceParts(string basename, bir:ModuleId id) returns front:So
 
 function subModuleSuffix(bir:ModuleId id) returns string {
     return ".".'join(...id.names.slice(1));
-}
-
-function generateInitModule(CompileContext cx, front:ResolvedModule entryMod) returns CompileError? {
-    LlvmModule initMod = check cx.buildInitModule(filterFuncs(entryMod.getExports()));
-    string? initOutFilename = cx.outputFilename("._init");
-    if initOutFilename != () {
-        check outputModule(initMod, initOutFilename, cx.outputOptions);
-    }
 }
 
 function filterFuncs(front:ModuleExports defns) returns map<bir:FunctionSignature> {
