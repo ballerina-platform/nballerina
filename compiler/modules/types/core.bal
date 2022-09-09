@@ -162,7 +162,7 @@ public isolated class Env {
 }
 
 // See memoSubtypeIsEmpty for what these mean.
-type MemoEmpty boolean|"active"|"provisional"|();
+type MemoEmpty boolean|"provisional"|();
 
 type BddMemo record {|
     readonly Bdd bdd;
@@ -211,9 +211,9 @@ public class Context {
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
 
-    // Equal to number of BddMemo entries in above tables
+    // Contains all BddMemo entries in above table
     // with empty == "provisional".
-    int provisionalEmptyCount = 0;
+    BddMemo[] memoStack = [];
 
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
