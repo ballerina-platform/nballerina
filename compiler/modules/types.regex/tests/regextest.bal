@@ -31,8 +31,17 @@ function testRegexInclusion(f:SubtypeTestOp op, string lhs, string rhs) {
     test:assertEquals(typeRelation(lhs, rhs), op);
 }
 
+@test:Config{
+    dataProvider: readGeneratedTests,
+    groups: ["longRunning"] 
+}
+function testRegexGenerated(f:SubtypeTestOp op, string lhs, string rhs) {
+    test:assertEquals(typeRelation(lhs, rhs), op);
+}
+
 function readRegexStringTests() returns map<TestCase>|error => readTestCases("modules/types.regex/tests/data/regexStringTests.json");
 function readInclusionTests() returns map<TestCase>|error => readTestCases("modules/types.regex/tests/data/regexInclusionTests.json");
+function readGeneratedTests() returns map<TestCase>|error => readTestCases("modules/types.regex/tests/data/regexGeneratedTests.json");
 
 function readTestCases(string filePath) returns map<TestCase>|error {
     map<TestCase> tests = {};
