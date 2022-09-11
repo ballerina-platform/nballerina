@@ -21,7 +21,7 @@ function testRegexString(f:SubtypeTestOp op, string str, string regex) {
         [false, true] => { result = ">"; }
         _ => { result = "<>"; }
     }
-    test:assertEquals(op, result);
+    test:assertEquals(result, op);
 }
 
 @test:Config{
