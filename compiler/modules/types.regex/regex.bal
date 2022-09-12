@@ -137,6 +137,9 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
     if index >= end {
         return "end";
     }
+    if regex[index] is ")"|"*"|"|" {
+        panic error("unexpected start position " + index.toString());
+    }
     var [lhs, lhsWrapped] = readPattern(regex, index, end);
     int endIndex = lhsWrapped ? (lhs.endIndex + 2) : (lhs.endIndex + 1);
     if end > endIndex && endIndex < regex.length() {
@@ -158,7 +161,7 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
 function readPattern(string regex, int index, int end) returns [PatternRange, boolean] {
     if regex[index] != "(" {
         int endIndex = index;
-        while endIndex < end && regex[endIndex] !is "("|"|"|"*" {
+        while endIndex < end && regex[endIndex] !is "("|"|"|"*"|")" {
             endIndex += 1;
         }
         if endIndex < end && regex[endIndex] == "*" {
