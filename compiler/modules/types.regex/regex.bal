@@ -2,9 +2,10 @@ import wso2/nballerina.types as t;
 
 type StringAsList ()|[string:Char, StringAsList];
 
-type RegexPattern Concat|Star|Or;
+type RegexPattern Concat|End|Star|Or;
 
 type Concat "concat";
+type End "end";
 
 type Star record {|
     PatternRange range;
@@ -66,26 +67,24 @@ function stringListToSemType(t:Env env, StringAsList stringList) returns t:SemTy
 }
 
 public function regexToSemType(t:Env env, string regex) returns t:SemType {
-    return regexToSemTypeInner(env, regex, 0, regex.length(), t:NIL);
+    return regexToSemTypeInner(env, regex, 0, regex.length() - 1, t:NIL);
 }
 
 function regexToSemTypeInner(t:Env env, string regex, int index, int end, t:SemType restTy) returns t:SemType {
-    if index == end {
+    RegexPattern pattern = nextPattern(regex, index, end + 1);
+    if pattern is Star {
+        return starToSemType(env, regex, pattern, end, restTy);
+    }
+    else if pattern is Or {
+        return orToSemType(env, regex, pattern, end, restTy);
+    }
+    else if pattern is End {
         return restTy;
     }
     else {
-        RegexPattern pattern = nextPattern(regex, index, end);
-        if pattern is Star {
-            return starToSemType(env, regex, pattern, end, restTy);
-        }
-        else if pattern is Or {
-            return orToSemType(env, regex, pattern, end, restTy);
-        }
-        else {
-            string:Char char = regex[index];
-            t:ListDefinition defn = new;
-            return defineReadonlyListType(defn, env, [t:stringConst(char), regexToSemTypeInner(env, regex, index + 1, end, restTy)]);
-        }
+        string:Char char = regex[index];
+        t:ListDefinition defn = new;
+        return defineReadonlyListType(defn, env, [t:stringConst(char), regexToSemTypeInner(env, regex, index + 1, end, restTy)]);
     }
 }
 
@@ -100,16 +99,18 @@ function starToSemType(t:Env env, string regex, Star pattern, int end, t:SemType
 
 function orToSemType(t:Env env, string regex, Or pattern, int end, t:SemType restTy) returns t:SemType {
     t:SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, end, restTy);
-    t:SemType lhs = regexToSemTypeInner(env, regex, pattern.lhs.startIndex, pattern.lhs.endIndex + 1, rest);
-    t:SemType rhs = regexToSemTypeInner(env, regex, pattern.rhs.startIndex, pattern.rhs.endIndex + 1, rest);
+    t:SemType lhs = regexToSemTypeInner(env, regex, pattern.lhs.startIndex, pattern.lhs.endIndex, rest);
+    t:SemType rhs = regexToSemTypeInner(env, regex, pattern.rhs.startIndex, pattern.rhs.endIndex, rest);
     return t:union(lhs, rhs);
 }
 
 function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, int endIndex, t:SemType recTy, t:ListDefinition recListDefn) returns t:SemType{
     t:ListDefinition defn = (index == startIndex) ? recListDefn : new;
-    RegexPattern pattern = nextPattern(regex, index, endIndex);
-
-    if (pattern is Star && pattern.range.startIndex == startIndex && pattern.range.endIndex == endIndex ) || pattern is Concat {
+    RegexPattern pattern = nextPattern(regex, index, endIndex + 1);
+    if pattern is End {
+        panic error("unexpected");
+    }
+    if (pattern is Star && pattern.range.startIndex == startIndex && pattern.range.endIndex == endIndex) || pattern is Concat {
         string:Char char = regex[index];
         if index == endIndex {
             // last character in the pattern
@@ -121,7 +122,7 @@ function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, 
         }
     }
     else {
-        t:SemType unionType = pattern is Star ? starToSemType(env, regex, pattern, endIndex + 1, recTy) : orToSemType(env, regex, pattern, endIndex + 1, recTy);
+        t:SemType unionType = pattern is Star ? starToSemType(env, regex, pattern, endIndex, recTy) : orToSemType(env, regex, pattern, endIndex, recTy);
         if index == startIndex {
             t:Context cx = t:contextFromEnv(env);
             t:ListMemberTypes memberTypes = t:listAllMemberTypes(cx, unionType); // unionType is [T1, T2] | [T3, T4] == [S1, S2]
@@ -133,16 +134,24 @@ function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, 
 }
 
 function nextPattern(string regex, int index, int end) returns RegexPattern {
+    if index >= end {
+        return "end";
+    }
+    if regex[index] is ")"|"*"|"|" {
+        panic error("unexpected start position " + index.toString());
+    }
     var [lhs, lhsWrapped] = readPattern(regex, index, end);
     int endIndex = lhsWrapped ? (lhs.endIndex + 2) : (lhs.endIndex + 1);
-    if end > endIndex {
+    if end > endIndex && endIndex < regex.length() {
         string op = regex[endIndex];
         if op == "*" {
-            return { range: lhs, nextIndex: endIndex + 1 };
+            int nextIndex = skipTillEnd(regex, endIndex + 1);
+            return { range: lhs, nextIndex };
         }
         else if op == "|" {
             var [rhs, rhsWrapped] = readPattern(regex, endIndex + 1, end);
             int nextIndex = rhsWrapped ? (rhs.endIndex + 2) : (rhs.endIndex + 1);
+            nextIndex = skipTillEnd(regex, nextIndex);
             return { lhs, rhs, nextIndex };
         }
     }
@@ -152,7 +161,7 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
 function readPattern(string regex, int index, int end) returns [PatternRange, boolean] {
     if regex[index] != "(" {
         int endIndex = index;
-        while endIndex < (end) && regex[endIndex] !is "("|"|"|"*" {
+        while endIndex < end && regex[endIndex] !is "("|"|"|"*"|")" {
             endIndex += 1;
         }
         if endIndex < end && regex[endIndex] == "*" {
@@ -174,4 +183,12 @@ function readPattern(string regex, int index, int end) returns [PatternRange, bo
         }
         return [{ startIndex: index + 1, endIndex: endIndex - 1 }, true];
     }
+}
+
+function skipTillEnd(string regex, int currentIndex) returns int {
+    int nextIndex = currentIndex;
+    while nextIndex < regex.length() && regex[nextIndex] is ")"|"|"|"*" {
+        nextIndex += 1;
+    }
+    return nextIndex;
 }

@@ -7,5 +7,16 @@
     ["<", "a*b*", "(a|b)*"],
     ["=", "(ab)*a", "a(ba)*"],
 
-    ["<>", "(ab)*", "a*b*"]
+    ["<>", "(ab)*", "a*b*"],
+
+    ["<", "(A)*F", "(AB*)*F"],
+    ["<", "(A)*F", "(A(B)*)*F"],
+    ["=", "(AB*)*F", "(A(B)*)*F"],
+
+    ["<", "(AC)*F", "(AB*C)*F"],
+    ["<", "(AC)*F", "(A(B)*C)*F"],
+    ["=", "(AB*C)*F", "(A(B)*C)*F"],
+
+    ["<", "(JRBB(U(yeNTW)*W)*mlJQv)*xIZVP", "(JRBB(U(yeNTW(CoePqmjQbZ)*)*W)*mlJQv)*xIZVP"],
+    ["<", "(JRBB(U(yeNTW(CoePqmjQbZ)*)*W)*mlJQv)*xIZVP", "(JRBB(U(yeNTW(C(KCQCY)*oePqmjQbZ)*)*W)*mlJQv)*xIZVP"]
 ]
