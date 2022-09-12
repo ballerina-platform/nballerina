@@ -1,12 +1,11 @@
-import ballerina/io;
 import wso2/nballerina.types as t;
 
 type StringAsList ()|[string:Char, StringAsList];
 
-type RegexPattern Concat|EOF|Star|Or;
+type RegexPattern Concat|End|Star|Or;
 
 type Concat "concat";
-type EOF "eof";
+type End "end";
 
 type Star record {|
     PatternRange range;
@@ -68,20 +67,18 @@ function stringListToSemType(t:Env env, StringAsList stringList) returns t:SemTy
 }
 
 public function regexToSemType(t:Env env, string regex) returns t:SemType {
-    io:println(regex);
     return regexToSemTypeInner(env, regex, 0, regex.length() - 1, t:NIL);
 }
 
 function regexToSemTypeInner(t:Env env, string regex, int index, int end, t:SemType restTy) returns t:SemType {
     RegexPattern pattern = nextPattern(regex, index, end + 1);
-    io:println(pattern, "x");
     if pattern is Star {
         return starToSemType(env, regex, pattern, end, restTy);
     }
     else if pattern is Or {
         return orToSemType(env, regex, pattern, end, restTy);
     }
-    else if pattern is EOF {
+    else if pattern is End {
         return restTy;
     }
     else {
@@ -110,8 +107,7 @@ function orToSemType(t:Env env, string regex, Or pattern, int end, t:SemType res
 function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, int endIndex, t:SemType recTy, t:ListDefinition recListDefn) returns t:SemType{
     t:ListDefinition defn = (index == startIndex) ? recListDefn : new;
     RegexPattern pattern = nextPattern(regex, index, endIndex+1);
-    io:println(pattern, "star");
-    if pattern is EOF {
+    if pattern is End {
         panic error("unexpected");
     }
     if (pattern is Star && pattern.range.startIndex == startIndex && pattern.range.endIndex == endIndex) || pattern is Concat {
@@ -129,7 +125,6 @@ function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, 
         t:SemType unionType = pattern is Star ? starToSemType(env, regex, pattern, endIndex, recTy) : orToSemType(env, regex, pattern, endIndex, recTy);
         if index == startIndex {
             t:Context cx = t:contextFromEnv(env);
-            io:println(unionType);
             t:ListMemberTypes memberTypes = t:listAllMemberTypes(cx, unionType); // unionType is [T1, T2] | [T3, T4] == [S1, S2]
             t:SemType[] memberSemTypes = memberTypes[1];
             return defineReadonlyListType(defn, env, memberSemTypes);
@@ -140,11 +135,10 @@ function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, 
 
 function nextPattern(string regex, int index, int end) returns RegexPattern {
     if index >= end {
-        return "eof";
+        return "end";
     }
     var [lhs, lhsWrapped] = readPattern(regex, index, end);
     int endIndex = lhsWrapped ? (lhs.endIndex + 2) : (lhs.endIndex + 1);
-    io:print(index, ":", end, "::", endIndex, "[", lhs, lhsWrapped, "]");
     if end > endIndex && endIndex < regex.length() {
         string op = regex[endIndex];
         if op == "*" {
