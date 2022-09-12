@@ -142,18 +142,13 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
     if end > endIndex && endIndex < regex.length() {
         string op = regex[endIndex];
         if op == "*" {
-            int nextIndex = endIndex + 1;
-            while nextIndex < regex.length() && regex[nextIndex] is ")"|"|"|"*" {
-                nextIndex += 1;
-            }
+            int nextIndex = skipTillEnd(regex, endIndex + 1);
             return { range: lhs, nextIndex };
         }
         else if op == "|" {
             var [rhs, rhsWrapped] = readPattern(regex, endIndex + 1, end);
             int nextIndex = rhsWrapped ? (rhs.endIndex + 2) : (rhs.endIndex + 1);
-            while nextIndex < regex.length() && regex[nextIndex] is ")"|"|"|"*" {
-                nextIndex += 1;
-            }
+            nextIndex = skipTillEnd(regex, nextIndex);
             return { lhs, rhs, nextIndex };
         }
     }
@@ -185,4 +180,12 @@ function readPattern(string regex, int index, int end) returns [PatternRange, bo
         }
         return [{ startIndex: index + 1, endIndex: endIndex - 1 }, true];
     }
+}
+
+function skipTillEnd(string regex, int currentIndex) returns int {
+    int nextIndex = currentIndex;
+    while nextIndex < regex.length() && regex[nextIndex] is ")"|"|"|"*" {
+        nextIndex += 1;
+    }
+    return nextIndex;
 }
