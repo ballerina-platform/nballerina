@@ -106,7 +106,7 @@ function orToSemType(t:Env env, string regex, Or pattern, int end, t:SemType res
 
 function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, int endIndex, t:SemType recTy, t:ListDefinition recListDefn) returns t:SemType{
     t:ListDefinition defn = (index == startIndex) ? recListDefn : new;
-    RegexPattern pattern = nextPattern(regex, index, endIndex+1);
+    RegexPattern pattern = nextPattern(regex, index, endIndex + 1);
     if pattern is End {
         panic error("unexpected");
     }
