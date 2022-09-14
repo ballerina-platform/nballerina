@@ -146,6 +146,13 @@ public function typeRelation(string lhs, string rhs) returns string  {
     }
 }
 
+public function regexToBalTypes(string regex) returns string {
+    t:Env env = new;
+    RegexContext cx = new;
+    IntermediateType ty = regexToIntermediateType(cx, env, regex, 0, regex.length() - 1, cx.terminalType(t:NIL, "()"));
+    return intermediateTypeToString(ty);
+}
+
 // This is faster than using regexToSemType but should produce the same result
 function stringToSingleton(t:Env env, string str) returns t:SemType {
     StringAsList stringList = stringToList(str, 0);
@@ -300,7 +307,6 @@ function skipTillEnd(string regex, int currentIndex) returns int {
     return nextIndex;
 }
 
-// For debug purposes
 function intermediateTypeToString(IntermediateType ty) returns string {
     if ty is IntermediateTypeReference {
         return ty;
@@ -316,7 +322,7 @@ function intermediateTypeToString(IntermediateType ty) returns string {
     }
     else {
         string[] body = [];
-        body.push("type " + ty.name + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";");
+        body.push("type " + ty.name + " " + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";");
         body.push(...from var operand in ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
         return "\n".'join(...body);
     }
