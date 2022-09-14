@@ -1,5 +1,4 @@
 import wso2/nballerina.types as t;
-import ballerina/io;
 
 type StringAsList ()|[string:Char, StringAsList];
 
@@ -28,9 +27,9 @@ type IntermediateType IntermediateTypeReference|IntermediateTypeActual;
 
 type IntermediateTypeReference string;
 
-// TODO: make this a union of types with a common base
-type IntermediateTypeActual ListIntermediateType|UnionIntermediateType|TerminalIntermediateType; 
 // TODO: better names
+type IntermediateTypeActual ListIntermediateType|UnionIntermediateType|TerminalIntermediateType; 
+
 type IntermdiateTypeBase record {|
     "list"|"union"|"terminal" operator;
     IntermediateTypeReference name;
@@ -43,8 +42,6 @@ type ListIntermediateType record {|
     IntermediateType[] operands = [];
     t:ListDefinition defn;
     "list" operator = "list"; 
-    // TODO: remove this
-    boolean resolved = false;
 |};
 
 type UnionIntermediateType record {|
@@ -77,7 +74,7 @@ class RegexContext {
 
     function listType(t:Env env) returns ListIntermediateType {
         t:ListDefinition defn = new;
-        ListIntermediateType ty = { name: self.nextTypeRef(), defn, semtype:defn.getSemType(env) };
+        ListIntermediateType ty = { name: self.nextTypeRef(), defn };
         self.intermediateTypes[ty.name] = ty;
         return ty;
     }
@@ -96,36 +93,7 @@ class RegexContext {
     }
 }
 
-function intermediateTypeToString(IntermediateType ty) returns string {
-    if ty !is IntermediateTypeReference && ty.semtype is () {
-        panic error("unresolved type");
-    }
-    if ty is IntermediateTypeReference {
-        return ty;
-    } 
-    else if ty is TerminalIntermediateType {
-        return string `type ${ty.name} "${ty.rep}";`;
-    }
-    else if ty is ListIntermediateType {
-        if !ty.resolved {
-            panic error("unresolved type");
-        }
-        string[] body = [];
-        body.push("type " + ty.name + " " + "[" + ", ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + "]" + ";");
-        body.push(...from var operand in ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
-        return "\n".'join(...body);
-    }
-    else {
-        string[] body = [];
-        body.push("type " + ty.name + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";");
-        body.push(...from var operand in ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
-        return "\n".'join(...body);
-    }
-}
-
 function finalizeIntermediateType(RegexContext cx, t:Env env, IntermediateType root) returns t:SemType {
-    // io:println("before compression:", root);
-    // expandUnions(root);
     return intermediateTypeToSemTypeInner(cx, env, root);
 }
 
@@ -142,123 +110,27 @@ function intermediateTypeToSemTypeInner(RegexContext cx, t:Env env, Intermediate
         return <t:SemType>ty.semtype;
     }
     else if ty is ListIntermediateType {
+         if ty.semtype !is () {
+             return <t:SemType>ty.semtype;
+         }
          t:ListDefinition defn = ty.defn;
+         ty.semtype = defn.getSemType(env);
          t:SemType[] operands = from var operand in ty.operands select intermediateTypeToSemTypeInner(cx, env, operand);
-         ty.resolved = true;
          return defn.define(env, operands);
     }
     else {
         if ty.semtype !is () {
             return <t:SemType>ty.semtype;
         }
-        t:SemType[] operandTypes = [];
-        foreach var operand in ty.operands {
-            if operand is IntermediateTypeReference || operand.semtype is () {
-                operandTypes.push(intermediateTypeToSemTypeInner(cx, env, operand));
-            }
-            else {
-                operandTypes.push(<t:SemType>operand.semtype);
-            }
-        }
+        t:SemType[] operandTypes = from var operand in ty.operands select intermediateTypeToSemTypeInner(cx, env, operand);
         t:SemType accumType = operandTypes[0];
         foreach int i in 1 ..< operandTypes.length() {
             accumType = t:union(accumType, operandTypes[i]);
         }
         ty.semtype = accumType;
-        foreach var operand in ty.operands {
-            _ = intermediateTypeToSemTypeInner(cx, env, operand);
-        }
         return accumType;
     }
 }
-
-// function expandUnions(IntermediateType ty) {
-//     if ty !is UnionIntermediateType {
-//         return;
-//     }
-//     foreach var operand in ty.operands {
-//         expandUnions(operand);
-//     }
-//     IntermediateType[] newOperands = [];
-//     foreach var operand in ty.operands {
-//         if operand is UnionIntermediateType {
-//             newOperands.push(...operand.operands);
-//         }
-//         newOperands.push(operand);
-//     }
-//     ty.operands = newOperands;
-// }
-// 
-// function intermediateTypeToSemType(RegexContext cx, t:Env env, IntermediateType ty) returns t:SemType {
-//     if ty is IntermediateTypeReference {
-//         IntermediateTypeActual actualType = cx.getAcutalType(ty);
-//         // if actualType.ty is () {
-//         //     io:println("--", actualType);
-//         // }
-//         return <t:SemType>actualType.ty;
-//     }
-//     else if ty is UnionIntermediateType {
-//         t:SemType[] operandTypes = from var operandRef in ty.operands select <t:SemType>cx.getAcutalType(operandRef).ty;
-//         t:SemType accumType = operandTypes[0];
-//         foreach int i in 1 ..< operandTypes.length() {
-//             accumType = t:union(accumType, operandTypes[i]);
-//         }
-//         ty.ty = accumType;
-//         foreach var operand in ty.operands {
-//             _ = intermediateTypeToSemType(cx, env, operand);
-//         }
-//         return accumType;
-//     }
-//     else if ty is ListIntermediateType {
-//         t:ListDefinition defn = ty.defn;
-//         t:SemType[] operands = from var operand in ty.operands select intermediateTypeToSemType(cx, env, operand);
-//         return defn.define(env, operands);
-//     }
-//     else {
-//         return <t:SemType>ty.ty;
-//     }
-//     // JBUG:
-//     panic error("unexpectd");
-// }
-
-// better name
-// function compressIntermediateTypes(RegexContext cx, IntermediateType ty) {
-//     // IntermediateTypeActual ty = cx.getAcutalType(typeRef);
-//     if ty !is UnionIntermediateType|ListIntermediateType {
-//         return;
-//     }
-//     // JBUG: cast
-//     // foreach var operand in <IntermediateType[]>ty.operands {
-//     //     compressIntermediateTypes(cx, operand);
-//     // }
-//     if ty is ListIntermediateType {
-//         return;
-//     }
-//     IntermediateTypeActual[] operands = from var operand in ty.operands select cx.getAcutalType(operand);
-//     t:SemType accumType = <t:SemType>operands[0].ty;
-//     foreach int i in 1 ..< operands.length() {
-//         if operands[i].ty is () {
-//             io:println(operands[i].name);
-//         }
-//         accumType = t:union(accumType, <t:SemType>operands[i].ty);
-//     }
-//     ty.ty = accumType;
-// }
-
-// function compressedUnionTypeOperands(RegexContext cx, UnionIntermediateType unionType) returns IntermediateType[] {
-//     IntermediateType[] operands = [];
-//     foreach var operand in unionType.operands {
-//         // IntermediateTypeActual operand = cx.getAcutalType(operandRef); 
-//         // io:println(operand);
-//         if operand !is UnionIntermediateType {
-//             operands.push(operand);
-//         }
-//         else {
-//             operands.push(...compressedUnionTypeOperands(cx, operand));
-//         }
-//     }
-//     return operands;
-// }
 
 public function typeRelation(string lhs, string rhs) returns string  {
     t:Env env = new;
@@ -305,40 +177,11 @@ function stringListToSemType(t:Env env, StringAsList stringList) returns t:SemTy
 
 public function regexToSemType(t:Env env, string regex) returns t:SemType {
     RegexContext cx = new;
-    // t:Context tc = t:contextFromEnv(env);
-    IntermediateType ty = regexToIntermediateTypeInner(cx, env, regex, 0, regex.length() - 1, cx.terminalType(t:NIL, "()"));
-    t:SemType t1 = finalizeIntermediateType(cx, env, ty);
-    io:println("//" + regex);
-    io:println(intermediateTypeToString(ty));
-    // t:SemType t2 = regexToSemTypeInner(env, regex, 0, regex.length() - 1, t:NIL);
-    // if !t:isSameType(tc, t1, t2) {
-    //     io:println("new: ", t1);
-    //     io:println("old: ", t2);
-    //     panic error("invalid type for" + regex);
-    // }
-    return t1;
+    IntermediateType ty = regexToIntermediateType(cx, env, regex, 0, regex.length() - 1, cx.terminalType(t:NIL, "()"));
+    return finalizeIntermediateType(cx, env, ty);
 }
 
-
-function regexToSemTypeInner(t:Env env, string regex, int index, int end, t:SemType restTy) returns t:SemType {
-    RegexPattern pattern = nextPattern(regex, index, end + 1);
-    if pattern is Star {
-        return starToSemType(env, regex, pattern, end, restTy);
-    }
-    else if pattern is Or {
-        return orToSemType(env, regex, pattern, end, restTy);
-    }
-    else if pattern is End {
-        return restTy;
-    }
-    else {
-        string:Char char = regex[index];
-        t:ListDefinition defn = new;
-        return defineReadonlyListType(defn, env, [t:stringConst(char), regexToSemTypeInner(env, regex, index + 1, end, restTy)]);
-    }
-}
-
-function regexToIntermediateTypeInner(RegexContext cx, t:Env env, string regex, int index, int end, IntermediateType restTy) returns IntermediateType {
+function regexToIntermediateType(RegexContext cx, t:Env env, string regex, int index, int end, IntermediateType restTy) returns IntermediateType {
     RegexPattern pattern = nextPattern(regex, index, end + 1);
     if pattern is Concat {
         return concatToSemType(cx, env, regex, index, end, restTy);
@@ -355,21 +198,12 @@ function regexToIntermediateTypeInner(RegexContext cx, t:Env env, string regex, 
 function concatToSemType(RegexContext cx, t:Env env, string regex, int index, int end, IntermediateType restTy) returns IntermediateType {
     string:Char char = regex[index];
     IntermediateTypeActual ty = cx.listType(env);
-    ty.operands = [cx.terminalType(t:stringConst(char), char), regexToIntermediateTypeInner(cx, env, regex, index + 1, end, restTy)];
+    ty.operands = [cx.terminalType(t:stringConst(char), char), regexToIntermediateType(cx, env, regex, index + 1, end, restTy)];
     return ty;
 } 
 
-function starToSemType(t:Env env, string regex, Star pattern, int end, t:SemType restTy) returns t:SemType {
-    t:SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, end, restTy);
-    t:ListDefinition defn = new;
-    t:SemType ty = t:union(rest, getReadonlyListType(defn, env));
-    PatternRange range = pattern.range;
-    _ = starToSemTypeInner(env, regex, range.startIndex, range.startIndex, range.endIndex, ty, defn);
-    return ty;
-}
-
 function starToIntermediateType(RegexContext cx, t:Env env, string regex, Star pattern, int end, IntermediateType restTy) returns IntermediateType {
-    IntermediateType rest = regexToIntermediateTypeInner(cx, env, regex, pattern.nextIndex, end, restTy);
+    IntermediateType rest = regexToIntermediateType(cx, env, regex, pattern.nextIndex, end, restTy);
     IntermediateTypeActual ty = cx.unionType();
     PatternRange range = pattern.range;
     IntermediateType recursiveTy = starToIntermediateTypeInnner(cx, env, regex, range.startIndex, range.startIndex, range.endIndex, ty.name);
@@ -394,52 +228,16 @@ function starToIntermediateTypeInnner(RegexContext cx, t:Env env, string regex, 
         }
         return ty;
     }
-    return regexToIntermediateTypeInner(cx, env, regex, index, endIndex, recTy);
-}
-
-function orToSemType(t:Env env, string regex, Or pattern, int end, t:SemType restTy) returns t:SemType {
-    t:SemType rest = regexToSemTypeInner(env, regex, pattern.nextIndex, end, restTy);
-    t:SemType lhs = regexToSemTypeInner(env, regex, pattern.lhs.startIndex, pattern.lhs.endIndex, rest);
-    t:SemType rhs = regexToSemTypeInner(env, regex, pattern.rhs.startIndex, pattern.rhs.endIndex, rest);
-    return t:union(lhs, rhs);
+    return regexToIntermediateType(cx, env, regex, index, endIndex, recTy);
 }
 
 function orToIntermediateType(RegexContext cx, t:Env env, string regex, Or pattern, int end, IntermediateType restTy) returns IntermediateType {
-    IntermediateType rest = regexToIntermediateTypeInner(cx, env, regex, pattern.nextIndex, end, restTy);
-    IntermediateType lhs = regexToIntermediateTypeInner(cx, env, regex, pattern.lhs.startIndex, pattern.lhs.endIndex, rest);
-    IntermediateType rhs = regexToIntermediateTypeInner(cx, env, regex, pattern.rhs.startIndex, pattern.rhs.endIndex, rest);
+    IntermediateType rest = regexToIntermediateType(cx, env, regex, pattern.nextIndex, end, restTy);
+    IntermediateType lhs = regexToIntermediateType(cx, env, regex, pattern.lhs.startIndex, pattern.lhs.endIndex, rest);
+    IntermediateType rhs = regexToIntermediateType(cx, env, regex, pattern.rhs.startIndex, pattern.rhs.endIndex, rest);
     IntermediateTypeActual ty = cx.unionType();
     ty.operands = [lhs, rhs];
     return ty;
-}
-
-function starToSemTypeInner(t:Env env, string regex, int index, int startIndex, int endIndex, t:SemType recTy, t:ListDefinition recListDefn) returns t:SemType{
-    t:ListDefinition defn = (index == startIndex) ? recListDefn : new;
-    RegexPattern pattern = nextPattern(regex, index, endIndex + 1);
-    if pattern is End {
-        panic error("unexpected");
-    }
-    if (pattern is Star && pattern.range.startIndex == startIndex && pattern.range.endIndex == endIndex) || pattern is Concat {
-        string:Char char = regex[index];
-        if index == endIndex {
-            // last character in the pattern
-            return defineReadonlyListType(defn, env, [t:stringConst(char), recTy]);
-        }
-        else {
-            return defineReadonlyListType(defn, env, [t:stringConst(char),
-                                                      starToSemTypeInner(env, regex, index + 1, startIndex, endIndex, recTy, recListDefn)]);
-        }
-    }
-    else {
-        t:SemType unionType = pattern is Star ? starToSemType(env, regex, pattern, endIndex, recTy) : orToSemType(env, regex, pattern, endIndex, recTy);
-        if index == startIndex {
-            t:Context cx = t:contextFromEnv(env);
-            t:ListMemberTypes memberTypes = t:listAllMemberTypes(cx, unionType); // unionType is [T1, T2] | [T3, T4] == [S1, S2]
-            t:SemType[] memberSemTypes = memberTypes[1];
-            return defineReadonlyListType(defn, env, memberSemTypes);
-        }
-        return unionType;
-    }
 }
 
 function nextPattern(string regex, int index, int end) returns RegexPattern {
@@ -500,4 +298,26 @@ function skipTillEnd(string regex, int currentIndex) returns int {
         nextIndex += 1;
     }
     return nextIndex;
+}
+
+// For debug purposes
+function intermediateTypeToString(IntermediateType ty) returns string {
+    if ty is IntermediateTypeReference {
+        return ty;
+    } 
+    else if ty is TerminalIntermediateType {
+        return string `type ${ty.name} "${ty.rep}";`;
+    }
+    else if ty is ListIntermediateType {
+        string[] body = [];
+        body.push("type " + ty.name + " " + "[" + ", ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + "]" + ";");
+        body.push(...from var operand in ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
+        return "\n".'join(...body);
+    }
+    else {
+        string[] body = [];
+        body.push("type " + ty.name + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";");
+        body.push(...from var operand in ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
+        return "\n".'join(...body);
+    }
 }
