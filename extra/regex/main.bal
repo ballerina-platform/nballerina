@@ -9,12 +9,12 @@ public function main(string[] regularExpressions, *Options opts) returns error? 
     if regularExpressions.length() != 2 {
         panic error("Expect 2 regular expression to compare");
     }
-    string relation = r:typeRelation(regularExpressions[0], regularExpressions[1]);
-    io:println(string `${regularExpressions[0]} ${relation} ${regularExpressions[1]}`);
     if opts.balTypes {
         check writeTypeDefn(regularExpressions[0], "lhs.bal");
         check writeTypeDefn(regularExpressions[1], "rhs.bal");
     }
+    string relation = r:typeRelation(regularExpressions[0], regularExpressions[1]);
+    io:println(string `${regularExpressions[0]} ${relation} ${regularExpressions[1]}`);
 }
 
 function writeTypeDefn(string regex, string fileName) returns error? {
