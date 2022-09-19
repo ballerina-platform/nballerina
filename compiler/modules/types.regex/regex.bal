@@ -214,7 +214,7 @@ function starToIntermediateTypeInner(RegexContext cx, string regex, int index, i
     if (pattern is Star && pattern.range.startIndex == startIndex && pattern.range.endIndex == endIndex) || pattern is Concat {
         string:Char char = regex[index];
         IntermediateType[2] operands = index == endIndex ? [cx.terminalType(char), recTy] :  
-                                                          [cx.terminalType(char), starToIntermediateTypeInner(cx, regex, index + 1, startIndex, endIndex, recTy)];
+                                                           [cx.terminalType(char), starToIntermediateTypeInner(cx, regex, index + 1, startIndex, endIndex, recTy)];
         IntermediateListType ty = cx.listType(operands);
         return ty;
     }
@@ -301,16 +301,16 @@ function intermediateTypeToString(IntermediateType ty) returns string {
         }
         return string `type ${ty.name} ${value};`;
     }
-    else if ty is IntermediateListType {
-        string[] body = [];
-        body.push("type " + ty.name + " " + "[" + ", ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + "]" + ";");
-        body.push(...from var operand in ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
-        return "\n".'join(...body);
-    }
     else {
         string[] body = [];
-        body.push("type " + ty.name + " " + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";");
-        body.push(...from var operand in ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
+        if ty is IntermediateListType {
+            body.push("type " + ty.name + " " + "[" + ", ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + "]" + ";");
+        }
+        else {
+            body.push("type " + ty.name + " " + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";");
+        }
+        // JBUG: cast
+        body.push(...from var operand in <IntermediateType[]>ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
         return "\n".'join(...body);
     }
 }
