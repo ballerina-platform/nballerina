@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     env:
-      JBAL_VERSION: '2201.0.0'
+      JBAL_VERSION: '2201.2.0'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -73,7 +73,7 @@ jobs:
 
   test-jni:
     env:
-      JBAL_VERSION: '2201.0.0'
+      JBAL_VERSION: '2201.2.0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
