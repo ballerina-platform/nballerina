@@ -213,8 +213,8 @@ function createMappingDescType(t:Context tc, t:SemType semType) returns llvm:Str
     return llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, llStructureDescPtrType, llvm:arrayType(LLVM_MEMBER_TYPE, mat.names.length())]);
 }
 
-function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {  
-    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(cx.tc, semType);
+function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicDerefType(cx.tc, semType);
     llvm:ConstValue[] llFields = from var ty in mat.types select getMemberType(cx, ty);
     return cx.llContext.constStruct([
         llvm:constInt(LLVM_TID, tid),
@@ -475,7 +475,7 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
 }
 
 function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
-    t:MappingAtomicType? mat = t:mappingAtomicType(cx.tc, semType);
+    t:MappingAtomicType? mat = t:mappingAtomicDerefType(cx.tc, semType);
     if mat != () {
         t:SemType rest = mat.rest;
         if rest == t:NEVER {

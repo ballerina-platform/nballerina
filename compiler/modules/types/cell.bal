@@ -23,32 +23,22 @@ function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 }
 
 function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
-    SemType combined;
-    CellMutability minMut;
+    CellAtomicType combinedAtomicType;
     if posList == () {
-        combined = TOP;
-        minMut = CELL_MUT_UNLIMITED;
+        combinedAtomicType = { t:TOP, mut:CELL_MUT_UNLIMITED };
     }
     else {
-        CellAtomicType cellAtomType = cx.cellAtomType(posList.atom);
-        combined = cellAtomType.t;
-        minMut = cellAtomType.mut;
-
+        combinedAtomicType = cx.cellAtomType(posList.atom);
         Conjunction? p = posList.next;
         while true {
             if p == () {
                 break;
             }
-
-            cellAtomType = cx.cellAtomType(p.atom);
-            combined = intersect(combined, cellAtomType.t);
-
-            minMut = <CellMutability>int:min(minMut, cellAtomType.mut);
+            combinedAtomicType = intersectCellAtomicType(combinedAtomicType, cx.cellAtomType(p.atom));
             p = p.next;
         }
     }
-    CellAtomicType combinedAtomicCell = { t: combined, mut: minMut };
-    return !cellInhabited(cx, combinedAtomicCell, negList);
+    return !cellInhabited(cx, combinedAtomicType, negList);
 }
 
 function cellInhabited(Context cx, CellAtomicType posCell, Conjunction? negList) returns boolean {
@@ -130,6 +120,12 @@ function cellNegListUnlimitedUnion(Context cx, Conjunction? negList) returns Sem
         neg = neg.next;
     }
     return negUnion;
+}
+
+function intersectCellAtomicType(CellAtomicType c1, CellAtomicType c2) returns CellAtomicType {
+    SemType t = intersect(c1.t, c2.t);
+    CellMutability mut = <CellMutability>int:min(c1.mut, c2.mut);
+    return { t, mut };
 }
 
 final BasicTypeOps cellOps = {

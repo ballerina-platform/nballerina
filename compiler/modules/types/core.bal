@@ -97,6 +97,15 @@ public isolated class Env {
         }
     }
 
+    isolated function cellAtomType(Atom atom) returns CellAtomicType {
+        if atom is RecAtom {
+            panic error("cell cannot be a RecAtom");
+        }
+        else {
+            return <CellAtomicType>atom.atomicType;
+        }
+    }
+
     isolated function recListAtom() returns RecAtom {
         lock {
             int result = self.recListAtoms.length();
@@ -222,6 +231,7 @@ public class Context {
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
     SemType? readOnlyMemo = ();
+    MappingAtomicType? mappingAtomicTopMemo = ();
 
     function init(Env env) {
         self.env = env;
@@ -390,6 +400,7 @@ public final BasicTypeBitSet ERROR = basicType(BT_ERROR);
 public final BasicTypeBitSet LIST = basicType(BT_LIST);
 public final BasicTypeBitSet MAPPING = basicType(BT_MAPPING);
 public final BasicTypeBitSet TABLE = basicType(BT_TABLE);
+public final BasicTypeBitSet CELL = basicType(BT_CELL);
 
 // matches all functions
 public final BasicTypeBitSet FUNCTION = basicType(BT_FUNCTION);
@@ -1130,18 +1141,22 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
     }
 }
 
-final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest:TOP };
+public function mappingAtomicDerefType(Context cx, SemType t) returns MappingAtomicType? {
+    MappingAtomicType? mat = mappingAtomicType(cx, t);
+    return mat != () ? derefMappingAtomicType(cx, mat) : ();
+}
 
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
+    MappingAtomicType mappingAtomicTop = createMappingAtomicTop(cx);
     if t is BasicTypeBitSet {
-        return t == MAPPING ? MAPPING_ATOMIC_TOP : ();
+        return t == MAPPING ? mappingAtomicTop : ();
     }
     else {
         Env env = cx.env;
         if !isSubtypeSimple(t, MAPPING) {
             return ();
         }
-        return bddMappingAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_MAPPING), MAPPING_ATOMIC_TOP);
+        return bddMappingAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_MAPPING), mappingAtomicTop);
     }
 }
 
@@ -1160,7 +1175,7 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // This computes the spec operation called "member type of K in T",
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
-public function mappingMemberType(Context cx, SemType t, SemType k) returns SemType {
+public function mappingDerefMemberType(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
         return (t & MAPPING) != 0 ? TOP : NEVER;
     }
@@ -1169,7 +1184,7 @@ public function mappingMemberType(Context cx, SemType t, SemType k) returns SemT
         if keyData == false {
             return NEVER;
         }
-        return bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
+        return bddMappingDerefMemberType(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
     }
 }
 
@@ -1183,7 +1198,7 @@ public function mappingMemberRequired(Context cx, SemType t, SemType k) returns 
     }
 }
 
-public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
+public function mappingAtomicTypeApplicableDerefMemberTypes(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
     StringSubtype|boolean keyStringType;
     if keyType is BasicTypeBitSet {
         keyStringType = (keyType & STRING) != 0;
@@ -1195,7 +1210,7 @@ public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomic
         return [];
     }
     else {
-        return mappingAtomicApplicableMemberTypes(atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
+        return mappingAtomicApplicableDerefMemberTypes(cx, atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
     }
 }
 
@@ -1226,7 +1241,7 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         MappingAlternative[] alts = [];
         foreach var { pos, neg } in paths {
-            var intersection = intersectMappingAtoms(cx.env, from var atom in pos select cx.mappingAtomType(atom));
+            var intersection = intersectMappingAtoms(cx, from var atom in pos select cx.mappingAtomType(atom));
             if intersection !is () {
                 alts.push({
                     semType: intersection[0],
@@ -1237,6 +1252,37 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
         }
         return alts;
     }
+}
+
+final CellAtomicType CELL_ATOMIC_TOP = { t: TOP, mut: CELL_MUT_LIMITED };
+
+public function simpleCellAtomicType(Context cx, SemType t) returns CellAtomicType {
+    return <CellAtomicType>cellAtomicType(cx, t);
+}
+
+public function cellAtomicType(Context cx, SemType t) returns CellAtomicType? {
+    if t is BasicTypeBitSet {
+        return t == CELL ? CELL_ATOMIC_TOP : ();
+    }
+    else {
+        Env env = cx.env;
+        if !isSubtypeSimple(t, CELL) {
+            return ();
+        }
+        return bddCellAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_CELL), CELL_ATOMIC_TOP);
+    }
+}
+
+function bddCellAtomicType(Env env, Bdd bdd, CellAtomicType top) returns CellAtomicType? {
+    if bdd is boolean {
+        if bdd {
+            return top;
+        }
+    }
+    else if bdd.left == true && bdd.middle == false && bdd.right == false {
+        return env.cellAtomType(bdd.atom);
+    }
+    return ();
 }
 
 function createBasicSemType(BasicTypeCode typeCode, SubtypeData subtypeData) returns SemType {
@@ -1540,6 +1586,17 @@ public function createAnydata(Context context) returns SemType {
     _ = mapDef.define(env, [], ad);
     context.anydataMemo = ad;
     return ad;
+}
+
+public function createMappingAtomicTop(Context context) returns MappingAtomicType {
+    MappingAtomicType? memo = context.mappingAtomicTopMemo;
+    if memo != () {
+        return memo;
+    }
+
+    MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, TOP, CELL_MUT_LIMITED) };
+    context.mappingAtomicTopMemo = mat;
+    return mat;
 }
 
 final readonly & BasicTypeOps[] ops;

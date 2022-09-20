@@ -30,6 +30,8 @@ type U NN|SS|NS|SN;
 public function main() {
     UU r = { x: 1, y: "yyy" };
     if r is U {
-        io:println("yes"); // @output yes
+        io:println("yes");
+    } else {
+        io:println("no"); // @output no
     }
 }

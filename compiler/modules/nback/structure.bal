@@ -372,7 +372,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
                                              m,
                                              check buildConstString(builder, scaffold, fieldName),
                                              check buildWideRepr(builder, scaffold, operand, REPR_ANY,
-                                                                 t:mappingMemberType(tc, mappingType, t:stringConst(fieldName)))
+                                                                 t:mappingDerefMemberType(tc, mappingType, t:stringConst(fieldName)))
                                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
@@ -448,7 +448,7 @@ function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:Strin
     // don't need to check when the condition is false, because there can be only one applicable member type
     else if t:singleStringShape(keyOperand.semType) == () && mat.names.length() != 0 {
         t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
-        foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypes(tc, mat, keyOperand.semType) {
+        foreach t:SemType ty in t:mappingAtomicTypeApplicableDerefMemberTypes(tc, mat, keyOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
             }
@@ -501,7 +501,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         rf = mappingIndexedSetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
-    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType, keyOperand.semType);
+    t:SemType memberType = t:mappingDerefMemberType(scaffold.typeContext(), mappingType, keyOperand.semType);
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
@@ -526,7 +526,7 @@ function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, t:SemTyp
         // inherent type is atomic, so if mapping type isn't, they cannot be equal
         return false;
     }
-    foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypes(tc, mat, keyType) {
+    foreach t:SemType ty in t:mappingAtomicTypeApplicableDerefMemberTypes(tc, mat, keyType) {
         if !t:isSubtype(tc, newMemberType, ty) {
             return true;
         }

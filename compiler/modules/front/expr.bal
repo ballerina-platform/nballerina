@@ -552,7 +552,7 @@ function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register ma
         string fieldName = (<bir:StringConstOperand>k).value;
         return cx.semanticErr(`field access to ${fieldName}} is invalid because field may not be present`, pos=pos);
     }
-    t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, k.semType);
+    t:SemType memberType = t:mappingDerefMemberType(cx.mod.tc, mapping.semType, k.semType);
     bir:INSN_MAPPING_FILLING_GET|bir:INSN_MAPPING_GET name = bir:INSN_MAPPING_GET;
     if maybeMissing {
         if accessType == "fill" {
@@ -956,14 +956,14 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
         // XXX can this happen?
         return cx.semanticErr("mapping not allowed in this context", s:range(expr));
     }
-    t:MappingAtomicType? mat = t:mappingAtomicType(tc, expectedMappingType);
+    t:MappingAtomicType? mat = t:mappingAtomicDerefType(tc, expectedMappingType);
     if mat != () { // easy case
         return [expectedMappingType, mat]; 
     }
     string[] fieldNames = from var f in expr.fields order by f.name select f.name;
     t:MappingAlternative[] alts =
         from var alt in t:mappingAlternatives(tc, expectedMappingType)
-        where mappingAlternativeAllowsFields(alt, fieldNames)
+        where mappingAlternativeAllowsFields(tc, alt, fieldNames)
         select alt;
     if alts.length() == 0 {
         return cx.semanticErr("no applicable inherent type for mapping constructor", s:range(expr));
@@ -972,18 +972,18 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
         return cx.semanticErr("ambiguous inherent type for mapping constructor", s:range(expr));
     }
     t:SemType semType = alts[0].semType;
-    mat = t:mappingAtomicType(tc, semType);
+    mat = t:mappingAtomicDerefType(tc, semType);
     if mat is () {
         return cx.semanticErr("applicable type for mapping constructor is not atomic", s:range(expr));
     }
     return [semType, mat];
 }
 
-function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] fieldNames) returns boolean {
+function mappingAlternativeAllowsFields(t:Context cx, t:MappingAlternative alt, string[] fieldNames) returns boolean {
     t:MappingAtomicType? pos = alt.pos;
     if pos !is () {
         // SUBSET won't be right with record defaults
-        if pos.rest == t:NEVER {
+        if t:simpleCellAtomicType(cx, pos.rest).t == t:NEVER {
             if pos.names != fieldNames {
                 return false;
             }
