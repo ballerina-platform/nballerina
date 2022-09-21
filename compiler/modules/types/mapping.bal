@@ -144,7 +144,7 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
             }
             pairing = new (pos, neg);
             foreach var {type1: posType, type2: negType} in pairing {
-                if isNever(simpleCellAtomicType(cx, posType).t) || isNever(simpleCellAtomicType(cx, negType).t) {
+                if isNever(simpleCellAtomicType(cx, posType).ty) || isNever(simpleCellAtomicType(cx, negType).ty) {
                     return mappingInhabited(cx, pos, negList.next);
                 }
             }
@@ -223,14 +223,14 @@ function intersectMapping(Context cx, TempMappingSubtype m1, TempMappingSubtype 
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
         CellAtomicType cat = intersectCellAtomicType(simpleCellAtomicType(cx, type1), simpleCellAtomicType(cx, type2));
-        if isNever(cat.t) {
+        if isNever(cat.ty) {
             return ();
         }
-        SemType t = cellContaining(cx.env, cat.t, cat.mut);
+        SemType t = cellContaining(cx.env, cat.ty, cat.mut);
         types.push(t);
     }
     CellAtomicType restCat = intersectCellAtomicType(simpleCellAtomicType(cx, m1.rest), simpleCellAtomicType(cx, m2.rest));
-    SemType rest = cellContaining(cx.env, restCat.t, restCat.mut);
+    SemType rest = cellContaining(cx.env, restCat.ty, restCat.mut);
     return { names, types, rest };
 }
 

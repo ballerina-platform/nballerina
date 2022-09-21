@@ -1132,7 +1132,7 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
 }
 
 public function simpleMappingAtomicDerefType(Context cx, MappingAtomicType mat) returns MappingAtomicType {
-    SemType[] & readonly derefMemTypes = from SemType t in mat.types select simpleCellAtomicType(cx, t).t;
+    SemType[] & readonly derefMemTypes = from SemType t in mat.types select simpleCellAtomicType(cx, t).ty;
     SemType & readonly derefRest = mappingRestDerefType(cx, mat);
     return { names: mat.names, types: derefMemTypes, rest: derefRest };
 }
@@ -1251,10 +1251,10 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
 }
 
 public function mappingRestDerefType(Context cx, MappingAtomicType|TempMappingSubtype mat) returns SemType {
-    return simpleCellAtomicType(cx, mat.rest).t;
+    return simpleCellAtomicType(cx, mat.rest).ty;
 }
 
-final CellAtomicType CELL_ATOMIC_TOP = { t: TOP, mut: CELL_MUT_LIMITED };
+final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED };
 
 public function simpleCellAtomicType(Context cx, SemType t) returns CellAtomicType {
     return <CellAtomicType>cellAtomicType(cx, t);
