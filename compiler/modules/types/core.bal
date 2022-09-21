@@ -98,12 +98,7 @@ public isolated class Env {
     }
 
     isolated function cellAtomType(Atom atom) returns CellAtomicType {
-        if atom is RecAtom {
-            panic error("cell cannot be a RecAtom");
-        }
-        else {
-            return <CellAtomicType>atom.atomicType;
-        }
+        return <CellAtomicType>(<TypeAtom>atom).atomicType;
     }
 
     isolated function recListAtom() returns RecAtom {
@@ -260,12 +255,7 @@ public class Context {
     }
 
     function cellAtomType(Atom atom) returns CellAtomicType {
-        if atom is RecAtom {
-            panic error("cell cannot be a RecAtom");
-        }
-        else {
-            return <CellAtomicType>atom.atomicType;
-        }
+        return <CellAtomicType>(<TypeAtom>atom).atomicType;
     }
 }
 
@@ -716,7 +706,7 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if cx == () || code < BT_COUNT_INHERENTLY_IMMUTABLE {
+        if cx == () || code < BT_COUNT_INHERENTLY_IMMUTABLE || code == BT_MAPPING {
             // normal diff or read-only basic type
             if data1 == () {
                 var complement = ops[code].complement;
@@ -1141,9 +1131,15 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
     }
 }
 
+public function simpleMappingAtomicDerefType(Context cx, MappingAtomicType mat) returns MappingAtomicType {
+    SemType[] & readonly derefMemTypes = from SemType t in mat.types select simpleCellAtomicType(cx, t).t;
+    SemType & readonly derefRest = mappingRestDerefType(cx, mat);
+    return { names: mat.names, types: derefMemTypes, rest: derefRest };
+}
+
 public function mappingAtomicDerefType(Context cx, SemType t) returns MappingAtomicType? {
     MappingAtomicType? mat = mappingAtomicType(cx, t);
-    return mat != () ? derefMappingAtomicType(cx, mat) : ();
+    return mat != () ? simpleMappingAtomicDerefType(cx, mat) : ();
 }
 
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
@@ -1175,7 +1171,7 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // This computes the spec operation called "member type of K in T",
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
-public function mappingDerefMemberType(Context cx, SemType t, SemType k) returns SemType {
+public function mappingMemberDerefType(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
         return (t & MAPPING) != 0 ? TOP : NEVER;
     }
@@ -1184,7 +1180,7 @@ public function mappingDerefMemberType(Context cx, SemType t, SemType k) returns
         if keyData == false {
             return NEVER;
         }
-        return bddMappingDerefMemberType(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
+        return bddMappingMemberDerefType(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
     }
 }
 
@@ -1198,7 +1194,7 @@ public function mappingMemberRequired(Context cx, SemType t, SemType k) returns 
     }
 }
 
-public function mappingAtomicTypeApplicableDerefMemberTypes(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
+public function mappingAtomicTypeApplicableMemberDerefTypes(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
     StringSubtype|boolean keyStringType;
     if keyType is BasicTypeBitSet {
         keyStringType = (keyType & STRING) != 0;
@@ -1210,7 +1206,7 @@ public function mappingAtomicTypeApplicableDerefMemberTypes(Context cx, MappingA
         return [];
     }
     else {
-        return mappingAtomicApplicableDerefMemberTypes(cx, atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
+        return mappingAtomicApplicableMemberDerefTypes(cx, atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
     }
 }
 
@@ -1252,6 +1248,10 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
         }
         return alts;
     }
+}
+
+public function mappingRestDerefType(Context cx, MappingAtomicType|TempMappingSubtype mat) returns SemType {
+    return simpleCellAtomicType(cx, mat.rest).t;
 }
 
 final CellAtomicType CELL_ATOMIC_TOP = { t: TOP, mut: CELL_MUT_LIMITED };

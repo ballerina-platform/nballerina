@@ -483,7 +483,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? 
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping get applied to non-mapping", insn.pos);
     }
-    t:SemType memberType = t:mappingDerefMemberType(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
+    t:SemType memberType = t:mappingMemberDerefType(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
     if insn.name == INSN_MAPPING_GET && !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, keyOperand.semType) {
         memberType = t:union(memberType, t:NIL);
     }
@@ -498,7 +498,7 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns Error? 
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping set applied to non-mapping", insn.pos);
     }
-    t:SemType memberType = t:mappingDerefMemberType(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
+    t:SemType memberType = t:mappingMemberDerefType(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type", insn.pos);
 }
 

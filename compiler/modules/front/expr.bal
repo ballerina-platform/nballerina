@@ -552,7 +552,7 @@ function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register ma
         string fieldName = (<bir:StringConstOperand>k).value;
         return cx.semanticErr(`field access to ${fieldName}} is invalid because field may not be present`, pos=pos);
     }
-    t:SemType memberType = t:mappingDerefMemberType(cx.mod.tc, mapping.semType, k.semType);
+    t:SemType memberType = t:mappingMemberDerefType(cx.mod.tc, mapping.semType, k.semType);
     bir:INSN_MAPPING_FILLING_GET|bir:INSN_MAPPING_GET name = bir:INSN_MAPPING_GET;
     if maybeMissing {
         if accessType == "fill" {
@@ -983,7 +983,7 @@ function mappingAlternativeAllowsFields(t:Context cx, t:MappingAlternative alt, 
     t:MappingAtomicType? pos = alt.pos;
     if pos !is () {
         // SUBSET won't be right with record defaults
-        if t:simpleCellAtomicType(cx, pos.rest).t == t:NEVER {
+        if t:mappingRestDerefType(cx, pos) == t:NEVER {
             if pos.names != fieldNames {
                 return false;
             }
