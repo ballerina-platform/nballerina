@@ -1,12 +1,12 @@
 import ballerina/io;
 
-type N record {|
+type N record {
     int x;
-|};
+};
 
-type S record {|
+type S record {
     string x;
-|};
+};
 
 type NorS N|S;
 

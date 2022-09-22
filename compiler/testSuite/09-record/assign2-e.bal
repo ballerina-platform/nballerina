@@ -1,4 +1,4 @@
-type I record {|
+type N record {|
     int x;
 |};
 
@@ -6,13 +6,13 @@ type S record {|
     string x;
 |};
 
-type IS record {|
+type NS record {|
     int|string x;
 |};
 
-type IorS I|S;
+type NorS N|S;
 
 public function main() {
-    IS a = { x: "str" };
-    IorS b = a; // @error
+    NS ns = { x: "str" };
+    NorS nOrS = ns; // @error
 }
