@@ -9,6 +9,10 @@ public type MappingAtomicType readonly & record {|
     SemType rest;
 |};
 
+public function mappingAtomicTypeMemberAtDeref(Context cx, MappingAtomicType mat, string k) returns SemType {
+    return cellDeref(cx, mappingAtomicTypeMemberAt(mat, k));
+}
+
 public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) returns SemType {
     int? i = mat.names.indexOf(k, 0);
     return i is int ? mat.types[i] : mat.rest;
@@ -32,13 +36,6 @@ public class MappingDefinition {
     }
 
     public function define(Env env, Field[] fields, SemType rest) returns SemType {
-            Field[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1], CELL_MUT_LIMITED)];
-            SemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
-            return self.defineWithoutWrapper(env, cellFields, restCell);
-    }
-
-    // Calling directly will not have the members wrapped in cells
-    public function defineWithoutWrapper(Env env, Field[] fields, SemType rest) returns SemType {
         var [names, types] = splitFields(fields);
         MappingAtomicType atomicType = {
             names: names.cloneReadOnly(),
@@ -139,12 +136,12 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
             // so we can move on to the next one
 
             // Deal the easy case of two closed records fast.
-            if isNever(mappingRestDerefType(cx, pos)) && isNever(mappingRestDerefType(cx, neg)) {
+            if isNever(cellDeref(cx, pos.rest)) && isNever(cellDeref(cx, neg.rest)) {
                 return mappingInhabited(cx, pos, negList.next);
             }
             pairing = new (pos, neg);
             foreach var {type1: posType, type2: negType} in pairing {
-                if isNever(simpleCellAtomicType(cx, posType).ty) || isNever(simpleCellAtomicType(cx, negType).ty) {
+                if isNever(cellDeref(cx, posType)) || isNever(cellDeref(cx, negType)) {
                     return mappingInhabited(cx, pos, negList.next);
                 }
             }
@@ -222,14 +219,14 @@ function intersectMapping(Context cx, TempMappingSubtype m1, TempMappingSubtype 
     SemType[] types = [];
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
-        CellAtomicType cat = intersectCellAtomicType(simpleCellAtomicType(cx, type1), simpleCellAtomicType(cx, type2));
+        CellAtomicType cat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(cx, type1), <CellAtomicType>cellAtomicType(cx, type2));
         if isNever(cat.ty) {
             return ();
         }
         SemType t = cellContaining(cx.env, cat.ty, cat.mut);
         types.push(t);
     }
-    CellAtomicType restCat = intersectCellAtomicType(simpleCellAtomicType(cx, m1.rest), simpleCellAtomicType(cx, m2.rest));
+    CellAtomicType restCat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(cx, m1.rest), <CellAtomicType>cellAtomicType(cx, m2.rest));
     SemType rest = cellContaining(cx.env, restCat.ty, restCat.mut);
     return { names, types, rest };
 }
@@ -348,41 +345,42 @@ class MappingPairing {
     private function curName2() returns string => self.names2[self.i2];
 }
 
-function bddMappingMemberDerefType(Context cx, Bdd b, StringSubtype|true key, SemType accum) returns SemType {
+function bddMappingMemberTypeDeref(Context cx, Bdd b, StringSubtype|true key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
     else {
-        return union(bddMappingMemberDerefType(cx, b.left, key,
-                                          intersect(mappingAtomicMemberDerefType(cx, cx.mappingAtomType(b.atom), key),
+        return union(bddMappingMemberTypeDeref(cx, b.left, key,
+                                          intersect(mappingAtomicMemberTypeDeref(cx, cx.mappingAtomType(b.atom), key),
                                                     accum)),
-                     union(bddMappingMemberDerefType(cx, b.middle, key, accum),
-                           bddMappingMemberDerefType(cx, b.right, key, accum)));
+                     union(bddMappingMemberTypeDeref(cx, b.middle, key, accum),
+                           bddMappingMemberTypeDeref(cx, b.right, key, accum)));
     }
 }
 
-function mappingAtomicMemberDerefType(Context cx, MappingAtomicType atomic, StringSubtype|true key) returns SemType {
+function mappingAtomicMemberTypeDeref(Context cx, MappingAtomicType atomic, StringSubtype|true key) returns SemType {
     SemType memberType = NEVER;
-    foreach SemType ty in mappingAtomicApplicableMemberDerefTypes(cx, atomic, key) {
+    foreach SemType ty in mappingAtomicApplicableMemberTypesDeref(cx, atomic, key) {
         memberType = union(memberType, ty);
     }
     return memberType;
 }
 
-function mappingAtomicApplicableMemberDerefTypes(Context cx, MappingAtomicType atomicType, StringSubtype|true key) returns SemType[] {
-    MappingAtomicType atomic = simpleMappingAtomicDerefType(cx, atomicType);
+function mappingAtomicApplicableMemberTypesDeref(Context cx, MappingAtomicType atomic, StringSubtype|true key) returns SemType[] {
+    SemType[] types = from SemType t in atomic.types select cellDeref(cx, t);
+    SemType rest = cellDeref(cx, atomic.rest);
     SemType[] memberTypes = [];
     if key == true {
-        memberTypes.push(...atomic.types);
-        memberTypes.push(atomic.rest);
+        memberTypes.push(...types);
+        memberTypes.push(rest);
     }
     else {
         StringSubtypeListCoverage coverage = stringSubtypeListCoverage(key, atomic.names);
         foreach int index in coverage.indices {
-            memberTypes.push(atomic.types[index]);
+            memberTypes.push(types[index]);
         }
         if !coverage.isSubtype {
-            memberTypes.push(atomic.rest);
+            memberTypes.push(rest);
         }
     }
     return memberTypes;

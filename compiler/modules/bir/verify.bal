@@ -443,12 +443,13 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     if !vc.isSubtype(ty, t:MAPPING) {
         return vc.invalidErr("inherent type of mapping construct is not a mapping", insn.pos);
     }
-    t:MappingAtomicType? mat = t:mappingAtomicDerefType(vc.typeContext(), ty);
+    t:Context tc = vc.typeContext();
+    t:MappingAtomicType? mat = t:mappingAtomicType(tc, ty);
     if mat == () {
         return vc.invalidErr("inherent type of map is not atomic", insn.pos);
     }
     foreach int i in 0 ..< insn.operands.length() {
-        check validOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAt(mat, insn.fieldNames[i]), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
+        check validOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAtDeref(tc, mat, insn.fieldNames[i]), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
     }
     if insn.operands.length() < mat.names.length() {
         return vc.semanticErr("missing record fields in mapping constructor", insn.pos);
@@ -483,7 +484,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? 
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping get applied to non-mapping", insn.pos);
     }
-    t:SemType memberType = t:mappingMemberDerefType(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
+    t:SemType memberType = t:mappingMemberTypeDeref(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
     if insn.name == INSN_MAPPING_GET && !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, keyOperand.semType) {
         memberType = t:union(memberType, t:NIL);
     }
@@ -498,7 +499,7 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns Error? 
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping set applied to non-mapping", insn.pos);
     }
-    t:SemType memberType = t:mappingMemberDerefType(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
+    t:SemType memberType = t:mappingMemberTypeDeref(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type", insn.pos);
 }
 

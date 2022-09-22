@@ -706,21 +706,7 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if cx == () || code < BT_COUNT_INHERENTLY_IMMUTABLE || code == BT_MAPPING {
-            // normal diff or read-only basic type
-            if data1 == () {
-                var complement = ops[code].complement;
-                data = complement(<SubtypeData>data2);
-            }
-            else if data2 == () {
-                data = data1;
-            }
-            else {
-                var diff = ops[code].diff;
-                data = diff(data1, data2);
-            }
-        }
-        else {
+        if cx != () && (code == BT_LIST || code == BT_TABLE) {
             // read-only diff for mutable basic type
             if data1 == () {
                 // data1 was all
@@ -739,6 +725,19 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
                 else {
                     data = data1;
                 }
+            }
+        } else {
+            // normal diff or read-only basic type
+            if data1 == () {
+                var complement = ops[code].complement;
+                data = complement(<SubtypeData>data2);
+            }
+            else if data2 == () {
+                data = data1;
+            }
+            else {
+                var diff = ops[code].diff;
+                data = diff(data1, data2);
             }
         }
         // JBUG `data` is not narrowed properly if you swap the order by doing `if data == true {} else if data != false {}`
@@ -1131,15 +1130,10 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
     }
 }
 
-public function simpleMappingAtomicDerefType(Context cx, MappingAtomicType mat) returns MappingAtomicType {
-    SemType[] & readonly derefMemTypes = from SemType t in mat.types select simpleCellAtomicType(cx, t).ty;
-    SemType & readonly derefRest = mappingRestDerefType(cx, mat);
-    return { names: mat.names, types: derefMemTypes, rest: derefRest };
-}
-
-public function mappingAtomicDerefType(Context cx, SemType t) returns MappingAtomicType? {
-    MappingAtomicType? mat = mappingAtomicType(cx, t);
-    return mat != () ? simpleMappingAtomicDerefType(cx, mat) : ();
+public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest) returns SemType {
+    Field[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1], CELL_MUT_LIMITED)];
+    SemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
+    return md.define(env, cellFields, restCell);
 }
 
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
@@ -1171,7 +1165,7 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // This computes the spec operation called "member type of K in T",
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
-public function mappingMemberDerefType(Context cx, SemType t, SemType k) returns SemType {
+public function mappingMemberTypeDeref(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
         return (t & MAPPING) != 0 ? TOP : NEVER;
     }
@@ -1180,7 +1174,7 @@ public function mappingMemberDerefType(Context cx, SemType t, SemType k) returns
         if keyData == false {
             return NEVER;
         }
-        return bddMappingMemberDerefType(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
+        return bddMappingMemberTypeDeref(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
     }
 }
 
@@ -1194,7 +1188,7 @@ public function mappingMemberRequired(Context cx, SemType t, SemType k) returns 
     }
 }
 
-public function mappingAtomicTypeApplicableMemberDerefTypes(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
+public function mappingAtomicTypeApplicableMemberTypesDeref(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
     StringSubtype|boolean keyStringType;
     if keyType is BasicTypeBitSet {
         keyStringType = (keyType & STRING) != 0;
@@ -1206,7 +1200,7 @@ public function mappingAtomicTypeApplicableMemberDerefTypes(Context cx, MappingA
         return [];
     }
     else {
-        return mappingAtomicApplicableMemberDerefTypes(cx, atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
+        return mappingAtomicApplicableMemberTypesDeref(cx, atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
     }
 }
 
@@ -1250,15 +1244,11 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
     }
 }
 
-public function mappingRestDerefType(Context cx, MappingAtomicType|TempMappingSubtype mat) returns SemType {
-    return simpleCellAtomicType(cx, mat.rest).ty;
+public function cellDeref(Context cx, SemType t) returns SemType {
+    return (<CellAtomicType>cellAtomicType(cx, t)).ty;
 }
 
-final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED };
-
-public function simpleCellAtomicType(Context cx, SemType t) returns CellAtomicType {
-    return <CellAtomicType>cellAtomicType(cx, t);
-}
+final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
 
 public function cellAtomicType(Context cx, SemType t) returns CellAtomicType? {
     if t is BasicTypeBitSet {
@@ -1565,7 +1555,7 @@ public function createJson(Context context) returns SemType {
     MappingDefinition mapDef = new;
     SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, rest = j);
-    _ = mapDef.define(env, [], j);
+    _ = defineMappingTypeWrapped(mapDef, env, [], j);
     context.jsonMemo = j;
     return j;
 }
@@ -1583,7 +1573,7 @@ public function createAnydata(Context context) returns SemType {
     SemType tableTy = tableContaining(mapDef.getSemType(env));
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, rest = ad);
-    _ = mapDef.define(env, [], ad);
+    _ = defineMappingTypeWrapped(mapDef, env, [], ad);
     context.anydataMemo = ad;
     return ad;
 }

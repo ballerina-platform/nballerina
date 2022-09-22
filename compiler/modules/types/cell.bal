@@ -23,22 +23,22 @@ function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 }
 
 function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
-    CellAtomicType combinedAtomicType;
+    CellAtomicType combined;
     if posList == () {
-        combinedAtomicType = { ty:TOP, mut:CELL_MUT_UNLIMITED };
+        combined = { ty:TOP, mut:CELL_MUT_UNLIMITED };
     }
     else {
-        combinedAtomicType = cx.cellAtomType(posList.atom);
+        combined = cx.cellAtomType(posList.atom);
         Conjunction? p = posList.next;
         while true {
             if p == () {
                 break;
             }
-            combinedAtomicType = intersectCellAtomicType(combinedAtomicType, cx.cellAtomType(p.atom));
+            combined = intersectCellAtomicType(combined, cx.cellAtomType(p.atom));
             p = p.next;
         }
     }
-    return !cellInhabited(cx, combinedAtomicType, negList);
+    return !cellInhabited(cx, combined, negList);
 }
 
 function cellInhabited(Context cx, CellAtomicType posCell, Conjunction? negList) returns boolean {
