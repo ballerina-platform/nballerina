@@ -1584,7 +1584,7 @@ public function createMappingAtomicTop(Context context) returns MappingAtomicTyp
         return memo;
     }
 
-    MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, TOP, CELL_MUT_LIMITED) };
+    MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, CELL_ATOMIC_TOP.ty, CELL_ATOMIC_TOP.mut) };
     context.mappingAtomicTopMemo = mat;
     return mat;
 }
