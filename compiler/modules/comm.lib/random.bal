@@ -1,3 +1,7 @@
+public type Range record {|
+    int rangeStart;
+    int rangeEnd;
+|};
 // Mask operand of multiplication to 31 bits to avoid overflow.
 public isolated class Random {
     private final int multiplier = 0x5eece66d; // 0x5DEECE66D from Java's Random class, masked to 31 bit
@@ -17,7 +21,10 @@ public isolated class Random {
     }
 
     // 0 to range [exclusive]
-    public function nextRange(int range) returns int {
+    public function nextRange(Range|int range) returns int {
+        if range is Range {
+            return range.rangeStart + self.nextRange(range.rangeEnd - range.rangeStart);
+        }
         if range > self.mask {
             panic error("Range too large");
         }

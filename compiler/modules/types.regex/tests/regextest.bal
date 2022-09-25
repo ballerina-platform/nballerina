@@ -2,7 +2,7 @@ import ballerina/test;
 import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as f;
-import ballerina/random;
+import wso2/nballerina.comm.lib;
 
 type TestCase [f:SubtypeTestOp, string, string];
 
@@ -35,7 +35,8 @@ function testRegexInclusion(f:SubtypeTestOp op, string lhs, string rhs) {
 // constant configs for regex generation
 const int MAX_CHUNK_LEN = 10;
 const int MIN_CHUNK_LEN = 1;
-const int SEQUENCE_LEN = 3; // Increasing this value will give much deeply nested regular expressions
+const int SEQUENCE_LEN = 5; // Increasing this value will give much deeply nested regular expressions
+const int SEED = 0;
 
 @test:Config{
     dataProvider: randomRegexTests,
@@ -45,9 +46,10 @@ function testRandomRegexGeneration(f:SubtypeTestOp op, string lhs, string rhs) {
     test:assertEquals(typeRelation(lhs, rhs), op);
 }
 
-function randomRegexTests() returns map<TestCase>|error {
+function randomRegexTests() returns map<TestCase> {
+    lib:Random randomGenerator = new(SEED);
     map<TestCase> tests = {};
-    string[] testCases = check generateRegexSequence(SEQUENCE_LEN);
+    string[] testCases = generateRegexSequence(SEQUENCE_LEN, randomGenerator);
     foreach int i in 0 ..< testCases.length() {
         foreach int j in i + 1 ..< testCases.length() {
             string lhs = testCases[i];
@@ -58,17 +60,17 @@ function randomRegexTests() returns map<TestCase>|error {
     return tests;
 }
 
-function generateRegexSequence(int length) returns string[]|error {
-    string currentChunk = check randomString();
+function generateRegexSequence(int sequenceLen, lib:Random randomGenerator) returns string[] {
+    string currentChunk = randomString(randomGenerator);
     string[] regexes = [currentChunk];
-    int startIndex = 0;
-    int endIndex = currentChunk.length() - 1;
-    while regexes.length() < length {
-        int insertionPoint = check random:createIntInRange(startIndex, endIndex);
+    int rangeStart = 0;
+    int rangeEnd = currentChunk.length() - 1;
+    while regexes.length() < sequenceLen {
+        int insertionPoint = randomGenerator.nextRange({ rangeStart, rangeEnd });
         string newString = currentChunk.substring(0, insertionPoint) + "(";
-        startIndex = newString.length();
-        newString += check randomString();
-        endIndex = newString.length();
+        rangeStart = newString.length();
+        newString += randomString(randomGenerator);
+        rangeEnd = newString.length();
         newString += ")*" + currentChunk.substring(insertionPoint, currentChunk.length());
         regexes.push(newString);
         currentChunk = newString;
@@ -76,10 +78,9 @@ function generateRegexSequence(int length) returns string[]|error {
     return regexes;
 }
 
-function randomString() returns string|error {
-    int len = check random:createIntInRange(MIN_CHUNK_LEN, MAX_CHUNK_LEN);
-    byte[] chars = from int _ in 0 ..< len select <byte>check random:createIntInRange(97, 122); // ASCII lower case range
-    return string:fromBytes(chars);
+function randomString(lib:Random randomGenerator) returns string {
+    int len = randomGenerator.nextRange({ rangeStart: MIN_CHUNK_LEN, rangeEnd: MAX_CHUNK_LEN});
+    return randomGenerator.randomStringValue(len);
 }
 
 function readRegexStringTests() returns map<TestCase>|error => readTestCases("modules/types.regex/tests/data/regexStringTests.json");
