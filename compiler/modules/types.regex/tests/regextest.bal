@@ -2,6 +2,7 @@ import ballerina/test;
 import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as f;
+import ballerina/random;
 
 type TestCase [f:SubtypeTestOp, string, string];
 
@@ -29,6 +30,56 @@ function testRegexString(f:SubtypeTestOp op, string str, string regex) {
 }
 function testRegexInclusion(f:SubtypeTestOp op, string lhs, string rhs) {
     test:assertEquals(typeRelation(lhs, rhs), op);
+}
+
+// constant configs for regex generation
+const int MAX_CHUNK_LEN = 10;
+const int MIN_CHUNK_LEN = 1;
+const int SEQUENCE_LEN = 3; // Increasing this value will give much deeply nested regular expressions
+
+@test:Config{
+    dataProvider: randomRegexTests,
+    groups: ["longRunning"]
+}
+function testRandomRegexGeneration(f:SubtypeTestOp op, string lhs, string rhs) {
+    test:assertEquals(typeRelation(lhs, rhs), op);
+}
+
+function randomRegexTests() returns map<TestCase>|error {
+    map<TestCase> tests = {};
+    string[] testCases = check generateRegexSequence(SEQUENCE_LEN);
+    foreach int i in 0 ..< testCases.length() {
+        foreach int j in i + 1 ..< testCases.length() {
+            string lhs = testCases[i];
+            string rhs = testCases[j];
+            tests[string `${lhs} < ${rhs}`] = ["<", lhs, rhs];
+        }
+    }
+    return tests;
+}
+
+function generateRegexSequence(int length) returns string[]|error {
+    string currentChunk = check randomString();
+    string[] regexes = [currentChunk];
+    int startIndex = 0;
+    int endIndex = currentChunk.length() - 1;
+    while regexes.length() < length {
+        int insertionPoint = check random:createIntInRange(startIndex, endIndex);
+        string newString = currentChunk.substring(0, insertionPoint) + "(";
+        startIndex = newString.length();
+        newString += check randomString();
+        endIndex = newString.length();
+        newString += ")*" + currentChunk.substring(insertionPoint, currentChunk.length());
+        regexes.push(newString);
+        currentChunk = newString;
+    }
+    return regexes;
+}
+
+function randomString() returns string|error {
+    int len = check random:createIntInRange(MIN_CHUNK_LEN, MAX_CHUNK_LEN);
+    byte[] chars = from int _ in 0 ..< len select <byte>check random:createIntInRange(97, 122); // ASCII lower case range
+    return string:fromBytes(chars);
 }
 
 function readRegexStringTests() returns map<TestCase>|error => readTestCases("modules/types.regex/tests/data/regexStringTests.json");
