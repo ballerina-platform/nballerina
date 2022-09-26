@@ -320,7 +320,7 @@ function intermediateTypeToString(IntermediateType ty) returns string {
         if value is () {
             return string `type ${ty.name} ();`;
         }
-        return string `type ${ty.name} ${value};`;
+        return string `type ${ty.name} "${value}";`;
     }
     else {
         string[] body = [];
