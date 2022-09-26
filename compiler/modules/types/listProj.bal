@@ -52,7 +52,7 @@ function listProjPath(Context cx, IntSubtype|true k, Conjunction? pos, Conjuncti
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                var intersected = listIntersectWith(members, rest, lt.members, lt.rest);
+                var intersected = listIntersectWith(cx, members, rest, lt.members, lt.rest);
                 if intersected is () {
                     return NEVER;
                 }

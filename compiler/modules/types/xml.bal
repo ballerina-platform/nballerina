@@ -49,7 +49,7 @@ public function xmlSequence(SemType constituentType) returns SemType {
 function makeXmlSequence(XmlSubtype d) returns XmlSubtype|boolean {
     int primitives = XML_PRIMITIVE_NEVER | d.primitives;
     int atom = d.primitives & XML_PRIMITIVE_SINGLETON;
-    Bdd sequence = bddUnion(bddAtom(atom), d.sequence);
+    Bdd sequence = bddUnion(noBddCache, bddAtom(atom), d.sequence);
     return createXmlSubtype(primitives, sequence);
 }
 
@@ -81,21 +81,21 @@ function xmlSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     XmlSubtype v1 = <XmlSubtype>d1;
     XmlSubtype v2 = <XmlSubtype>d2;
     int primitives = v1.primitives | v2.primitives;
-    return createXmlSubtype(primitives, bddUnion(v1.sequence, v2.sequence));
+    return createXmlSubtype(primitives, bddUnion(noBddCache, v1.sequence, v2.sequence));
 }
 
 function xmlSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     XmlSubtype v1 = <XmlSubtype>d1;
     XmlSubtype v2 = <XmlSubtype>d2;
     int primitives = v1.primitives & v2.primitives;
-    return createXmlSubtypeOrEmpty(primitives, bddIntersect(v1.sequence, v2.sequence));
+    return createXmlSubtypeOrEmpty(primitives, bddIntersect(noBddCache, v1.sequence, v2.sequence));
 }
 
 function xmlSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     XmlSubtype v1 = <XmlSubtype>d1;
     XmlSubtype v2 = <XmlSubtype>d2;
     int primitives = v1.primitives & ~v2.primitives;
-    return createXmlSubtypeOrEmpty(primitives, bddDiff(v1.sequence, v2.sequence));
+    return createXmlSubtypeOrEmpty(primitives, bddDiff(noBddCache, v1.sequence, v2.sequence));
 }
 
 function xmlSubtypeComplement(SubtypeData d) returns SubtypeData {

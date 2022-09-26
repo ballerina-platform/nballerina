@@ -268,6 +268,7 @@ type BasicSubtype [BasicTypeCode, ProperSubtypeData];
 type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
 type UnaryOp function(SubtypeData t) returns SubtypeData;
 type UnaryTypeCheckOp function(Context cx, SubtypeData t) returns boolean;
+type ContextBinOp function(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData;
 
 function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
     panic error("binary operation should not be called");
@@ -287,6 +288,8 @@ type BasicTypeOps readonly & record {|
     BinOp diff = binOpPanic;
     UnaryOp complement = unaryOpPanic;
     UnaryTypeCheckOp isEmpty = unaryTypeCheckOpPanic;
+    ContextBinOp? contextIntersect = ();
+    ContextBinOp? contextDiff = ();
 |};
 
 final readonly & (BasicSubtype[]) EMPTY_SUBTYPES = [];
@@ -575,6 +578,10 @@ public function union(SemType t1, SemType t2) returns SemType {
 }
 
 public function intersect(SemType t1, SemType t2) returns SemType {
+    return memoIntersect((), t1, t2);
+}
+
+function memoIntersect(Context? cx, SemType t1, SemType t2) returns SemType {
     BasicTypeBitSet all1;
     BasicTypeBitSet all2;
     BasicTypeBitSet some1;
@@ -635,8 +642,14 @@ public function intersect(SemType t1, SemType t2) returns SemType {
             data = data1;
         }
         else {
-            var intersect = ops[code].intersect;
-            data = intersect(data1, data2);
+            var cxIntersect = ops[code].contextIntersect;
+            if cxIntersect == () || cx == () {
+                var intersect = ops[code].intersect;
+                data = intersect(data1, data2);
+            }
+            else {
+                data = cxIntersect(cx, data1, data2);
+           }
         }
         if data != false {
             // data cannot be true since data1 and data2 are not both true
@@ -650,14 +663,18 @@ public function intersect(SemType t1, SemType t2) returns SemType {
 }
 
 public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
-    return maybeRoDiff(t1, t2, cx);
+    return maybeRoDiff(t1, t2, cx, true);
 }
 
 public function diff(SemType t1, SemType t2) returns SemType {
-    return maybeRoDiff(t1, t2, ());
+    return maybeRoDiff(t1, t2, (), false);
 }
 
-function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
+public function memoDiff(Context cx, SemType t1, SemType t2) returns SemType {
+    return maybeRoDiff(t1, t2, cx, false);
+}
+
+function maybeRoDiff(SemType t1, SemType t2, Context? cx, boolean roDiff) returns SemType {
     BasicTypeBitSet all1;
     BasicTypeBitSet all2;
     BasicTypeBitSet some1;
@@ -705,7 +722,7 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if cx == () || code < BT_COUNT_INHERENTLY_IMMUTABLE {
+        if !roDiff || code < BT_COUNT_INHERENTLY_IMMUTABLE {
             // normal diff or read-only basic type
             if data1 == () {
                 var complement = ops[code].complement;
@@ -715,8 +732,14 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
                 data = data1;
             }
             else {
-                var diff = ops[code].diff;
-                data = diff(data1, data2);
+                var cxDiff = ops[code].contextDiff;
+                if cxDiff == () || cx == () {
+                    var diff = ops[code].diff;
+                    data = diff(data1, data2);
+                }
+                else {
+                    data = cxDiff(cx, data1, data2);
+                }
             }
         }
         else {
@@ -732,7 +755,7 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
             else {
                 var diff = ops[code].diff;
                 var isEmpty = ops[code].isEmpty;
-                if isEmpty(cx, diff(data1, data2)) {
+                if isEmpty(<Context>cx, diff(data1, data2)) {
                     data = false;
                 }
                 else {
@@ -1117,7 +1140,7 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         ListAlternative[] alts = [];
         foreach var { pos, neg } in paths {
-            var intersection = intersectListAtoms(cx.env, from var atom in pos select cx.listAtomType(atom));
+            var intersection = intersectListAtoms(cx, from var atom in pos select cx.listAtomType(atom));
             if intersection !is () {
                 alts.push({
                     semType: intersection[0],

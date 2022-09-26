@@ -99,6 +99,14 @@ public function typeRelation(string lhs, string rhs) returns string  {
     }
 }
 
+public function isSubtype(string lhs, string rhs) returns boolean  {
+    t:Env env = new;
+    t:SemType lhsTy = regexToSemType(env, lhs);
+    t:SemType rhsTy = regexToSemType(env, rhs);
+    t:Context cx = t:contextFromEnv(env);
+    return t:isSubtype(cx, lhsTy, rhsTy);
+}
+
 public function regexToBalTypes(string regex) returns string {
     RegexContext cx = new;
     IntermediateType ty = regexToIntermediateType(cx, regex, 0, regex.length() - 1, cx.terminalType(()));

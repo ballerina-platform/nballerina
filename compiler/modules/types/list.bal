@@ -1,5 +1,7 @@
 // Implementation specific to basic type list.
 
+import ballerina/io;
+
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
     SemType rest;
@@ -147,7 +149,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                var intersected = listIntersectWith(members, rest, lt.members, lt.rest);
+                var intersected = listIntersectWith(cx, members, rest, lt.members, lt.rest);
                 if intersected is () {
                     return true;
                 }
@@ -167,14 +169,14 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, indices, memberTypes, nRequired, neg);
 }
 
-function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, ListAtomicType]? {
+function intersectListAtoms(Context cx, ListAtomicType[] atoms) returns [SemType, ListAtomicType]? {
     if atoms.length() == 0 {
         return ();
     }
     ListAtomicType atom = atoms[0];
     foreach int i in 1 ..< atoms.length() {
         ListAtomicType next = atoms[i];
-        var tmpAtom = listIntersectWith(atom.members, atom.rest, next.members, next.rest);
+        var tmpAtom = listIntersectWith(cx, atom.members, atom.rest, next.members, next.rest);
         if tmpAtom is () {
             return ();
         }
@@ -186,21 +188,21 @@ function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, L
         }
         atom = { members: members.cloneReadOnly(), rest };
     }
-    SemType semType = createBasicSemType(BT_LIST, bddAtom(env.listAtom(atom)));
+    SemType semType = createBasicSemType(BT_LIST, bddAtom(cx.env.listAtom(atom)));
     return [semType, atom];
 }
 
-function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
+function listIntersectWith(Context cx, FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
     if listLengthsDisjoint(members1, rest1, members2, rest2) {
         return ();
     }
     return [
         {
             initial: (from int i in 0 ..< int:max(members1.initial.length(), members2.initial.length())
-                      select intersect(listMemberAt(members1, rest1, i), listMemberAt(members2, rest2, i))),
+                      select memoIntersect(cx, listMemberAt(members1, rest1, i), listMemberAt(members2, rest2, i))),
             fixedLength: int:max(members1.fixedLength, members2.fixedLength)
         },
-        intersect(rest1, rest2)
+        memoIntersect(cx, rest1, rest2)
     ];
 }
 
@@ -215,6 +217,8 @@ function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLength
 // `memberTypes[i]` is the type that P gives to `indices[i]`;
 // `nRequired` is the number of members of `memberTypes` that are required by P.
 // `neg` represents N.
+
+int isEmptyLevel = 0;
 function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
     if neg == () {
         return true;
@@ -264,8 +268,17 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
         // We can generalize this to tuples of arbitrary length.
        
         foreach int i in 0 ..< memberTypes.length() {
-            SemType d = diff(memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
-            if !isEmpty(cx, d) {
+            SemType d = memoDiff(cx, memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
+            boolean e;
+            int beforeCount = cx.listMemo.length();
+            isEmptyLevel += 1;
+            e = isEmpty(cx, d);
+            isEmptyLevel -= 1;
+            int afterCount = cx.listMemo.length();
+            if afterCount == beforeCount + 1 {
+                io:println(afterCount, "@" , isEmptyLevel);
+            }
+            if !e {
                 SemType[] t = memberTypes.clone();
                 t[i] = d;
                 // We need to make index i be required
@@ -554,10 +567,24 @@ function nextBoundary(int cur, Range r, int? next) returns int? {
     return next;
 }
 
+function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    return memoSubtypeIntersect(cx.listMemo, <Bdd>t1, <Bdd>t2);
+}
+
+function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
+    if b != false && cx.listMemo[b] == () {
+        //io:println("fresh BDD: ", bddToString(b));
+    }
+    return b;
+}
+
 final BasicTypeOps listOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: listSubtypeIsEmpty
+    isEmpty: listSubtypeIsEmpty,
+    contextIntersect: listSubtypeIntersect,
+    contextDiff: listSubtypeDiff
 };

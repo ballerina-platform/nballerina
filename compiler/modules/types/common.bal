@@ -65,6 +65,40 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     return isEmpty;
 }
 
+class MemoBddCache {
+    *BddCache;
+    private final BddMemoTable memo;
+
+    function init(BddMemoTable memo) {
+        self.memo = memo;
+    }
+    isolated function get(Bdd bdd) returns Bdd {
+        if memoAssumeEmpty(self.memo, bdd) {
+            return false;
+        }
+        return bdd;
+    }
+}
+
+function memoSubtypeIntersect(BddMemoTable memoTable, Bdd b1, Bdd b2) returns Bdd {
+    MemoBddCache cache = new(memoTable);
+    return bddIntersect(cache, cache.get(b1), cache.get(b2));
+}
+
+function memoSubtypeDiff(BddMemoTable memoTable, Bdd b1, Bdd b2) returns Bdd {
+    MemoBddCache cache = new(memoTable);
+    return bddDiff(cache, cache.get(b1), cache.get(b2));
+}
+
+isolated function memoAssumeEmpty(BddMemoTable memoTable, Bdd b) returns boolean {
+    BddMemo? m = memoTable[b];
+    if m != () {
+        MemoEmpty res = m.empty;
+        return res == true || res == "provisional";
+    }
+    return false;
+}
+
 type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;
 
 // A Bdd represents a disjunction of conjunctions of atoms, where each atom is either positive or
@@ -101,19 +135,19 @@ function andIfPositive(Atom atom, Conjunction? next) returns Conjunction? {
 }
 
 function bddSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return bddUnion(<Bdd>t1, <Bdd>t2);
+    return bddUnion(noBddCache, <Bdd>t1, <Bdd>t2);
 }
 
 function bddSubtypeIntersect(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return bddIntersect(<Bdd>t1, <Bdd>t2);
+    return bddIntersect(noBddCache, <Bdd>t1, <Bdd>t2);
 }
 
 function bddSubtypeDiff(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return bddDiff(<Bdd>t1, <Bdd>t2);
+    return bddDiff(noBddCache, <Bdd>t1, <Bdd>t2);
 }
 
 function bddSubtypeComplement(SubtypeData t) returns SubtypeData {
-    return bddComplement(<Bdd>t);
+    return bddComplement(noBddCache, <Bdd>t);
 }
 
 // Represents path from root to leaf (ending with true)
@@ -134,11 +168,11 @@ function bddPaths(Bdd b, BddPath[] paths, BddPath accum) {
         BddPath left = accum.clone();
         BddPath right = accum.clone();
         left.pos.push(b.atom);
-        left.bdd = bddIntersect(left.bdd, bddAtom(b.atom));
+        left.bdd = bddIntersect(noBddCache, left.bdd, bddAtom(b.atom));
         bddPaths(b.left, paths, left);
         bddPaths(b.middle, paths, accum);
         right.neg.push(b.atom);
-        right.bdd = bddDiff(right.bdd, bddAtom(b.atom));
+        right.bdd = bddDiff(noBddCache, right.bdd, bddAtom(b.atom));
         bddPaths(b.right, paths, right);
     }
 }
