@@ -1,4 +1,5 @@
 import wso2/nballerina.types as t;
+import ballerina/io;
 
 type StringAsList ()|[string:Char, StringAsList];
 
@@ -88,7 +89,9 @@ class RegexContext {
 public function typeRelation(string lhs, string rhs) returns string  {
     t:Env env = new;
     t:SemType lhsTy = regexToSemType(env, lhs);
+    io:println("lhsTy", lhsTy);
     t:SemType rhsTy = regexToSemType(env, rhs);
+    io:println("rhsTy", rhsTy);
     t:Context cx = t:contextFromEnv(env);
     var relation = [t:isSubtype(cx, lhsTy, rhsTy), t:isSubtype(cx, rhsTy, lhsTy)];
     match relation {
@@ -99,10 +102,16 @@ public function typeRelation(string lhs, string rhs) returns string  {
     }
 }
 
-public function regexToBalTypes(string regex) returns string {
+public function regexesToBalTypes(string[] regexes) returns string[] {
     RegexContext cx = new;
-    IntermediateType ty = regexToIntermediateType(cx, regex, 0, regex.length() - 1, cx.terminalType(()));
-    return intermediateTypeToString(ty);
+    t:Env env = new();
+    IntermediateType[] intermediateTypes = [];
+    foreach string regex in regexes {
+        IntermediateType intermediateType = regexToIntermediateType(cx, regex, 0, regex.length() - 1, cx.terminalType(()));
+        intermediateTypes.push(intermediateType);
+        _ = intermediateTypeToSemType(cx, env, intermediateType); // this is to ensure we have bdd atoms before turning to string
+    }
+    return from var intermediateType in intermediateTypes select intermediateTypeToString(intermediateType);
 }
 
 // This is faster than using regexToSemType but should produce the same result
@@ -325,7 +334,7 @@ function intermediateTypeToString(IntermediateType ty) returns string {
     else {
         string[] body = [];
         if ty is IntermediateListType {
-            body.push("type " + ty.name + " " + "[" + ", ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + "]" + ";");
+            body.push("type " + ty.name + " " + "[" + ", ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + "]" + ";" + listTypeAtomicIndexComment(ty));
         }
         else {
             body.push("type " + ty.name + " " + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";");
@@ -334,4 +343,16 @@ function intermediateTypeToString(IntermediateType ty) returns string {
         body.push(...from var operand in <IntermediateType[]>ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
         return "\n".'join(...body);
     }
+}
+
+function listTypeAtomicIndexComment(IntermediateListType ty) returns string {
+    t:SemType? semtype = ty.semtype;
+    if semtype is () {
+        return "";
+    }
+    int? atomIndex = t:semTypeToBddIndex(semtype);
+    if atomIndex is () {
+        return "";
+    }
+    return " // " + atomIndex.toString();
 }
