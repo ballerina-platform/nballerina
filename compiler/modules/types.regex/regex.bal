@@ -88,9 +88,7 @@ class RegexContext {
 public function typeRelation(string lhs, string rhs) returns string  {
     t:Env env = new;
     t:SemType lhsTy = regexToSemType(env, lhs);
-    // io:println("lhsTy", lhsTy);
     t:SemType rhsTy = regexToSemType(env, rhs);
-    // io:println("rhsTy", rhsTy);
     t:Context cx = t:contextFromEnv(env);
     var relation = [t:isSubtype(cx, lhsTy, rhsTy), t:isSubtype(cx, rhsTy, lhsTy)];
     match relation {

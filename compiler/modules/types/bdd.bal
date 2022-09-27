@@ -228,7 +228,7 @@ isolated function bddToString(Bdd b, boolean inner = false) returns string {
     }
 }
 
-// TODO: comment here
+// This is for debug purposes. Used by regex to add comments for type definitions
 public isolated function semTypeToBddString(SemType ty) returns string? {
     if ty !is ComplexSemType {
         return ();

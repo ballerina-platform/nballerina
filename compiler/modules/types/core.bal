@@ -654,7 +654,6 @@ public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
 }
 
 public function diff(SemType t1, SemType t2) returns SemType {
-    // io:println(t1, "-", t2);
     return maybeRoDiff(t1, t2, ());
 }
 
@@ -765,7 +764,6 @@ public function isNever(SemType t) returns boolean {
 }
 
 public function isEmpty(Context cx, SemType t) returns boolean {
-    // io:println("isEmpty: ", t);
     if t is BasicTypeBitSet {
         return t == 0;
     }
