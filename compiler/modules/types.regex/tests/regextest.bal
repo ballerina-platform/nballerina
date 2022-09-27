@@ -33,6 +33,7 @@ function testRegexInclusion(f:SubtypeTestOp op, string lhs, string rhs) {
 
 @test:Config{
     dataProvider: readGeneratedTests,
+    enable: false,
     groups: ["longRunning"] 
 }
 function testRegexGenerated(f:SubtypeTestOp op, string lhs, string rhs) {
