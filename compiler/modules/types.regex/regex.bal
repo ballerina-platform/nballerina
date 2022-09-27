@@ -1,5 +1,4 @@
 import wso2/nballerina.types as t;
-import ballerina/io;
 
 type StringAsList ()|[string:Char, StringAsList];
 
@@ -89,9 +88,9 @@ class RegexContext {
 public function typeRelation(string lhs, string rhs) returns string  {
     t:Env env = new;
     t:SemType lhsTy = regexToSemType(env, lhs);
-    io:println("lhsTy", lhsTy);
+    // io:println("lhsTy", lhsTy);
     t:SemType rhsTy = regexToSemType(env, rhs);
-    io:println("rhsTy", rhsTy);
+    // io:println("rhsTy", rhsTy);
     t:Context cx = t:contextFromEnv(env);
     var relation = [t:isSubtype(cx, lhsTy, rhsTy), t:isSubtype(cx, rhsTy, lhsTy)];
     match relation {
@@ -334,10 +333,10 @@ function intermediateTypeToString(IntermediateType ty) returns string {
     else {
         string[] body = [];
         if ty is IntermediateListType {
-            body.push("type " + ty.name + " " + "[" + ", ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + "]" + ";" + listTypeAtomicIndexComment(ty));
+            body.push("type " + ty.name + " " + "[" + ", ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + "]" + ";" + intermediateTypeBddComment(ty));
         }
         else {
-            body.push("type " + ty.name + " " + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";");
+            body.push("type " + ty.name + " " + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";" + intermediateTypeBddComment(ty));
         }
         // JBUG: cast
         body.push(...from var operand in <IntermediateType[]>ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
@@ -345,14 +344,14 @@ function intermediateTypeToString(IntermediateType ty) returns string {
     }
 }
 
-function listTypeAtomicIndexComment(IntermediateListType ty) returns string {
+function intermediateTypeBddComment(IntermediateListType|IntermediateUnionType ty) returns string {
     t:SemType? semtype = ty.semtype;
     if semtype is () {
         return "";
     }
-    int? atomIndex = t:semTypeToBddIndex(semtype);
-    if atomIndex is () {
+    string? bddString = t:semTypeToBddString(semtype);
+    if bddString is () {
         return "";
     }
-    return " // " + atomIndex.toString();
+    return " // " + bddString;
 }

@@ -229,14 +229,13 @@ isolated function bddToString(Bdd b, boolean inner = false) returns string {
 }
 
 // TODO: comment here
-public isolated function semTypeToBddIndex(SemType ty) returns int? {
+public isolated function semTypeToBddString(SemType ty) returns string? {
     if ty !is ComplexSemType {
         return ();
     } 
-    var subTypeData = ty.subtypeDataList[0];
-    if subTypeData !is BddNode {
+    var currentSubtype = ty.subtypeDataList[0];
+    if currentSubtype !is BddNode {
         return ();
     }
-    Atom atom = subTypeData.atom;
-    return atom is RecAtom ? atom : atom.index; 
+    return bddToString(currentSubtype);
 }
