@@ -211,6 +211,11 @@ function starToIntermediateTypeInner(RegexContext cx, string regex, int index, i
     if pattern is End {
         panic error("unexpected end of pattern");
     }
+    // nested star ((a*)*) considered equal to their unnested version (a*) aviod invalid type loop
+    if pattern is Star && isNestedStarPattern(regex, startIndex, endIndex, pattern) {
+        PatternRange range = pattern.range;
+        return starToIntermediateTypeInner(cx, regex, range.startIndex, range.startIndex, range.endIndex, recTy); 
+    }
     if (pattern is Star && pattern.range.startIndex == startIndex && pattern.range.endIndex == endIndex) || pattern is Concat {
         string:Char char = regex[index];
         IntermediateType[2] operands = index == endIndex ? [cx.terminalType(char), recTy] :  
@@ -219,6 +224,22 @@ function starToIntermediateTypeInner(RegexContext cx, string regex, int index, i
         return ty;
     }
     return regexToIntermediateType(cx, regex, index, endIndex, recTy);
+}
+
+function isNestedStarPattern(string regex, int startIndex, int endIndex, Star inner) returns boolean {
+    int otherStart = inner.range.startIndex;
+    int otherEnd = inner.range.endIndex;
+    foreach int i in startIndex ..< otherStart {
+        if regex[i] != "(" {
+            return false;
+        }
+    }
+    foreach int i in otherEnd + 1 ..< endIndex + 1 {
+        if regex[i] !is ")"|"*" {
+            return false;
+        }
+    }
+    return true;
 }
 
 function orToIntermediateType(RegexContext cx, string regex, Or pattern, int end, IntermediateType restTy) returns IntermediateType {
@@ -299,7 +320,7 @@ function intermediateTypeToString(IntermediateType ty) returns string {
         if value is () {
             return string `type ${ty.name} ();`;
         }
-        return string `type ${ty.name} ${value};`;
+        return string `type ${ty.name} "${value}";`;
     }
     else {
         string[] body = [];
