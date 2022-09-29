@@ -113,6 +113,8 @@ public function isSubtype(string lhs, string rhs) returns boolean  {
     io:println(rhs, "<", lhs);
     io:println([cx.a, cx.b, cx.total]);
     io:println(cx.countData);
+    io:println(cx.sharedPosCount);
+    io:println(cx.uniquePosCount);
     return result;
 }
 

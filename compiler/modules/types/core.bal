@@ -201,9 +201,11 @@ public function contextFromEnv(Env env) returns Context {
 }
 
 public type CountData record {|
-    readonly string:Char pos;
-    readonly string:Char|"none" neg;
+    readonly string pos;
+    readonly string neg;
+
     int count;
+    int sharedCount;
 |};
 
 // Operations on types require a Context.
@@ -224,7 +226,9 @@ public class Context {
     public int b = 0;
     public int total = 0;
     public table<CountData> key(pos, neg) countData = table [];
-
+    public map<int> uniquePosCount = {};
+    public map<int> sharedPosCount = {};
+    map<int> atomMap = {};
 
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
@@ -818,37 +822,47 @@ public function isEmpty(Context cx, SemType t) returns boolean {
 }
 
 function bddStringRep(Context cx, Bdd b) returns string {
-    var key = bddToKey(cx, b);
-    if key is () | "multi" {
+    var k = bddToKey(cx, b);
+    if k is () {
         return "?";
     }
-    var [pos, negs] = key;
-    return negs.length() == 0 ? pos : pos + "-" + "".join(...negs.sort());
+    return " | ".'join(...from var each in k select keyToStringRep(each));
 }
 
-function bddToKey(Context cx, Bdd b) returns [string:Char, string:Char[]]|"multi"? {
+function keyToStringRep(Key key) returns string {
+    var [pos, negs] = key;
+    return negs.length() == 0 ? pos : pos + " - " + " ".join(...negs.sort());
+}
+
+type Key [string, string[]];
+
+function bddToKey(Context cx, Bdd b) returns Key[]? {
     BddPath[] paths = [];
     bddPaths(b, paths, {});
-    if paths.length() != 1 {
-        return "multi";
-        // io:println("--", paths);
-        // foreach var path in paths {
-        //     if path.pos.length() != 1 {
-        //         io:println("()");
-        //     }
-        //     io:println(posNegSets(cx, path.pos[0], path.neg));
-        //     
-        // }
-        // panic error("unexpected 1");
-    } 
-    BddPath path = paths[0];
-    if path.pos.length() != 1 {
-        return ();
+    // if paths.length() != 1 {
+    //     // io:println("--", paths,);
+    //     // foreach var path in paths {
+    //     //     if path.pos.length() != 1 {
+    //     //         io:println("\t()");
+    //     //     }
+    //     //     else {
+    //     //     io:println("\t", posNegSets(cx, path.pos[0], path.neg));
+    //     //     }
+    //     //     
+    //     // }
+    //     return ();
+    // } 
+    Key[] k = [];
+    foreach var path in paths {
+        if path.pos.length() != 1 {
+            return ();
+        }
+        k.push(posNegSets(cx, path.pos[0], path.neg));
     }
-    return posNegSets(cx, path.pos[0], path.neg);
+    return k;
 }
 
-function posNegSets(Context cx, Atom pos, Atom[] negs) returns [string:Char, string:Char[]] {
+function posNegSets(Context cx, Atom pos, Atom[] negs) returns [string, string[]] {
     // ListAtomicType atomicType = cx.listAtomType(node.atom);
     // SemType[] initial = atomicType.members.initial; 
     // // io:println(initial[1]);
@@ -858,9 +872,20 @@ function posNegSets(Context cx, Atom pos, Atom[] negs) returns [string:Char, str
     return [atomToChar(cx, pos), from var neg in negs select atomToChar(cx, neg)];
 }
 
-function atomToChar(Context cx, Atom atom) returns string:Char {
+function atomToChar(Context cx, Atom atom) returns string {
     ListAtomicType listTy = cx.listAtomType(atom);
-    return getChar(<ComplexSemType>listTy.members.initial[0]);
+    string:Char char = getChar(<ComplexSemType>listTy.members.initial[0]);
+    int index = atom is RecAtom ? atom : atom.index;
+    // if cx.atomMap.hasKey(char) {
+    //     if cx.atomMap.get(char) != atom {
+    //         io:println(atom, ",", cx.atomMap.get(char));
+    //         panic error("error");
+    //     }
+    // }
+    // else {
+    //     cx.atomMap[char] = atom is RecAtom? atom : atom.index;
+    // }
+    return char + index.toString();
 }
 
 function updateCountTable(Context cx, Bdd bdd) {
@@ -869,18 +894,26 @@ function updateCountTable(Context cx, Bdd bdd) {
     if k is () {
         return;
     }
-    if k is "multi" {
-        cx.b += 1;
-        return;
+    // if k is "multi" {
+    //     cx.b += 1;
+    //     return;
+    // }
+    boolean shared = k.length() > 1;
+    if !shared {
+        cx.a += 1;
     }
-    cx.a += 1;
-    var [pos, negs] = k;
-    if negs.length() == 0 {
-        incrementCount(cx, [pos, "none"]);
-    } 
     else {
-        foreach var neg in negs {
-            incrementCount(cx, [pos, neg]);
+        cx.b += 1;
+    }
+    foreach var key in k {
+        var [pos, negs] = key;
+        if negs.length() == 0 {
+            incrementCount(cx, [pos, "none"], shared);
+        } 
+        else {
+            foreach var neg in negs {
+                incrementCount(cx, [pos, neg], shared);
+            }
         }
     }
 }
@@ -899,14 +932,26 @@ function getChar(ComplexSemType ty) returns string:Char {
     return val;
 }
 
-function incrementCount(Context cx, [string:Char, string:Char|"none"] key) {
+function incrementCount(Context cx, [string, string|"none"] key, boolean shared) {
+    var [pos, neg] = key;
+    int count;
+    int sharedCount;
     if cx.countData.hasKey(key) {
-       int newCount = cx.countData.get(key).count + 1;
-       cx.countData.put({ pos: key[0], neg: key[1], count: newCount });
+       { count, sharedCount} = cx.countData.get(key); 
     }
     else {
-       cx.countData.add({ pos: key[0], neg: key[1], count: 1 });
+        count = 0;
+        sharedCount = 0;
     }
+    if shared {
+        sharedCount += 1;
+        cx.sharedPosCount[pos] = cx.sharedPosCount.hasKey(pos) ? cx.sharedPosCount.get(pos) + 1 : 1;
+    }
+    else {
+        count += 1;
+        cx.uniquePosCount[pos] = cx.uniquePosCount.hasKey(pos) ? cx.uniquePosCount.get(pos) + 1 : 1;
+    }
+   cx.countData.put({ pos, neg, count, sharedCount });
 }
 
 function negativeSet(Context cx, BddNode node, boolean inner = false) returns string:Char[] {
