@@ -276,7 +276,7 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
             isEmptyLevel -= 1;
             int afterCount = cx.listMemo.length();
             if afterCount == beforeCount + 1 {
-                io:println(afterCount, "@" , isEmptyLevel);
+                // io:println(afterCount, "@" , isEmptyLevel);
             }
             if !e {
                 SemType[] t = memberTypes.clone();
@@ -575,8 +575,26 @@ function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns Sub
     Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
     if b != false && cx.listMemo[b] == () {
         //io:println("fresh BDD: ", bddToString(b));
+        io:println(",".'join(bddStringRep(cx, b), bddStringRep(cx, <Bdd>t1), bddStringRep(cx, <Bdd>t2)));
+        // if b is BddNode && isCorrectType(cx, b) && b.right is BddNode && isCorrectType(cx, <BddNode>b.right) && b.left is false {
+        //     var[pos, negs] = posNegSets(cx, b);
+        //     io:println(pos, "-", "".'join(...negs));
+        // }
+        // else {
+        //     io:println("?");
+        // }
     }
     return b;
+}
+
+function bddStringRep(Context cx, Bdd b) returns string {
+    if b is BddNode {
+        var[pos, negs] = posNegSets(cx, b);
+        return negs.length() == 0 ? pos : pos + "-" + "".'join(...negs);
+    }
+    else {
+        return "?";
+    }
 }
 
 final BasicTypeOps listOps = {

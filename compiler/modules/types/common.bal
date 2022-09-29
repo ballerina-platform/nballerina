@@ -48,6 +48,7 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
         m = { bdd: b };
         memoTable.add(m);
     }
+    updateCount(cx, b);
     m.empty = "provisional";
     int initStackDepth = cx.memoStack.length();
     cx.memoStack.push(m);

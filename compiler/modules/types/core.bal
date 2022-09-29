@@ -1,4 +1,5 @@
 import wso2/nballerina.comm.lib;
+import ballerina/io;
 
 // There is an integer for each basic type.
 
@@ -200,6 +201,12 @@ public function contextFromEnv(Env env) returns Context {
     return new(env);
 }
 
+public type CountData record {|
+    readonly string:Char pos;
+    readonly string:Char|"none" neg;
+    int count;
+|};
+
 // Operations on types require a Context.
 // There can be multiple contexts for the same Env.
 // Whereas an Env is isolated, a Context is not isolated.
@@ -214,6 +221,10 @@ public class Context {
     // Contains all BddMemo entries in above table
     // with empty == "provisional".
     BddMemo[] memoStack = [];
+    public int a = 0;
+    public int total = 0;
+    public table<CountData> key(pos, neg) countData = table [];
+
 
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
@@ -804,6 +815,84 @@ public function isEmpty(Context cx, SemType t) returns boolean {
         }
         return true;
     }
+}
+
+function updateCount(Context cx, Bdd bdd) {
+    cx.total += 1;
+    if bdd is boolean {
+        return;
+    }
+    if isCorrectType(cx, bdd) && bdd.right is BddNode && isCorrectType(cx, <BddNode>bdd.right) && bdd.left is false {
+        updateCountTable(cx, bdd);
+        cx.a += 1;
+    }
+}
+
+function isCorrectType(Context cx, BddNode node) returns boolean {
+    ListAtomicType atomicType = cx.listAtomType(node.atom);
+    SemType[] initial = atomicType.members.initial; 
+    return isSubtype(cx, initial[0], STRING);
+}
+
+function updateCountTable(Context cx, BddNode node) {
+    var [pos, negs] = posNegSets(cx, node);
+    if negs.length() == 0 {
+        incrementCount(cx, [pos, "none"]);
+    } 
+    else {
+        foreach var neg in negs {
+            incrementCount(cx, [pos, neg]);
+        }
+    }
+}
+
+public function posNegSets(Context cx, BddNode node) returns [string:Char, string:Char[]] {
+    ListAtomicType atomicType = cx.listAtomType(node.atom);
+    SemType[] initial = atomicType.members.initial; 
+    // io:println(initial[1]);
+    string:Char pos = getChar(<ComplexSemType> initial[0]);
+    string:Char[] negs = negativeSet(cx, node).sort();
+    return [pos, negs];
+}
+
+function getChar(ComplexSemType ty) returns string:Char {
+    if ty.subtypeDataList.length() != 1 {
+        panic error("1");
+    }
+    StringSubtype subType = <StringSubtype>ty.subtypeDataList[0];
+    string:Char val = subType.char.values[0];
+    if subType.char.allowed is false {
+        panic error("2");
+    }
+    if subType.char.values.length() != 1 {
+        panic error("3");
+    }
+    return val;
+}
+
+function incrementCount(Context cx, [string:Char, string:Char|"none"] key) {
+    if cx.countData.hasKey(key) {
+       int newCount = cx.countData.get(key).count + 1;
+       cx.countData.put({ pos: key[0], neg: key[1], count: newCount });
+    }
+    else {
+       cx.countData.add({ pos: key[0], neg: key[1], count: 1 });
+    }
+}
+
+function negativeSet(Context cx, BddNode node, boolean inner = false) returns string:Char[] {
+    // Bdd right = inner? node.middle : node.right;
+    Bdd right = node.right;
+    if right is BddNode {
+        ListAtomicType atomicType = cx.listAtomType(right.atom);
+        SemType[] initial = atomicType.members.initial; 
+        // io:println("--", initial[1]);
+        ComplexSemType key = <ComplexSemType> initial[0];
+        string:Char[] results = [getChar(key)];
+        results.push(...negativeSet(cx, right, true));
+        return results;
+    }
+    return [];
 }
     
 public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean { 

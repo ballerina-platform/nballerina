@@ -1,4 +1,5 @@
 import wso2/nballerina.types as t;
+import ballerina/io;
 
 type StringAsList ()|[string:Char, StringAsList];
 
@@ -90,7 +91,11 @@ public function typeRelation(string lhs, string rhs) returns string  {
     t:SemType lhsTy = regexToSemType(env, lhs);
     t:SemType rhsTy = regexToSemType(env, rhs);
     t:Context cx = t:contextFromEnv(env);
-    var relation = [t:isSubtype(cx, lhsTy, rhsTy), t:isSubtype(cx, rhsTy, lhsTy)];
+    boolean l = t:isSubtype(cx, lhsTy, rhsTy);
+    boolean r = t:isSubtype(cx, rhsTy, lhsTy);
+    io:println(rhs, "<", lhs);
+    io:println([cx.a, cx.total]);
+    var relation = [l, r];
     match relation {
         [true, true] => { return "="; }
         [true, false] => { return "<"; }
@@ -104,7 +109,11 @@ public function isSubtype(string lhs, string rhs) returns boolean  {
     t:SemType lhsTy = regexToSemType(env, lhs);
     t:SemType rhsTy = regexToSemType(env, rhs);
     t:Context cx = t:contextFromEnv(env);
-    return t:isSubtype(cx, lhsTy, rhsTy);
+    boolean result = t:isSubtype(cx, lhsTy, rhsTy);
+    io:println(rhs, "<", lhs);
+    io:println([cx.a, cx.total]);
+    io:println(cx.countData);
+    return result;
 }
 
 public function regexToBalTypes(string regex) returns string {
