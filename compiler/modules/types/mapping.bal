@@ -219,15 +219,13 @@ function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2)
     SemType[] types = [];
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
-        CellAtomicType cat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(type1), <CellAtomicType>cellAtomicType(type2));
-        if isNever(cat.ty) {
+        MemberSemType t = intersectMemberSemTypes(env, <MemberSemType>type1, <MemberSemType>type2);
+        if isNeverDeref(type1) {
             return ();
         }
-        SemType t = cellContaining(env, cat.ty, cat.mut);
         types.push(t);
     }
-    CellAtomicType restCat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(m1.rest), <CellAtomicType>cellAtomicType(m2.rest));
-    SemType rest = cellContaining(env, restCat.ty, restCat.mut);
+    MemberSemType rest = intersectMemberSemTypes(env, <MemberSemType>m1.rest, <MemberSemType>m2.rest);
     return { names, types, rest };
 }
 

@@ -302,6 +302,13 @@ public type ComplexSemType readonly & record {|
     ProperSubtypeData[] subtypeDataList;
 |};
 
+// This is to represent a SemType belonging to cell basic type
+public type MemberSemType readonly & record {|
+    0 all = 0;
+    BasicTypeBitSet some = CELL;
+    ProperSubtypeData[1] subtypeDataList;
+|};
+
 // subtypeList must be ordered
 function createComplexSemType(BasicTypeBitSet all, BasicSubtype[] subtypeList = []) returns ComplexSemType {
     int some = 0;
@@ -644,6 +651,12 @@ public function intersect(SemType t1, SemType t2) returns SemType {
         return all;
     }
     return createComplexSemType(all, subtypes);    
+}
+
+public function intersectMemberSemTypes(Env env, MemberSemType t1, MemberSemType t2) returns MemberSemType {
+    // JBUG #37994 cannot use mapping binding pattern with readonly records
+    CellAtomicType cat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
+    return <MemberSemType>cellContaining(env, cat.ty, cat.mut);
 }
 
 public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
