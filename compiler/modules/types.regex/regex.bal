@@ -94,7 +94,7 @@ public function typeRelation(string lhs, string rhs) returns string  {
     boolean l = t:isSubtype(cx, lhsTy, rhsTy);
     boolean r = t:isSubtype(cx, rhsTy, lhsTy);
     io:println(rhs, "<", lhs);
-    io:println([cx.a, cx.total]);
+    io:println([cx.a, cx.b, cx.total]);
     var relation = [l, r];
     match relation {
         [true, true] => { return "="; }
@@ -111,7 +111,7 @@ public function isSubtype(string lhs, string rhs) returns boolean  {
     t:Context cx = t:contextFromEnv(env);
     boolean result = t:isSubtype(cx, lhsTy, rhsTy);
     io:println(rhs, "<", lhs);
-    io:println([cx.a, cx.total]);
+    io:println([cx.a, cx.b, cx.total]);
     io:println(cx.countData);
     return result;
 }

@@ -1,5 +1,4 @@
 import wso2/nballerina.comm.lib;
-import ballerina/io;
 
 // There is an integer for each basic type.
 
@@ -222,6 +221,7 @@ public class Context {
     // with empty == "provisional".
     BddMemo[] memoStack = [];
     public int a = 0;
+    public int b = 0;
     public int total = 0;
     public table<CountData> key(pos, neg) countData = table [];
 
@@ -817,25 +817,64 @@ public function isEmpty(Context cx, SemType t) returns boolean {
     }
 }
 
-function updateCount(Context cx, Bdd bdd) {
+function bddStringRep(Context cx, Bdd b) returns string {
+    var key = bddToKey(cx, b);
+    if key is () | "multi" {
+        return "?";
+    }
+    var [pos, negs] = key;
+    return negs.length() == 0 ? pos : pos + "-" + "".join(...negs.sort());
+}
+
+function bddToKey(Context cx, Bdd b) returns [string:Char, string:Char[]]|"multi"? {
+    BddPath[] paths = [];
+    bddPaths(b, paths, {});
+    if paths.length() != 1 {
+        return "multi";
+        // io:println("--", paths);
+        // foreach var path in paths {
+        //     if path.pos.length() != 1 {
+        //         io:println("()");
+        //     }
+        //     io:println(posNegSets(cx, path.pos[0], path.neg));
+        //     
+        // }
+        // panic error("unexpected 1");
+    } 
+    BddPath path = paths[0];
+    if path.pos.length() != 1 {
+        return ();
+    }
+    return posNegSets(cx, path.pos[0], path.neg);
+}
+
+function posNegSets(Context cx, Atom pos, Atom[] negs) returns [string:Char, string:Char[]] {
+    // ListAtomicType atomicType = cx.listAtomType(node.atom);
+    // SemType[] initial = atomicType.members.initial; 
+    // // io:println(initial[1]);
+    // string:Char pos = getChar(<ComplexSemType> initial[0]);
+    // string:Char[] negs = negativeSet(cx, node).sort();
+    // return [pos, negs];
+    return [atomToChar(cx, pos), from var neg in negs select atomToChar(cx, neg)];
+}
+
+function atomToChar(Context cx, Atom atom) returns string:Char {
+    ListAtomicType listTy = cx.listAtomType(atom);
+    return getChar(<ComplexSemType>listTy.members.initial[0]);
+}
+
+function updateCountTable(Context cx, Bdd bdd) {
     cx.total += 1;
-    if bdd is boolean {
+    var k = bddToKey(cx, bdd);
+    if k is () {
         return;
     }
-    if isCorrectType(cx, bdd) && bdd.right is BddNode && isCorrectType(cx, <BddNode>bdd.right) && bdd.left is false {
-        updateCountTable(cx, bdd);
-        cx.a += 1;
+    if k is "multi" {
+        cx.b += 1;
+        return;
     }
-}
-
-function isCorrectType(Context cx, BddNode node) returns boolean {
-    ListAtomicType atomicType = cx.listAtomType(node.atom);
-    SemType[] initial = atomicType.members.initial; 
-    return isSubtype(cx, initial[0], STRING);
-}
-
-function updateCountTable(Context cx, BddNode node) {
-    var [pos, negs] = posNegSets(cx, node);
+    cx.a += 1;
+    var [pos, negs] = k;
     if negs.length() == 0 {
         incrementCount(cx, [pos, "none"]);
     } 
@@ -845,16 +884,6 @@ function updateCountTable(Context cx, BddNode node) {
         }
     }
 }
-
-public function posNegSets(Context cx, BddNode node) returns [string:Char, string:Char[]] {
-    ListAtomicType atomicType = cx.listAtomType(node.atom);
-    SemType[] initial = atomicType.members.initial; 
-    // io:println(initial[1]);
-    string:Char pos = getChar(<ComplexSemType> initial[0]);
-    string:Char[] negs = negativeSet(cx, node).sort();
-    return [pos, negs];
-}
-
 function getChar(ComplexSemType ty) returns string:Char {
     if ty.subtypeDataList.length() != 1 {
         panic error("1");

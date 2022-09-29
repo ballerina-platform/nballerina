@@ -574,6 +574,7 @@ function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) return
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
     Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
     if b != false && cx.listMemo[b] == () {
+        // TODO: fix this
         //io:println("fresh BDD: ", bddToString(b));
         io:println(",".'join(bddStringRep(cx, b), bddStringRep(cx, <Bdd>t1), bddStringRep(cx, <Bdd>t2)));
         // if b is BddNode && isCorrectType(cx, b) && b.right is BddNode && isCorrectType(cx, <BddNode>b.right) && b.left is false {
@@ -585,16 +586,6 @@ function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns Sub
         // }
     }
     return b;
-}
-
-function bddStringRep(Context cx, Bdd b) returns string {
-    if b is BddNode {
-        var[pos, negs] = posNegSets(cx, b);
-        return negs.length() == 0 ? pos : pos + "-" + "".'join(...negs);
-    }
-    else {
-        return "?";
-    }
 }
 
 final BasicTypeOps listOps = {
