@@ -80,11 +80,11 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
             }
             t:SemType[] initial = from var member in members select semTypeFromSexpr(env, bindings, member);
             t:ListDefinition d = new;
-            return d.define(env, initial, len);
+            return t:defineListTypeWrapped(d, env, initial, len);
         }
         ["array", var members] => {
             t:ListDefinition d = new;
-            return d.define(env, rest = semTypeFromSexpr(env, bindings, <Type>members));
+            return t:defineListTypeWrapped(d, env, rest = semTypeFromSexpr(env, bindings, <Type>members));
         }
     }
 

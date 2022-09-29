@@ -99,7 +99,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
             }
             t:ListDefinition def = new;
             t:SemType[] members = check parseTypes(tc, consDefBinding(jlist, def, b), jlist, parent, 1);
-            return def.define(env, members);
+            return t:defineListTypeWrapped(def, env, members);
         }
         "list" => {
             t:SemType? s = lookupDef(env, b, jlist);
@@ -115,7 +115,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
             else {
                 rest = members.pop();
             }
-            return def.define(env, members, rest = rest);
+            return t:defineListTypeWrapped(def, env, members, rest = rest);
         }
         "record" => {
             t:SemType? s = lookupDef(env, b, jlist);
@@ -151,7 +151,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
                 return t:FUNCTION;
             }
             t:SemType ret = v.pop();
-            return def.define(env, t:tuple(env, ...v), ret);
+            return def.define(env, t:tupleTypeWrapped(env, ...v), ret);
         }
         "error" => {
             if jlist.length() != 2 {

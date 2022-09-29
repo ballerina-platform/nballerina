@@ -23,9 +23,9 @@ function test1() {
     Env env = new;
     disjoint(typeContext(env), STRING, INT);
     disjoint(typeContext(env), INT, NIL);
-    SemType t1 = tuple(env, INT, INT);
+    SemType t1 = tupleTypeWrapped(env, INT, INT);
     disjoint(typeContext(env), t1, INT);
-    SemType t2 = tuple(env, STRING, STRING);
+    SemType t2 = tupleTypeWrapped(env, STRING, STRING);
     disjoint(typeContext(env), NIL, t2);
 }
 
@@ -41,11 +41,12 @@ function test2() {
 }
 
 @test:Config{}
-function test3() {
+function test3MutableList() {
     Env env = new;
-    SemType s = tuple(env, INT, union(INT, STRING));
-    SemType t = union(tuple(env, INT, INT), tuple(env, INT, STRING));
-    equiv(env, s, t);
+    SemType s = tupleTypeWrapped(env, INT, union(INT, STRING));
+    SemType t = union(tupleTypeWrapped(env, INT, INT), tupleTypeWrapped(env, INT, STRING));
+    test:assertTrue(isSubtype(typeContext(env), t, s));
+    test:assertFalse(isSubtype(typeContext(env), s, t));
 }
 
 function equiv(Env env, SemType s, SemType t) {
@@ -56,11 +57,11 @@ function equiv(Env env, SemType s, SemType t) {
 @test:Config{}
 function test4() {
     Env env = new;
-    SemType isT = tuple(env, INT, STRING);
-    SemType itT = tuple(env, INT, TOP);
-    SemType tsT = tuple(env, TOP, STRING);
-    SemType iiT = tuple(env, INT, INT);
-    SemType ttT = tuple(env, TOP, TOP);
+    SemType isT = tupleTypeWrapped(env, INT, STRING);
+    SemType itT = tupleTypeWrapped(env, INT, TOP);
+    SemType tsT = tupleTypeWrapped(env, TOP, STRING);
+    SemType iiT = tupleTypeWrapped(env, INT, INT);
+    SemType ttT = tupleTypeWrapped(env, TOP, TOP);
     var cx = typeContext(env);
     test:assertTrue(isSubtype(cx, isT, itT));
     test:assertTrue(isSubtype(cx, isT, tsT));
@@ -68,18 +69,19 @@ function test4() {
 }
 
 @test:Config{}
-function test5() {
+function test5MutableList() {
     Env env = new;
-    SemType s = tuple(env, INT, union(NIL, union(INT, STRING)));
-    SemType t = union(tuple(env, INT, INT), union(tuple(env, INT, NIL), tuple(env, INT, STRING)));
-    equiv(env, s, t);
+    SemType s = tupleTypeWrapped(env, INT, union(NIL, union(INT, STRING)));
+    SemType t = union(tupleTypeWrapped(env, INT, INT), union(tupleTypeWrapped(env, INT, NIL), tupleTypeWrapped(env, INT, STRING)));
+    test:assertTrue(isSubtype(typeContext(env), t, s));
+    test:assertFalse(isSubtype(typeContext(env), s, t));
 }
 
 function recursiveTuple(Env env, function(Env, SemType) returns SemType[] f) returns SemType {
     ListDefinition def = new; 
     SemType t = def.getSemType(env);
     SemType[] members = f(env, t);
-    return def.define(env, members);
+    return defineListTypeWrapped(def, env, members);
 }
 
 @test:Config{}
@@ -106,15 +108,15 @@ function recTest3() {
     // This is equivalent to:
     // type Inner [int, Outer|()];
     // type Outer [int, Inner|()];
-    SemType t2 = recursiveTuple(env, (e, t) => [INT, union(NIL, tuple(e, INT, union(NIL, t)))]);
+    SemType t2 = recursiveTuple(env, (e, t) => [INT, union(NIL, tupleTypeWrapped(e, INT, union(NIL, t)))]);
     equiv(env, t1, t2);
 }
 
 @test:Config{}
 function tupleTest1() {
     Env env = new;
-    SemType s = tuple(env, INT, STRING, NIL);
-    SemType t = tuple(env, TOP, TOP, TOP);
+    SemType s = tupleTypeWrapped(env, INT, STRING, NIL);
+    SemType t = tupleTypeWrapped(env, TOP, TOP, TOP);
     test:assertTrue(isSubtype(typeContext(env), s, t));
     test:assertFalse(isSubtype(typeContext(env), t, s));
 }
@@ -122,8 +124,8 @@ function tupleTest1() {
 @test:Config{}
 function tupleTest2() {
     Env env = new;
-    SemType s = tuple(env, INT, STRING, NIL);
-    SemType t = tuple(env, TOP, TOP);
+    SemType s = tupleTypeWrapped(env, INT, STRING, NIL);
+    SemType t = tupleTypeWrapped(env, TOP, TOP);
     test:assertFalse(isSubtype(typeContext(env), s, t));
     test:assertFalse(isSubtype(typeContext(env), t, s));
 }
@@ -131,8 +133,8 @@ function tupleTest2() {
 @test:Config{}
 function tupleTest3() {
     Env env = new;
-    SemType z1 = tuple(env);
-    SemType z2 = tuple(env);
+    SemType z1 = tupleTypeWrapped(env);
+    SemType z2 = tupleTypeWrapped(env);
     test:assertTrue(!isEmpty(typeContext(env), z1));
     test:assertTrue(isSubtype(typeContext(env), z1, z2));
     test:assertTrue(isEmpty(typeContext(env), diff(z1, z2)));
@@ -144,8 +146,8 @@ function tupleTest3() {
 @test:Config{}
 function tupleTest4() {
     Env env = new;
-    SemType s = tuple(env, INT, INT);
-    SemType t = tuple(env, INT, INT, INT);
+    SemType s = tupleTypeWrapped(env, INT, INT);
+    SemType t = tupleTypeWrapped(env, INT, INT, INT);
     test:assertFalse(isEmpty(typeContext(env), s));
     test:assertFalse(isEmpty(typeContext(env), t));
     test:assertFalse(isSubtype(typeContext(env), s, t));
@@ -180,8 +182,8 @@ function funcTest2() {
 @test:Config{}
 function funcTest3() {
     Env env = new;
-    SemType s = func(env, tuple(env, union(NIL, INT)), INT);
-    SemType t = func(env, tuple(env, INT), INT);
+    SemType s = func(env, tupleTypeWrapped(env, union(NIL, INT)), INT);
+    SemType t = func(env, tupleTypeWrapped(env, INT), INT);
     test:assertTrue(isSubtype(typeContext(env), s, t));
     test:assertFalse(isSubtype(typeContext(env), t, s));
 }
@@ -189,8 +191,8 @@ function funcTest3() {
 @test:Config{}
 function funcTest4() {
     Env env = new;
-    SemType s = func(env, tuple(env, union(NIL, INT)), INT);
-    SemType t = func(env, tuple(env, INT), union(NIL, INT));
+    SemType s = func(env, tupleTypeWrapped(env, union(NIL, INT)), INT);
+    SemType t = func(env, tupleTypeWrapped(env, INT), union(NIL, INT));
     test:assertTrue(isSubtype(typeContext(env), s, t));
     test:assertFalse(isSubtype(typeContext(env), t, s));
 }
@@ -210,12 +212,12 @@ function stringTest() {
     test:assertEquals(result, ["b", "d"]);
 }
 
-@test:Config{ enable: false }
-function roTest() {
-    SemType t1 = basicType(BT_LIST); // FIX_RO: type should be LIST_RO
+@test:Config{}
+function listTest() {
+    SemType t1 = basicType(BT_LIST);
     Env env = new;
     ListDefinition ld = new;
-    SemType t2 = ld.define(env, rest = TOP);
+    SemType t2 = defineListTypeWrapped(ld, env, rest = TOP);
     SemType t = diff(t1, t2);
     Context cx = typeContext(env);
     boolean b = isEmpty(cx, t);

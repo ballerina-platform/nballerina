@@ -197,7 +197,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 
         array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberHeapLlvm, 0)));
         foreach int i in 0 ..< length {
-            llvm:Value val = check buildWideRepr(builder, scaffold, insn.operands[i], repr.memberRepr, t:listAtomicTypeMemberAt(atomic, i));
+            llvm:Value val = check buildWideRepr(builder, scaffold, insn.operands[i], repr.memberRepr, t:listAtomicTypeMemberAtDeref(scaffold.typeContext(), atomic, i));
             builder.store(listReprConvertToHeapType(builder, repr, val),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
         }
@@ -293,7 +293,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     llvm:BasicBlock? bbJoin = ();
     t:SemType listType = listOperand.semType;
     t:Context tc = scaffold.typeContext();
-    t:SemType memberType = t:listMemberType(tc, listType, indexOperand.semType);
+    t:SemType memberType = t:listMemberTypeDeref(tc, listType, indexOperand.semType);
     llvm:Value index = buildInt(builder, scaffold, indexOperand);
     ListAccess la = listAccess(semTypeRepr(newMemberOperand.semType));
     llvm:Value val = check buildWideRepr(builder, scaffold, newMemberOperand, la.repr, memberType);

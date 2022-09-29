@@ -226,7 +226,9 @@ public class Context {
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
     SemType? readOnlyMemo = ();
+
     MappingAtomicType? mappingAtomicTopMemo = ();
+    ListAtomicType? listAtomicTopMemo = ();
 
     function init(Env env) {
         self.env = env;
@@ -997,6 +999,17 @@ public function intSubtypeConstraints(SemType t) returns IntSubtypeConstraints? 
     } 
 }
 
+public function defineListTypeWrapped(ListDefinition ld, Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER) returns SemType {
+    SemType[] initialCells = from var i in initial select cellContaining(env, i, CELL_MUT_LIMITED);
+    SemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
+    return ld.define(env, initialCells, fixedLength, restCell);
+}
+
+public function tupleTypeWrapped(Env env, SemType... members) returns SemType {
+    ListDefinition def = new;
+    return defineListTypeWrapped(def, env, members);
+}
+
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns BasicTypeBitSet? {
     if atomic != () && atomic.members.fixedLength == 0 {
         SemType memberType = atomic.rest;
@@ -1021,7 +1034,7 @@ public function listAllMemberTypes(Context cx, SemType t) returns ListMemberType
         SemType[] types = [];
         Range[] allRanges = bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), []);
         foreach Range r in allRanges {
-            SemType m = listMemberType(cx, t, intConst(r.min));
+            SemType m = listMemberTypeDeref(cx, t, intConst(r.min));
             if m != NEVER {
                 ranges.push(r);
                 types.push(m);
@@ -1033,7 +1046,7 @@ public function listAllMemberTypes(Context cx, SemType t) returns ListMemberType
 
 public function listAtomicType(Context cx, SemType t) returns ListAtomicType? {
     if t is BasicTypeBitSet {
-        return t == LIST ? LIST_ATOMIC_TOP : ();
+        return t == LIST ? createListAtomicTop(cx) : ();
     }
     else {
         Env env = cx.env;
@@ -1061,7 +1074,7 @@ function bddListAtomicType(Env env, Bdd bdd, ListAtomicType top) returns ListAto
 // This is what Castagna calls projection.
 // We will extend this to allow `key` to be a SemType, which will turn into an IntSubtype.
 // If `t` is not a list, NEVER is returned
-public function listMemberType(Context cx, SemType t, SemType k) returns SemType {
+public function listMemberTypeDeref(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
         return (t & LIST) != 0 ? TOP : NEVER;
     }
@@ -1070,7 +1083,7 @@ public function listMemberType(Context cx, SemType t, SemType k) returns SemType
         if keyData == false {
             return NEVER;
         }
-        return bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), <IntSubtype|true>keyData, TOP);
+        return bddListMemberTypeDeref(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), <IntSubtype|true>keyData, TOP);
     }
 }
 
@@ -1086,7 +1099,7 @@ public function listAtomicTypeApplicableMemberTypes(Context cx, ListAtomicType a
         return [];
     }
     else {
-        return listAtomicApplicableMemberTypes(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
+        return listAtomicApplicableMemberTypes(cx, atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
     }
 }
 
@@ -1117,7 +1130,7 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         ListAlternative[] alts = [];
         foreach var { pos, neg } in paths {
-            var intersection = intersectListAtoms(cx.env, from var atom in pos select cx.listAtomType(atom));
+            var intersection = intersectListAtoms(cx, from var atom in pos select cx.listAtomType(atom));
             if intersection !is () {
                 alts.push({
                     semType: intersection[0],
@@ -1554,7 +1567,7 @@ public function createJson(Context context) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, rest = j);
+    _ = defineListTypeWrapped(listDef, env, rest = j);
     _ = defineMappingTypeWrapped(mapDef, env, [], j);
     context.jsonMemo = j;
     return j;
@@ -1572,7 +1585,7 @@ public function createAnydata(Context context) returns SemType {
     MappingDefinition mapDef = new;
     SemType tableTy = tableContaining(mapDef.getSemType(env));
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, rest = ad);
+    _ = defineListTypeWrapped(listDef, env, rest = ad);
     _ = defineMappingTypeWrapped(mapDef, env, [], ad);
     context.anydataMemo = ad;
     return ad;
@@ -1583,10 +1596,19 @@ public function createMappingAtomicTop(Context context) returns MappingAtomicTyp
     if memo != () {
         return memo;
     }
-
     MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, CELL_ATOMIC_TOP.ty, CELL_ATOMIC_TOP.mut) };
     context.mappingAtomicTopMemo = mat;
     return mat;
+}
+
+public function createListAtomicTop(Context context) returns ListAtomicType {
+    ListAtomicType? memo = context.listAtomicTopMemo;
+    if memo != () {
+        return memo;
+    }
+    ListAtomicType lat = { members: {initial: [], fixedLength: 0 }, rest: cellContaining(context.env, CELL_ATOMIC_TOP.ty, CELL_ATOMIC_TOP.mut) };
+    context.listAtomicTopMemo = lat;
+    return lat;
 }
 
 final readonly & BasicTypeOps[] ops;

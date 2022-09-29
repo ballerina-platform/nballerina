@@ -579,7 +579,7 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
     if l is bir:Register {
         if t:isSubtypeSimple(l.semType, t:LIST) {
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, index);
-            t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r.semType);
+            t:SemType memberType = t:listMemberTypeDeref(cx.mod.tc, l.semType, r.semType);
             if t:isEmpty(cx.mod.tc, memberType) {
                 return cx.semanticErr("index out of range", s:range(index));
             }
@@ -857,7 +857,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
     bir:Operand[] operands = [];
     foreach var [i, member] in expr.members.enumerate() {
         bir:Operand operand;
-        t:SemType requiredType =  t:listAtomicTypeMemberAt(atomicType, i);
+        t:SemType requiredType =  t:listAtomicTypeMemberAtDeref(cx.mod.tc, atomicType, i);
         if t:isNever(requiredType) {
             return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
         }
@@ -885,7 +885,7 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
     int len = expr.members.length();
     t:ListAlternative[] alts =
         from var alt in t:listAlternatives(tc, expectedListType)
-        where listAlternativeAllowsLength(alt, len)
+        where listAlternativeAllowsLength(cx.mod.tc, alt, len)
         select alt;
     if alts.length() == 0 {
         return cx.semanticErr("no applicable inherent type for list constructor", s:range(expr));
@@ -901,12 +901,12 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
     return [semType, lat];
 }
 
-function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boolean {
+function listAlternativeAllowsLength(t:Context cx, t:ListAlternative alt, int len) returns boolean {
     t:ListAtomicType? pos = alt.pos;
     if pos !is () {
         int minLength = pos.members.fixedLength;
         // This doesn't account for filling. See spec issue #1064
-        if pos.rest == t:NEVER ? len != minLength : len < minLength {
+        if t:cellDeref(cx, pos.rest) == t:NEVER ? len != minLength : len < minLength {
             return false;
         }
     }
@@ -1525,12 +1525,12 @@ function arraySupertype(t:Context tc, t:SemType listType) returns [t:SemType, t:
     t:ListAtomicType? atomic = t:listAtomicType(tc, listType);
     if atomic != () && atomic.members.fixedLength == 0 {
         // simple case
-        return [atomic.rest, listType];
+        return [t:cellDeref(tc, atomic.rest), listType];
     }
     else {
-        t:SemType memberType = t:listMemberType(tc, listType, t:INT);
+        t:SemType memberType = t:listMemberTypeDeref(tc, listType, t:INT);
         t:ListDefinition def = new;
-        return [memberType, def.define(tc.env, rest = memberType)];
+        return [memberType, t:defineListTypeWrapped(def, tc.env, rest = memberType)];
     }
 }
 

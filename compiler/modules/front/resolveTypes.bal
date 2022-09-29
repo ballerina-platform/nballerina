@@ -83,7 +83,7 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
         if x.isRest {
             restParamType = check resolveSubsetTypeDesc(mod, defn, x.td);
             t:ListDefinition d = new;
-            t:SemType arrTy = d.define(mod.tc.env, rest = <t:SemType>restParamType);
+            t:SemType arrTy = t:defineListTypeWrapped(d, mod.tc.env, rest = <t:SemType>restParamType);
             paramTypes.push(arrTy);
         }
         else {
@@ -198,7 +198,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             if restTd != () {
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
-            return check nonEmptyType(mod, modDefn, td, d.define(env, initial = members, rest = rest));
+            return check nonEmptyType(mod, modDefn, td, t:defineListTypeWrapped(d, env, initial = members, rest = rest));
         }
         else {
             return check nonEmptyType(mod, modDefn, td, defn.getSemType(env));
@@ -212,11 +212,11 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             t:SemType t = check resolveTypeDesc(mod, modDefn, depth + 1, td.member);
             foreach s:SimpleConstExpr? len in td.dimensions.reverse() {
                 if len == () {
-                    t = d.define(env, rest = t);
+                    t = t:defineListTypeWrapped(d, env, rest = t);
                 }
                 else {
                     int length = check resolveConstExprForInt(mod, modDefn, len, "array length should be a non-negative integer constant");
-                    t = d.define(env, [t], length);
+                    t = t:defineListTypeWrapped(d, env, [t], length);
                 }
             }
             return check nonEmptyType(mod, modDefn, td, t);
@@ -327,7 +327,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             t:SemType[] args = from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             s:TypeDesc? retTy = td.ret;
             t:SemType ret = retTy != () ? check resolveTypeDesc(mod, modDefn, depth + 1, retTy) : t:NIL;
-            return d.define(env, t:tuple(env, ...args), ret);
+            return d.define(env, t:tupleTypeWrapped(env, ...args), ret);
         }
         else {
             return defn.getSemType(env);

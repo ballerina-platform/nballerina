@@ -7,7 +7,6 @@
 // SS<:U
 // SS<:UU
 // U<:UU
-// UU<:U
 type NN [int, int];
 type SS [string, string];
 type NS [int, string];
