@@ -97,10 +97,6 @@ public isolated class Env {
         }
     }
 
-    isolated function cellAtomType(Atom atom) returns CellAtomicType {
-        return <CellAtomicType>(<TypeAtom>atom).atomicType;
-    }
-
     isolated function recListAtom() returns RecAtom {
         lock {
             int result = self.recListAtoms.length();
@@ -163,6 +159,10 @@ public isolated class Env {
             return <FunctionAtomicType>self.recFunctionAtoms[ra];
         }
     }
+}
+
+function cellAtomType(Atom atom) returns CellAtomicType {
+    return <CellAtomicType>(<TypeAtom>atom).atomicType;
 }
 
 // See memoSubtypeIsEmpty for what these mean.
@@ -252,10 +252,6 @@ public class Context {
 
     function functionAtomType(Atom atom) returns FunctionAtomicType {
         return self.env.getRecFunctionAtomType(<RecAtom>atom);
-    }
-
-    function cellAtomType(Atom atom) returns CellAtomicType {
-        return <CellAtomicType>(<TypeAtom>atom).atomicType;
     }
 }
 
@@ -1188,7 +1184,7 @@ public function mappingMemberRequired(Context cx, SemType t, SemType k) returns 
     }
 }
 
-public function mappingAtomicTypeApplicableMemberTypesDeref(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
+public function mappingAtomicTypeApplicableMemberTypesDeref(MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
     StringSubtype|boolean keyStringType;
     if keyType is BasicTypeBitSet {
         keyStringType = (keyType & STRING) != 0;
@@ -1200,7 +1196,7 @@ public function mappingAtomicTypeApplicableMemberTypesDeref(Context cx, MappingA
         return [];
     }
     else {
-        return mappingAtomicApplicableMemberTypesDeref(cx, atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
+        return mappingAtomicApplicableMemberTypesDeref(atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
     }
 }
 
@@ -1231,7 +1227,7 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         MappingAlternative[] alts = [];
         foreach var { pos, neg } in paths {
-            var intersection = intersectMappingAtoms(cx, from var atom in pos select cx.mappingAtomType(atom));
+            var intersection = intersectMappingAtoms(cx.env, from var atom in pos select cx.mappingAtomType(atom));
             if intersection !is () {
                 alts.push({
                     semType: intersection[0],
@@ -1244,33 +1240,36 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
     }
 }
 
-public function cellDeref(Context cx, SemType t) returns SemType {
-    return (<CellAtomicType>cellAtomicType(cx, t)).ty;
+public function cellDeref(SemType t) returns SemType {
+    return (<CellAtomicType>cellAtomicType(t)).ty;
+}
+
+public function isNeverDeref(SemType t) returns boolean {
+    return isNever(cellDeref(t));
 }
 
 final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
 
-public function cellAtomicType(Context cx, SemType t) returns CellAtomicType? {
+public function cellAtomicType(SemType t) returns CellAtomicType? {
     if t is BasicTypeBitSet {
         return t == CELL ? CELL_ATOMIC_TOP : ();
     }
     else {
-        Env env = cx.env;
         if !isSubtypeSimple(t, CELL) {
             return ();
         }
-        return bddCellAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_CELL), CELL_ATOMIC_TOP);
+        return bddCellAtomicType(<Bdd>getComplexSubtypeData(t, BT_CELL), CELL_ATOMIC_TOP);
     }
 }
 
-function bddCellAtomicType(Env env, Bdd bdd, CellAtomicType top) returns CellAtomicType? {
+function bddCellAtomicType(Bdd bdd, CellAtomicType top) returns CellAtomicType? {
     if bdd is boolean {
         if bdd {
             return top;
         }
     }
     else if bdd.left == true && bdd.middle == false && bdd.right == false {
-        return env.cellAtomType(bdd.atom);
+        return cellAtomType(bdd.atom);
     }
     return ();
 }
@@ -1583,7 +1582,6 @@ public function createMappingAtomicTop(Context context) returns MappingAtomicTyp
     if memo != () {
         return memo;
     }
-
     MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, CELL_ATOMIC_TOP.ty, CELL_ATOMIC_TOP.mut) };
     context.mappingAtomicTopMemo = mat;
     return mat;

@@ -919,7 +919,6 @@ function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boo
 function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
     // SUBSET always have contextually expected type for mapping constructor
     var [resultType, mat] = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
-    t:Context tc = cx.mod.tc;
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
     string[] fieldNames = [];
@@ -932,7 +931,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
         }
         fieldPos[name] = f.startPos;
         if mat.names.indexOf(name) == () {
-            if t:cellDeref(tc, mat.rest) == t:NEVER {
+            if t:isNeverDeref(mat.rest) {
                 return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
             }
             else if f.isIdentifier && mat.names.length() > 0 {
@@ -940,7 +939,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
             }
         }
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtDeref(tc, mat, name), f.value, "incorrect type for list member");
+        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtDeref(mat, name), f.value, "incorrect type for list member");
         operands.push(operand);
         fieldNames.push(name);
     }
@@ -964,7 +963,7 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
     string[] fieldNames = from var f in expr.fields order by f.name select f.name;
     t:MappingAlternative[] alts =
         from var alt in t:mappingAlternatives(tc, expectedMappingType)
-        where mappingAlternativeAllowsFields(tc, alt, fieldNames)
+        where mappingAlternativeAllowsFields(alt, fieldNames)
         select alt;
     if alts.length() == 0 {
         return cx.semanticErr("no applicable inherent type for mapping constructor", s:range(expr));
@@ -980,11 +979,11 @@ function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:Map
     return [semType, mat];
 }
 
-function mappingAlternativeAllowsFields(t:Context cx, t:MappingAlternative alt, string[] fieldNames) returns boolean {
+function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] fieldNames) returns boolean {
     t:MappingAtomicType? pos = alt.pos;
     if pos !is () {
         // SUBSET won't be right with record defaults
-        if t:cellDeref(cx, pos.rest) == t:NEVER {
+        if t:isNeverDeref(pos.rest) {
             if pos.names != fieldNames {
                 return false;
             }

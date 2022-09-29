@@ -443,13 +443,12 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     if !vc.isSubtype(ty, t:MAPPING) {
         return vc.invalidErr("inherent type of mapping construct is not a mapping", insn.pos);
     }
-    t:Context tc = vc.typeContext();
-    t:MappingAtomicType? mat = t:mappingAtomicType(tc, ty);
+    t:MappingAtomicType? mat = t:mappingAtomicType(vc.typeContext(), ty);
     if mat == () {
         return vc.invalidErr("inherent type of map is not atomic", insn.pos);
     }
     foreach int i in 0 ..< insn.operands.length() {
-        check validOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAtDeref(tc, mat, insn.fieldNames[i]), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
+        check validOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAtDeref(mat, insn.fieldNames[i]), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
     }
     if insn.operands.length() < mat.names.length() {
         return vc.semanticErr("missing record fields in mapping constructor", insn.pos);
