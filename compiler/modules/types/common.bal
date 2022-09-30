@@ -60,13 +60,14 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
             if memoEmpty == "provisional" {
                 cx.memoStack[i].empty = isEmpty ? isEmpty : ();
                 if isEmpty {
-                    io:println("**", bddStringRep(cx, cx.memoStack[i].bdd), " = ", isEmpty);
+                    io:println("empty ", bddStringRep(cx, cx.memoStack[i].bdd));
                 }
             }
         }
         cx.memoStack.setLength(initStackDepth);
         m.empty = isEmpty;
-        io:println("**", bddStringRep(cx, b), " = ", m.empty);
+        string result = isEmpty ? "empty " : "inhabited ";
+        io:println(result, bddStringRep(cx, b));
     }
     return isEmpty;
 }

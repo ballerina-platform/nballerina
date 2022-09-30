@@ -2,6 +2,7 @@ import wso2/nballerina.bir;
 import wso2/nballerina.nback;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
+import wso2/nballerina.types.regex as r;
 
 import ballerina/io;
 import ballerina/file;
@@ -11,6 +12,7 @@ type CompileError err:Diagnostic|io:Error|file:Error;
 public type Options record {
     boolean testJsonTypes = false;
     boolean showTypes = false;
+    boolean regexDebug = false;
     int? debugLevel;
     // outDir also implies treating each file as a separate module
     string? outDir = ();
@@ -26,6 +28,12 @@ final bir:ModuleId DEFAULT_ROOT_MODULE_ID = { org: "", names: [DEFAULT_ROOT_MODU
 const SOURCE_EXTENSION = ".bal";
 const TEST_EXTENSION = ".balt";
 public function main(string[] filenames, *Options opts) returns error? {
+    if opts.regexDebug {
+        string lhs = filenames[0];
+        string rhs = filenames[1];
+        io:println(r:isSubtype(lhs, rhs));
+        return;
+    }
     if filenames.length() == 0 {
         return error("no input files");
     }

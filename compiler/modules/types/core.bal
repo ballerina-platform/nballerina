@@ -228,7 +228,7 @@ public class Context {
     public table<CountData> key(pos, neg) countData = table [];
     public map<int> uniquePosCount = {};
     public map<int> sharedPosCount = {};
-    map<int> atomMap = {};
+    public map<int[]> atoms = {};
 
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
@@ -826,12 +826,12 @@ function bddStringRep(Context cx, Bdd b) returns string {
     if k is () {
         return "?";
     }
-    return " | ".'join(...from var each in k select keyToStringRep(each));
+    return "|".'join(...from var each in k select keyToStringRep(each));
 }
 
 function keyToStringRep(Key key) returns string {
     var [pos, negs] = key;
-    return negs.length() == 0 ? pos : pos + " - " + " ".join(...negs.sort());
+    return negs.length() == 0 ? pos : pos + "-" + "".join(...negs.sort());
 }
 
 type Key [string, string[]];
@@ -876,16 +876,23 @@ function atomToChar(Context cx, Atom atom) returns string {
     ListAtomicType listTy = cx.listAtomType(atom);
     string:Char char = getChar(<ComplexSemType>listTy.members.initial[0]);
     int index = atom is RecAtom ? atom : atom.index;
-    // if cx.atomMap.hasKey(char) {
-    //     if cx.atomMap.get(char) != atom {
-    //         io:println(atom, ",", cx.atomMap.get(char));
-    //         panic error("error");
-    //     }
-    // }
-    // else {
-    //     cx.atomMap[char] = atom is RecAtom? atom : atom.index;
-    // }
-    return char + index.toString();
+    int id;
+    if cx.atoms.hasKey(char) {
+        int[] atoms = cx.atoms.get(char);
+        var tmpID = atoms.indexOf(index);
+        if tmpID is int {
+            id = tmpID;
+        }
+        else {
+            atoms.push(index);
+            id = atoms.length() - 1;
+        }
+    }
+    else {
+        id = 0;
+        cx.atoms[char] = [index];
+    }
+    return char + id.toString();
 }
 
 function updateCountTable(Context cx, Bdd bdd) {
