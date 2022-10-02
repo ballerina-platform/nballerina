@@ -106,9 +106,10 @@ public function typeRelation(string lhs, string rhs) returns string  {
 
 public function isSubtype(string lhs, string rhs) returns boolean  {
     t:Env env = new;
+    t:Context cx = t:contextFromEnv(env);
     t:SemType lhsTy = regexToSemType(env, lhs);
     t:SemType rhsTy = regexToSemType(env, rhs);
-    t:Context cx = t:contextFromEnv(env);
+    cx.setRhsStartIndex(<t:ComplexSemType>rhsTy);
     boolean result = t:isSubtype(cx, lhsTy, rhsTy);
     io:println(rhs, "<", lhs);
     io:println([cx.a, cx.b, cx.total]);
