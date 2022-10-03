@@ -91,10 +91,13 @@ public function typeRelation(string lhs, string rhs) returns string  {
     t:SemType lhsTy = regexToSemType(env, lhs);
     t:SemType rhsTy = regexToSemType(env, rhs);
     t:Context cx = t:contextFromEnv(env);
+    io:println(lhs, rhs, "started");
     boolean l = t:isSubtype(cx, lhsTy, rhsTy);
+    io:println(lhs, "<",  rhs, "done");
     boolean r = t:isSubtype(cx, rhsTy, lhsTy);
-    io:println(rhs, "<", lhs);
-    io:println([cx.a, cx.b, cx.total]);
+    io:println(rhs, "<",  lhs, "done");
+    // io:println(rhs, "<", lhs);
+    // io:println([cx.a, cx.b, cx.total]);
     var relation = [l, r];
     match relation {
         [true, true] => { return "="; }

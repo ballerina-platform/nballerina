@@ -834,11 +834,13 @@ public function isEmpty(Context cx, SemType t) returns boolean {
 }
 
 function bddStringRep(Context cx, Bdd b) returns string {
-    var k = bddToKey(cx, b);
-    if k is () {
-        return "?";
-    }
-    return "|".'join(...from var each in k select keyToStringRep(each));
+    // FIXME:
+    return "";
+    // var k = bddToKey(cx, b);
+    // if k is () {
+    //     return "?";
+    // }
+    // return "|".'join(...from var each in k select keyToStringRep(each));
 }
 
 function keyToStringRep(Key key) returns string {
@@ -908,33 +910,35 @@ function atomToChar(Context cx, Atom atom) returns string {
 }
 
 function updateCountTable(Context cx, Bdd bdd) {
-    cx.total += 1;
-    var k = bddToKey(cx, bdd);
-    if k is () {
-        return;
-    }
-    // if k is "multi" {
-    //     cx.b += 1;
+    // FIXME:
+    return;
+    // cx.total += 1;
+    // var k = bddToKey(cx, bdd);
+    // if k is () {
     //     return;
     // }
-    boolean shared = k.length() > 1;
-    if !shared {
-        cx.a += 1;
-    }
-    else {
-        cx.b += 1;
-    }
-    foreach var key in k {
-        var [pos, negs] = key;
-        if negs.length() == 0 {
-            incrementCount(cx, [pos, "none"], shared);
-        } 
-        else {
-            foreach var neg in negs {
-                incrementCount(cx, [pos, neg], shared);
-            }
-        }
-    }
+    // // if k is "multi" {
+    // //     cx.b += 1;
+    // //     return;
+    // // }
+    // boolean shared = k.length() > 1;
+    // if !shared {
+    //     cx.a += 1;
+    // }
+    // else {
+    //     cx.b += 1;
+    // }
+    // foreach var key in k {
+    //     var [pos, negs] = key;
+    //     if negs.length() == 0 {
+    //         incrementCount(cx, [pos, "none"], shared);
+    //     } 
+    //     else {
+    //         foreach var neg in negs {
+    //             incrementCount(cx, [pos, neg], shared);
+    //         }
+    //     }
+    // }
 }
 function getChar(ComplexSemType ty) returns string:Char {
     if ty.subtypeDataList.length() != 1 {

@@ -1,6 +1,5 @@
 // Implementation specific to basic type list.
 
-import ballerina/io;
 
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
@@ -572,11 +571,14 @@ function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) return
 }
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    if isSkippableDiff(cx, <Bdd> t1, <Bdd> t2) {
+        return t1;
+    }
     Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
     if b != false && cx.listMemo[b] == () {
         // TODO: fix this
         //io:println("fresh BDD: ", bddToString(b));
-        io:println(" ".'join(bddStringRep(cx, b), bddStringRep(cx, <Bdd>t1), bddStringRep(cx, <Bdd>t2), cx.isEmptyStackSize.toString()));
+        // io:println(" ".'join(bddStringRep(cx, b), bddStringRep(cx, <Bdd>t1), bddStringRep(cx, <Bdd>t2), cx.isEmptyStackSize.toString()));
         // if b is BddNode && isCorrectType(cx, b) && b.right is BddNode && isCorrectType(cx, <BddNode>b.right) && b.left is false {
         //     var[pos, negs] = posNegSets(cx, b);
         //     io:println(pos, "-", "".'join(...negs));
@@ -584,8 +586,79 @@ function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns Sub
         // else {
         //     io:println("?");
         // }
+        // BddPath[] paths = [];
+        // bddPaths(b, paths, {});
+        // // TODO: how to deal with multiple lengths
+        // if paths.length() == 1 {
+        //     BddPath path = paths[0];
+        //     if filterListPath(cx, path.pos, path.neg) {
+        //         return t1;
+        //     }
+        //     // SubtypeData? tmp = filterListPath(cx, path.pos, path.neg); 
+        //     // if tmp !is () {
+        //     //     return tmp;
+        //     // }
+        // }
     }
     return b;
+}
+
+function isSkippableDiff(Context cx, Bdd t1, Bdd t2) returns boolean {
+    if t1 !is BddNode || t2 !is BddNode {
+        return false;
+    }
+    if t1.left is true && t1.middle is false && t1.right is false &&
+       t2.left is true && t2.middle is false && t2.right is false {
+        ListAtomicType posAtom = cx.listAtomType(t1.atom);
+        ListAtomicType negAtom = cx.listAtomType(t2.atom);
+        // we only handle tuples
+        if !isNever(posAtom.rest) || !isNever(negAtom.rest) {
+            return false;
+        }
+        var posInitial = posAtom.members.initial; 
+        var negInitial = negAtom.members.initial; 
+        if posInitial.length() == negInitial.length() && posInitial.length() == 2 {
+            return isEmpty(cx, intersect(posInitial[0], negInitial[0])) && isEmpty(cx, intersect(posInitial[1], negInitial[1]));
+            // return isSameType(cx, posInitial[0], negInitial[0]) && isSameType(cx, posInitial[1], negInitial[1]);
+        }
+
+        // if posInitial.length() == negInitial.length() {
+        //     boolean same = true;
+        //     foreach int i in 0 ..< posInitial.length() {
+        //         if !isSameType(cx, posInitial[i], negInitial[i]) {
+        //             same = false;
+        //             break;
+        //         } 
+        //     }
+        //     return same;
+        // }
+        // if posInitial.length() == negInitial.length() && posInitial.length() == 2 {
+        //     if isSameType(cx, posInitial[0], negInitial[0]) && isSubtype(cx, posInitial[0], STRING) {
+        //         return true;
+        //     }
+        // }
+    }
+    return false;
+}
+
+function filterListPath(Context cx, Atom[] pos, Atom[] negs) returns boolean {
+    if pos.length() != 1 || negs.length() != 1 {
+        return false;
+    }
+    ListAtomicType posAtom = cx.listAtomType(pos[0]);
+    var posInitial = posAtom.members.initial; 
+    // TODO just limit this to single neg
+    foreach var neg in negs {
+        ListAtomicType negAtom = cx.listAtomType(neg);
+        var negInitial = negAtom.members.initial; 
+        // FIXME:
+        if posInitial.length() == negInitial.length() && posInitial.length() == 2 {
+            if isSameType(cx, posInitial[0], negInitial[0]) && isSubtype(cx, posInitial[0], STRING) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 final BasicTypeOps listOps = {

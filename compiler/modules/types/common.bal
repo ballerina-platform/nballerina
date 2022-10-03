@@ -1,4 +1,3 @@
-import ballerina/io;
 // Code common to implementation of multiple basic types
 
 public type Definition object {
@@ -59,15 +58,15 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
             if memoEmpty == "provisional" {
                 cx.memoStack[i].empty = isEmpty ? isEmpty : ();
-                if isEmpty {
-                    io:println("empty ", bddStringRep(cx, cx.memoStack[i].bdd));
-                }
+                // if isEmpty {
+                //     io:println("empty ", bddStringRep(cx, cx.memoStack[i].bdd));
+                // }
             }
         }
         cx.memoStack.setLength(initStackDepth);
         m.empty = isEmpty;
-        string result = isEmpty ? "empty " : "inhabited ";
-        io:println(result, bddStringRep(cx, b));
+        // string result = isEmpty ? "empty " : "inhabited ";
+        // io:println(result, bddStringRep(cx, b));
     }
     return isEmpty;
 }
