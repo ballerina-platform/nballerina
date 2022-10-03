@@ -200,14 +200,6 @@ public function contextFromEnv(Env env) returns Context {
     return new(env);
 }
 
-public type CountData record {|
-    readonly string pos;
-    readonly string neg;
-
-    int count;
-    int sharedCount;
-|};
-
 // Operations on types require a Context.
 // There can be multiple contexts for the same Env.
 // Whereas an Env is isolated, a Context is not isolated.
@@ -222,14 +214,6 @@ public class Context {
     // Contains all BddMemo entries in above table
     // with empty == "provisional".
     BddMemo[] memoStack = [];
-    int isEmptyStackSize = 0;
-    int rhsStartIndex = -1;
-    public int a = 0;
-    public int b = 0;
-    public int total = 0;
-    public table<CountData> key(pos, neg) countData = table [];
-    public map<int> uniquePosCount = {};
-    public map<int> sharedPosCount = {};
 
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
@@ -241,12 +225,6 @@ public class Context {
 
     function init(Env env) {
         self.env = env;
-    }
-
-    public function setRhsStartIndex(ComplexSemType ty) {
-        BddNode subtype = <BddNode>ty.subtypeDataList[0];
-        Atom atom = subtype.atom;
-        self.rhsStartIndex =  atom is RecAtom ? atom : atom.index;
     }
 
     function listAtomType(Atom atom) returns ListAtomicType {
@@ -809,189 +787,25 @@ public function isNever(SemType t) returns boolean {
 }
 
 public function isEmpty(Context cx, SemType t) returns boolean {
-    cx.isEmptyStackSize += 1;
     if t is BasicTypeBitSet {
-        cx.isEmptyStackSize -= 1;
         return t == 0;
     }
     else {
         if t.all != 0 {
             // includes all of one or more basic types
-            cx.isEmptyStackSize -= 1;
             return false;
         }
         foreach var st in unpackComplexSemType(t) {
             var [code, data] = st;
             var isEmpty = ops[code].isEmpty;
             if !isEmpty(cx, data) {
-                cx.isEmptyStackSize -= 1;
                 return false;
             }
         }
-        cx.isEmptyStackSize -= 1;
         return true;
     }
 }
 
-function bddStringRep(Context cx, Bdd b) returns string {
-    // FIXME:
-    return "";
-    // var k = bddToKey(cx, b);
-    // if k is () {
-    //     return "?";
-    // }
-    // return "|".'join(...from var each in k select keyToStringRep(each));
-}
-
-function keyToStringRep(Key key) returns string {
-    var [pos, negs] = key;
-    return negs.length() == 0 ? pos : pos + "-" + "".join(...negs.sort());
-}
-
-type Key [string, string[]];
-
-function bddToKey(Context cx, Bdd b) returns Key[]? {
-    BddPath[] paths = [];
-    bddPaths(b, paths, {});
-    // if paths.length() != 1 {
-    //     // io:println("--", paths,);
-    //     // foreach var path in paths {
-    //     //     if path.pos.length() != 1 {
-    //     //         io:println("\t()");
-    //     //     }
-    //     //     else {
-    //     //     io:println("\t", posNegSets(cx, path.pos[0], path.neg));
-    //     //     }
-    //     //     
-    //     // }
-    //     return ();
-    // } 
-    Key[] k = [];
-    foreach var path in paths {
-        if path.pos.length() != 1 {
-            return ();
-        }
-        k.push(posNegSets(cx, path.pos[0], path.neg));
-    }
-    return k;
-}
-
-function posNegSets(Context cx, Atom pos, Atom[] negs) returns [string, string[]] {
-    // ListAtomicType atomicType = cx.listAtomType(node.atom);
-    // SemType[] initial = atomicType.members.initial; 
-    // // io:println(initial[1]);
-    // string:Char pos = getChar(<ComplexSemType> initial[0]);
-    // string:Char[] negs = negativeSet(cx, node).sort();
-    // return [pos, negs];
-    return [atomToChar(cx, pos), from var neg in negs select atomToChar(cx, neg)];
-}
-
-function atomToChar(Context cx, Atom atom) returns string {
-    ListAtomicType listTy = cx.listAtomType(atom);
-    string:Char char = getChar(<ComplexSemType>listTy.members.initial[0]);
-    int index = atom is RecAtom ? atom : atom.index;
-    int id = index >= cx.rhsStartIndex ? 1 : 0;
-    // if cx.atoms.hasKey(char) {
-    //     int[] atoms = cx.atoms.get(char);
-    //     var tmpID = atoms.indexOf(index);
-    //     if tmpID is int {
-    //         id = tmpID;
-    //     }
-    //     else {
-    //         atoms.push(index);
-    //         id = atoms.length() - 1;
-    //     }
-    // }
-    // else {
-    //     id = 0;
-    //     cx.atoms[char] = [index];
-    // }
-    return char + id.toString();
-}
-
-function updateCountTable(Context cx, Bdd bdd) {
-    // FIXME:
-    return;
-    // cx.total += 1;
-    // var k = bddToKey(cx, bdd);
-    // if k is () {
-    //     return;
-    // }
-    // // if k is "multi" {
-    // //     cx.b += 1;
-    // //     return;
-    // // }
-    // boolean shared = k.length() > 1;
-    // if !shared {
-    //     cx.a += 1;
-    // }
-    // else {
-    //     cx.b += 1;
-    // }
-    // foreach var key in k {
-    //     var [pos, negs] = key;
-    //     if negs.length() == 0 {
-    //         incrementCount(cx, [pos, "none"], shared);
-    //     } 
-    //     else {
-    //         foreach var neg in negs {
-    //             incrementCount(cx, [pos, neg], shared);
-    //         }
-    //     }
-    // }
-}
-function getChar(ComplexSemType ty) returns string:Char {
-    if ty.subtypeDataList.length() != 1 {
-        panic error("1");
-    }
-    StringSubtype subType = <StringSubtype>ty.subtypeDataList[0];
-    string:Char val = subType.char.values[0];
-    if subType.char.allowed is false {
-        panic error("2");
-    }
-    if subType.char.values.length() != 1 {
-        panic error("3");
-    }
-    return val;
-}
-
-function incrementCount(Context cx, [string, string|"none"] key, boolean shared) {
-    var [pos, neg] = key;
-    int count;
-    int sharedCount;
-    if cx.countData.hasKey(key) {
-       { count, sharedCount} = cx.countData.get(key); 
-    }
-    else {
-        count = 0;
-        sharedCount = 0;
-    }
-    if shared {
-        sharedCount += 1;
-        cx.sharedPosCount[pos] = cx.sharedPosCount.hasKey(pos) ? cx.sharedPosCount.get(pos) + 1 : 1;
-    }
-    else {
-        count += 1;
-        cx.uniquePosCount[pos] = cx.uniquePosCount.hasKey(pos) ? cx.uniquePosCount.get(pos) + 1 : 1;
-    }
-   cx.countData.put({ pos, neg, count, sharedCount });
-}
-
-function negativeSet(Context cx, BddNode node, boolean inner = false) returns string:Char[] {
-    // Bdd right = inner? node.middle : node.right;
-    Bdd right = node.right;
-    if right is BddNode {
-        ListAtomicType atomicType = cx.listAtomType(right.atom);
-        SemType[] initial = atomicType.members.initial; 
-        // io:println("--", initial[1]);
-        ComplexSemType key = <ComplexSemType> initial[0];
-        string:Char[] results = [getChar(key)];
-        results.push(...negativeSet(cx, right, true));
-        return results;
-    }
-    return [];
-}
-    
 public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean { 
     return isEmpty(cx, diff(t1, t2));
 }

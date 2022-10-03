@@ -48,7 +48,6 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
         m = { bdd: b };
         memoTable.add(m);
     }
-    updateCountTable(cx, b);
     m.empty = "provisional";
     int initStackDepth = cx.memoStack.length();
     cx.memoStack.push(m);
@@ -58,15 +57,10 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
             if memoEmpty == "provisional" {
                 cx.memoStack[i].empty = isEmpty ? isEmpty : ();
-                // if isEmpty {
-                //     io:println("empty ", bddStringRep(cx, cx.memoStack[i].bdd));
-                // }
             }
         }
         cx.memoStack.setLength(initStackDepth);
         m.empty = isEmpty;
-        // string result = isEmpty ? "empty " : "inhabited ";
-        // io:println(result, bddStringRep(cx, b));
     }
     return isEmpty;
 }

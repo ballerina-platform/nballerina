@@ -1,5 +1,6 @@
 // Implementation specific to basic type list.
 
+import ballerina/io;
 
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
@@ -275,7 +276,7 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
             isEmptyLevel -= 1;
             int afterCount = cx.listMemo.length();
             if afterCount == beforeCount + 1 {
-                // io:println(afterCount, "@" , isEmptyLevel);
+                io:println(afterCount, "@" , isEmptyLevel);
             }
             if !e {
                 SemType[] t = memberTypes.clone();
@@ -576,29 +577,7 @@ function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns Sub
     }
     Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
     if b != false && cx.listMemo[b] == () {
-        // TODO: fix this
         //io:println("fresh BDD: ", bddToString(b));
-        // io:println(" ".'join(bddStringRep(cx, b), bddStringRep(cx, <Bdd>t1), bddStringRep(cx, <Bdd>t2), cx.isEmptyStackSize.toString()));
-        // if b is BddNode && isCorrectType(cx, b) && b.right is BddNode && isCorrectType(cx, <BddNode>b.right) && b.left is false {
-        //     var[pos, negs] = posNegSets(cx, b);
-        //     io:println(pos, "-", "".'join(...negs));
-        // }
-        // else {
-        //     io:println("?");
-        // }
-        // BddPath[] paths = [];
-        // bddPaths(b, paths, {});
-        // // TODO: how to deal with multiple lengths
-        // if paths.length() == 1 {
-        //     BddPath path = paths[0];
-        //     if filterListPath(cx, path.pos, path.neg) {
-        //         return t1;
-        //     }
-        //     // SubtypeData? tmp = filterListPath(cx, path.pos, path.neg); 
-        //     // if tmp !is () {
-        //     //     return tmp;
-        //     // }
-        // }
     }
     return b;
 }
@@ -619,43 +598,6 @@ function isSkippableDiff(Context cx, Bdd t1, Bdd t2) returns boolean {
         var negInitial = negAtom.members.initial; 
         if posInitial.length() == negInitial.length() && posInitial.length() == 2 {
             return isEmpty(cx, intersect(posInitial[0], negInitial[0])) && isEmpty(cx, intersect(posInitial[1], negInitial[1]));
-            // return isSameType(cx, posInitial[0], negInitial[0]) && isSameType(cx, posInitial[1], negInitial[1]);
-        }
-
-        // if posInitial.length() == negInitial.length() {
-        //     boolean same = true;
-        //     foreach int i in 0 ..< posInitial.length() {
-        //         if !isSameType(cx, posInitial[i], negInitial[i]) {
-        //             same = false;
-        //             break;
-        //         } 
-        //     }
-        //     return same;
-        // }
-        // if posInitial.length() == negInitial.length() && posInitial.length() == 2 {
-        //     if isSameType(cx, posInitial[0], negInitial[0]) && isSubtype(cx, posInitial[0], STRING) {
-        //         return true;
-        //     }
-        // }
-    }
-    return false;
-}
-
-function filterListPath(Context cx, Atom[] pos, Atom[] negs) returns boolean {
-    if pos.length() != 1 || negs.length() != 1 {
-        return false;
-    }
-    ListAtomicType posAtom = cx.listAtomType(pos[0]);
-    var posInitial = posAtom.members.initial; 
-    // TODO just limit this to single neg
-    foreach var neg in negs {
-        ListAtomicType negAtom = cx.listAtomType(neg);
-        var negInitial = negAtom.members.initial; 
-        // FIXME:
-        if posInitial.length() == negInitial.length() && posInitial.length() == 2 {
-            if isSameType(cx, posInitial[0], negInitial[0]) && isSubtype(cx, posInitial[0], STRING) {
-                return true;
-            }
         }
     }
     return false;
