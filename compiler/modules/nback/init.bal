@@ -199,10 +199,10 @@ function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) re
     foreach FunctionRef fr in functionRefs {
         initStructValues.push(fr);
     }
-    t:SemType restType = t:cellDeref(cx.tc, atomic.rest);
+    t:SemType restType = t:cellDeref(atomic.rest);
     initStructValues.push(getMemberType(cx, restType));
     initStructValues.push(getFillerDesc(cx, restType));
-    llvm:ConstValue[] llMembers = from var ty in atomic.members.initial let var tyDeref = t:cellDeref(cx.tc, ty) select getMemberType(cx, tyDeref);
+    llvm:ConstValue[] llMembers = from var ty in atomic.members.initial let var tyDeref = t:cellDeref(ty) select getMemberType(cx, tyDeref);
     initStructValues.push(cx.llContext.constArray(LLVM_MEMBER_TYPE, llMembers));
     return cx.llContext.constStruct(initStructValues);    
 }

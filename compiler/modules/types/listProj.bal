@@ -52,7 +52,7 @@ function listProjPathDeref(Context cx, IntSubtype|true k, Conjunction? pos, Conj
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                var intersected = listIntersectWith(cx, members, rest, lt.members, lt.rest);
+                var intersected = listIntersectWith(cx.env, members, rest, lt.members, lt.rest);
                 if intersected is () {
                     return NEVER;
                 }
@@ -63,7 +63,7 @@ function listProjPathDeref(Context cx, IntSubtype|true k, Conjunction? pos, Conj
             return NEVER;
         }
         // Ensure that we can use isNever on rest in listInhabited
-        if cellDeref(cx, rest) !== NEVER && isEmpty(cx, rest) {
+        if !isNeverDeref(rest) && isEmpty(cx, rest) {
             rest = NEVER;
         }
     }
@@ -84,7 +84,7 @@ function listProjExcludeDeref(Context cx, int[] indices, int[] keyIndices, SemTy
         int len = memberTypes.length();
         foreach int k in keyIndices {
             if k < len {
-                p = union(p, cellDeref(cx, memberTypes[k]));
+                p = union(p, cellDeref(memberTypes[k]));
             }
         }
     }

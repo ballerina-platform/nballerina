@@ -1108,7 +1108,7 @@ public function listAtomicTypeApplicableMemberTypes(Context cx, ListAtomicType a
         return [];
     }
     else {
-        return listAtomicApplicableMemberTypes(cx, atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
+        return listAtomicApplicableMemberTypes(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
     }
 }
 
@@ -1139,7 +1139,7 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         ListAlternative[] alts = [];
         foreach var { pos, neg } in paths {
-            var intersection = intersectListAtoms(cx, from var atom in pos select cx.listAtomType(atom));
+            var intersection = intersectListAtoms(cx.env, from var atom in pos select cx.listAtomType(atom));
             if intersection !is () {
                 alts.push({
                     semType: intersection[0],

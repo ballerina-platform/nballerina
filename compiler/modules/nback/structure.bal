@@ -197,7 +197,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 
         array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberHeapLlvm, 0)));
         foreach int i in 0 ..< length {
-            llvm:Value val = check buildWideRepr(builder, scaffold, insn.operands[i], repr.memberRepr, t:listAtomicTypeMemberAtDeref(scaffold.typeContext(), atomic, i));
+            llvm:Value val = check buildWideRepr(builder, scaffold, insn.operands[i], repr.memberRepr, t:listAtomicTypeMemberAtDeref(atomic, i));
             builder.store(listReprConvertToHeapType(builder, repr, val),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
         }

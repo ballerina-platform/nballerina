@@ -431,7 +431,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns E
     }
     Operand[] operands = insn.operands;
     foreach int i in 0 ..< operands.length() {
-        check validOperandType(vc, operands[i], t:listAtomicTypeMemberAtDeref(vc.typeContext(), lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
+        check validOperandType(vc, operands[i], t:listAtomicTypeMemberAtDeref(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
     }
     if !t:listAtomicFillableFrom(vc.typeContext(), lat, operands.length()) {
         return vc.semanticErr("not enough members in list constructor", insn.pos);

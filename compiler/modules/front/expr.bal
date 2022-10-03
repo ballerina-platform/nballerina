@@ -857,7 +857,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
     bir:Operand[] operands = [];
     foreach var [i, member] in expr.members.enumerate() {
         bir:Operand operand;
-        t:SemType requiredType =  t:listAtomicTypeMemberAtDeref(cx.mod.tc, atomicType, i);
+        t:SemType requiredType =  t:listAtomicTypeMemberAtDeref(atomicType, i);
         if t:isNever(requiredType) {
             return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
         }
@@ -885,7 +885,7 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
     int len = expr.members.length();
     t:ListAlternative[] alts =
         from var alt in t:listAlternatives(tc, expectedListType)
-        where listAlternativeAllowsLength(cx.mod.tc, alt, len)
+        where listAlternativeAllowsLength(alt, len)
         select alt;
     if alts.length() == 0 {
         return cx.semanticErr("no applicable inherent type for list constructor", s:range(expr));
@@ -901,12 +901,12 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
     return [semType, lat];
 }
 
-function listAlternativeAllowsLength(t:Context cx, t:ListAlternative alt, int len) returns boolean {
+function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boolean {
     t:ListAtomicType? pos = alt.pos;
     if pos !is () {
         int minLength = pos.members.fixedLength;
         // This doesn't account for filling. See spec issue #1064
-        if t:cellDeref(cx, pos.rest) == t:NEVER ? len != minLength : len < minLength {
+        if t:isNeverDeref(pos.rest)? len != minLength : len < minLength {
             return false;
         }
     }
@@ -1524,7 +1524,7 @@ function arraySupertype(t:Context tc, t:SemType listType) returns [t:SemType, t:
     t:ListAtomicType? atomic = t:listAtomicType(tc, listType);
     if atomic != () && atomic.members.fixedLength == 0 {
         // simple case
-        return [t:cellDeref(tc, atomic.rest), listType];
+        return [t:cellDeref(atomic.rest), listType];
     }
     else {
         t:SemType memberType = t:listMemberTypeDeref(tc, listType, t:INT);
