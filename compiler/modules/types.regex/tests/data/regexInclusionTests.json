@@ -17,5 +17,19 @@
     ["<", "(AC)*F", "(A(B)*C)*F"],
     ["=", "(AB*C)*F", "(A(B)*C)*F"],
 
-    ["<", "(RgeRgF(b((OS)*cDVB)*H)*kYLy)*W", "(RgeRgF(b(((glPrQ)*OS)*cDVB)*H)*kYLy)*W"]
+    ["<", "(RgeRgF(b((OS)*cDVB)*H)*kYLy)*W", "(RgeRgF(b(((glPrQ)*OS)*cDVB)*H)*kYLy)*W"],
+
+    ["<", "(JRBB(U(yeNTW)*W)*mlJQv)*xIZVP", "(JRBB(U(yeNTW(CoePqmjQbZ)*)*W)*mlJQv)*xIZVP"],
+    ["<", "(JRBB(U(yeNTW(CoePqmjQbZ)*)*W)*mlJQv)*xIZVP", "(JRBB(U(yeNTW(C(KCQCY)*oePqmjQbZ)*)*W)*mlJQv)*xIZVP"],
+
+    ["<", "BD(gS(Pp(xM(Tc)*ke)*)*S)*v", "BD(gS(Pp(xM((CvGb)*Tc)*ke)*)*S)*v"],
+    ["<", "BD(gS(Pp(xM(Tcn)*ke)*)*S)*v", "BD(gS(Pp(xM((CvGb)*Tcn)*ke)*)*S)*v"],
+
+
+    ["<", "ab(cd(ef(gh(ij)*lm)*)*n)*o", "ab(cd(ef(gh((pqrs)*ij)*lm)*)*n)*o"],
+    ["<", "ab(cd(ef(gh(ijk)*lm)*)*n)*o", "ab(cd(ef(gh((pqrs)*ijk)*lm)*)*n)*o"],
+
+    ["<", "ab(cd(ef(gh(ijABCDEFGHI)*lm)*)*n)*o", "ab(cd(ef(gh((pqrs)*ijABCDEFGHI)*lm)*)*n)*o"],
+
+    ["<", "BDGB(gSUNd(Pp(xMsTI(TcnBE)*ke)*)*S)*v", "BDGB(gSUNd(Pp(xMsTI((CvGb)*TcnBE)*ke)*)*S)*v"]
 ]
