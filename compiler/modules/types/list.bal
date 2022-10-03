@@ -572,7 +572,7 @@ function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) return
 }
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    if isSkippableDiff(cx, <Bdd> t1, <Bdd> t2) {
+    if isDisjoint(cx, <Bdd> t1, <Bdd> t2) {
         return t1;
     }
     Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
@@ -582,7 +582,7 @@ function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns Sub
     return b;
 }
 
-function isSkippableDiff(Context cx, Bdd t1, Bdd t2) returns boolean {
+function isDisjoint(Context cx, Bdd t1, Bdd t2) returns boolean {
     if t1 !is BddNode || t2 !is BddNode {
         return false;
     }
@@ -594,10 +594,15 @@ function isSkippableDiff(Context cx, Bdd t1, Bdd t2) returns boolean {
         if !isNever(posAtom.rest) || !isNever(negAtom.rest) {
             return false;
         }
-        var posInitial = posAtom.members.initial; 
-        var negInitial = negAtom.members.initial; 
-        if posInitial.length() == negInitial.length() && posInitial.length() == 2 {
-            return isEmpty(cx, intersect(posInitial[0], negInitial[0])) && isEmpty(cx, intersect(posInitial[1], negInitial[1]));
+        SemType[] posInitial = posAtom.members.initial; 
+        SemType[] negInitial = negAtom.members.initial; 
+        if posInitial.length() == negInitial.length() {
+            foreach int i in 0 ..< posInitial.length() {
+                if !isEmpty(cx, intersect(posInitial[i], negInitial[i])) {
+                    return false;
+                } 
+            }
+            return true;
         }
     }
     return false;

@@ -805,7 +805,7 @@ public function isEmpty(Context cx, SemType t) returns boolean {
         return true;
     }
 }
-
+    
 public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean { 
     return isEmpty(cx, diff(t1, t2));
 }
