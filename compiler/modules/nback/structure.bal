@@ -448,7 +448,7 @@ function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:Strin
     // don't need to check when the condition is false, because there can be only one applicable member type
     else if t:singleStringShape(keyOperand.semType) == () && mat.names.length() != 0 {
         t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
-        foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypesDeref(tc, mat, keyOperand.semType) {
+        foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypesDeref(mat, keyOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
             }
@@ -526,7 +526,7 @@ function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, t:SemTyp
         // inherent type is atomic, so if mapping type isn't, they cannot be equal
         return false;
     }
-    foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypesDeref(tc, mat, keyType) {
+    foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypesDeref(mat, keyType) {
         if !t:isSubtype(tc, newMemberType, ty) {
             return true;
         }

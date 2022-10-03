@@ -508,7 +508,7 @@ function codeGenBreakContinueStmt(StmtContext cx, bir:BasicBlock startBlock, Bin
     return { block: () };
 }
 
-type MatchTest EqualMatchTest|UniformTypeMatchTest;
+type MatchTest EqualMatchTest|BasicTypeMatchTest;
 
 type EqualMatchTest record {|
     int clauseIndex;
@@ -517,7 +517,7 @@ type EqualMatchTest record {|
     readonly t:SingleValue value;
 |};
 
-type UniformTypeMatchTest record {|
+type BasicTypeMatchTest record {|
     int clauseIndex;
     Position pos;
     t:BasicTypeBitSet bitSet;
@@ -570,7 +570,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
                     return cx.semanticErr("duplicate wildcard match pattern", pattern.startPos);
                 }
                 hadWildcardPattern = true;
-                UniformTypeMatchTest mt = { bitSet: t:ANY, clauseIndex: i, pos: clause.opPos };
+                BasicTypeMatchTest mt = { bitSet: t:ANY, clauseIndex: i, pos: clause.opPos };
                 matchTests.push(mt);
                 patternType = t:ANY;
                 if t:isSubtypeSimple(matchedType, t:ERROR) {

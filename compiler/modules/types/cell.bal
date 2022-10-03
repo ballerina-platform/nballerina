@@ -15,7 +15,7 @@ public function cellContaining(Env env, SemType ty, CellMutability mut) returns 
     CellAtomicType atomicCell = { ty, mut };
     Atom atom = env.cellAtom(atomicCell);
     BddNode bdd = bddAtom(atom);
-    return createComplexSemType(0, [[BT_CELL, bdd]]);
+    return basicSubtype(BT_CELL, bdd);
 }
 
 function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -25,16 +25,16 @@ function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
     CellAtomicType combined;
     if posList == () {
-        combined = { ty:TOP, mut:CELL_MUT_UNLIMITED };
+        combined = { ty: TOP, mut: CELL_MUT_UNLIMITED };
     }
     else {
-        combined = cx.cellAtomType(posList.atom);
+        combined = cellAtomType(posList.atom);
         Conjunction? p = posList.next;
         while true {
             if p == () {
                 break;
             }
-            combined = intersectCellAtomicType(combined, cx.cellAtomType(p.atom));
+            combined = intersectCellAtomicType(combined, cellAtomType(p.atom));
             p = p.next;
         }
     }
@@ -60,20 +60,20 @@ function cellInhabited(Context cx, CellAtomicType posCell, Conjunction? negList)
 }
 
 function cellMutNoneInhabited(Context cx, SemType pos, Conjunction? negList) returns boolean {
-    SemType negListUnionResult = cellNegListUnion(cx, negList);
+    SemType negListUnionResult = cellNegListUnion(negList);
     // We expect `isNever` condition to be `true` when there are no negative atoms.
     // Otherwise, we do `isEmpty` to conclude on the inhabitance.
     return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
 }
 
-function cellNegListUnion(Context cx, Conjunction? negList) returns SemType {
+function cellNegListUnion(Conjunction? negList) returns SemType {
     SemType negUnion = NEVER;
     Conjunction? neg = negList;
     while true {
         if neg == () {
             break;
         }
-        negUnion = union(negUnion, cx.cellAtomType(neg.atom).ty);
+        negUnion = union(negUnion, cellAtomType(neg.atom).ty);
         neg = neg.next;
     }
     return negUnion;
@@ -83,7 +83,7 @@ function cellMutLimitedInhabited(Context cx, SemType pos, Conjunction? negList) 
     if negList == () {
         return true;
     }
-    CellAtomicType negAtomicCell = cx.cellAtomType(negList.atom);
+    CellAtomicType negAtomicCell = cellAtomType(negList.atom);
     if negAtomicCell.mut >= CELL_MUT_LIMITED && isEmpty(cx, diff(pos, negAtomicCell.ty)) {
         return false;
     }
@@ -96,26 +96,26 @@ function cellMutUnlimitedInhabited(Context cx, SemType pos, Conjunction? negList
         if neg == () {
             break;
         }
-        if cx.cellAtomType(neg.atom).mut == CELL_MUT_LIMITED && isSameType(cx, TOP, cx.cellAtomType(neg.atom).ty) {
+        if cellAtomType(neg.atom).mut == CELL_MUT_LIMITED && isSameType(cx, TOP, cellAtomType(neg.atom).ty) {
             return false;
         }
         neg = neg.next;
     }
-    SemType negListUnionResult = cellNegListUnlimitedUnion(cx, negList);
+    SemType negListUnionResult = cellNegListUnlimitedUnion(negList);
     // We expect `isNever` condition to be `true` when there are no negative atoms with unlimited mutability.
     // Otherwise, we do `isEmpty` to conclude on the inhabitance.
     return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
 }
 
-function cellNegListUnlimitedUnion(Context cx, Conjunction? negList) returns SemType {
+function cellNegListUnlimitedUnion(Conjunction? negList) returns SemType {
     SemType negUnion = NEVER;
     Conjunction? neg = negList;
     while true {
         if neg == () {
             break;
         }
-        if cx.cellAtomType(neg.atom).mut == CELL_MUT_UNLIMITED {
-            negUnion = union(negUnion, cx.cellAtomType(neg.atom).ty);
+        if cellAtomType(neg.atom).mut == CELL_MUT_UNLIMITED {
+            negUnion = union(negUnion, cellAtomType(neg.atom).ty);
         }
         neg = neg.next;
     }

@@ -214,10 +214,9 @@ function createMappingDescType(t:Context tc, t:SemType semType) returns llvm:Str
 }
 
 function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
-    t:Context tc = cx.tc;
-    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(tc, semType);
-    llvm:ConstValue[] llFields = from var ty in mat.types let var tyDeref = t:cellDeref(tc, ty) select getMemberType(cx, tyDeref);
-    t:SemType rest = t:cellDeref(tc, mat.rest);
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(cx.tc, semType);
+    llvm:ConstValue[] llFields = from var ty in mat.types let var tyDeref = t:cellDeref(ty) select getMemberType(cx, tyDeref);
+    t:SemType rest = t:cellDeref(mat.rest);
     return cx.llContext.constStruct([
         llvm:constInt(LLVM_TID, tid),
         llvm:constInt("i32", llFields.length()),
@@ -302,7 +301,7 @@ function addComplexTypeDefn(InitModuleContext cx, string symbol, t:ComplexSemTyp
     llvm:ConstValue[] llSubtypes = [];
     foreach var [code, subtype] in some {
         if code == t:BT_TABLE {
-            // these cannot occur for now, so ignore them
+            // this cannot occur for now, so ignore them
             continue;
         }
         someBits |= 1 << code;
@@ -477,14 +476,13 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
 }
 
 function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
-    t:Context tc = cx.tc;
-    t:MappingAtomicType? mat = t:mappingAtomicType(tc, semType);
+    t:MappingAtomicType? mat = t:mappingAtomicType(cx.tc, semType);
     if mat != () {
-        t:SemType rest = t:cellDeref(tc, mat.rest);
+        t:SemType rest = t:cellDeref(mat.rest);
         if rest == t:NEVER {
             t:BasicTypeBitSet[] fieldTypes = [];
             foreach var ty in mat.types {
-                t:SemType tyDeref = t:cellDeref(tc, ty);
+                t:SemType tyDeref = t:cellDeref(ty);
                 if tyDeref is t:BasicTypeBitSet {
                     fieldTypes.push(tyDeref);
                 }
