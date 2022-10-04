@@ -30,5 +30,8 @@
 
     ["<", "ab(cd(ef(gh(ijABCDEFGHI)*lm)*)*n)*o", "ab(cd(ef(gh((pqrs)*ijABCDEFGHI)*lm)*)*n)*o"],
 
-    ["<", "BDGB(gSUNd(Pp(xMsTI(TcnBE)*ke)*)*S)*v", "BDGB(gSUNd(Pp(xMsTI((CvGb)*TcnBE)*ke)*)*S)*v"]
+    ["<", "BDGB(gSUNd(Pp(xMsTI(TcnBE)*ke)*)*S)*v", "BDGB(gSUNd(Pp(xMsTI((CvGb)*TcnBE)*ke)*)*S)*v"],
+
+    ["<", "((a(b(cde)*fg)*)*ij)*", "((a(b((klmn)*cde)*fg)*)*ij)*"],
+    ["<", "((P(x(Tcn)*ke)*)*ab)*", "((P(x((CvGb)*Tcn)*ke)*)*ab)*"] 
 ]
