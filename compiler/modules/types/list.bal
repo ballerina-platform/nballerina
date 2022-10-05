@@ -572,7 +572,7 @@ function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) return
 }
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    if isTupleDisjointSimple(cx, <Bdd> t1, <Bdd> t2) is true {
+    if listIsEmptySimple(cx, bddIntersect(noBddCache, <Bdd> t1, <Bdd> t2)) {
         return t1;
     }
     Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
@@ -582,13 +582,16 @@ function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns Sub
     return b;
 }
 
-function isTupleDisjointSimple(Context cx, Bdd t1, Bdd t2) returns boolean? {
-    if t1 !is BddNode || t1.left !is true || t1.middle !is false || t1.right !is false {
-        // We only handle the case of one positive atom minus zero or more negative atoms
-        return ();
+function listIsEmptySimple(Context cx, Bdd bdd) returns boolean {
+    BddMemo? m = cx.listMemo[bdd];
+    if m !is () && m.empty is boolean {
+        return <boolean>m.empty;
     }
-    Bdd intersection = bddIntersect(noBddCache, t1, t2);
-    return bddEvery(cx, intersection, (), (), isTupleIntersectionEmptySimple);
+    boolean empty = bddEvery(cx, bdd, (), (), isTupleIntersectionEmptySimple);
+    if empty is true {
+        cx.listMemo.put({ bdd, empty }); // handle both memoized values being () and not in memo
+    }
+    return empty;
 }
 
 function isTupleIntersectionEmptySimple(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
