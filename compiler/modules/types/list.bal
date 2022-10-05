@@ -572,7 +572,7 @@ function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) return
 }
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    if isDisjoint(cx, <Bdd> t1, <Bdd> t2) {
+    if isTupleDisjointSimple(cx, <Bdd> t1, <Bdd> t2) is true {
         return t1;
     }
     Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
@@ -582,58 +582,44 @@ function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns Sub
     return b;
 }
 
-function isDisjoint(Context cx, Bdd t1, Bdd t2) returns boolean {
-    ListAtomicType[]? posAtoms = bddListAtoms(cx, t1);
-    ListAtomicType[]? negAtoms = bddListAtoms(cx, t2);
-    if posAtoms is () || negAtoms is () {
+function isTupleDisjointSimple(Context cx, Bdd t1, Bdd t2) returns boolean? {
+    if t1 !is BddNode || t1.left !is true || t1.middle !is false || t1.right !is false {
+        // We only handle the case of one positive atom minus zero or more negative atoms
+        return ();
+    }
+    Bdd intersection = bddIntersect(noBddCache, t1, t2);
+    return bddEvery(cx, intersection, (), (), isTupleIntersectionEmptySimple);
+}
+
+function isTupleIntersectionEmptySimple(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+    if neg !is () || pos is () {
         return false;
     }
-    SemType[]? posMemberUnion = tupleMemberUnion(posAtoms); 
-    SemType[]? negMemberUnion = tupleMemberUnion(negAtoms); 
-    if posMemberUnion is () || negMemberUnion is () || posMemberUnion.length() != negMemberUnion.length() {
+    SemType[]? memberTypes = tupleMembers(cx.listAtomType(pos.atom));
+    if memberTypes is () {
         return false;
     }
-    foreach int i in 0 ..< posMemberUnion.length() {
-        if isNever(intersect(posMemberUnion[i], negMemberUnion[i])) {
-            return true;
+    Conjunction? current = pos.next;
+    while current !is () {
+        SemType[]? currentMemberTypes = tupleMembers(cx.listAtomType(current.atom));
+        if currentMemberTypes is () || currentMemberTypes.length() != memberTypes.length() {
+            return false;
         }
+        foreach int i in 0 ..< currentMemberTypes.length() {
+            if isNever(intersect(currentMemberTypes[i], memberTypes[i])) {
+                return true;
+            }
+        }
+        current = current.next;
     }
     return false;
 }
 
-function tupleMemberUnion(ListAtomicType[] atoms) returns SemType[]? {
-    SemType[] memberUnion = [];
-    foreach ListAtomicType atom in atoms {
-        if !isNever(atom.rest) {
-            return ();
-        }
-        SemType[] members = atom.members.initial;
-        if memberUnion.length() == 0 {
-            memberUnion = [...members]; // to remove the readonly part
-        }
-        else {
-            if members.length() != memberUnion.length() {
-                return ();
-            }
-            foreach int i in 0 ..< memberUnion.length() {
-                memberUnion[i] = union(memberUnion[i], members[i]);
-            }
-        }
+function tupleMembers(ListAtomicType atom) returns SemType[]? {
+    if !isNever(atom.rest) {
+        return ();
     }
-    return memberUnion;
-}
-
-function bddListAtoms(Context cx, Bdd b) returns ListAtomicType[]? {
-    BddPath[] paths = [];
-    bddPaths(b, paths, {});
-    ListAtomicType[] atoms = [];
-    foreach BddPath path in paths {
-        if path.neg.length() != 0 {
-            return ();
-        } 
-        atoms.push(...from Atom posAtom in path.pos select cx.listAtomType(posAtom));
-    }
-    return atoms;
+    return atom.members.initial;
 }
 
 final BasicTypeOps listOps = {
