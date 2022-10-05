@@ -90,7 +90,7 @@ function listProjExcludeDeref(Context cx, int[] indices, int[] keyIndices, SemTy
     }
     else {
         final ListAtomicType nt = cx.listAtomType(neg.atom);
-        if nRequired > 0 && isNever(listMemberAtDeref(cx, nt.members, nt.rest, indices[nRequired - 1])) {
+        if nRequired > 0 && isNeverDeref(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
             return listProjExcludeDeref(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
         }
         int negLen = nt.members.fixedLength;
@@ -108,7 +108,7 @@ function listProjExcludeDeref(Context cx, int[] indices, int[] keyIndices, SemTy
             }
         } 
         foreach int i in 0 ..< memberTypes.length() {
-            SemType d = diff(memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
+            SemType d = diff(cellDeref(memberTypes[i]), listMemberAtDeref(nt.members, nt.rest, indices[i]));
             if !isEmpty(cx, d) {
                 SemType[] t = memberTypes.clone();
                 t[i] = d;

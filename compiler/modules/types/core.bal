@@ -304,13 +304,6 @@ public type ComplexSemType readonly & record {|
     ProperSubtypeData[] subtypeDataList;
 |};
 
-// This is to represent a SemType belonging to cell basic type
-public type MemberSemType readonly & record {|
-    0 all = 0;
-    BasicTypeBitSet some = CELL;
-    ProperSubtypeData[1] subtypeDataList;
-|};
-
 // subtypeList must be ordered
 function createComplexSemType(BasicTypeBitSet all, BasicSubtype[] subtypeList = []) returns ComplexSemType {
     int some = 0;
@@ -655,10 +648,16 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
-public function intersectMemberSemTypes(Env env, MemberSemType t1, MemberSemType t2) returns MemberSemType {
-    // JBUG #37994 cannot use mapping binding pattern with readonly records
-    CellAtomicType cat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
-    return <MemberSemType>cellContaining(env, cat.ty, cat.mut);
+public function intersectMemberSemTypes(Env env, SemType t1, SemType t2) returns SemType {
+    // member types could be cell based or not.
+    if isCell(t1) {
+        // JBUG #37994 cannot use mapping binding pattern with readonly records
+        CellAtomicType cat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
+        return cellContaining(env, cat.ty, cat.mut);
+    }
+    else {
+        return intersect(t1, t2);
+    }
 }
 
 public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
@@ -717,7 +716,7 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if cx != () && (code == BT_LIST || code == BT_TABLE) {
+        if cx != () && code == BT_TABLE {
             // read-only diff for mutable basic type
             if data1 == () {
                 // data1 was all
@@ -1266,8 +1265,23 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
     }
 }
 
+public function isCell(SemType t) returns boolean {
+    if t is BasicTypeBitSet {
+        return false;
+    }
+    else {
+        return t.some == CELL;
+    }
+}
+
+// This returns dereferenced t, if t belonging to cell basic type. 
+// Returns t intact otherwise.
 public function cellDeref(SemType t) returns SemType {
-    return (<CellAtomicType>cellAtomicType(t)).ty;
+    if isCell(t) {
+        return (<CellAtomicType>cellAtomicType(t)).ty;
+    } else {
+        return t;
+    }
 }
 
 public function isNeverDeref(SemType t) returns boolean {

@@ -251,7 +251,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
     }
 }
 
-function testListProj(t:Context tc, t:SemType t, t:SemType index) returns t:SemType { // TODO:
+function testListProj(t:Context tc, t:SemType t, t:SemType index) returns t:SemType {
     t:SemType s1 = t:listProjDeref(tc, t, index);
     t:SemType s2 = t:listMemberTypeDeref(tc, t, index);
     if !t:isSubtype(tc, s1, s2) {

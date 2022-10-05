@@ -2,8 +2,6 @@
     ["proper_subtype", "int", ["|", "int", "nil"]],
     ["proper_subtype", ["tuple", "int"], ["tuple", ["|", "int", "nil"]]],
     ["equivalent", "int", ["|", "int", "int"]],
-    ["equivalent", ["tuple", "int", ["|", "int", "nil"]],
-                   ["|", ["tuple", "int", "int"], ["tuple", "int", "nil"]]],
     ["incomparable", ["tuple", "int"], ["tuple", "int", "int"]],
     ["proper_subtype", ["rec", "x", ["tuple", "int", [ "|", "nil", ["ref", "x"]]]],
                         ["rec", "x", ["tuple", ["|", "int", "nil"],  [ "|", "nil", ["ref", "x"]]]]],

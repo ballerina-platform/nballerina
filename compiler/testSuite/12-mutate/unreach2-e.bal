@@ -5,7 +5,7 @@ public function main() {
     if arr is int[] {
         io:println("all ints");
     }
-    else if arr is string[] {
-        io:println("all strings");
+    else if arr is int[] {
+        io:println("unreachable"); // @error
     }
 }

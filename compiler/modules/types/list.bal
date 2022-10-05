@@ -113,6 +113,11 @@ function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
     return { initial: initial.slice(0, i + 2), fixedLength: array.fixedLength };
 }
 
+public function tuple(Env env, SemType... members) returns SemType {
+    ListDefinition def = new;
+    return def.define(env, members);
+}
+
 function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return memoSubtypeIsEmpty(cx, cx.listMemo, listBddIsEmpty, <Bdd>t);
 }
@@ -121,11 +126,31 @@ function listBddIsEmpty(Context cx, Bdd b) returns boolean {
     return bddEvery(cx, b, (), (), listFormulaIsEmpty);
 }
 
+function isCellListAtomicType(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+    if pos != () {
+        return isCell(cx.listAtomType(pos.atom).rest);
+    }
+    else if neg != () {
+        return isCell(cx.listAtomType(neg.atom).rest);
+    }
+    else {
+        return true;
+    }
+}
+
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+    // member types could be cell based or not.
+    boolean cellBased = isCellListAtomicType(cx, pos, neg);
     FixedLengthArray members;
     SemType rest;
     if pos == () {
-        ListAtomicType listAtomicTop = createListAtomicTop(cx);
+        ListAtomicType listAtomicTop;
+        if cellBased {
+            listAtomicTop = createListAtomicTop(cx);
+        }
+        else {
+            listAtomicTop = { members: { initial: [], fixedLength: 0 }, rest: TOP };
+        }
         members = listAtomicTop.members;
         rest = listAtomicTop.rest;
     }
@@ -158,8 +183,13 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             return true;
         }
         // Ensure that we can use isNever on rest in listInhabited
-        if rest !== NEVER && isEmpty(cx, rest) {
-            rest = NEVER;
+        if !isNeverDeref(rest) && isEmpty(cx, rest) {
+            if cellBased {
+                rest = cellContaining(cx.env, NEVER, CELL_MUT_LIMITED);
+            }
+            else {
+                rest = NEVER;
+            }
         }
     }
     int[] indices = listSamples(cx, members, rest, neg);
@@ -197,10 +227,10 @@ function listIntersectWith(Env env, FixedLengthArray members1, SemType rest1, Fi
     return [
         {
             initial: from int i in 0 ..< int:max(members1.initial.length(), members2.initial.length())
-            select intersectMemberSemTypes(env, <MemberSemType>listMemberAt(members1, rest1, i), <MemberSemType>listMemberAt(members2, rest2, i)),
+            select intersectMemberSemTypes(env, listMemberAt(members1, rest1, i), listMemberAt(members2, rest2, i)),
             fixedLength: int:max(members1.fixedLength, members2.fixedLength)
         },
-        intersectMemberSemTypes(env, <MemberSemType>rest1, <MemberSemType>rest2)
+        intersectMemberSemTypes(env, rest1, rest2)
     ];
 }
 
@@ -221,7 +251,7 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
     }
     else {
         final ListAtomicType nt = cx.listAtomType(neg.atom);
-        if nRequired > 0 && isNever(listMemberAtDeref(cx, nt.members, nt.rest, indices[nRequired - 1])) {
+        if nRequired > 0 && isNeverDeref(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
             // Skip this negative if it is always shorter than the minimum required by the positive
             return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
         }
@@ -377,7 +407,7 @@ function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLeng
     return false;
 }
 
-public function listMemberAtDeref(Context cx, FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
+public function listMemberAtDeref(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
     return cellDeref(listMemberAt(fixedArray, rest, index));
 }
 

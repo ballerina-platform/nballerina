@@ -906,7 +906,7 @@ function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boo
     if pos !is () {
         int minLength = pos.members.fixedLength;
         // This doesn't account for filling. See spec issue #1064
-        if t:isNeverDeref(pos.rest)? len != minLength : len < minLength {
+        if t:isNeverDeref(pos.rest) ? len != minLength : len < minLength {
             return false;
         }
     }

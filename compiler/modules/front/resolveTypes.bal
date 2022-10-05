@@ -83,7 +83,7 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
         if x.isRest {
             restParamType = check resolveSubsetTypeDesc(mod, defn, x.td);
             t:ListDefinition d = new;
-            t:SemType arrTy = t:defineListTypeWrapped(d, mod.tc.env, rest = <t:SemType>restParamType);
+            t:SemType arrTy = d.define(mod.tc.env, rest = <t:SemType>restParamType);
             paramTypes.push(arrTy);
         }
         else {
@@ -327,7 +327,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             t:SemType[] args = from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             s:TypeDesc? retTy = td.ret;
             t:SemType ret = retTy != () ? check resolveTypeDesc(mod, modDefn, depth + 1, retTy) : t:NIL;
-            return d.define(env, t:tupleTypeWrapped(env, ...args), ret);
+            return d.define(env, t:tuple(env, ...args), ret);
         }
         else {
             return defn.getSemType(env);
