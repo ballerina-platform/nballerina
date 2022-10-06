@@ -572,7 +572,8 @@ function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) return
 }
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    if listIsEmptySimple(cx, bddIntersect(noBddCache, <Bdd> t1, <Bdd> t2)) {
+    MemoBddCache cache = new (cx.listMemo);
+    if listIsEmptySimple(cx, bddIntersect(cache, <Bdd> t1, <Bdd> t2)) is true {
         return t1;
     }
     Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
@@ -582,47 +583,47 @@ function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns Sub
     return b;
 }
 
-function listIsEmptySimple(Context cx, Bdd bdd) returns boolean {
+function listIsEmptySimple(Context cx, Bdd bdd) returns boolean? {
     BddMemo? m = cx.listMemo[bdd];
     if m !is () && m.empty is boolean {
         return <boolean>m.empty;
     }
-    boolean empty = bddEvery(cx, bdd, (), (), isTupleIntersectionEmptySimple);
-    if empty is true {
+    boolean empty = bddEvery(cx, bdd, (), (), listFormulaIsDefinitelyEmpty);
+    if empty == true {
         cx.listMemo.put({ bdd, empty }); // handle both memoized values being () and not in memo
+        return true;
     }
-    return empty;
+    return ();
 }
 
-function isTupleIntersectionEmptySimple(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+function listFormulaIsDefinitelyEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
     if neg !is () || pos is () {
         return false;
     }
-    SemType[]? memberTypes = tupleMembers(cx.listAtomType(pos.atom));
-    if memberTypes is () {
+    var { members, rest } = cx.listAtomType(pos.atom);
+    int memberCount = members.fixedLength;
+    if !isNever(rest) {
         return false;
     }
     Conjunction? current = pos.next;
     while current !is () {
-        SemType[]? currentMemberTypes = tupleMembers(cx.listAtomType(current.atom));
-        if currentMemberTypes is () || currentMemberTypes.length() != memberTypes.length() {
+        var { members: currentMembers, rest: currentRest } = cx.listAtomType(current.atom);
+        if !isNever(currentRest) {
             return false;
         }
-        foreach int i in 0 ..< currentMemberTypes.length() {
-            if isNever(intersect(currentMemberTypes[i], memberTypes[i])) {
+        var intersection = listIntersectWith(cx, members, rest, currentMembers, currentRest); 
+        if intersection is () {
+            return false;
+        }
+        FixedLengthArray intersectionMembers = intersection[0];
+        foreach int i in 0 ..< memberCount {
+            if isNever(fixedArrayGet(intersectionMembers, i)) {
                 return true;
             }
         }
         current = current.next;
     }
     return false;
-}
-
-function tupleMembers(ListAtomicType atom) returns SemType[]? {
-    if !isNever(atom.rest) {
-        return ();
-    }
-    return atom.members.initial;
 }
 
 final BasicTypeOps listOps = {
