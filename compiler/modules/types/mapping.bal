@@ -1,19 +1,19 @@
 // Implementation specific to basic type list.
 
-public type Field [string, SemType];
+public type Field [string, MemberSemType];
 
 public type MappingAtomicType readonly & record {|
     // sorted
     string[] names;
-    SemType[] types;
-    SemType rest;
+    MemberSemType[] types;
+    MemberSemType rest;
 |};
 
 public function mappingAtomicTypeMemberAtDeref(MappingAtomicType mat, string k) returns SemType {
     return cellDeref(mappingAtomicTypeMemberAt(mat, k));
 }
 
-public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) returns SemType {
+public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) returns MemberSemType {
     int? i = mat.names.indexOf(k, 0);
     return i is int ? mat.types[i] : mat.rest;
 }
@@ -35,7 +35,7 @@ public class MappingDefinition {
         }
     }
 
-    public function define(Env env, Field[] fields, SemType rest) returns SemType {
+    public function define(Env env, Field[] fields, MemberSemType rest) returns SemType {
         var [names, types] = splitFields(fields);
         MappingAtomicType atomicType = {
             names: names.cloneReadOnly(),
@@ -62,10 +62,10 @@ public class MappingDefinition {
     } 
 }
 
-function splitFields(Field[] fields) returns [string[], SemType[]] {
+function splitFields(Field[] fields) returns [string[], MemberSemType[]] {
     Field[] sortedFields = fields.sort("ascending", fieldName);
     string[] names = [];
-    SemType[] types = [];
+    MemberSemType[] types = [];
     foreach var [s, t] in sortedFields {
         names.push(s);
         types.push(t);
@@ -210,29 +210,29 @@ function intersectMappingAtoms(Env env, MappingAtomicType[] atoms) returns [SemT
 type TempMappingSubtype record {|
     // sorted
     string[] names;
-    SemType[] types;
-    SemType rest;
+    MemberSemType[] types;
+    MemberSemType rest;
 |};
 
 function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2) returns TempMappingSubtype? {
     string[] names = [];
-    SemType[] types = [];
+    MemberSemType[] types = [];
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
-        SemType t = intersectMemberSemTypes(env, type1, type2);
+        MemberSemType t = intersectMemberSemTypes(env, type1, type2);
         if isNeverDeref(type1) {
             return ();
         }
         types.push(t);
     }
-    SemType rest = intersectMemberSemTypes(env, m1.rest, m2.rest);
+    MemberSemType rest = intersectMemberSemTypes(env, m1.rest, m2.rest);
     return { names, types, rest };
 }
 
 type FieldPair record {|
     string name;
-    SemType type1;
-    SemType type2;
+    MemberSemType type1;
+    MemberSemType type2;
     int? index1 = ();
     int? index2 = ();
 |};
@@ -246,14 +246,14 @@ class MappingPairing {
     *object:Iterable;
     private final string[] names1;
     private final string[] names2;
-    private final SemType[] types1;
-    private final SemType[] types2;
+    private final MemberSemType[] types1;
+    private final MemberSemType[] types2;
     private final int len1;
     private final int len2;
     private int i1 = 0;
     private int i2 = 0;
-    private final SemType rest1;
-    private final SemType rest2;
+    private final MemberSemType rest1;
+    private final MemberSemType rest2;
 
     function init(TempMappingSubtype m1, TempMappingSubtype m2) {
         self.names1 = m1.names;
@@ -334,9 +334,9 @@ class MappingPairing {
         return { value: p };
     }
     
-    private function curType1() returns SemType => self.types1[self.i1];
+    private function curType1() returns MemberSemType => self.types1[self.i1];
     
-    private function curType2() returns SemType => self.types2[self.i2];
+    private function curType2() returns MemberSemType => self.types2[self.i2];
     
     private function curName1() returns string => self.names1[self.i1];
 
@@ -365,7 +365,7 @@ function mappingAtomicMemberTypeDeref(MappingAtomicType atomic, StringSubtype|tr
 }
 
 function mappingAtomicApplicableMemberTypesDeref(MappingAtomicType atomic, StringSubtype|true key) returns SemType[] {
-    SemType[] types = from SemType t in atomic.types select cellDeref(t);
+    SemType[] types = from MemberSemType t in atomic.types select cellDeref(t);
     SemType rest = cellDeref(atomic.rest);
     SemType[] memberTypes = [];
     if key == true {

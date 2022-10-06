@@ -11,7 +11,7 @@ public type CellAtomicType readonly & record {|
     CellMutability mut;
 |};
 
-public function cellContaining(Env env, SemType ty, CellMutability mut) returns SemType {
+public function cellContaining(Env env, SemType ty, CellMutability mut) returns MemberSemType {
     CellAtomicType atomicCell = { ty, mut };
     Atom atom = env.cellAtom(atomicCell);
     BddNode bdd = bddAtom(atom);
