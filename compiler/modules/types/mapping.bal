@@ -219,13 +219,13 @@ function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2)
     MemberSemType[] types = [];
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
-        MemberSemType t = intersectMemberTypes(env, type1, type2);
+        MemberSemType t = intersectMemberSemTypes(env, type1, type2);
         if isNeverDeref(type1) {
             return ();
         }
         types.push(t);
     }
-    MemberSemType rest = intersectMemberTypes(env, m1.rest, m2.rest);
+    MemberSemType rest = intersectMemberSemTypes(env, m1.rest, m2.rest);
     return { names, types, rest };
 }
 

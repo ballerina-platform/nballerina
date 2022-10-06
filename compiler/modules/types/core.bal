@@ -302,7 +302,7 @@ public type ComplexSemType readonly & record {|
     ProperSubtypeData[] subtypeDataList;
 |};
 
-// This is to represent a SemType belonging to cell basic type
+// This is to represent a SemType that has the possibility of belonging to either cell basic type or other basic types
 public type MemberSemType SemType;
 
 // subtypeList must be ordered
@@ -649,7 +649,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
-public function intersectMemberTypes(Env env, SemType t1, SemType t2) returns SemType {
+public function intersectMemberSemTypes(Env env, MemberSemType t1, MemberSemType t2) returns MemberSemType {
     // member types could be cell based or not.
     if isCell(t1) {
         // JBUG #37994 cannot use mapping binding pattern with readonly records
