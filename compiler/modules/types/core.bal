@@ -303,11 +303,7 @@ public type ComplexSemType readonly & record {|
 |};
 
 // This is to represent a SemType belonging to cell basic type
-public type MemberSemType readonly & record {|
-    0 all = 0;
-    BasicTypeBitSet some = CELL;
-    ProperSubtypeData[1] subtypeDataList;
-|};
+public type MemberSemType SemType;
 
 // subtypeList must be ordered
 function createComplexSemType(BasicTypeBitSet all, BasicSubtype[] subtypeList = []) returns ComplexSemType {
@@ -653,10 +649,16 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
-public function intersectMemberSemTypes(Env env, MemberSemType t1, MemberSemType t2) returns MemberSemType {
-    // JBUG #37994 cannot use mapping binding pattern with readonly records
-    CellAtomicType cat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
-    return <MemberSemType>cellContaining(env, cat.ty, cat.mut);
+public function intersectMemberTypes(Env env, SemType t1, SemType t2) returns SemType {
+    // member types could be cell based or not.
+    if isCell(t1) {
+        // JBUG #37994 cannot use mapping binding pattern with readonly records
+        CellAtomicType cat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
+        return cellContaining(env, cat.ty, cat.mut);
+    }
+    else {
+        return intersect(t1, t2);
+    }
 }
 
 public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
@@ -1141,7 +1143,7 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest) returns SemType {
     Field[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1], CELL_MUT_LIMITED)];
-    SemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
+    MemberSemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
     return md.define(env, cellFields, restCell);
 }
 
@@ -1253,11 +1255,20 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
     }
 }
 
-public function cellDeref(SemType t) returns SemType {
+public function isCell(SemType t) returns boolean {
+    if t is BasicTypeBitSet {
+        return false;
+    }
+    else {
+        return t.some == CELL;
+    }
+}
+
+public function cellDeref(MemberSemType t) returns SemType {
     return (<CellAtomicType>cellAtomicType(t)).ty;
 }
 
-public function isNeverDeref(SemType t) returns boolean {
+public function isNeverDeref(MemberSemType t) returns boolean {
     return isNever(cellDeref(t));
 }
 
