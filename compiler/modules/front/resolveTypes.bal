@@ -257,7 +257,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             else {
                 rest = t:NEVER;
             }
-            return check nonEmptyType(mod, modDefn, td, d.define(env, fields, rest));
+            return check nonEmptyType(mod, modDefn, td, t:defineMappingTypeWrapped(d, env, fields, rest));
         }
         else {
             return check nonEmptyType(mod, modDefn, td, defn.getSemType(env));

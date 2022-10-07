@@ -124,7 +124,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
             }
             t:MappingDefinition def = new;
             t:Field[] fields = check parseFields(tc, consDefBinding(jlist, def, b), jlist, parent, 1);
-            return def.define(env, fields, t:NEVER);
+            return t:defineMappingTypeWrapped(def, env, fields, t:NEVER);
         }
         "map" => {
             t:SemType? s = lookupDef(env, b, jlist);
@@ -138,7 +138,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
             Binding? mb = consDefBinding(jlist, def, b);
             t:SemType rest = check parseType(tc, mb, jlist[1], pathAppend(parent, 1));
             t:Field[] fields = check parseFields(tc, mb, jlist, parent, 2);
-            return def.define(env, fields, rest);
+            return t:defineMappingTypeWrapped(def, env, fields, rest);
         }
         "function" => {
             t:SemType? s = lookupDef(env, b, jlist);

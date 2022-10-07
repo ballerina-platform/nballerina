@@ -84,7 +84,7 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
     BaseRepr baseRepr = repr.base;
     if baseRepr == BASE_REPR_TAGGED { 
         llvm:PointerValue tagged = <llvm:PointerValue>value;
-        t:BasicTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), operand.semType, semType);
+        t:BasicTypeBitSet? bitSet = testTypeAsBasicBitSet(scaffold.typeContext(), operand.semType, semType);
         if bitSet != () {
             hasType = buildHasTagInSet(builder, tagged, bitSet);
         }
@@ -131,7 +131,7 @@ function buildNarrowReg(llvm:Builder builder, Scaffold scaffold, bir:NarrowRegis
     var sourceRepr = scaffold.getRepr(sourceReg);
     var value = builder.load(scaffold.address(sourceReg));
     t:SemType semType = register.semType;
-    if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsUniformBitSet(scaffold.typeContext(), register.underlying.semType, semType) == () {
+    if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsBasicBitSet(scaffold.typeContext(), register.underlying.semType, semType) == () {
         value = buildExactify(builder, scaffold, <llvm:PointerValue>value, semType);
     }
     llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(register));
@@ -152,7 +152,7 @@ function buildTypeMerge(llvm:Builder builder, Scaffold scaffold, bir:TypeMergeIn
     bir:Register unnarrowed = unnarrow(insn.operands[0]);
     var [sourceRepr, value] = check buildReprValue(builder, scaffold, unnarrowed);
     t:SemType semType = insn.result.semType;
-    if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsUniformBitSet(scaffold.typeContext(), unnarrowed.semType, semType) == () {
+    if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsBasicBitSet(scaffold.typeContext(), unnarrowed.semType, semType) == () {
         value = buildExactify(builder, scaffold, <llvm:PointerValue>value, semType);
     }
     llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
@@ -179,9 +179,9 @@ function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
     return <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, structureExactifyFunction, [tagged, scaffold.getExactify(t:diff(targetType, t:createReadOnly(tc)))]);
 }
 
-// If we can perform the type test by testing whether the value belongs to a UniformTypeBitSet, then return that bit set.
+// If we can perform the type test by testing whether the value belongs to a BasicTypeBitSet, then return that bit set.
 // Otherwise return nil.
-function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType targetType) returns t:BasicTypeBitSet? {
+function testTypeAsBasicBitSet(t:Context tc, t:SemType sourceType, t:SemType targetType) returns t:BasicTypeBitSet? {
     t:BasicTypeBitSet bitSet = t:widenToBasicTypes(targetType);
     // For example, let L be a subtype of list, and support sourceType is L? and targetType is L
     // Then bitSet is t:LIST and (sourceType & bitSet) is L which is (non-proper) subtype of the targetType.

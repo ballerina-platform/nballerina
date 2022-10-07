@@ -28,8 +28,17 @@ type UU record {|
 type U NN|SS|NS|SN;
 
 public function main() {
-    UU r = { x: 1, y: "yyy" };
-    if r is U {
-        io:println("yes"); // @output yes
+    SN ns = { x: "str", y:3 };
+    U u = ns;
+
+    if u is NN {
+        io:println("NN");
+    } else if u is SS {
+        io:println("SS");
+    } else if u is NS {
+        io:println("NS");
+    } else {
+        SN _ = u;
+        io:println("SN"); //  @output SN
     }
 }

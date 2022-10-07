@@ -149,7 +149,7 @@ class SemtypeBuilder {
         if rest != -1 {
             r = self.defns[rest];
         }
-        t:SemType t = (new t:MappingDefinition()).define(self.cx.env, fs, r);
+        t:SemType t = t:defineMappingTypeWrapped(new t:MappingDefinition(), self.cx.env, fs, r);
         return self.push(t);
     }
 

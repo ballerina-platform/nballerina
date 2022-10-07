@@ -7,15 +7,15 @@ public const CELL_MUT_UNLIMITED = 2;
 public type CellMutability CELL_MUT_NONE|CELL_MUT_LIMITED|CELL_MUT_UNLIMITED;
 
 public type CellAtomicType readonly & record {|
-    SemType t;
+    SemType ty;
     CellMutability mut;
 |};
 
-public function cellContaining(Env env, SemType t, CellMutability mut) returns SemType {
-    CellAtomicType atomicCell = { t, mut };
+public function cellContaining(Env env, SemType ty, CellMutability mut) returns MemberSemType {
+    CellAtomicType atomicCell = { ty, mut };
     Atom atom = env.cellAtom(atomicCell);
     BddNode bdd = bddAtom(atom);
-    return createComplexSemType(0, [[BT_CELL, bdd]]);
+    return basicSubtype(BT_CELL, bdd);
 }
 
 function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -23,36 +23,26 @@ function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 }
 
 function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
-    SemType combined;
-    CellMutability minMut;
+    CellAtomicType combined;
     if posList == () {
-        combined = TOP;
-        minMut = CELL_MUT_UNLIMITED;
+        combined = { ty: TOP, mut: CELL_MUT_UNLIMITED };
     }
     else {
-        CellAtomicType cellAtomType = cx.cellAtomType(posList.atom);
-        combined = cellAtomType.t;
-        minMut = cellAtomType.mut;
-
+        combined = cellAtomType(posList.atom);
         Conjunction? p = posList.next;
         while true {
             if p == () {
                 break;
             }
-
-            cellAtomType = cx.cellAtomType(p.atom);
-            combined = intersect(combined, cellAtomType.t);
-
-            minMut = <CellMutability>int:min(minMut, cellAtomType.mut);
+            combined = intersectCellAtomicType(combined, cellAtomType(p.atom));
             p = p.next;
         }
     }
-    CellAtomicType combinedAtomicCell = { t: combined, mut: minMut };
-    return !cellInhabited(cx, combinedAtomicCell, negList);
+    return !cellInhabited(cx, combined, negList);
 }
 
 function cellInhabited(Context cx, CellAtomicType posCell, Conjunction? negList) returns boolean {
-    SemType pos = posCell.t;
+    SemType pos = posCell.ty;
     if isEmpty(cx, pos) {
         return false;
     }
@@ -70,20 +60,20 @@ function cellInhabited(Context cx, CellAtomicType posCell, Conjunction? negList)
 }
 
 function cellMutNoneInhabited(Context cx, SemType pos, Conjunction? negList) returns boolean {
-    SemType negListUnionResult = cellNegListUnion(cx, negList);
+    SemType negListUnionResult = cellNegListUnion(negList);
     // We expect `isNever` condition to be `true` when there are no negative atoms.
     // Otherwise, we do `isEmpty` to conclude on the inhabitance.
     return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
 }
 
-function cellNegListUnion(Context cx, Conjunction? negList) returns SemType {
+function cellNegListUnion(Conjunction? negList) returns SemType {
     SemType negUnion = NEVER;
     Conjunction? neg = negList;
     while true {
         if neg == () {
             break;
         }
-        negUnion = union(negUnion, cx.cellAtomType(neg.atom).t);
+        negUnion = union(negUnion, cellAtomType(neg.atom).ty);
         neg = neg.next;
     }
     return negUnion;
@@ -93,8 +83,8 @@ function cellMutLimitedInhabited(Context cx, SemType pos, Conjunction? negList) 
     if negList == () {
         return true;
     }
-    CellAtomicType negAtomicCell = cx.cellAtomType(negList.atom);
-    if negAtomicCell.mut >= CELL_MUT_LIMITED && isEmpty(cx, diff(pos, negAtomicCell.t)) {
+    CellAtomicType negAtomicCell = cellAtomType(negList.atom);
+    if negAtomicCell.mut >= CELL_MUT_LIMITED && isEmpty(cx, diff(pos, negAtomicCell.ty)) {
         return false;
     }
     return cellMutLimitedInhabited(cx, pos, negList.next);
@@ -106,30 +96,36 @@ function cellMutUnlimitedInhabited(Context cx, SemType pos, Conjunction? negList
         if neg == () {
             break;
         }
-        if cx.cellAtomType(neg.atom).mut == CELL_MUT_LIMITED && isSameType(cx, TOP, cx.cellAtomType(neg.atom).t) {
+        if cellAtomType(neg.atom).mut == CELL_MUT_LIMITED && isSameType(cx, TOP, cellAtomType(neg.atom).ty) {
             return false;
         }
         neg = neg.next;
     }
-    SemType negListUnionResult = cellNegListUnlimitedUnion(cx, negList);
+    SemType negListUnionResult = cellNegListUnlimitedUnion(negList);
     // We expect `isNever` condition to be `true` when there are no negative atoms with unlimited mutability.
     // Otherwise, we do `isEmpty` to conclude on the inhabitance.
     return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
 }
 
-function cellNegListUnlimitedUnion(Context cx, Conjunction? negList) returns SemType {
+function cellNegListUnlimitedUnion(Conjunction? negList) returns SemType {
     SemType negUnion = NEVER;
     Conjunction? neg = negList;
     while true {
         if neg == () {
             break;
         }
-        if cx.cellAtomType(neg.atom).mut == CELL_MUT_UNLIMITED {
-            negUnion = union(negUnion, cx.cellAtomType(neg.atom).t);
+        if cellAtomType(neg.atom).mut == CELL_MUT_UNLIMITED {
+            negUnion = union(negUnion, cellAtomType(neg.atom).ty);
         }
         neg = neg.next;
     }
     return negUnion;
+}
+
+function intersectCellAtomicType(CellAtomicType c1, CellAtomicType c2) returns CellAtomicType {
+    SemType ty = intersect(c1.ty, c2.ty);
+    CellMutability mut = <CellMutability>int:min(c1.mut, c2.mut);
+    return { ty, mut };
 }
 
 final BasicTypeOps cellOps = {

@@ -161,6 +161,10 @@ public isolated class Env {
     }
 }
 
+function cellAtomType(Atom atom) returns CellAtomicType {
+    return <CellAtomicType>(<TypeAtom>atom).atomicType;
+}
+
 // See memoSubtypeIsEmpty for what these mean.
 type MemoEmpty boolean|"provisional"|();
 
@@ -222,6 +226,7 @@ public class Context {
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
     SemType? readOnlyMemo = ();
+    MappingAtomicType? mappingAtomicTopMemo = ();
 
     function init(Env env) {
         self.env = env;
@@ -247,15 +252,6 @@ public class Context {
 
     function functionAtomType(Atom atom) returns FunctionAtomicType {
         return self.env.getRecFunctionAtomType(<RecAtom>atom);
-    }
-
-    function cellAtomType(Atom atom) returns CellAtomicType {
-        if atom is RecAtom {
-            panic error("cell cannot be a RecAtom");
-        }
-        else {
-            return <CellAtomicType>atom.atomicType;
-        }
     }
 }
 
@@ -305,6 +301,9 @@ public type ComplexSemType readonly & record {|
     // Ordered in increasing order of BasicTypeCode
     ProperSubtypeData[] subtypeDataList;
 |};
+
+// This is to represent a SemType that has the possibility of belonging to either cell basic type or other basic types
+public type MemberSemType SemType;
 
 // subtypeList must be ordered
 function createComplexSemType(BasicTypeBitSet all, BasicSubtype[] subtypeList = []) returns ComplexSemType {
@@ -390,6 +389,7 @@ public final BasicTypeBitSet ERROR = basicType(BT_ERROR);
 public final BasicTypeBitSet LIST = basicType(BT_LIST);
 public final BasicTypeBitSet MAPPING = basicType(BT_MAPPING);
 public final BasicTypeBitSet TABLE = basicType(BT_TABLE);
+public final BasicTypeBitSet CELL = basicType(BT_CELL);
 
 // matches all functions
 public final BasicTypeBitSet FUNCTION = basicType(BT_FUNCTION);
@@ -649,6 +649,18 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
+public function intersectMemberSemTypes(Env env, MemberSemType t1, MemberSemType t2) returns MemberSemType {
+    // member types could be cell based or not.
+    if isCell(t1) {
+        // JBUG #37994 cannot use mapping binding pattern with readonly records
+        CellAtomicType cat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
+        return cellContaining(env, cat.ty, cat.mut);
+    }
+    else {
+        return intersect(t1, t2);
+    }
+}
+
 public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
     return maybeRoDiff(t1, t2, cx);
 }
@@ -705,21 +717,7 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if cx == () || code < BT_COUNT_INHERENTLY_IMMUTABLE {
-            // normal diff or read-only basic type
-            if data1 == () {
-                var complement = ops[code].complement;
-                data = complement(<SubtypeData>data2);
-            }
-            else if data2 == () {
-                data = data1;
-            }
-            else {
-                var diff = ops[code].diff;
-                data = diff(data1, data2);
-            }
-        }
-        else {
+        if cx != () && (code == BT_LIST || code == BT_TABLE) {
             // read-only diff for mutable basic type
             if data1 == () {
                 // data1 was all
@@ -738,6 +736,19 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
                 else {
                     data = data1;
                 }
+            }
+        } else {
+            // normal diff or read-only basic type
+            if data1 == () {
+                var complement = ops[code].complement;
+                data = complement(<SubtypeData>data2);
+            }
+            else if data2 == () {
+                data = data1;
+            }
+            else {
+                var diff = ops[code].diff;
+                data = diff(data1, data2);
             }
         }
         // JBUG `data` is not narrowed properly if you swap the order by doing `if data == true {} else if data != false {}`
@@ -1130,18 +1141,23 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
     }
 }
 
-final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest:TOP };
+public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest) returns SemType {
+    Field[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1], CELL_MUT_LIMITED)];
+    MemberSemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
+    return md.define(env, cellFields, restCell);
+}
 
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
+    MappingAtomicType mappingAtomicTop = createMappingAtomicTop(cx);
     if t is BasicTypeBitSet {
-        return t == MAPPING ? MAPPING_ATOMIC_TOP : ();
+        return t == MAPPING ? mappingAtomicTop : ();
     }
     else {
         Env env = cx.env;
         if !isSubtypeSimple(t, MAPPING) {
             return ();
         }
-        return bddMappingAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_MAPPING), MAPPING_ATOMIC_TOP);
+        return bddMappingAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_MAPPING), mappingAtomicTop);
     }
 }
 
@@ -1160,7 +1176,7 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // This computes the spec operation called "member type of K in T",
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
-public function mappingMemberType(Context cx, SemType t, SemType k) returns SemType {
+public function mappingMemberTypeDeref(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
         return (t & MAPPING) != 0 ? TOP : NEVER;
     }
@@ -1169,7 +1185,7 @@ public function mappingMemberType(Context cx, SemType t, SemType k) returns SemT
         if keyData == false {
             return NEVER;
         }
-        return bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
+        return bddMappingMemberTypeDeref(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
     }
 }
 
@@ -1183,7 +1199,7 @@ public function mappingMemberRequired(Context cx, SemType t, SemType k) returns 
     }
 }
 
-public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
+public function mappingAtomicTypeApplicableMemberTypesDeref(MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
     StringSubtype|boolean keyStringType;
     if keyType is BasicTypeBitSet {
         keyStringType = (keyType & STRING) != 0;
@@ -1195,7 +1211,7 @@ public function mappingAtomicTypeApplicableMemberTypes(Context cx, MappingAtomic
         return [];
     }
     else {
-        return mappingAtomicApplicableMemberTypes(atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
+        return mappingAtomicApplicableMemberTypesDeref(atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
     }
 }
 
@@ -1237,6 +1253,49 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
         }
         return alts;
     }
+}
+
+public function isCell(SemType t) returns boolean {
+    if t is BasicTypeBitSet {
+        return false;
+    }
+    else {
+        return t.some == CELL;
+    }
+}
+
+public function cellDeref(MemberSemType t) returns SemType {
+    return (<CellAtomicType>cellAtomicType(t)).ty;
+}
+
+public function isNeverDeref(MemberSemType t) returns boolean {
+    return isNever(cellDeref(t));
+}
+
+final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
+
+public function cellAtomicType(SemType t) returns CellAtomicType? {
+    if t is BasicTypeBitSet {
+        return t == CELL ? CELL_ATOMIC_TOP : ();
+    }
+    else {
+        if !isSubtypeSimple(t, CELL) {
+            return ();
+        }
+        return bddCellAtomicType(<Bdd>getComplexSubtypeData(t, BT_CELL), CELL_ATOMIC_TOP);
+    }
+}
+
+function bddCellAtomicType(Bdd bdd, CellAtomicType top) returns CellAtomicType? {
+    if bdd is boolean {
+        if bdd {
+            return top;
+        }
+    }
+    else if bdd.left == true && bdd.middle == false && bdd.right == false {
+        return cellAtomType(bdd.atom);
+    }
+    return ();
 }
 
 function createBasicSemType(BasicTypeCode typeCode, SubtypeData subtypeData) returns SemType {
@@ -1519,7 +1578,7 @@ public function createJson(Context context) returns SemType {
     MappingDefinition mapDef = new;
     SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, rest = j);
-    _ = mapDef.define(env, [], j);
+    _ = defineMappingTypeWrapped(mapDef, env, [], j);
     context.jsonMemo = j;
     return j;
 }
@@ -1537,9 +1596,19 @@ public function createAnydata(Context context) returns SemType {
     SemType tableTy = tableContaining(mapDef.getSemType(env));
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, rest = ad);
-    _ = mapDef.define(env, [], ad);
+    _ = defineMappingTypeWrapped(mapDef, env, [], ad);
     context.anydataMemo = ad;
     return ad;
+}
+
+public function createMappingAtomicTop(Context context) returns MappingAtomicType {
+    MappingAtomicType? memo = context.mappingAtomicTopMemo;
+    if memo != () {
+        return memo;
+    }
+    MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, CELL_ATOMIC_TOP.ty, CELL_ATOMIC_TOP.mut) };
+    context.mappingAtomicTopMemo = mat;
+    return mat;
 }
 
 final readonly & BasicTypeOps[] ops;

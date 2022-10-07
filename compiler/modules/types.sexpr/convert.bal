@@ -126,5 +126,5 @@ public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSex
         rest = <Type>atomSexpr[1];
     }
     t:MappingDefinition d = new;
-    return d.define(env, fields, semTypeFromSexpr(env, bindings, rest));
+    return t:defineMappingTypeWrapped(d, env, fields, semTypeFromSexpr(env, bindings, rest));
 }

@@ -7,7 +7,6 @@
 // SS<:U
 // SS<:UU
 // U<:UU
-// UU<:U
 
 type NN record {|
     int x;
