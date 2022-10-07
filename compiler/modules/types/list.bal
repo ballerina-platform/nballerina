@@ -2,7 +2,7 @@
 
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
-    SemType rest;
+    MemberSemType rest;
 |};
 
 // Represent a fixed length semtype member list similar to a tuple.
@@ -11,7 +11,7 @@ public type ListAtomicType readonly & record {|
 // { initial: [string, int], fixedLength: 100 } means `int` is repeated 99 times to get a list of 100 members.
 // `fixedLength` must be `0` when `initial` is empty and the `fixedLength` must be at least `initial.length()`
 public type FixedLengthArray record {|
-    SemType[] initial;
+    MemberSemType[] initial;
     int fixedLength;
 |};
 
@@ -126,31 +126,11 @@ function listBddIsEmpty(Context cx, Bdd b) returns boolean {
     return bddEvery(cx, b, (), (), listFormulaIsEmpty);
 }
 
-function isCellListAtomicType(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    if pos != () {
-        return isCell(cx.listAtomType(pos.atom).rest);
-    }
-    else if neg != () {
-        return isCell(cx.listAtomType(neg.atom).rest);
-    }
-    else {
-        return true;
-    }
-}
-
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    // member types could be cell based or not.
-    boolean cellBased = isCellListAtomicType(cx, pos, neg);
     FixedLengthArray members;
     SemType rest;
     if pos == () {
-        ListAtomicType listAtomicTop;
-        if cellBased {
-            listAtomicTop = createListAtomicTop(cx);
-        }
-        else {
-            listAtomicTop = { members: { initial: [], fixedLength: 0 }, rest: TOP };
-        }
+        ListAtomicType listAtomicTop = createListAtomicTop(cx);
         members = listAtomicTop.members;
         rest = listAtomicTop.rest;
     }
@@ -184,12 +164,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
         }
         // Ensure that we can use isNever on rest in listInhabited
         if !isNeverDeref(rest) && isEmpty(cx, rest) {
-            if cellBased {
-                rest = cellContaining(cx.env, NEVER, CELL_MUT_LIMITED);
-            }
-            else {
-                rest = NEVER;
-            }
+            rest = cellContaining(cx.env, NEVER);
         }
     }
     int[] indices = listSamples(cx, members, rest, neg);
@@ -210,7 +185,7 @@ function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, L
         }
         var [members, rest] = tmpAtom;
         foreach SemType member in members.initial {
-            if isNever(member) {
+            if isNeverDeref(member) {
                 return ();
             }
         }
@@ -220,7 +195,7 @@ function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, L
     return [semType, atom];
 }
 
-function listIntersectWith(Env env, FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
+function listIntersectWith(Env env, FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, MemberSemType]? {
     if listLengthsDisjoint(members1, rest1, members2, rest2) {
         return ();
     }

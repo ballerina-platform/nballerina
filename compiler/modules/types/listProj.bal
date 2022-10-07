@@ -111,7 +111,7 @@ function listProjExcludeDeref(Context cx, int[] indices, int[] keyIndices, SemTy
             SemType d = diff(cellDeref(memberTypes[i]), listMemberAtDeref(nt.members, nt.rest, indices[i]));
             if !isEmpty(cx, d) {
                 SemType[] t = memberTypes.clone();
-                t[i] = d;
+                t[i] = cellContaining(cx.env, d);
                 // We need to make index i be required
                 p = union(p, listProjExcludeDeref(cx, indices, keyIndices, t, int:max(nRequired, i + 1), neg.next));
             }

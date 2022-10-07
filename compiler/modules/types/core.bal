@@ -304,7 +304,7 @@ public type ComplexSemType readonly & record {|
     ProperSubtypeData[] subtypeDataList;
 |};
 
-// This is to represent a SemType that has the possibility of belonging to either cell basic type or other basic types
+// This is to represent a SemType belonging to cell basic type
 public type MemberSemType SemType;
 
 // subtypeList must be ordered
@@ -652,15 +652,8 @@ public function intersect(SemType t1, SemType t2) returns SemType {
 }
 
 public function intersectMemberSemTypes(Env env, MemberSemType t1, MemberSemType t2) returns MemberSemType {
-    // member types could be cell based or not.
-    if isCell(t1) {
-        // JBUG #37994 cannot use mapping binding pattern with readonly records
-        CellAtomicType cat = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
-        return cellContaining(env, cat.ty, cat.mut);
-    }
-    else {
-        return intersect(t1, t2);
-    }
+    var { ty, mut } = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
+    return cellContaining(env, ty, mut);
 }
 
 public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
@@ -1010,15 +1003,20 @@ public function intSubtypeConstraints(SemType t) returns IntSubtypeConstraints? 
     } 
 }
 
-public function defineListTypeWrapped(ListDefinition ld, Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER) returns SemType {
-    SemType[] initialCells = from var i in initial select cellContaining(env, i, CELL_MUT_LIMITED);
-    SemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
+public function defineListTypeWrapped(ListDefinition ld, Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
+    SemType[] initialCells = from var i in initial select cellContaining(env, i, mut);
+    SemType restCell = cellContaining(env, rest, mut);
     return ld.define(env, initialCells, fixedLength, restCell);
 }
 
 public function tupleTypeWrapped(Env env, SemType... members) returns SemType {
     ListDefinition def = new;
     return defineListTypeWrapped(def, env, members);
+}
+
+public function tupleTypeWrappedRo(Env env, SemType... members) returns SemType {
+    ListDefinition def = new;
+    return defineListTypeWrapped(def, env, members, mut = CELL_MUT_NONE);
 }
 
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns BasicTypeBitSet? {
@@ -1038,7 +1036,7 @@ final readonly & ListMemberTypes LIST_MEMBER_TYPES_NONE = [[], []];
 
 public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
     if t is BasicTypeBitSet {
-        return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE;
+        return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE; // TODO: revisit
     }
     else {
         Range[] ranges = [];
@@ -1155,8 +1153,8 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
 }
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest) returns SemType {
-    Field[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1], CELL_MUT_LIMITED)];
-    MemberSemType restCell = cellContaining(env, rest, CELL_MUT_LIMITED);
+    Field[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1])];
+    MemberSemType restCell = cellContaining(env, rest);
     return md.define(env, cellFields, restCell);
 }
 
@@ -1277,14 +1275,8 @@ public function isCell(SemType t) returns boolean {
     }
 }
 
-// This returns dereferenced t, if t belonging to cell basic type. 
-// Returns t intact otherwise.
 public function cellDeref(SemType t) returns SemType {
-    if isCell(t) {
-        return (<CellAtomicType>cellAtomicType(t)).ty;
-    } else {
-        return t;
-    }
+    return (<CellAtomicType>cellAtomicType(t)).ty;
 }
 
 public function isNeverDeref(MemberSemType t) returns boolean {
@@ -1625,7 +1617,8 @@ public function createMappingAtomicTop(Context context) returns MappingAtomicTyp
     if memo != () {
         return memo;
     }
-    MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, CELL_ATOMIC_TOP.ty, CELL_ATOMIC_TOP.mut) };
+    var { ty, mut } = CELL_ATOMIC_TOP;
+    MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, ty, mut) };
     context.mappingAtomicTopMemo = mat;
     return mat;
 }
@@ -1635,7 +1628,8 @@ public function createListAtomicTop(Context context) returns ListAtomicType {
     if memo != () {
         return memo;
     }
-    ListAtomicType lat = { members: {initial: [], fixedLength: 0 }, rest: cellContaining(context.env, CELL_ATOMIC_TOP.ty, CELL_ATOMIC_TOP.mut) };
+    var { ty, mut } = CELL_ATOMIC_TOP;
+    ListAtomicType lat = { members: {initial: [], fixedLength: 0 }, rest: cellContaining(context.env, ty, mut) };
     context.listAtomicTopMemo = lat;
     return lat;
 }
