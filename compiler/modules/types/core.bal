@@ -227,7 +227,7 @@ public class Context {
         self.env = env;
     }
 
-    function listAtomType(Atom atom) returns ListAtomicType {
+    isolated function listAtomType(Atom atom) returns ListAtomicType {
         if atom is RecAtom {
             return self.env.getRecListAtomType(atom);
         }
@@ -310,7 +310,7 @@ public type ComplexSemType readonly & record {|
 |};
 
 // subtypeList must be ordered
-function createComplexSemType(BasicTypeBitSet all, BasicSubtype[] subtypeList = []) returns ComplexSemType {
+isolated function createComplexSemType(BasicTypeBitSet all, BasicSubtype[] subtypeList = []) returns ComplexSemType {
     int some = 0;
     ProperSubtypeData[] dataList = [];
     foreach var [code, data] in subtypeList {
@@ -325,7 +325,7 @@ function createComplexSemType(BasicTypeBitSet all, BasicSubtype[] subtypeList = 
     };
 }
 
-function unpackComplexSemType(ComplexSemType t) returns BasicSubtype[] {
+isolated function unpackComplexSemType(ComplexSemType t) returns BasicSubtype[] {
     int some = t.some;
     BasicSubtype[] subtypeList = [];
     foreach var data in t.subtypeDataList {
@@ -365,7 +365,7 @@ public function basicType(BasicTypeCode code) returns BasicTypeBitSet {
 // bits is bit vecor indexed by BasicTypeCode
 // I would like to make the arg int:Unsigned32
 // but are language/impl bugs that make this not work well
-public function basicTypeUnion(int bits) returns BasicTypeBitSet {
+public isolated function basicTypeUnion(int bits) returns BasicTypeBitSet {
     return <BasicTypeBitSet>bits;
 }
 
@@ -434,7 +434,7 @@ class SubtypePairIteratorImpl {
     private final BasicSubtype[] t2;
     private final BasicTypeBitSet bits;
 
-    function init(SemType t1, SemType t2, BasicTypeBitSet bits) {
+    isolated function init(SemType t1, SemType t2, BasicTypeBitSet bits) {
         self.i1 = 0;
         self.i2 = 0;
         self.t1 = (t1 is BasicTypeBitSet) ? [] : unpackComplexSemType(t1);
@@ -442,11 +442,11 @@ class SubtypePairIteratorImpl {
         self.bits = bits;
     }
 
-    public function iterator() returns SubtypePairIterator {
+    public isolated function iterator() returns SubtypePairIterator {
         return self;
     }
 
-    public function next() returns record {| [BasicTypeCode, ProperSubtypeData?, ProperSubtypeData?] value; |}? {
+    public isolated function next() returns record {| [BasicTypeCode, ProperSubtypeData?, ProperSubtypeData?] value; |}? {
         while true {
             if self.i1 >= self.t1.length() {
                 if self.i2 >= self.t2.length() {
@@ -493,16 +493,16 @@ class SubtypePairIteratorImpl {
         return ();
     } 
 
-    private function include(BasicTypeCode code) returns boolean {
+    private isolated function include(BasicTypeCode code) returns boolean {
         int c = code;
         return (self.bits & (1 << c)) != 0;
     }
 
-    private function get1() returns BasicSubtype {
+    private isolated function get1() returns BasicSubtype {
         return self.t1[self.i1];
     }
 
-    private function get2() returns BasicSubtype {
+    private isolated function get2() returns BasicSubtype {
         return self.t2[self.i2];
     }
 }
@@ -581,7 +581,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return memoIntersect((), t1, t2);
 }
 
-function memoIntersect(Context? cx, SemType t1, SemType t2) returns SemType {
+isolated function memoIntersect(Context? cx, SemType t1, SemType t2) returns SemType {
     BasicTypeBitSet all1;
     BasicTypeBitSet all2;
     BasicTypeBitSet some1;
@@ -782,7 +782,7 @@ public function complement(SemType t) returns SemType {
     return diff(TOP, t);
 }
 
-public function isNever(SemType t) returns boolean {
+public isolated function isNever(SemType t) returns boolean {
     return t is BasicTypeBitSet && t == 0;
 }
 

@@ -17,7 +17,7 @@ public function bitCount(int bits) returns int {
 // This should be a function in lang.int
 // Modern CPUs have a hardware instruction for this
 // This is __builtin_ctz in GCC and clang
-public function numberOfTrailingZeros(int bits) returns int {
+public isolated function numberOfTrailingZeros(int bits) returns int {
     if bits == 0 {
         return 64;
     }

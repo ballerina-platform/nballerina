@@ -192,7 +192,7 @@ function intersectListAtoms(Context cx, ListAtomicType[] atoms) returns [SemType
     return [semType, atom];
 }
 
-function listIntersectWith(Context cx, FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
+isolated function listIntersectWith(Context cx, FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
     if listLengthsDisjoint(members1, rest1, members2, rest2) {
         return ();
     }
@@ -378,7 +378,7 @@ function listSampleTypes(Context cx, FixedLengthArray members, SemType rest, int
     return [memberTypes, nRequired];
 }
 
-function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns boolean {
+isolated function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns boolean {
     int len1 = members1.fixedLength;
     int len2 = members2.fixedLength;
     if len1 < len2 {
@@ -390,7 +390,7 @@ function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLeng
     return false;
 }
 
-function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
+isolated function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
     if index < fixedArray.fixedLength {
         return fixedArrayGet(fixedArray, index);
     }
@@ -406,7 +406,7 @@ function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean 
     return false;
 }
 
-function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
+isolated function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
     int memberLen = members.initial.length();
     int i = int:min(index, memberLen - 1);
     return members.initial[i];
@@ -568,15 +568,15 @@ function nextBoundary(int cur, Range r, int? next) returns int? {
 }
 
 function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return memoSubtypeIntersect(cx.listMemo, <Bdd>t1, <Bdd>t2);
+    return memoSubtypeIntersect(cx, cx.listMemo, <Bdd>t1, <Bdd>t2, "list");
 }
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    MemoBddCache cache = new (cx.listMemo);
+    MemoBddCache cache = new (cx, cx.listMemo, "list");
     if listIsEmptySimple(cx, bddIntersect(cache, <Bdd> t1, <Bdd> t2)) is true {
         return t1;
     }
-    Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
+    Bdd b = memoSubtypeDiff(cx, cx.listMemo, <Bdd>t1, <Bdd>t2, "list");
     if b != false && cx.listMemo[b] == () {
         //io:println("fresh BDD: ", bddToString(b));
     }
