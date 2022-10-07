@@ -601,29 +601,28 @@ function listFormulaIsDefinitelyEmpty(Context cx, Conjunction? pos, Conjunction?
         return false;
     }
     var { members, rest } = cx.listAtomType(pos.atom);
-    int memberCount = members.fixedLength;
-    if !isNever(rest) {
-        return false;
-    }
     Conjunction? current = pos.next;
     while current !is () {
         var { members: currentMembers, rest: currentRest } = cx.listAtomType(current.atom);
-        if !isNever(currentRest) {
-            return false;
-        }
         var intersection = listIntersectWith(cx, members, rest, currentMembers, currentRest); 
         if intersection is () {
             return false;
         }
-        FixedLengthArray intersectionMembers = intersection[0];
-        foreach int i in 0 ..< memberCount {
-            if isNever(fixedArrayGet(intersectionMembers, i)) {
-                return true;
-            }
+        if fixedArrayDefinitelyEmpty(intersection[0]) == true {
+            return true;
         }
         current = current.next;
     }
     return false;
+}
+
+function fixedArrayDefinitelyEmpty(FixedLengthArray array) returns true? {
+    foreach int i in 0 ..< array.fixedLength {
+        if isNever(fixedArrayGet(array, i)) {
+            return true;
+        }
+    }
+    return ();
 }
 
 final BasicTypeOps listOps = {
