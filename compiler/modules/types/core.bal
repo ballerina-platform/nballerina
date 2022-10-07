@@ -1275,7 +1275,7 @@ public function isCell(SemType t) returns boolean {
     }
 }
 
-public function cellDeref(SemType t) returns SemType {
+public function cellDeref(MemberSemType t) returns SemType {
     return (<CellAtomicType>cellAtomicType(t)).ty;
 }
 
