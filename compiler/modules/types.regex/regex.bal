@@ -102,7 +102,7 @@ public function typeRelation(string lhs, string rhs) returns string  {
 public function regexToBalTypes(string regex) returns string {
     RegexContext cx = new;
     IntermediateType ty = regexToIntermediateType(cx, regex, 0, regex.length() - 1, cx.terminalType(()));
-    return intermediateTypeToString(ty);
+    return intermediateTypeToString(ty, {});
 }
 
 // This is faster than using regexToSemType but should produce the same result
@@ -127,6 +127,7 @@ function stringListToSemType(t:Env env, StringAsList stringList) returns t:SemTy
 }
 
 public function regexToSemType(t:Env env, string regex) returns t:SemType {
+    // io:println(regex);
     RegexContext cx = new;
     IntermediateType ty = regexToIntermediateType(cx, regex, 0, regex.length() - 1, cx.terminalType(()));
     return intermediateTypeToSemType(cx, env, ty);
@@ -177,16 +178,17 @@ function intermediateTerminalTypeToSemType(IntermediateTerminalType ty) returns 
     return t:NIL;
 }
 
-function regexToIntermediateType(RegexContext cx, string regex, int index, int end, IntermediateType restTy) returns IntermediateType {
+function regexToIntermediateType(RegexContext cx, string regex, int index, int end, IntermediateType restTy, boolean noPrefix=false) returns IntermediateType {
     RegexPattern pattern = nextPattern(regex, index, end + 1);
+    // io:println("main", pattern);
     if pattern is Concat {
         return concatToSemType(cx, regex, index, end, restTy);
     }
     else if pattern is Star {
-        return starToIntermediateType(cx, regex, pattern, end, restTy);
+        return starToIntermediateType(cx, regex, pattern, end, restTy, noPrefix);
     }
     else if pattern is Or {
-        return orToIntermediateType(cx, regex, pattern, end, restTy);
+        return orToIntermediateType(cx, regex, pattern, end, restTy, noPrefix);
     }
     return restTy;
 }
@@ -197,55 +199,46 @@ function concatToSemType(RegexContext cx, string regex, int index, int end, Inte
     return ty;
 }
 
-function starToIntermediateType(RegexContext cx, string regex, Star pattern, int end, IntermediateType restTy) returns IntermediateType {
-    IntermediateType rest = regexToIntermediateType(cx, regex, pattern.nextIndex, end, restTy);
+function starToIntermediateType(RegexContext cx, string regex, Star pattern, int end, IntermediateType restTy, boolean noPrefix) returns IntermediateType {
+    // io:println(pattern, end, restTy, noPrefix);
+    IntermediateType unmatchedType = regexToIntermediateType(cx, regex, pattern.nextIndex, end, restTy);
+    // io:println("unmatchedType", unmatchedType);
+    boolean noSuffix = false;
+
+    if noPrefix {
+        // we don't care about prefix other wise
+        IntermediateTypeValue actualRest = cx.typeValue(unmatchedType);
+        if actualRest is IntermediateUnionType {
+            IntermediateTypeValue actualRestTy = cx.typeValue(restTy);
+            if actualRestTy is IntermediateUnionType {
+                noSuffix = actualRestTy.name == actualRest.name;
+            }
+        }
+    }
+    // if noSuffix {
+    //     var tmp = starToIntermediateTypeInner(cx, regex, range.startIndex, range.startIndex, range.endIndex, actualRest.name);
+
+    //     io:println("new style", tmp, "::", restTy);
+    //     return tmp;
+    // }
     PatternRange range = pattern.range;
+    RegexPattern body = nextPattern(regex, range.startIndex, range.endIndex + 1);
+    // io:println("body", body);
+    if body is End {
+        panic error("empty *");
+    }
+    if noSuffix && noPrefix {
+        return regexToIntermediateType(cx, regex, range.startIndex, range.endIndex, restTy, true); 
+    }
     IntermediateUnionType ty = cx.unionType();
-    IntermediateType recursiveTy = starToIntermediateTypeInner(cx, regex, range.startIndex, range.startIndex, range.endIndex, ty.name);
-    ty.operands = [recursiveTy, rest];
+    ty.operands = [regexToIntermediateType(cx, regex, range.startIndex, range.endIndex, ty, true), unmatchedType];
     return ty;
 }
 
-function starToIntermediateTypeInner(RegexContext cx, string regex, int index, int startIndex, int endIndex, IntermediateTypeReference recTy) returns IntermediateType {
-    RegexPattern pattern = nextPattern(regex, index, endIndex + 1);
-    if pattern is End {
-        panic error("unexpected end of pattern");
-    }
-    // nested star ((a*)*) considered equal to their unnested version (a*) aviod invalid type loop
-    if pattern is Star && isNestedStarPattern(regex, startIndex, endIndex, pattern) {
-        PatternRange range = pattern.range;
-        return starToIntermediateTypeInner(cx, regex, range.startIndex, range.startIndex, range.endIndex, recTy); 
-    }
-    if (pattern is Star && pattern.range.startIndex == startIndex && pattern.range.endIndex == endIndex) || pattern is Concat {
-        string:Char char = regex[index];
-        IntermediateType[2] operands = index == endIndex ? [cx.terminalType(char), recTy] :  
-                                                           [cx.terminalType(char), starToIntermediateTypeInner(cx, regex, index + 1, startIndex, endIndex, recTy)];
-        IntermediateListType ty = cx.listType(operands);
-        return ty;
-    }
-    return regexToIntermediateType(cx, regex, index, endIndex, recTy);
-}
-
-function isNestedStarPattern(string regex, int startIndex, int endIndex, Star inner) returns boolean {
-    int otherStart = inner.range.startIndex;
-    int otherEnd = inner.range.endIndex;
-    foreach int i in startIndex ..< otherStart {
-        if regex[i] != "(" {
-            return false;
-        }
-    }
-    foreach int i in otherEnd + 1 ..< endIndex + 1 {
-        if regex[i] !is ")"|"*" {
-            return false;
-        }
-    }
-    return true;
-}
-
-function orToIntermediateType(RegexContext cx, string regex, Or pattern, int end, IntermediateType restTy) returns IntermediateType {
+function orToIntermediateType(RegexContext cx, string regex, Or pattern, int end, IntermediateType restTy, boolean noPrefix) returns IntermediateType {
     IntermediateType rest = regexToIntermediateType(cx, regex, pattern.nextIndex, end, restTy);
-    IntermediateType lhs = regexToIntermediateType(cx, regex, pattern.lhs.startIndex, pattern.lhs.endIndex, rest);
-    IntermediateType rhs = regexToIntermediateType(cx, regex, pattern.rhs.startIndex, pattern.rhs.endIndex, rest);
+    IntermediateType lhs = regexToIntermediateType(cx, regex, pattern.lhs.startIndex, pattern.lhs.endIndex, rest, noPrefix);
+    IntermediateType rhs = regexToIntermediateType(cx, regex, pattern.rhs.startIndex, pattern.rhs.endIndex, rest, noPrefix);
     IntermediateUnionType ty = cx.unionType();
     ty.operands = [lhs, rhs];
     return ty;
@@ -311,11 +304,15 @@ function skipTillEnd(string regex, int currentIndex) returns int {
     return nextIndex;
 }
 
-function intermediateTypeToString(IntermediateType ty) returns string {
+function intermediateTypeToString(IntermediateType ty, map<true> visited) returns string {
     if ty is IntermediateTypeReference {
         return ty;
     }
+    else if visited.hasKey(ty.name) {
+        return "";
+    }
     else if ty is IntermediateTerminalType {
+        visited[ty.name] = true;
         string? value = ty.value;
         if value is () {
             return string `type ${ty.name} ();`;
@@ -323,6 +320,7 @@ function intermediateTypeToString(IntermediateType ty) returns string {
         return string `type ${ty.name} "${value}";`;
     }
     else {
+        visited[ty.name] = true;
         string[] body = [];
         if ty is IntermediateListType {
             body.push("type " + ty.name + " " + "[" + ", ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + "]" + ";");
@@ -331,7 +329,7 @@ function intermediateTypeToString(IntermediateType ty) returns string {
             body.push("type " + ty.name + " " + " | ".'join(...from var operand in ty.operands select operand is IntermediateTypeReference ? operand : operand.name) + ";");
         }
         // JBUG: cast
-        body.push(...from var operand in <IntermediateType[]>ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand));
+        body.push(...from var operand in <IntermediateType[]>ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand, visited));
         return "\n".'join(...body);
     }
 }
