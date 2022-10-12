@@ -337,6 +337,6 @@ function intermediateTypeToString(IntermediateType ty, map<true> visited) return
         }
         // JBUG: cast
         body.push(...from var operand in <IntermediateType[]>ty.operands where operand !is IntermediateTypeReference select intermediateTypeToString(operand, visited));
-        return "\n".'join(...body);
+        return "\n".'join(...from var line in body where line != "" select line);
     }
 }
