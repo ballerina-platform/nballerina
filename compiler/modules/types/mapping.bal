@@ -1,6 +1,8 @@
 // Implementation specific to basic type list.
 
-public type Field [string, MemberSemType];
+public type Field [string, SemType];
+
+public type MemberField [string, MemberSemType];
 
 public type MappingAtomicType readonly & record {|
     // sorted
@@ -35,7 +37,7 @@ public class MappingDefinition {
         }
     }
 
-    public function define(Env env, Field[] fields, MemberSemType rest) returns SemType {
+    public function define(Env env, MemberField[] fields, MemberSemType rest) returns SemType {
         var [names, types] = splitFields(fields);
         MappingAtomicType atomicType = {
             names: names.cloneReadOnly(),
@@ -62,8 +64,8 @@ public class MappingDefinition {
     } 
 }
 
-function splitFields(Field[] fields) returns [string[], MemberSemType[]] {
-    Field[] sortedFields = fields.sort("ascending", fieldName);
+function splitFields(MemberField[] fields) returns [string[], MemberSemType[]] {
+    MemberField[] sortedFields = fields.sort("ascending", fieldName);
     string[] names = [];
     MemberSemType[] types = [];
     foreach var [s, t] in sortedFields {
@@ -73,7 +75,7 @@ function splitFields(Field[] fields) returns [string[], MemberSemType[]] {
     return [names, types];
 }
 
-isolated function fieldName(Field f) returns string {
+isolated function fieldName(MemberField f) returns string {
     return f[0];
 }
 
@@ -155,14 +157,14 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
             return mappingInhabited(cx, pos, negList.next);
         }
         foreach var { index1, type1: posType, type2: negType } in pairing {
-            SemType d = diff(posType, negType);
+            MemberSemType d = <MemberSemType>diff(posType, negType);
              if index1 is () {
                 // We cannot match the rest field of the positive with named field of a negative atom
                 return mappingInhabited(cx, pos, negList.next);
             }
             if !isEmpty(cx, d) {
                 TempMappingSubtype mt;
-                SemType[] posTypes = shallowCopyTypes(pos.types);
+                MemberSemType[] posTypes = shallowCopyMemberTypes(pos.types);
                 posTypes[index1] = d;
                 mt = { types: posTypes, names: pos.names, rest: pos.rest };
                 if mappingInhabited(cx, mt, negList.next) {
@@ -174,9 +176,9 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
     }
 }
 
-function insertField(TempMappingSubtype m, string name, SemType t) returns TempMappingSubtype {
+function insertField(TempMappingSubtype m, string name, MemberSemType t) returns TempMappingSubtype {
     string[] names = shallowCopyStrings(m.names);
-    SemType[] types = shallowCopyTypes(m.types);
+    MemberSemType[] types = shallowCopyMemberTypes(m.types);
     int i = names.length();
     while true {
         if i == 0 || name <= names[i - 1] {

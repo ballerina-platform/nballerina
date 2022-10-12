@@ -39,6 +39,11 @@ public isolated class Env {
     private int recAtomCount = 0;
 
     public isolated function init() {
+        // We are reserving the first two indexes of atomTable to represent cell top and bottom typeAtoms. 
+        // This is to avoid passing down env argument when doing cell type operations.
+        // Please refer to the cellFixSubtypeData() in cell.bal
+        _ = self.cellAtom(CELL_ATOMIC_TOP);
+        _ = self.cellAtom(CELL_ATOMIC_BOTTOM);
     }
 
     // Tests whether the Env is ready for use.
@@ -305,7 +310,11 @@ public type ComplexSemType readonly & record {|
 |};
 
 // This is to represent a SemType belonging to cell basic type
-public type MemberSemType SemType;
+public type MemberSemType readonly & record {|
+    0 all = 0;
+    BasicTypeBitSet some = CELL;
+    ProperSubtypeData[1] subtypeDataList;
+|};
 
 // subtypeList must be ordered
 function createComplexSemType(BasicTypeBitSet all, BasicSubtype[] subtypeList = []) returns ComplexSemType {
@@ -1004,8 +1013,8 @@ public function intSubtypeConstraints(SemType t) returns IntSubtypeConstraints? 
 }
 
 public function defineListTypeWrapped(ListDefinition ld, Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
-    SemType[] initialCells = from var i in initial select cellContaining(env, i, mut);
-    SemType restCell = cellContaining(env, rest, mut);
+    MemberSemType[] initialCells = from var i in initial select cellContaining(env, i, mut);
+    MemberSemType restCell = cellContaining(env, rest, mut);
     return ld.define(env, initialCells, fixedLength, restCell);
 }
 
@@ -1152,7 +1161,7 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
 }
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest) returns SemType {
-    Field[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1])];
+    MemberField[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1])];
     MemberSemType restCell = cellContaining(env, rest);
     return md.define(env, cellFields, restCell);
 }
@@ -1283,6 +1292,7 @@ public function isNeverDeref(MemberSemType t) returns boolean {
 }
 
 final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
+final CellAtomicType CELL_ATOMIC_BOTTOM = { ty: NEVER, mut: CELL_MUT_LIMITED };
 
 public function cellAtomicType(SemType t) returns CellAtomicType? {
     if t is BasicTypeBitSet {
