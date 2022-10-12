@@ -127,7 +127,6 @@ function stringListToSemType(t:Env env, StringAsList stringList) returns t:SemTy
 }
 
 public function regexToSemType(t:Env env, string regex) returns t:SemType {
-    // io:println(regex);
     RegexContext cx = new;
     IntermediateType ty = regexToIntermediateType(cx, regex, 0, regex.length() - 1, cx.terminalType(()));
     return intermediateTypeToSemType(cx, env, ty);
@@ -180,7 +179,6 @@ function intermediateTerminalTypeToSemType(IntermediateTerminalType ty) returns 
 
 function regexToIntermediateType(RegexContext cx, string regex, int index, int end, IntermediateType restTy, boolean noPrefix=false) returns IntermediateType {
     RegexPattern pattern = nextPattern(regex, index, end + 1);
-    // io:println("main", pattern);
     if pattern is Concat {
         return concatToSemType(cx, regex, index, end, restTy);
     }
@@ -200,35 +198,44 @@ function concatToSemType(RegexContext cx, string regex, int index, int end, Inte
 }
 
 function starToIntermediateType(RegexContext cx, string regex, Star pattern, int end, IntermediateType restTy, boolean noPrefix) returns IntermediateType {
-    // io:println(pattern, end, restTy, noPrefix);
     IntermediateType unmatchedType = regexToIntermediateType(cx, regex, pattern.nextIndex, end, restTy);
-    // io:println("unmatchedType", unmatchedType);
     boolean noSuffix = false;
 
     if noPrefix {
-        // we don't care about prefix other wise
+        // we don't care about prefix otherwise
         IntermediateTypeValue actualRest = cx.typeValue(unmatchedType);
         if actualRest is IntermediateUnionType {
             IntermediateTypeValue actualRestTy = cx.typeValue(restTy);
             if actualRestTy is IntermediateUnionType {
+                // if the names are same that means regexToIntermediateType returned restTy. Than happens only if pattern.nextIndex is >= end (via nextPattern)
+                // that means there is nothing after this pattern (inside the range covered by end)
                 noSuffix = actualRestTy.name == actualRest.name;
             }
         }
     }
-    // if noSuffix {
-    //     var tmp = starToIntermediateTypeInner(cx, regex, range.startIndex, range.startIndex, range.endIndex, actualRest.name);
-
-    //     io:println("new style", tmp, "::", restTy);
-    //     return tmp;
-    // }
     PatternRange range = pattern.range;
     RegexPattern body = nextPattern(regex, range.startIndex, range.endIndex + 1);
-    // io:println("body", body);
     if body is End {
         panic error("empty *");
     }
     if noSuffix && noPrefix {
-        return regexToIntermediateType(cx, regex, range.startIndex, range.endIndex, restTy, true); 
+        // If we don't have a prefix or suffix that means it is a nested star (ex: (a*)*). This means restTy is the union type for the outer *
+        // So we need to avoid adding a union type referring to the outer union type (to avoid invalid type cycle)
+        // i.e we need
+        // type T1 T2 | T0;
+        // type T2 [T3, T1];
+        // type T3 "a";
+        // type T0 ();
+        // ```
+        // instead of
+        // ```
+        // type T1 T2 | T0;
+        // type T2 T4 | T1; <- skip this
+        // type T4 [T3, T2];
+        // type T3 "a";
+        // type T0 ();
+        // ```
+        return regexToIntermediateType(cx, regex, range.startIndex, range.endIndex, restTy, true);
     }
     IntermediateUnionType ty = cx.unionType();
     ty.operands = [regexToIntermediateType(cx, regex, range.startIndex, range.endIndex, ty, true), unmatchedType];
