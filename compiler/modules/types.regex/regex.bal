@@ -83,6 +83,12 @@ class RegexContext {
         }
         return self.intermediateTypes.get(ty);
     }
+
+    function intermediateTypeSame(IntermediateType lhs, IntermediateType rhs) returns boolean {
+        IntermediateTypeReference lhsName = lhs is IntermediateTypeReference ? lhs : lhs.name;
+        IntermediateTypeReference rhsName = rhs is IntermediateTypeReference ? rhs : rhs.name;
+        return lhsName == rhsName;
+    }
 }
 
 public function typeRelation(string lhs, string rhs) returns string  {
@@ -199,43 +205,33 @@ function concatToSemType(RegexContext cx, string regex, int index, int end, Inte
 
 function starToIntermediateType(RegexContext cx, string regex, Star pattern, int end, IntermediateType restTy, boolean noPrefix) returns IntermediateType {
     IntermediateType unmatchedType = regexToIntermediateType(cx, regex, pattern.nextIndex, end, restTy);
-    boolean noSuffix = false;
-
-    if noPrefix {
-        // we don't care about prefix otherwise
-        IntermediateTypeValue actualRest = cx.typeValue(unmatchedType);
-        if actualRest is IntermediateUnionType {
-            IntermediateTypeValue actualRestTy = cx.typeValue(restTy);
-            if actualRestTy is IntermediateUnionType {
-                // if the names are same that means regexToIntermediateType returned restTy. Than happens only if pattern.nextIndex is >= end (via nextPattern)
-                // that means there is nothing after this pattern (inside the range covered by end)
-                noSuffix = actualRestTy.name == actualRest.name;
-            }
-        }
-    }
     PatternRange range = pattern.range;
     RegexPattern body = nextPattern(regex, range.startIndex, range.endIndex + 1);
     if body is End {
         panic error("empty *");
     }
-    if noSuffix && noPrefix {
-        // If we don't have a prefix or suffix that means it is a nested star (ex: (a*)*). This means restTy is the union type for the outer *
-        // So we need to avoid adding a union type referring to the outer union type (to avoid invalid type cycle)
-        // i.e we need
-        // type T1 T2 | T0;
-        // type T2 [T3, T1];
-        // type T3 "a";
-        // type T0 ();
-        // ```
-        // instead of
-        // ```
-        // type T1 T2 | T0;
-        // type T2 T4 | T1; <- skip this
-        // type T4 [T3, T2];
-        // type T3 "a";
-        // type T0 ();
-        // ```
-        return regexToIntermediateType(cx, regex, range.startIndex, range.endIndex, restTy, true);
+    if noPrefix {
+        // if unmatchedType and restTy are same that means regexToIntermediateType returned restTy. Than happens only if pattern.nextIndex is >= end (via nextPattern)
+        // that means there is nothing after this pattern (inside the range covered by end)
+        if cx.intermediateTypeSame(unmatchedType, restTy) {
+            // If we don't have a prefix or suffix that means it is a nested star (ex: (a*)*). This means restTy is the union type for the outer *
+            // So we need to avoid adding a union type referring to the outer union type (to avoid invalid type cycle)
+            // i.e we need
+            // type T1 T2 | T0;
+            // type T2 [T3, T1];
+            // type T3 "a";
+            // type T0 ();
+            // ```
+            // instead of
+            // ```
+            // type T1 T2 | T0;
+            // type T2 T4 | T1; <- skip this
+            // type T4 [T3, T2];
+            // type T3 "a";
+            // type T0 ();
+            // ```
+            return regexToIntermediateType(cx, regex, range.startIndex, range.endIndex, unmatchedType, true);
+        }
     }
     IntermediateUnionType ty = cx.unionType();
     ty.operands = [regexToIntermediateType(cx, regex, range.startIndex, range.endIndex, ty, true), unmatchedType];
