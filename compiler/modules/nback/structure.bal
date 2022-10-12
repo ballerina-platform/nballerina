@@ -465,7 +465,7 @@ function isListMemberTypeExact(t:Context tc, t:SemType listType, bir:IntOperand 
     // don't need to check when the condition is false, because there can be only one applicable member type
     else if t:singleIntShape(indexOperand.semType) == () && lat.members.fixedLength != 0 {
         t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
-        foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypes(tc, lat, indexOperand.semType) {
+        foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypesDeref(tc, lat, indexOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
             }
@@ -542,7 +542,7 @@ function isListSetAlwaysInexact(t:Context tc, t:SemType listType, t:SemType inde
         // If indexing with a constant value, then we have the precise type
         return false;
     }
-    foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypes(tc, lat, indexType) {
+    foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypesDeref(tc, lat, indexType) {
         if !t:isSubtype(tc, newMemberType, ty) {
             return true;
         }

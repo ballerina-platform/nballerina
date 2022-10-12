@@ -29,10 +29,10 @@ function listProjBddDeref(Context cx, IntSubtype|true k, Bdd b, Conjunction? pos
 // Based on listFormulaIsEmpty
 function listProjPathDeref(Context cx, IntSubtype|true k, Conjunction? pos, Conjunction? neg) returns SemType {
     FixedLengthArray members;
-    SemType rest;
+    MemberSemType rest;
     if pos == () {
         members = { initial: [], fixedLength: 0 };
-        rest = TOP;
+        rest = cellContaining(cx.env, TOP);
     }
     else {
         // combine all the positive tuples using intersection
@@ -64,7 +64,7 @@ function listProjPathDeref(Context cx, IntSubtype|true k, Conjunction? pos, Conj
         }
         // Ensure that we can use isNever on rest in listInhabited
         if !isNeverDeref(rest) && isEmpty(cx, rest) {
-            rest = NEVER;
+            rest = cellContaining(cx.env, NEVER);
         }
     }
     // return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
@@ -78,7 +78,7 @@ function listProjPathDeref(Context cx, IntSubtype|true k, Conjunction? pos, Conj
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
 // `keyIndices` are the indices in `memberTypes` of those samples that belong to the key type.
-function listProjExcludeDeref(Context cx, int[] indices, int[] keyIndices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
+function listProjExcludeDeref(Context cx, int[] indices, int[] keyIndices, MemberSemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
     SemType p = NEVER;
     if neg == () {
         int len = memberTypes.length();
@@ -103,14 +103,14 @@ function listProjExcludeDeref(Context cx, int[] indices, int[] keyIndices, SemTy
                 if indices[i] >= negLen {
                     break;
                 }
-                SemType[] t = memberTypes.slice(0, i);
+                MemberSemType[] t = memberTypes.slice(0, i);
                 p = union(p, listProjExcludeDeref(cx, indices, keyIndices, t, nRequired, neg.next));
             }
         } 
         foreach int i in 0 ..< memberTypes.length() {
             SemType d = diff(cellDeref(memberTypes[i]), listMemberAtDeref(nt.members, nt.rest, indices[i]));
             if !isEmpty(cx, d) {
-                SemType[] t = memberTypes.clone();
+                MemberSemType[] t = memberTypes.clone();
                 t[i] = cellContaining(cx.env, d);
                 // We need to make index i be required
                 p = union(p, listProjExcludeDeref(cx, indices, keyIndices, t, int:max(nRequired, i + 1), neg.next));

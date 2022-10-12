@@ -467,7 +467,7 @@ function createStringSubtypeStruct(InitModuleContext cx, t:ComplexSemType semTyp
 function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
     t:ListAtomicType? lat = t:listAtomicType(cx.tc, semType);
     if lat != () {
-        t:SemType rest = lat.rest;
+        t:SemType rest = t:cellDeref(lat.rest);
         if rest is t:BasicTypeBitSet && lat.members.fixedLength == 0 {
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_ARRAY);
         }

@@ -114,7 +114,7 @@ function createLlListDescType(int nMemberTypes = 0) returns llvm:StructType {
 
 function listAtomicTypeToListReprPrefix(t:ListAtomicType? atomic) returns ListReprPrefix {
     if atomic != () && atomic.members.fixedLength == 0 {
-        t:SemType rest = atomic.rest;
+        t:SemType rest = t:cellDeref(atomic.rest);
         if rest == t:INT {
             return "int_array";
         }

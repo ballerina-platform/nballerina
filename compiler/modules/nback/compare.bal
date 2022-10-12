@@ -253,7 +253,7 @@ function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns Ru
 
 function isPotentiallyExactIntArray(t:Context tc, t:SemType semType) returns boolean {
     t:ListAtomicType? atomic = t:listAtomicType(tc, semType);
-    return atomic == () ? false : t:listAtomicSimpleArrayMemberType(atomic) == t:INT;
+    return atomic == () ? false : t:listAtomicSimpleArrayMemberTypeDeref(atomic) == t:INT;
 }
 
 final readonly & map<bir:OrderOp> flippedOrderOps = {

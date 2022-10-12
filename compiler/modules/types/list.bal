@@ -23,7 +23,7 @@ public function listAtomicTypeMemberAtDeref(ListAtomicType atomic, int i) return
     return cellDeref(listAtomicTypeMemberAt(atomic, i));
 }
 
-public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
+public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns MemberSemType {
     if i < atomic.members.fixedLength {
         int initialLen = atomic.members.initial.length();
         return atomic.members.initial[ i < initialLen ? i : initialLen - 1];
@@ -33,10 +33,10 @@ public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns Sem
     }
 }
 
-public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns ListMemberTypes {
+public function listAtomicTypeAllMemberTypesDeref(ListAtomicType atomicType) returns ListMemberTypes {
     Range[] ranges = [];
     SemType[] types = [];
-    SemType[] initial = atomicType.members.initial;
+    SemType[] initial = from var i in atomicType.members.initial select cellDeref(i);
     int initialLength = initial.length();
     int fixedLength = atomicType.members.fixedLength;
     if initialLength != 0 {
@@ -48,8 +48,9 @@ public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns 
             ranges[initialLength - 1] = { min: initialLength - 1, max: fixedLength - 1 };
         }
     }
-    if !isNeverDeref(atomicType.rest) {
-        types.push(atomicType.rest);
+    SemType rest = cellDeref(atomicType.rest);
+    if !isNever(rest) {
+        types.push(rest);
         ranges.push({ min: fixedLength, max: int:MAX_VALUE });
     }
     return [ranges, types];
@@ -352,12 +353,12 @@ function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunc
     return indices;
 }
 
-function listSampleTypes(Context cx, FixedLengthArray members, SemType rest, int[] indices) returns [SemType[], int] {
-    SemType[] memberTypes = [];
+function listSampleTypes(Context cx, FixedLengthArray members, SemType rest, int[] indices) returns [MemberSemType[], int] {
+    MemberSemType[] memberTypes = [];
     int nRequired = 0;
     foreach int i in 0 ..< indices.length() {
         int index = indices[i];
-        SemType t = listMemberAt(members, rest, index);
+        MemberSemType t = listMemberAt(members, rest, index);
         if isEmpty(cx, t) {
             break;
         }
@@ -386,7 +387,7 @@ public function listMemberAtDeref(FixedLengthArray fixedArray, SemType rest, int
     return cellDeref(listMemberAt(fixedArray, rest, index));
 }
 
-function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
+function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns MemberSemType {
     if index < fixedArray.fixedLength {
         return fixedArrayGet(fixedArray, index);
     }
@@ -402,7 +403,7 @@ function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean 
     return false;
 }
 
-function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
+function fixedArrayGet(FixedLengthArray members, int index) returns MemberSemType {
     int memberLen = members.initial.length();
     int i = int:min(index, memberLen - 1);
     return members.initial[i];
@@ -430,7 +431,7 @@ function bddListAllRanges(Context cx, Bdd b, Range[] accum) returns Range[] {
         return b ? accum : [];
     }
     else {
-        var [atomRanges, _] = listAtomicTypeAllMemberTypes(cx.listAtomType(b.atom));
+        var [atomRanges, _] = listAtomicTypeAllMemberTypesDeref(cx.listAtomType(b.atom));
         return distinctRanges(bddListAllRanges(cx, b.left, distinctRanges(atomRanges, accum)),
                               distinctRanges(bddListAllRanges(cx, b.middle, accum), 
                                              bddListAllRanges(cx, b.right, accum)));
@@ -470,8 +471,8 @@ function listAtomicMemberTypeAtDeref(FixedLengthArray fixedArray, SemType rest, 
     return m;
 }
 
-function listAtomicApplicableMemberTypes(ListAtomicType atomic, IntSubtype|true indexType) returns SemType[] {
-    var [ranges, memberTypes] = listAtomicTypeAllMemberTypes(atomic);
+function listAtomicApplicableMemberTypesDeref(ListAtomicType atomic, IntSubtype|true indexType) returns SemType[] {
+    var [ranges, memberTypes] = listAtomicTypeAllMemberTypesDeref(atomic);
     if indexType == true {
         return memberTypes;
     }

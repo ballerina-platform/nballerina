@@ -273,7 +273,7 @@ function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
 
 // Validate output of `t:listAllMemberTypes` by repeatedly testing for each range using `t:listProj` function.
 function testListAllMemberTypesProjection(t:Context tc, t:SemType t) {
-    var [ranges, types] = t:listAllMemberTypes(tc, t);
+    var [ranges, types] = t:listAllMemberTypesDeref(tc, t);
     foreach int i in 0 ..< ranges.length() {
         t:Range r = ranges[i];
         t:SemType it = types[i];

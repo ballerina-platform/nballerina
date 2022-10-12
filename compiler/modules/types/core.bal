@@ -848,8 +848,8 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     }
     ComparableMemo memo = { semType1: t1, semType2: t2 };
     cx.comparableMemo.add(memo);
-    var [ranges1, memberTypes1] = listAllMemberTypes(cx, t1);
-    var [ranges2, memberTypes2] = listAllMemberTypes(cx, t2);
+    var [ranges1, memberTypes1] = listAllMemberTypesDeref(cx, t1);
+    var [ranges2, memberTypes2] = listAllMemberTypesDeref(cx, t2);
     foreach var [_, i1, i2] in combineRanges(ranges1, ranges2) {
         if i1 != () && i2 != () && !comparable(cx, memberTypes1[i1], memberTypes2[i2]) {
             memo.comparable = false;
@@ -867,9 +867,9 @@ public function listAtomicFillableFrom(Context cx, ListAtomicType atomic, int sp
 // Number of members that must be specified in the list constructor
 // Potentially memoizable
 public function listAtomicMinLengthWithFill(Context cx, ListAtomicType atomic) returns int {
-    readonly & SemType[] members = atomic.members.initial;
+    readonly & MemberSemType[] members = atomic.members.initial;
     int i = members.length();
-    while i > 0 && filler(cx, members[i - 1]) != () {
+    while i > 0 && filler(cx, cellDeref(members[i - 1])) != () {
         i -= 1;
     }
     return i == members.length() ? atomic.members.fixedLength : i;
@@ -926,7 +926,7 @@ function computeFiller(Context cx, SemType t) returns Filler? {
     if lat != () {
         Filler[] memberFillers = [];
         foreach var memberType in lat.members.initial {
-            Filler? f = filler(cx, memberType);
+            Filler? f = filler(cx, cellDeref(memberType));
             if f is () {
                 return ();
             }
@@ -1019,9 +1019,9 @@ public function tupleTypeWrappedRo(Env env, SemType... members) returns SemType 
     return defineListTypeWrapped(def, env, members, mut = CELL_MUT_NONE);
 }
 
-public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns BasicTypeBitSet? {
+public function listAtomicSimpleArrayMemberTypeDeref(ListAtomicType? atomic) returns BasicTypeBitSet? {
     if atomic != () && atomic.members.fixedLength == 0 {
-        SemType memberType = atomic.rest;
+        SemType memberType = cellDeref(atomic.rest);
         if memberType is BasicTypeBitSet {
             return memberType;
         }
@@ -1029,14 +1029,12 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
     return ();   
 }
 
-final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
-
 final readonly & ListMemberTypes LIST_MEMBER_TYPES_ALL = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
 final readonly & ListMemberTypes LIST_MEMBER_TYPES_NONE = [[], []];
 
-public function listAllMemberTypes(Context cx, SemType t) returns ListMemberTypes {
+public function listAllMemberTypesDeref(Context cx, SemType t) returns ListMemberTypes {
     if t is BasicTypeBitSet {
-        return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE; // TODO: revisit
+        return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE;
     }
     else {
         Range[] ranges = [];
@@ -1054,15 +1052,16 @@ public function listAllMemberTypes(Context cx, SemType t) returns ListMemberType
 }
 
 public function listAtomicType(Context cx, SemType t) returns ListAtomicType? {
+    ListAtomicType listAtomicTop = createListAtomicTop(cx);
     if t is BasicTypeBitSet {
-        return t == LIST ? createListAtomicTop(cx) : ();
+        return t == LIST ? listAtomicTop : ();
     }
     else {
         Env env = cx.env;
         if !isSubtypeSimple(t, LIST) {
             return ();
         }
-        return bddListAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_LIST), LIST_ATOMIC_TOP);       
+        return bddListAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_LIST), listAtomicTop);    
     }
 }
 
@@ -1096,7 +1095,7 @@ public function listMemberTypeDeref(Context cx, SemType t, SemType k) returns Se
     }
 }
 
-public function listAtomicTypeApplicableMemberTypes(Context cx, ListAtomicType atomic, SemType indexType) returns readonly & SemType[] {
+public function listAtomicTypeApplicableMemberTypesDeref(Context cx, ListAtomicType atomic, SemType indexType) returns readonly & SemType[] {
     IntSubtype|boolean indexIntType;
     if indexType is BasicTypeBitSet {
         indexIntType = (indexType & INT) != 0;
@@ -1108,7 +1107,7 @@ public function listAtomicTypeApplicableMemberTypes(Context cx, ListAtomicType a
         return [];
     }
     else {
-        return listAtomicApplicableMemberTypes(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
+        return listAtomicApplicableMemberTypesDeref(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
     }
 }
 
