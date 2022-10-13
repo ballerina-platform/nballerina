@@ -1184,7 +1184,7 @@ function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemT
     bir:Register reg = opBinding.reg;
     t:Context tc = cx.mod.tc;
     t:SemType curSemType = reg.semType;
-    t:SemType diff = t:roDiff(tc, curSemType, semType);
+    t:SemType diff = t:diff(curSemType, semType);
     if t:isEmpty(tc, diff) {
         return codeGenConstCond(cx, nextBlock, !negated, prevs, pos);
     }
@@ -1248,7 +1248,7 @@ function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
 function finishCodeGenTypeTest(ExprContext cx, t:SemType semType, bir:Operand operand, bir:BasicBlock nextBlock, boolean negated, Position pos) returns CodeGenError|BooleanExprEffect {
     t:Context tc = cx.mod.tc;  
     t:SemType curSemType = operandSemType(tc, operand);
-    t:SemType diff = t:roDiff(tc, curSemType, semType);
+    t:SemType diff = t:diff(curSemType, semType);
     if t:isEmpty(tc, diff) {
         return { result: singletonBooleanOperand(tc, !negated), block: nextBlock };
     }
