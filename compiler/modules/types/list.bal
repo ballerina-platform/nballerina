@@ -1,7 +1,5 @@
 // Implementation specific to basic type list.
 
-import ballerina/io;
-
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
     SemType rest;
@@ -51,6 +49,49 @@ public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns 
         ranges.push({ min: fixedLength, max: int:MAX_VALUE });
     }
     return [ranges, types];
+}
+
+// TODO: we need this for mappinga and cells? as well
+class MemoListBddCache {
+    *BddCache;
+
+    private MemoBddCache memoCache;
+    private Context cx;
+
+    function init(Context cx, BddMemoTable memo) {
+        self.memoCache = new(cx, memo);
+        self.cx = cx;
+    }
+
+    isolated function get(Bdd bdd) returns Bdd {
+        return self.memoCache.get(bdd);
+    }
+
+    isolated function simpleIntersection(Bdd b1, Bdd b2) returns Bdd? {
+        if b1 !is BddNode || b2 !is BddNode ||
+           b1.left != true || b1.middle != false || b1.right != false ||
+           b2.left != true || b2.middle != false || b2.right != false {
+            return ();
+        }
+        Atom a1 = b1.atom;
+        Atom a2 = b2.atom;
+        // TODO: detect if list atom is recursive more correctly
+        // allowing rec atoms causes us to go for an infinite loop
+        if a1 !is RecAtom && a2 !is RecAtom {
+            ListAtomicType ty1 = self.cx.listAtomType(a1);
+            ListAtomicType ty2 = self.cx.listAtomType(a2);
+            var { members: m1, rest: r1 } = ty1; 
+            var { members: m2, rest: r2 } = ty2; 
+            var intersection = listIntersectWith(self.cx, m1, r1, m2, r2);
+            if intersection is () {
+                return ();
+            }
+            ListAtomicType intersectionTy = { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
+            TypeAtom intersectionAtom = self.cx.env.listAtom(intersectionTy);
+            return bddCreate(self, intersectionAtom, true, false, false);
+        } 
+        return ();
+    }
 }
 
 public class ListDefinition {
@@ -218,7 +259,6 @@ isolated function listIntersectWith(Context cx, FixedLengthArray members1, SemTy
 // `nRequired` is the number of members of `memberTypes` that are required by P.
 // `neg` represents N.
 
-int isEmptyLevel = 0;
 function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
     if neg == () {
         return true;
@@ -269,16 +309,7 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
        
         foreach int i in 0 ..< memberTypes.length() {
             SemType d = memoDiff(cx, memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
-            boolean e;
-            int beforeCount = cx.listMemo.length();
-            isEmptyLevel += 1;
-            e = isEmpty(cx, d);
-            isEmptyLevel -= 1;
-            int afterCount = cx.listMemo.length();
-            if afterCount == beforeCount + 1 {
-                io:println(afterCount, "@" , isEmptyLevel);
-            }
-            if !e {
+            if !isEmpty(cx, d) {
                 SemType[] t = memberTypes.clone();
                 t[i] = d;
                 // We need to make index i be required
@@ -422,8 +453,8 @@ function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum
     }
     else {
         return union(bddListMemberType(cx, b.left, key,
-                                       intersect(listAtomicMemberType(cx.listAtomType(b.atom), key),
-                                                 accum)),
+                                       memoIntersect(cx, listAtomicMemberType(cx.listAtomType(b.atom), key),
+                                                     accum)),
                      union(bddListMemberType(cx, b.middle, key, accum),
                            bddListMemberType(cx, b.right, key, accum)));
     }
@@ -568,21 +599,21 @@ function nextBoundary(int cur, Range r, int? next) returns int? {
 }
 
 function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return memoSubtypeIntersect(cx, cx.listMemo, <Bdd>t1, <Bdd>t2, "list");
+    MemoListBddCache cache = new(cx, cx.listMemo);
+    return memoSubtypeIntersect(cx, cache, <Bdd>t1, <Bdd>t2);
 }
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    MemoBddCache cache = new (cx, cx.listMemo, "list");
+    MemoListBddCache cache = new (cx, cx.listMemo);
     if listIsEmptySimple(cx, bddIntersect(cache, <Bdd> t1, <Bdd> t2)) is true {
         return t1;
     }
-    Bdd b = memoSubtypeDiff(cx, cx.listMemo, <Bdd>t1, <Bdd>t2, "list");
-    if b != false && cx.listMemo[b] == () {
-        //io:println("fresh BDD: ", bddToString(b));
-    }
+    Bdd b = memoSubtypeDiff(cx, cache, <Bdd>t1, <Bdd>t2);
     return b;
 }
 
+
+// TODO: add comment explaning what we are doing here
 function listIsEmptySimple(Context cx, Bdd bdd) returns boolean? {
     BddMemo? m = cx.listMemo[bdd];
     if m !is () && m.empty is boolean {

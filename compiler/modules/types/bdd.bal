@@ -82,9 +82,9 @@ isolated function bddIntersect(BddCache cache, Bdd b1, Bdd b2) returns Bdd {
         return b2 == true ? b1 : false;
     }
     else { 
-        Bdd? tmp = cache.simpleIntersection(b1, b2);
-        if tmp is Bdd {
-            return tmp;
+        Bdd? intersection = cache.simpleIntersection(b1, b2);
+        if intersection is Bdd {
+            return intersection;
         }
         int cmp = atomCmp(b1.atom, b2.atom);
         if cmp < 0 {

@@ -581,7 +581,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return memoIntersect((), t1, t2);
 }
 
-isolated function memoIntersect(Context? cx, SemType t1, SemType t2) returns SemType {
+public isolated function memoIntersect(Context? cx, SemType t1, SemType t2) returns SemType {
     BasicTypeBitSet all1;
     BasicTypeBitSet all2;
     BasicTypeBitSet some1;

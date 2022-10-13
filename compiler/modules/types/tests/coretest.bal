@@ -32,7 +32,7 @@ function test1() {
 function disjoint(Context cx, SemType t1, SemType t2) {
     test:assertFalse(isSubtype(cx, t1, t2));
     test:assertFalse(isSubtype(cx, t2, t1));
-    test:assertTrue(isEmpty(cx, intersect(t1, t2)));
+    test:assertTrue(isEmpty(cx, memoIntersect(cx, t1, t2)));
 }
 
 @test:Config{}
@@ -150,7 +150,7 @@ function tupleTest4() {
     test:assertFalse(isEmpty(typeContext(env), t));
     test:assertFalse(isSubtype(typeContext(env), s, t));
     test:assertFalse(isSubtype(typeContext(env), t, s));
-    test:assertTrue(isEmpty(typeContext(env), intersect(s, t)));
+    test:assertTrue(isEmpty(typeContext(env), memoIntersect(typeContext(env), s, t)));
 }
 
 function func(Env env, SemType args, SemType ret) returns SemType {

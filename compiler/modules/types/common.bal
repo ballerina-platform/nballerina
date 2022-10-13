@@ -1,4 +1,3 @@
-import ballerina/io;
 // Code common to implementation of multiple basic types
 
 public type Definition object {
@@ -66,22 +65,16 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     return isEmpty;
 }
 
-// TODO:
-type MemoKind "list"|"mapping"|"cell";
-
 class MemoBddCache {
     *BddCache;
     private final BddMemoTable memo;
     private final Context cx;
-    // FIXME: ugly workaround to figure out what the memo type must be.
-    // Ideally we should have Extend this to seprate Caches for list, mapping anc cell then only they will to the simpleIntersection
-    private final MemoKind? kind; 
 
-    function init(Context cx, BddMemoTable memo, MemoKind? kind) {
+    function init(Context cx, BddMemoTable memo) {
         self.memo = memo;
         self.cx = cx;
-        self.kind = kind;
     }
+
     isolated function get(Bdd bdd) returns Bdd {
         if memoAssumeEmpty(self.memo, bdd) {
             return false;
@@ -89,44 +82,14 @@ class MemoBddCache {
         return bdd;
     }
 
-    isolated function simpleIntersection(Bdd b1, Bdd b2) returns Bdd? {
-        if b1 !is BddNode || b2 !is BddNode ||
-           b1.left != true || b1.middle != false || b1.right != false ||
-           b2.left != true || b2.middle != false || b2.right != false {
-            io:println("skipped: ", b1);
-            io:println("\t", b2);
-            return ();
-        }
-        Atom a1 = b1.atom;
-        Atom a2 = b2.atom;
-        // allowing rec atoms causes us to go for an infinite loop
-        if self.kind is "list" && a1 !is RecAtom && a2 !is RecAtom {
-            ListAtomicType ty1 = self.cx.listAtomType(a1);
-            io:println("ty1:", ty1);
-            ListAtomicType ty2 = self.cx.listAtomType(a2);
-            io:println("ty2:", ty2);
-            var { members: m1, rest: r1 } = ty1; 
-            var { members: m2, rest: r2 } = ty2; 
-            var intersection = listIntersectWith(self.cx, m1, r1, m2, r2);
-            if intersection is () {
-                return ();
-            }
-            ListAtomicType intersectionTy = { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
-            TypeAtom intersectionAtom = self.cx.env.listAtom(intersectionTy);
-            io:println("working");
-            return bddCreate(self, intersectionAtom, true, false, false);
-        } 
-        return ();
-    }
+    isolated function simpleIntersection(Bdd b1, Bdd b2) returns Bdd? => ();
 }
 
-function memoSubtypeIntersect(Context cx, BddMemoTable memoTable, Bdd b1, Bdd b2, MemoKind? kind) returns Bdd {
-    MemoBddCache cache = new(cx, memoTable, kind);
+function memoSubtypeIntersect(Context cx, BddCache cache, Bdd b1, Bdd b2) returns Bdd {
     return bddIntersect(cache, cache.get(b1), cache.get(b2));
 }
 
-function memoSubtypeDiff(Context cx, BddMemoTable memoTable, Bdd b1, Bdd b2, MemoKind? kind) returns Bdd {
-    MemoBddCache cache = new(cx, memoTable, kind);
+function memoSubtypeDiff(Context cx, BddCache cache, Bdd b1, Bdd b2) returns Bdd {
     return bddDiff(cache, cache.get(b1), cache.get(b2));
 }
 
