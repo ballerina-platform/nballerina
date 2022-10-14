@@ -83,7 +83,7 @@ class MemoListBddCache {
         var { members: m1, rest: r1 } = ty1; 
         var { members: m2, rest: r2 } = ty2; 
         var intersection = listIntersectWith(self.cx, m1, r1, m2, r2);
-        if intersection is () {
+        if intersection == () {
             return ();
         }
         ListAtomicType intersectionTy = { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
