@@ -173,7 +173,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 accumType = t:union(accumType, next);
             }
             else {
-                accumType = t:intersect(accumType, next);
+                accumType = t:memoIntersect(mod.tc, accumType, next);
                 // This can fail to detect that the intersection is empty when the env is not ready
                 // (i.e. there's a recursive type still under construction).
                 // To solve this, we would need to build a list of intersections to be checked later.

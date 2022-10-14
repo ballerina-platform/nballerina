@@ -67,7 +67,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
-            if reprIsImmediate(lhsRepr) || reprIsImmediate(rhsRepr) || reprIsImmediate(semTypeRepr(t:intersect(lhs.semType, rhs.semType))) {
+            if reprIsImmediate(lhsRepr) || reprIsImmediate(rhsRepr) || reprIsImmediate(semTypeRepr(t:memoIntersect(scaffold.typeContext(), lhs.semType, rhs.semType))) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {

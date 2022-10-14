@@ -422,8 +422,8 @@ function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum
     }
     else {
         return union(bddListMemberType(cx, b.left, key,
-                                       intersect(listAtomicMemberType(cx.listAtomType(b.atom), key),
-                                                 accum)),
+                                       memoIntersect(cx, listAtomicMemberType(cx.listAtomType(b.atom), key),
+                                                     accum)),
                      union(bddListMemberType(cx, b.middle, key, accum),
                            bddListMemberType(cx, b.right, key, accum)));
     }

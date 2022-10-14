@@ -517,25 +517,25 @@ function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Interna
 }
 
 function verifyConvertToInt(VerifyContext vc, ConvertToIntInsn insn) returns err:Internal? {
-    if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:INT), t:NUMBER)) {
+    if vc.isEmpty(t:memoIntersect(vc.typeContext(), t:diff(insn.operand.semType, t:INT), t:NUMBER)) {
         return vc.invalidErr("operand type of ConvertToInt has no non-integral numeric component", insn.pos);
     }
     if !vc.isSameType(t:union(t:diff(insn.operand.semType, t:NUMBER), t:INT), insn.result.semType) {
         return vc.invalidErr("result type of ConvertToInt is incorrect", insn.pos);
     }
-    if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:INT), t:NUMBER)) {
+    if !vc.isEmpty(t:memoIntersect(vc.typeContext(), t:diff(insn.result.semType, t:INT), t:NUMBER)) {
         return vc.invalidErr("result type of ConvertToInt contains non-integral numeric type", insn.pos);
     }
 }
 
 function verifyConvertToFloat(VerifyContext vc, ConvertToFloatInsn insn) returns err:Internal? {
-    if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:FLOAT), t:NUMBER)) {
+    if vc.isEmpty(t:memoIntersect(vc.typeContext(), t:diff(insn.operand.semType, t:FLOAT), t:NUMBER)) {
         return vc.invalidErr("operand type of ConvertToFloat has no non-float numeric component", insn.pos);
     }
     if !vc.isSameType(t:union(t:diff(insn.operand.semType, t:NUMBER), t:FLOAT), insn.result.semType) {
         return vc.invalidErr("result type of ConvertToFloat is incorrect", insn.pos);
     }
-    if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:FLOAT), t:NUMBER)) {
+    if !vc.isEmpty(t:memoIntersect(vc.typeContext(), t:diff(insn.result.semType, t:FLOAT), t:NUMBER)) {
         return vc.invalidErr("result type of ConvertToFloat contains non-float numeric type", insn.pos);
     }
 }

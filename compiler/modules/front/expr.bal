@@ -836,7 +836,7 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
     ValueFlags resultFlags = leftFlags & rightFlags;
     t:SemType lt = t:widenUnsigned(lhs.semType);
     t:SemType rt = t:widenUnsigned(rhs.semType);
-    t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
+    t:SemType resultType = op == "&" ? t:memoIntersect(cx.mod.tc, lt, rt) : t:union(lt, rt);
     if resultFlags != 0 {
         int value = bitwiseEval(op, leftValue, rightValue);
         if (resultFlags & VALUE_SINGLE_SHAPE) != 0 {
@@ -872,7 +872,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
 
 function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListConstructorExpr expr) returns [t:SemType, t:ListAtomicType]|ResolveTypeError {
     // SUBSET always have contextually expected type for list constructor
-    t:SemType expectedListType = t:intersect(expectedType, t:LIST);
+    t:SemType expectedListType = t:memoIntersect(cx.mod.tc, expectedType, t:LIST);
     t:Context tc = cx.mod.tc;
     if t:isEmpty(tc, expectedListType) {
         // don't think this can happen 
@@ -950,7 +950,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
 }
 
 function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns [t:SemType, t:MappingAtomicType]|ResolveTypeError {
-    t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING);
+    t:SemType expectedMappingType = t:memoIntersect(cx.mod.tc, expectedType, t:MAPPING);
     t:Context tc = cx.mod.tc;
     if t:isEmpty(tc, expectedMappingType) {
         // XXX can this happen?
@@ -1051,7 +1051,7 @@ function codeGenEqualityExpr(ExprContext cx, bir:BasicBlock nextBlock, s:BinaryE
 
     t:SemType lType = operandSemType(tc, l);
     t:SemType rType = operandSemType(tc, r);
-    if t:isEmpty(tc, t:intersect(lType, rType)) {
+    if t:isEmpty(tc, t:memoIntersect(cx.mod.tc, lType, rType)) {
         return cx.semanticErr(`intersection of operands of operator ${op} is empty`, pos);
     }
     boolean exact = op.length() == 3;
@@ -1108,11 +1108,12 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
 
 function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
     t:SemType toType = check cx.resolveTypeDesc(tcExpr.td);
-    t:SemType operandExpectedType = expected == () ? toType : t:intersect(toType, expected);
+    t:Context tc = cx.mod.tc;
+    t:SemType operandExpectedType = expected == () ? toType : t:memoIntersect(tc, toType, expected);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, operandExpectedType, tcExpr.operand);
     t:SemType fromType = operandSemType(cx.mod.tc, operand);
     t:BasicTypeBitSet? toNumType = t:singleNumericType(toType);
-    if toNumType != () && !t:isSubtypeSimple(t:intersect(fromType, t:NUMBER), toNumType) {
+    if toNumType != () && !t:isSubtypeSimple(t:memoIntersect(tc, fromType, t:NUMBER), toNumType) {
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
         // do numeric conversion now
         { result: operand, block: nextBlock } = check codeGenNumericConvert(cx, nextBlock, operand, toNumType, tcExpr.opPos);
@@ -1122,7 +1123,7 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
         // it's redundant, so we can remove it
         return { result: operand, block: nextBlock };
     }
-    t:SemType resultType = t:intersect(fromType, toType);
+    t:SemType resultType = t:memoIntersect(tc, fromType, toType);
     if t:isEmpty(cx.mod.tc, resultType) {
         return cx.semanticErr("type cast cannot succeed", tcExpr.opPos);
     }
@@ -1193,7 +1194,7 @@ function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemT
         intersect = semType;
     }
     else {
-        intersect = t:intersect(curSemType, semType);
+        intersect = t:memoIntersect(tc, curSemType, semType);
     }
     if t:isEmpty(tc, intersect) {
         return codeGenConstCond(cx, nextBlock, negated, prevs, pos);
@@ -1257,7 +1258,7 @@ function finishCodeGenTypeTest(ExprContext cx, t:SemType semType, bir:Operand op
         intersect = semType;
     }
     else {
-        intersect = t:intersect(curSemType, semType);
+        intersect = t:memoIntersect(tc, curSemType, semType);
     }
     if t:isEmpty(tc, intersect) {
         return { result: singletonBooleanOperand(tc, negated), block: nextBlock };
@@ -1274,7 +1275,7 @@ function codeGenCheckingExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
     // Checking expr falls into one of : 1) never err 2) conditionally err
     var { result: o, block: nextBlock, binding } = check codeGenExpr(cx, bb, expected, expr);
     t:SemType semType = operandSemType(cx.mod.tc, o);
-    t:SemType errorType =  t:intersect(semType, t:ERROR);
+    t:SemType errorType =  t:memoIntersect(cx.mod.tc, semType, t:ERROR);
     if t:isNever(errorType) {
         return { result: o, block: nextBlock };
     }

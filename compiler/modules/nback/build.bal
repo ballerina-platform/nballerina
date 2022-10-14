@@ -221,14 +221,14 @@ function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand oper
 }
 
 function operationWidens(Scaffold scaffold, bir:Register operand, t:SemType targetType) returns boolean {
-    t:SemType sourceStructType = t:intersect(operand.semType, POTENTIALLY_EXACT);
+    t:SemType sourceStructType = t:memoIntersect(scaffold.typeContext(), operand.semType, POTENTIALLY_EXACT);
     t:BasicTypeBitSet sourceStructUniformTypes = t:widenToBasicTypes(sourceStructType);
     if sourceStructUniformTypes == t:NEVER {
         return false;
     }
     // Going from e.g. `int[]` to `int[]|map<any>` does not lose exactness,
     // but going from e.g. `int[]|map<int>` to `int[]|map<any>` does.
-    t:SemType targetStructType = t:intersect(targetType, sourceStructUniformTypes);
+    t:SemType targetStructType = t:memoIntersect(scaffold.typeContext(), targetType, sourceStructUniformTypes);
     if t:isNever(targetStructType) {
         return false;
     }
