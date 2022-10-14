@@ -562,7 +562,7 @@ function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) return
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
     MemoBddCache cache = new (cx.listMemo);
     // This is checking if t1 and t2 are disjoint (i.e intersection(t1, t2) is empty). If so diff(t1, t2) == t1.
-    if listIsEmptySimple(cx, bddIntersect(cache, <Bdd> t1, <Bdd> t2)) is true {
+    if listIsEmptySimple(cx, bddIntersect(cache, <Bdd> t1, <Bdd> t2)) == true {
         return t1;
     }
     return memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
@@ -570,7 +570,7 @@ function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns Sub
 
 function listIsEmptySimple(Context cx, Bdd bdd) returns boolean? {
     BddMemo? m = cx.listMemo[bdd];
-    if m !is () && m.empty is boolean {
+    if m != () && m.empty is boolean {
         return <boolean>m.empty;
     }
     boolean empty = bddEvery(cx, bdd, (), (), listFormulaIsDefinitelyEmpty);
@@ -582,15 +582,15 @@ function listIsEmptySimple(Context cx, Bdd bdd) returns boolean? {
 }
 
 function listFormulaIsDefinitelyEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    if neg !is () || pos is () {
+    if neg != () || pos == () {
         return false;
     }
     var { members, rest } = cx.listAtomType(pos.atom);
     Conjunction? current = pos.next;
-    while current !is () {
+    while current != () {
         var { members: currentMembers, rest: currentRest } = cx.listAtomType(current.atom);
         var intersection = listIntersectWith(cx, members, rest, currentMembers, currentRest); 
-        if intersection is () {
+        if intersection == () {
             return false;
         }
         // Here we are checking if any of the members in the intersection are never.
