@@ -68,28 +68,25 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
 class MemoBddCache {
     *BddCache;
     private final BddMemoTable memo;
-    private final Context cx;
 
-    function init(Context cx, BddMemoTable memo) {
+    function init(BddMemoTable memo) {
         self.memo = memo;
-        self.cx = cx;
     }
-
     isolated function get(Bdd bdd) returns Bdd {
         if memoAssumeEmpty(self.memo, bdd) {
             return false;
         }
         return bdd;
     }
-
-    isolated function simpleIntersection(Bdd b1, Bdd b2) returns Bdd? => ();
 }
 
-function memoSubtypeIntersect(Context cx, BddCache cache, Bdd b1, Bdd b2) returns Bdd {
+function memoSubtypeIntersect(BddMemoTable memoTable, Bdd b1, Bdd b2) returns Bdd {
+    MemoBddCache cache = new(memoTable);
     return bddIntersect(cache, cache.get(b1), cache.get(b2));
 }
 
-function memoSubtypeDiff(Context cx, BddCache cache, Bdd b1, Bdd b2) returns Bdd {
+function memoSubtypeDiff(BddMemoTable memoTable, Bdd b1, Bdd b2) returns Bdd {
+    MemoBddCache cache = new(memoTable);
     return bddDiff(cache, cache.get(b1), cache.get(b2));
 }
 

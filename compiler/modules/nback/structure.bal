@@ -447,7 +447,7 @@ function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:Strin
     }
     // don't need to check when the condition is false, because there can be only one applicable member type
     else if t:singleStringShape(keyOperand.semType) == () && mat.names.length() != 0 {
-        t:SemType peResult = t:memoIntersect(tc, resultType, POTENTIALLY_EXACT);
+        t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
         foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypes(tc, mat, keyOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
@@ -464,7 +464,7 @@ function isListMemberTypeExact(t:Context tc, t:SemType listType, bir:IntOperand 
     }
     // don't need to check when the condition is false, because there can be only one applicable member type
     else if t:singleIntShape(indexOperand.semType) == () && lat.members.fixedLength != 0 {
-        t:SemType peResult = t:memoIntersect(tc, resultType, POTENTIALLY_EXACT);
+        t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
         foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypes(tc, lat, indexOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
@@ -475,7 +475,7 @@ function isListMemberTypeExact(t:Context tc, t:SemType listType, bir:IntOperand 
 }
 
 function isSameTypeWithin(t:Context tc, t:SemType semType, t:SemType within, t:SemType targetType) returns boolean {
-    t:SemType ty = t:memoIntersect(tc, semType, within);
+    t:SemType ty = t:intersect(semType, within);
     return t:isNever(ty) || t:isSameType(tc, ty, targetType);
 }
 

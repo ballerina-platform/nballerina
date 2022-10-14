@@ -510,7 +510,7 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
             result = t:isEmpty(cx.typeContext, t:union(left, right)) == p.isEmpty;
         }
         INTERSECT => {
-            result = t:isEmpty(cx.typeContext, t:memoIntersect(cx.typeContext, left, right)) == p.isEmpty;
+            result = t:isEmpty(cx.typeContext, t:intersect(left, right)) == p.isEmpty;
         }
         DIFF => {
             result = t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty;

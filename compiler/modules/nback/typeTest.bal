@@ -189,7 +189,7 @@ function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType t
     // Here we test that it is impossible to have a value that is both in sourceType and in bitSet, but not in targetType.
     // So if it's in sourceType (which we know it must be), then if it's in bitSet, it must be in targetType.
     // Also we know that if it's in targetType, it must be in bitSet.
-    if t:isEmpty(tc, t:diff(t:memoIntersect(tc, sourceType, bitSet), targetType)) {
+    if t:isEmpty(tc, t:diff(t:intersect(sourceType, bitSet), targetType)) {
         return bitSet;
     }
     return ();

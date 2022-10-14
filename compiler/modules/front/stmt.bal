@@ -1076,7 +1076,7 @@ function codeGenCheckingStmt(StmtContext cx, bir:BasicBlock bb, BindingChain? in
     // checking stmt falls into one of : 1) never err 2) always err 3) conditionally err
     var { result: o, block: nextBlock, binding } = check cx.codeGenExpr(bb, initialBindings, t:ERROR, expr);
     t:SemType semType = operandSemType(cx.mod.tc, o);
-    t:SemType errorType = t:memoIntersect(cx.mod.tc, semType, t:ERROR);
+    t:SemType errorType = t:intersect(semType, t:ERROR);
     bir:BasicBlock block;
     t:SemType resultType;
     if t:isNever(errorType) {
