@@ -561,15 +561,13 @@ function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) return
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
     MemoBddCache cache = new (cx.listMemo);
+    // This is checking if t1 and t2 are disjoint (i.e intersection(t1, t2) is empty). If so diff(t1, t2) == t1.
     if listIsEmptySimple(cx, bddIntersect(cache, <Bdd> t1, <Bdd> t2)) is true {
-        // TODO: add comment
         return t1;
     }
     return memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
 }
 
-
-// TODO: add comment explaning what we are doing here
 function listIsEmptySimple(Context cx, Bdd bdd) returns boolean? {
     BddMemo? m = cx.listMemo[bdd];
     if m !is () && m.empty is boolean {
@@ -595,6 +593,8 @@ function listFormulaIsDefinitelyEmpty(Context cx, Conjunction? pos, Conjunction?
         if intersection is () {
             return false;
         }
+        // Here we are checking if any of the members in the intersection are never.
+        // Not having any such members is a necessary (but not sufficient) condition for the intersection to be not empty
         if fixedArrayDefinitelyEmpty(intersection[0]) == true {
             return true;
         }
