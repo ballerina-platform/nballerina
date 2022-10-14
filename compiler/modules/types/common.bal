@@ -78,10 +78,10 @@ class MemoBddCache {
         }
         return bdd;
     }
+    isolated function simpleIntersect(Bdd b1, Bdd b2) returns Bdd? => ();
 }
 
-function memoSubtypeIntersect(BddMemoTable memoTable, Bdd b1, Bdd b2) returns Bdd {
-    MemoBddCache cache = new(memoTable);
+function memoSubtypeIntersect(BddCache cache, Bdd b1, Bdd b2) returns Bdd {
     return bddIntersect(cache, cache.get(b1), cache.get(b2));
 }
 
