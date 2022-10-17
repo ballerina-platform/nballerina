@@ -2,10 +2,11 @@ import wso2/nballerina.types as t;
 
 type StringAsList ()|[string:Char, StringAsList];
 
-type RegexPattern Concat|End|Star|Or;
+type RegexPattern Concat|End|Star|Or|Skip;
 
 type Concat "concat";
 type End "end";
+type Skip "skip";
 
 type Star record {|
     PatternRange range;
@@ -184,9 +185,14 @@ function intermediateTerminalTypeToSemType(IntermediateTerminalType ty) returns 
 }
 
 function regexToIntermediateType(RegexContext cx, string regex, int index, int end, IntermediateType restTy, boolean noPrefix=false) returns IntermediateType {
-    RegexPattern pattern = nextPattern(regex, index, end + 1);
+    int currentIndex = index;
+    RegexPattern pattern = nextPattern(regex, currentIndex, end + 1);
+    while pattern is Skip {
+        pattern = nextPattern(regex, currentIndex + 1, end + 1);
+        currentIndex += 1;
+    }
     if pattern is Concat {
-        return concatToSemType(cx, regex, index, end, restTy);
+        return concatToSemType(cx, regex, currentIndex, end, restTy);
     }
     else if pattern is Star {
         return starToIntermediateType(cx, regex, pattern, end, restTy, noPrefix);
@@ -251,7 +257,7 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
     if index >= end {
         return "end";
     }
-    if regex[index] is ")"|"*"|"|" {
+    if regex[index] is "*"|"|" {
         panic error("unexpected start position " + index.toString());
     }
     var [lhs, lhsWrapped] = readPattern(regex, index, end);
@@ -269,7 +275,7 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
             return { lhs, rhs, nextIndex };
         }
     }
-    return "concat";
+    return regex[index] is "("|")" ? "skip" : "concat";
 }
 
 function readPattern(string regex, int index, int end) returns [PatternRange, boolean] {
