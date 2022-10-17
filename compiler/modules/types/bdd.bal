@@ -23,13 +23,11 @@ public type BddNode readonly & record {|
 
 type BddCache object {
     isolated function get(Bdd bdd) returns Bdd;
-    isolated function simpleIntersect(Bdd b1, Bdd b2) returns Bdd?;
 };
 
 readonly class NoBddCache {
     *BddCache;
     isolated function get(Bdd bdd) returns Bdd => bdd;
-    isolated function simpleIntersect(Bdd b1, Bdd b2) returns Bdd? => ();
 }
 
 final NoBddCache noBddCache = new;
@@ -82,10 +80,6 @@ isolated function bddIntersect(BddCache cache, Bdd b1, Bdd b2) returns Bdd {
         return b2 == true ? b1 : false;
     }
     else { 
-        Bdd? simpleIntersection = cache.simpleIntersect(b1, b2);
-        if simpleIntersection is Bdd {
-            return simpleIntersection;
-        }
         int cmp = atomCmp(b1.atom, b2.atom);
         if cmp < 0 {
             return bddCreate(cache, b1.atom,

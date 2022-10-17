@@ -53,46 +53,6 @@ public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns 
     return [ranges, types];
 }
 
-class MemoListBddCache {
-    *BddCache;
-    private final MemoBddCache memoCache;
-    private final Context cx;
-
-    function init(Context cx) {
-        self.cx = cx;
-        self.memoCache = new(cx.listMemo);
-    }
-    
-    isolated function get(Bdd bdd) returns Bdd {
-        return self.memoCache.get(bdd);
-    }
-
-    isolated function simpleIntersect(Bdd b1, Bdd b2) returns Bdd? {
-        if b1 !is BddNode || b2 !is BddNode ||
-           b1.left != true || b1.middle != false || b1.right != false ||
-           b2.left != true || b2.middle != false || b2.right != false {
-            return ();
-        }
-        Atom a1 = b1.atom;
-        Atom a2 = b2.atom;
-        if a1 is RecAtom || a2 is RecAtom {
-            return ();
-        }
-        ListAtomicType ty1 = self.cx.listAtomType(a1);
-        ListAtomicType ty2 = self.cx.listAtomType(a2);
-        var { members: m1, rest: r1 } = ty1; 
-        var { members: m2, rest: r2 } = ty2; 
-        var intersection = listIntersectWith(self.cx, m1, r1, m2, r2);
-        if intersection == () {
-            return ();
-        }
-        ListAtomicType intersectionTy = { members: intersection[0].cloneReadOnly(), rest: intersection[1] };
-        TypeAtom intersectionAtom = self.cx.env.listAtom(intersectionTy);
-        return bddCreate(self, intersectionAtom, true, false, false);
-
-    } 
-}
-
 public class ListDefinition {
     *Definition;
     private RecAtom? rec = ();
@@ -608,8 +568,7 @@ function nextBoundary(int cur, Range r, int? next) returns int? {
 }
 
 function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    MemoListBddCache cache = new(cx);
-    return memoSubtypeIntersect(cache, <Bdd>t1, <Bdd>t2);
+    return memoSubtypeIntersect(cx.listMemo, <Bdd>t1, <Bdd>t2);
 }
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
