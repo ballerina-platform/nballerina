@@ -552,7 +552,7 @@ function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register ma
         string fieldName = (<bir:StringConstOperand>k).value;
         return cx.semanticErr(`field access to ${fieldName}} is invalid because field may not be present`, pos=pos);
     }
-    t:SemType memberType = t:mappingMemberTypeDeref(cx.mod.tc, mapping.semType, k.semType);
+    t:SemType memberType = t:mappingMemberTypeInner(cx.mod.tc, mapping.semType, k.semType);
     bir:INSN_MAPPING_FILLING_GET|bir:INSN_MAPPING_GET name = bir:INSN_MAPPING_GET;
     if maybeMissing {
         if accessType == "fill" {
@@ -579,7 +579,7 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
     if l is bir:Register {
         if t:isSubtypeSimple(l.semType, t:LIST) {
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, index);
-            t:SemType memberType = t:listMemberTypeDeref(cx.mod.tc, l.semType, r.semType);
+            t:SemType memberType = t:listMemberTypeInner(cx.mod.tc, l.semType, r.semType);
             if t:isEmpty(cx.mod.tc, memberType) {
                 return cx.semanticErr("index out of range", s:range(index));
             }
@@ -857,7 +857,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
     bir:Operand[] operands = [];
     foreach var [i, member] in expr.members.enumerate() {
         bir:Operand operand;
-        t:SemType requiredType =  t:listAtomicTypeMemberAtDeref(atomicType, i);
+        t:SemType requiredType =  t:listAtomicTypeMemberAtInner(atomicType, i);
         if t:isNever(requiredType) {
             return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
         }
@@ -906,7 +906,7 @@ function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boo
     if pos !is () {
         int minLength = pos.members.fixedLength;
         // This doesn't account for filling. See spec issue #1064
-        if t:isNeverDeref(pos.rest) ? len != minLength : len < minLength {
+        if t:isNeverInner(pos.rest) ? len != minLength : len < minLength {
             return false;
         }
     }
@@ -931,7 +931,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
         }
         fieldPos[name] = f.startPos;
         if mat.names.indexOf(name) == () {
-            if t:isNeverDeref(mat.rest) {
+            if t:isNeverInner(mat.rest) {
                 return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
             }
             else if f.isIdentifier && mat.names.length() > 0 {
@@ -939,7 +939,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
             }
         }
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtDeref(mat, name), f.value, "incorrect type for list member");
+        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInner(mat, name), f.value, "incorrect type for list member");
         operands.push(operand);
         fieldNames.push(name);
     }
@@ -983,7 +983,7 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
     t:MappingAtomicType? pos = alt.pos;
     if pos !is () {
         // SUBSET won't be right with record defaults
-        if t:isNeverDeref(pos.rest) {
+        if t:isNeverInner(pos.rest) {
             if pos.names != fieldNames {
                 return false;
             }
@@ -1524,10 +1524,10 @@ function arraySupertype(t:Context tc, t:SemType listType) returns [t:SemType, t:
     t:ListAtomicType? atomic = t:listAtomicType(tc, listType);
     if atomic != () && atomic.members.fixedLength == 0 {
         // simple case
-        return [t:cellDeref(atomic.rest), listType];
+        return [t:cellInner(atomic.rest), listType];
     }
     else {
-        t:SemType memberType = t:listMemberTypeDeref(tc, listType, t:INT);
+        t:SemType memberType = t:listMemberTypeInner(tc, listType, t:INT);
         t:ListDefinition def = new;
         return [memberType, t:defineListTypeWrapped(def, tc.env, rest = memberType)];
     }

@@ -241,7 +241,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
         else if t:isSubtypeSimple(t, t:MAPPING) {
             if index is s:Identifier {
                 t:SemType kt = lookupSemtype(m, index);
-                return t:mappingMemberTypeDeref(tc, t, kt);
+                return t:mappingMemberTypeInner(tc, t, kt);
             }
             test:assertFail("index for mapping projection must be a subtype of string");
         }
@@ -252,8 +252,8 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
 }
 
 function testListProj(t:Context tc, t:SemType t, t:SemType index) returns t:SemType {
-    t:SemType s1 = t:listProjDeref(tc, t, index);
-    t:SemType s2 = t:listMemberTypeDeref(tc, t, index);
+    t:SemType s1 = t:listProjInner(tc, t, index);
+    t:SemType s2 = t:listMemberTypeInner(tc, t, index);
     if !t:isSubtype(tc, s1, s2) {
         test:assertFail("listProj result is not a subtype of listMemberType");
     }
@@ -273,11 +273,11 @@ function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
 
 // Validate output of `t:listAllMemberTypes` by repeatedly testing for each range using `t:listProj` function.
 function testListAllMemberTypesProjection(t:Context tc, t:SemType t) {
-    var [ranges, types] = t:listAllMemberTypesDeref(tc, t);
+    var [ranges, types] = t:listAllMemberTypesInner(tc, t);
     foreach int i in 0 ..< ranges.length() {
         t:Range r = ranges[i];
         t:SemType it = types[i];
-        t:SemType projected = t:listMemberTypeDeref(tc, t, t:intConst(r.min));
+        t:SemType projected = t:listMemberTypeInner(tc, t, t:intConst(r.min));
         if !t:isSubtype(tc, it, projected) || !t:isSubtype(tc, projected, it) {
             test:assertFail(string `All projection for member index ${r.min} is not equal to individual projection`);
         }

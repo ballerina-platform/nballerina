@@ -148,7 +148,7 @@ function shallowCopyTypes(SemType[] v) returns SemType[] {
     return from var x in v select x;
 }
 
-function shallowCopyMemberTypes(MemberSemType[] v) returns MemberSemType[] {
+function shallowCopyCellTypes(CellSemType[] v) returns CellSemType[] {
     return from var x in v select x;
 }
 

@@ -11,11 +11,11 @@ public type CellAtomicType readonly & record {|
     CellMutability mut;
 |};
 
-public function cellContaining(Env env, SemType ty, CellMutability mut = CELL_MUT_LIMITED) returns MemberSemType {
+public function cellContaining(Env env, SemType ty, CellMutability mut = CELL_MUT_LIMITED) returns CellSemType {
     CellAtomicType atomicCell = { ty, mut };
     Atom atom = env.cellAtom(atomicCell);
     BddNode bdd = bddAtom(atom);
-    return <MemberSemType>basicSubtype(BT_CELL, bdd);
+    return <CellSemType>basicSubtype(BT_CELL, bdd);
 }
 
 function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {

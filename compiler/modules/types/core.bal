@@ -310,7 +310,7 @@ public type ComplexSemType readonly & record {|
 |};
 
 // This is to represent a SemType belonging to cell basic type
-public type MemberSemType readonly & record {|
+public type CellSemType readonly & record {|
     0 all = 0;
     BasicTypeBitSet some = CELL;
     ProperSubtypeData[1] subtypeDataList;
@@ -660,7 +660,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
-public function intersectMemberSemTypes(Env env, MemberSemType t1, MemberSemType t2) returns MemberSemType {
+public function intersectMemberSemTypes(Env env, CellSemType t1, CellSemType t2) returns CellSemType {
     var { ty, mut } = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
     return cellContaining(env, ty, mut);
 }
@@ -857,8 +857,8 @@ function comparableNillableList(Context cx, SemType t1, SemType t2) returns bool
     }
     ComparableMemo memo = { semType1: t1, semType2: t2 };
     cx.comparableMemo.add(memo);
-    var [ranges1, memberTypes1] = listAllMemberTypesDeref(cx, t1);
-    var [ranges2, memberTypes2] = listAllMemberTypesDeref(cx, t2);
+    var [ranges1, memberTypes1] = listAllMemberTypesInner(cx, t1);
+    var [ranges2, memberTypes2] = listAllMemberTypesInner(cx, t2);
     foreach var [_, i1, i2] in combineRanges(ranges1, ranges2) {
         if i1 != () && i2 != () && !comparable(cx, memberTypes1[i1], memberTypes2[i2]) {
             memo.comparable = false;
@@ -876,9 +876,9 @@ public function listAtomicFillableFrom(Context cx, ListAtomicType atomic, int sp
 // Number of members that must be specified in the list constructor
 // Potentially memoizable
 public function listAtomicMinLengthWithFill(Context cx, ListAtomicType atomic) returns int {
-    readonly & MemberSemType[] members = atomic.members.initial;
+    readonly & CellSemType[] members = atomic.members.initial;
     int i = members.length();
-    while i > 0 && filler(cx, cellDeref(members[i - 1])) != () {
+    while i > 0 && filler(cx, cellInner(members[i - 1])) != () {
         i -= 1;
     }
     return i == members.length() ? atomic.members.fixedLength : i;
@@ -935,7 +935,7 @@ function computeFiller(Context cx, SemType t) returns Filler? {
     if lat != () {
         Filler[] memberFillers = [];
         foreach var memberType in lat.members.initial {
-            Filler? f = filler(cx, cellDeref(memberType));
+            Filler? f = filler(cx, cellInner(memberType));
             if f is () {
                 return ();
             }
@@ -1012,25 +1012,9 @@ public function intSubtypeConstraints(SemType t) returns IntSubtypeConstraints? 
     } 
 }
 
-public function defineListTypeWrapped(ListDefinition ld, Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
-    MemberSemType[] initialCells = from var i in initial select cellContaining(env, i, mut);
-    MemberSemType restCell = cellContaining(env, rest, mut);
-    return ld.define(env, initialCells, fixedLength, restCell);
-}
-
-public function tupleTypeWrapped(Env env, SemType... members) returns SemType {
-    ListDefinition def = new;
-    return defineListTypeWrapped(def, env, members);
-}
-
-public function tupleTypeWrappedRo(Env env, SemType... members) returns SemType {
-    ListDefinition def = new;
-    return defineListTypeWrapped(def, env, members, mut = CELL_MUT_NONE);
-}
-
-public function listAtomicSimpleArrayMemberTypeDeref(ListAtomicType? atomic) returns BasicTypeBitSet? {
+public function listAtomicSimpleArrayMemberTypeInner(ListAtomicType? atomic) returns BasicTypeBitSet? {
     if atomic != () && atomic.members.fixedLength == 0 {
-        SemType memberType = cellDeref(atomic.rest);
+        SemType memberType = cellInner(atomic.rest);
         if memberType is BasicTypeBitSet {
             return memberType;
         }
@@ -1041,7 +1025,7 @@ public function listAtomicSimpleArrayMemberTypeDeref(ListAtomicType? atomic) ret
 final readonly & ListMemberTypes LIST_MEMBER_TYPES_ALL = [[{ min: 0, max: int:MAX_VALUE }], [TOP]];
 final readonly & ListMemberTypes LIST_MEMBER_TYPES_NONE = [[], []];
 
-public function listAllMemberTypesDeref(Context cx, SemType t) returns ListMemberTypes {
+public function listAllMemberTypesInner(Context cx, SemType t) returns ListMemberTypes {
     if t is BasicTypeBitSet {
         return (t & LIST) != 0 ? LIST_MEMBER_TYPES_ALL : LIST_MEMBER_TYPES_NONE;
     }
@@ -1050,7 +1034,7 @@ public function listAllMemberTypesDeref(Context cx, SemType t) returns ListMembe
         SemType[] types = [];
         Range[] allRanges = bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), []);
         foreach Range r in allRanges {
-            SemType m = listMemberTypeDeref(cx, t, intConst(r.min));
+            SemType m = listMemberTypeInner(cx, t, intConst(r.min));
             if m != NEVER {
                 ranges.push(r);
                 types.push(m);
@@ -1091,7 +1075,7 @@ function bddListAtomicType(Env env, Bdd bdd, ListAtomicType top) returns ListAto
 // This is what Castagna calls projection.
 // We will extend this to allow `key` to be a SemType, which will turn into an IntSubtype.
 // If `t` is not a list, NEVER is returned
-public function listMemberTypeDeref(Context cx, SemType t, SemType k) returns SemType {
+public function listMemberTypeInner(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
         return (t & LIST) != 0 ? TOP : NEVER;
     }
@@ -1100,11 +1084,11 @@ public function listMemberTypeDeref(Context cx, SemType t, SemType k) returns Se
         if keyData == false {
             return NEVER;
         }
-        return bddListMemberTypeDeref(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), <IntSubtype|true>keyData, TOP);
+        return bddListMemberTypeInner(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), <IntSubtype|true>keyData, TOP);
     }
 }
 
-public function listAtomicTypeApplicableMemberTypesDeref(Context cx, ListAtomicType atomic, SemType indexType) returns readonly & SemType[] {
+public function listAtomicTypeApplicableMemberTypesInner(Context cx, ListAtomicType atomic, SemType indexType) returns readonly & SemType[] {
     IntSubtype|boolean indexIntType;
     if indexType is BasicTypeBitSet {
         indexIntType = (indexType & INT) != 0;
@@ -1116,7 +1100,7 @@ public function listAtomicTypeApplicableMemberTypesDeref(Context cx, ListAtomicT
         return [];
     }
     else {
-        return listAtomicApplicableMemberTypesDeref(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
+        return listAtomicApplicableMemberTypesInner(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
     }
 }
 
@@ -1160,12 +1144,6 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
     }
 }
 
-public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest) returns SemType {
-    MemberField[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1])];
-    MemberSemType restCell = cellContaining(env, rest);
-    return md.define(env, cellFields, restCell);
-}
-
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
     MappingAtomicType mappingAtomicTop = createMappingAtomicTop(cx);
     if t is BasicTypeBitSet {
@@ -1195,7 +1173,7 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // This computes the spec operation called "member type of K in T",
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
-public function mappingMemberTypeDeref(Context cx, SemType t, SemType k) returns SemType {
+public function mappingMemberTypeInner(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
         return (t & MAPPING) != 0 ? TOP : NEVER;
     }
@@ -1204,7 +1182,7 @@ public function mappingMemberTypeDeref(Context cx, SemType t, SemType k) returns
         if keyData == false {
             return NEVER;
         }
-        return bddMappingMemberTypeDeref(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
+        return bddMappingMemberTypeInner(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
     }
 }
 
@@ -1218,7 +1196,7 @@ public function mappingMemberRequired(Context cx, SemType t, SemType k) returns 
     }
 }
 
-public function mappingAtomicTypeApplicableMemberTypesDeref(MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
+public function mappingAtomicTypeApplicableMemberTypesInner(MappingAtomicType atomic, SemType keyType) returns readonly & SemType[] {
     StringSubtype|boolean keyStringType;
     if keyType is BasicTypeBitSet {
         keyStringType = (keyType & STRING) != 0;
@@ -1230,7 +1208,7 @@ public function mappingAtomicTypeApplicableMemberTypesDeref(MappingAtomicType at
         return [];
     }
     else {
-        return mappingAtomicApplicableMemberTypesDeref(atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
+        return mappingAtomicApplicableMemberTypesInner(atomic, <StringSubtype|true>keyStringType).cloneReadOnly();
     }
 }
 
@@ -1283,12 +1261,12 @@ public function isCell(SemType t) returns boolean {
     }
 }
 
-public function cellDeref(MemberSemType t) returns SemType {
+public function cellInner(CellSemType t) returns SemType {
     return (<CellAtomicType>cellAtomicType(t)).ty;
 }
 
-public function isNeverDeref(MemberSemType t) returns boolean {
-    return isNever(cellDeref(t));
+public function isNeverInner(CellSemType t) returns boolean {
+    return isNever(cellInner(t));
 }
 
 final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
