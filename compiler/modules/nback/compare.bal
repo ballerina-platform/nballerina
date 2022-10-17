@@ -231,7 +231,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
 function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns RuntimeFunction {
     t:BasicTypeBitSet memberType = 0;
     foreach int i in 0 ..< 2 {
-        memberType |= t:widenToBasicTypes(t:listMemberTypeDeref(tc, semTypes[i], t:INT));
+        memberType |= t:widenToBasicTypes(t:listMemberTypeInner(tc, semTypes[i], t:INT));
     }
     if memberType != t:NIL {
         memberType &= ~t:NIL;
@@ -253,7 +253,7 @@ function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns Ru
 
 function isPotentiallyExactIntArray(t:Context tc, t:SemType semType) returns boolean {
     t:ListAtomicType? atomic = t:listAtomicType(tc, semType);
-    return atomic == () ? false : t:listAtomicSimpleArrayMemberTypeDeref(atomic) == t:INT;
+    return atomic == () ? false : t:listAtomicSimpleArrayMemberTypeInner(atomic) == t:INT;
 }
 
 final readonly & map<bir:OrderOp> flippedOrderOps = {
