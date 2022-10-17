@@ -15,5 +15,7 @@
 
     ["<", "(AC)*F", "(AB*C)*F"],
     ["<", "(AC)*F", "(A(B)*C)*F"],
-    ["=", "(AB*C)*F", "(A(B)*C)*F"]
+    ["=", "(AB*C)*F", "(A(B)*C)*F"],
+
+    ["<", "(RgeRgF(b((OS)*cDVB)*H)*kYLy)*W", "(RgeRgF(b(((glPrQ)*OS)*cDVB)*H)*kYLy)*W"]
 ]

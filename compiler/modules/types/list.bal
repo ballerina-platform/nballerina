@@ -192,7 +192,7 @@ function intersectListAtoms(Context cx, ListAtomicType[] atoms) returns [SemType
     return [semType, atom];
 }
 
-isolated function listIntersectWith(Context cx, FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
+function listIntersectWith(Context cx, FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
     if listLengthsDisjoint(members1, rest1, members2, rest2) {
         return ();
     }
@@ -378,7 +378,7 @@ function listSampleTypes(Context cx, FixedLengthArray members, SemType rest, int
     return [memberTypes, nRequired];
 }
 
-isolated function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns boolean {
+function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns boolean {
     int len1 = members1.fixedLength;
     int len2 = members2.fixedLength;
     if len1 < len2 {
@@ -390,7 +390,7 @@ isolated function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, 
     return false;
 }
 
-isolated function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
+function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
     if index < fixedArray.fixedLength {
         return fixedArrayGet(fixedArray, index);
     }
@@ -406,7 +406,7 @@ function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean 
     return false;
 }
 
-isolated function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
+function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
     int memberLen = members.initial.length();
     int i = int:min(index, memberLen - 1);
     return members.initial[i];

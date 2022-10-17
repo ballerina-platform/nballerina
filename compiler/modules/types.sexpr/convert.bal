@@ -33,11 +33,10 @@ public function semTypeFromSexpr(t:Env env, map<Atom> bindings, Type tySExpr) re
         }
         if op == "&" {
             t:SemType intersect = t:TOP;
-            t:Context tc = t:contextFromEnv(env);
             foreach int i in 1 ..< tySExpr.length() {
                 // JBUG #36911 cast to anydata is needed
                 var part = <Type>(<anydata[]>tySExpr)[i];
-                intersect = t:memoIntersect(tc, intersect, semTypeFromSexpr(env, bindings, part));
+                intersect = t:intersect(intersect, semTypeFromSexpr(env, bindings, part));
             }
             return intersect;
         }
