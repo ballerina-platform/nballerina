@@ -260,7 +260,7 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
     if regex[index] is "*"|"|" {
         panic error("unexpected start position " + index.toString());
     }
-    var [lhs, lhsWrapped] = readPattern(regex, index, end);
+    var [lhs, lhsWrapped] = readPattern(regex, index, end, false);
     int endIndex = lhsWrapped ? (lhs.endIndex + 2) : (lhs.endIndex + 1);
     if end > endIndex && endIndex < regex.length() {
         string op = regex[endIndex];
@@ -269,7 +269,7 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
             return { range: lhs, nextIndex };
         }
         else if op == "|" {
-            var [rhs, rhsWrapped] = readPattern(regex, endIndex + 1, end);
+            var [rhs, rhsWrapped] = readPattern(regex, endIndex + 1, end, true);
             int nextIndex = rhsWrapped ? (rhs.endIndex + 2) : (rhs.endIndex + 1);
             nextIndex = skipTillEnd(regex, nextIndex);
             return { lhs, rhs, nextIndex };
@@ -278,10 +278,10 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
     return regex[index] is "("|")" ? "skip" : "concat";
 }
 
-function readPattern(string regex, int index, int end) returns [PatternRange, boolean] {
+function readPattern(string regex, int index, int end, boolean isRhs) returns [PatternRange, boolean] {
     if regex[index] != "(" {
         int endIndex = index;
-        while endIndex < end && regex[endIndex] !is "("|"|"|"*"|")" {
+        while endIndex < end && regex[endIndex] !is "("|"*"|")" && (isRhs || regex[endIndex] != "|") {
             endIndex += 1;
         }
         if endIndex < end && regex[endIndex] == "*" {
