@@ -2,7 +2,7 @@
 
 public type Field [string, SemType];
 
-public type MemberField [string, CellSemType];
+public type CellField [string, CellSemType];
 
 public type MappingAtomicType readonly & record {|
     // sorted
@@ -37,7 +37,7 @@ public class MappingDefinition {
         }
     }
 
-    public function define(Env env, MemberField[] fields, CellSemType rest) returns SemType {
+    public function define(Env env, CellField[] fields, CellSemType rest) returns SemType {
         var [names, types] = splitFields(fields);
         MappingAtomicType atomicType = {
             names: names.cloneReadOnly(),
@@ -65,13 +65,13 @@ public class MappingDefinition {
 }
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest) returns SemType {
-    MemberField[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1])];
+    CellField[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1])];
     CellSemType restCell = cellContaining(env, rest);
     return md.define(env, cellFields, restCell);
 }
 
-function splitFields(MemberField[] fields) returns [string[], CellSemType[]] {
-    MemberField[] sortedFields = fields.sort("ascending", fieldName);
+function splitFields(CellField[] fields) returns [string[], CellSemType[]] {
+    CellField[] sortedFields = fields.sort("ascending", fieldName);
     string[] names = [];
     CellSemType[] types = [];
     foreach var [s, t] in sortedFields {
@@ -81,7 +81,7 @@ function splitFields(MemberField[] fields) returns [string[], CellSemType[]] {
     return [names, types];
 }
 
-isolated function fieldName(MemberField f) returns string {
+isolated function fieldName(CellField f) returns string {
     return f[0];
 }
 
@@ -237,7 +237,7 @@ function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2)
     return { names, types, rest };
 }
 
-type FieldPair record {|
+type CellFieldPair record {|
     string name;
     CellSemType type1;
     CellSemType type2;
@@ -246,7 +246,7 @@ type FieldPair record {|
 |};
 
 public type MappingPairIterator object {
-    public function next() returns record {| FieldPair value; |}?;
+    public function next() returns record {| CellFieldPair value; |}?;
 };
 
 class MappingPairing {
@@ -283,8 +283,8 @@ class MappingPairing {
         self.i2 = 0;
     }
 
-    public function next() returns record {| FieldPair value; |}? {
-        FieldPair p;
+    public function next() returns record {| CellFieldPair value; |}? {
+        CellFieldPair p;
         if self.i1 >= self.len1 {
             if self.i2 >= self.len2 {
                 return ();
