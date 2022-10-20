@@ -26,7 +26,15 @@ public class FunctionDefinition {
 }
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return memoSubtypeIsEmpty(cx, cx.functionMemo, functionBddIsEmpty, <Bdd>t);
+    return functionSubtypeIsFiniteAndEmpty(cx, t).isEmpty;
+}
+
+function functionSubtypeIsFinite(Context cx, SubtypeData t) returns boolean {
+    return functionSubtypeIsFiniteAndEmpty(cx, t).isFinite;
+}
+
+function functionSubtypeIsFiniteAndEmpty(Context cx, SubtypeData t) returns MemoizedEmptinessCheckResult {
+    return memoSubtypeIsFiniteAndEmpty(cx, cx.functionMemo, functionBddIsEmpty, <Bdd>t);
 }
 
 function functionBddIsEmpty(Context cx, Bdd b) returns boolean {
@@ -92,5 +100,6 @@ BasicTypeOps functionOps =  {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: functionSubtypeIsEmpty
+    isEmpty: functionSubtypeIsEmpty,
+    isFinite: functionSubtypeIsFinite
 };

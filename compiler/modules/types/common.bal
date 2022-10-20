@@ -15,6 +15,10 @@ function and(Atom atom, Conjunction? next) returns Conjunction {
 
 type BddIsEmptyPredicate function(Context cx, Bdd b) returns boolean;
 
+type MemoizedEmptinessCheckResult record {|
+    boolean isEmpty;
+    boolean isFinite;
+|};
 // Memoization logic
 // Castagna's paper does not deal with this fully.
 // Although he calls it memoization, it is not, strictly speaking, just memoization,
@@ -29,17 +33,18 @@ type BddIsEmptyPredicate function(Context cx, Bdd b) returns boolean;
 // This follows Frisch's approach of undoing memoizations that turn out to be wrong.
 // (I did not succeed in fully understanding his approach, so I am not
 // completely sure if we are doing the same.)
-function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns boolean {
+function memoSubtypeIsFiniteAndEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns MemoizedEmptinessCheckResult {
     BddMemo? mm = memoTable[b];
     BddMemo m;
     if mm != () {
         MemoEmpty res = mm.empty;
         if res is boolean {
-            return res;
+            return { isEmpty: res, isFinite: mm.isFinite };
         }
         else if res != () {
             // We've got a loop.
-            return true;
+            mm.empty = "loop";
+            return { isEmpty: true, isFinite: false };
         }
         // nil case is same as not having a memo, so fall through
         m = mm;
@@ -52,6 +57,7 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     int initStackDepth = cx.memoStack.length();
     cx.memoStack.push(m);
     boolean isEmpty = isEmptyPredicate(cx, b);
+    m.isFinite = !(isEmpty && m.empty == "loop");
     if !isEmpty || initStackDepth == 0 {
         foreach int i in initStackDepth + 1 ..< cx.memoStack.length() {
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
@@ -62,7 +68,7 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
         cx.memoStack.setLength(initStackDepth);
         m.empty = isEmpty;
     }
-    return isEmpty;
+    return { isEmpty, isFinite: m.isFinite };
 }
 
 type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;
@@ -167,4 +173,8 @@ function shallowCopyStrings(string[] v) returns string[] {
 
 function notIsEmpty(Context cx, SubtypeData d) returns boolean {
     return false;
+}
+
+function alwaysFinite(Context cx, SubtypeData d) returns boolean {
+    return true;
 }

@@ -177,11 +177,12 @@ function cellAtomType(Atom atom) returns CellAtomicType {
 }
 
 // See memoSubtypeIsEmpty for what these mean.
-type MemoEmpty boolean|"provisional"|();
+type MemoEmpty boolean|"loop"|"provisional"|();
 
 type BddMemo record {|
     readonly Bdd bdd;
     MemoEmpty empty = ();
+    boolean isFinite = true;
 |};
 
 type BddMemoTable table<BddMemo> key(bdd);
@@ -296,6 +297,7 @@ type BasicTypeOps readonly & record {|
     BinOp diff = binOpPanic;
     UnaryOp complement = unaryOpPanic;
     UnaryTypeCheckOp isEmpty = unaryTypeCheckOpPanic;
+    UnaryTypeCheckOp isFinite = unaryTypeCheckOpPanic;
 |};
 
 final readonly & (BasicSubtype[]) EMPTY_SUBTYPES = [];
@@ -751,6 +753,25 @@ public function complement(SemType t) returns SemType {
 
 public function isNever(SemType t) returns boolean {
     return t is BasicTypeBitSet && t == 0;
+}
+
+public function isFinite(Context cx, SemType t) returns boolean {
+    if t is BasicTypeBitSet {
+        return true; 
+    }
+    else {
+        if t.all != 0 {
+            return true; 
+        }
+        foreach var st in unpackComplexSemType(t) {
+            var [code, data] = st;
+            var isFinite = ops[code].isFinite;
+            if !isFinite(cx, data) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 public function isEmpty(Context cx, SemType t) returns boolean {

@@ -72,5 +72,6 @@ final BasicTypeOps decimalOps = {
     intersect: decimalSubtypeIntersect,
     diff: decimalSubtypeDiff,
     complement: decimalSubtypeComplement,
-    isEmpty: notIsEmpty
+    isEmpty: notIsEmpty,
+    isFinite: alwaysFinite
 };

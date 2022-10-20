@@ -164,5 +164,7 @@ final BasicTypeOps cellOps = {
     intersect: cellSubtypeIntersect,
     diff: cellSubtypeDiff,
     complement: cellSubtypeComplement,
-    isEmpty: cellSubtypeIsEmpty
+    isEmpty: cellSubtypeIsEmpty,
+    // TODO: can these be infinite
+    isFinite: alwaysFinite
 };

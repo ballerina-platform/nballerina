@@ -55,8 +55,20 @@ function nonEmptyTypeNoDefer(ModuleSymbols mod, t:SemType semType, s:ModuleLevel
     if td is s:BinaryTypeDesc && td.op is "&" {
         return err:semantic("intersection must not be empty", loc);
     }
-    if t:isSemTypeRecursive(semType) {
-        return err:semantic("invalid recursive type (contains no finite shapes)", loc);
+    // if tc.loopCount == tc.isEmptyCount - 1 {
+    //     if !tc.isInfinite {
+    //         panic error("unexpected 4");
+    //     }
+    //     return err:semantic("infinite type", loc);
+    // }
+    if !t:isFinite(mod.tc, semType) {
+        // if tc.loopCount == 0 {
+        //     panic error ("unexpected 2" + { "isEmptyCount": tc.isEmptyCount, "loopCount": tc.loopCount }.toString());
+        // }
+        // if !tc.isInfinite {
+        //     panic error("unexpected 5");
+        // }
+        return err:semantic("empty type", loc);
     }
     mod.emptyNonRecursiveTypeLocation = loc;
 }

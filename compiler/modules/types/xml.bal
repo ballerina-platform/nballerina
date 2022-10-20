@@ -156,5 +156,6 @@ final BasicTypeOps xmlOps = {
     intersect: xmlSubtypeIntersect,
     diff: xmlSubtypeDiff,
     complement: xmlSubtypeComplement,
-    isEmpty: xmlSubtypeIsEmpty
+    isEmpty: xmlSubtypeIsEmpty,
+    isFinite: alwaysFinite
 };
