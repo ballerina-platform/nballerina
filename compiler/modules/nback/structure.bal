@@ -197,7 +197,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 
         array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberHeapLlvm, 0)));
         foreach int i in 0 ..< length {
-            llvm:Value val = check buildWideRepr(builder, scaffold, insn.operands[i], repr.memberRepr, t:listAtomicTypeMemberAt(atomic, i));
+            llvm:Value val = check buildWideRepr(builder, scaffold, insn.operands[i], repr.memberRepr, t:listAtomicTypeMemberAtInner(atomic, i));
             builder.store(listReprConvertToHeapType(builder, repr, val),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
         }
@@ -293,7 +293,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     llvm:BasicBlock? bbJoin = ();
     t:SemType listType = listOperand.semType;
     t:Context tc = scaffold.typeContext();
-    t:SemType memberType = t:listMemberType(tc, listType, indexOperand.semType);
+    t:SemType memberType = t:listMemberTypeInner(tc, listType, indexOperand.semType);
     llvm:Value index = buildInt(builder, scaffold, indexOperand);
     ListAccess la = listAccess(semTypeRepr(newMemberOperand.semType));
     llvm:Value val = check buildWideRepr(builder, scaffold, newMemberOperand, la.repr, memberType);
@@ -372,7 +372,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
                                              m,
                                              check buildConstString(builder, scaffold, fieldName),
                                              check buildWideRepr(builder, scaffold, operand, REPR_ANY,
-                                                                 t:mappingMemberTypeDeref(tc, mappingType, t:stringConst(fieldName)))
+                                                                 t:mappingMemberTypeInner(tc, mappingType, t:stringConst(fieldName)))
                                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
@@ -448,7 +448,7 @@ function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:Strin
     // don't need to check when the condition is false, because there can be only one applicable member type
     else if t:singleStringShape(keyOperand.semType) == () && mat.names.length() != 0 {
         t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
-        foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypesDeref(mat, keyOperand.semType) {
+        foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypesInner(mat, keyOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
             }
@@ -465,7 +465,7 @@ function isListMemberTypeExact(t:Context tc, t:SemType listType, bir:IntOperand 
     // don't need to check when the condition is false, because there can be only one applicable member type
     else if t:singleIntShape(indexOperand.semType) == () && lat.members.fixedLength != 0 {
         t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
-        foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypes(tc, lat, indexOperand.semType) {
+        foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypesInner(tc, lat, indexOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
             }
@@ -501,7 +501,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         rf = mappingIndexedSetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
-    t:SemType memberType = t:mappingMemberTypeDeref(scaffold.typeContext(), mappingType, keyOperand.semType);
+    t:SemType memberType = t:mappingMemberTypeInner(scaffold.typeContext(), mappingType, keyOperand.semType);
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
@@ -526,7 +526,7 @@ function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, t:SemTyp
         // inherent type is atomic, so if mapping type isn't, they cannot be equal
         return false;
     }
-    foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypesDeref(mat, keyType) {
+    foreach t:SemType ty in t:mappingAtomicTypeApplicableMemberTypesInner(mat, keyType) {
         if !t:isSubtype(tc, newMemberType, ty) {
             return true;
         }
@@ -542,7 +542,7 @@ function isListSetAlwaysInexact(t:Context tc, t:SemType listType, t:SemType inde
         // If indexing with a constant value, then we have the precise type
         return false;
     }
-    foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypes(tc, lat, indexType) {
+    foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypesInner(tc, lat, indexType) {
         if !t:isSubtype(tc, newMemberType, ty) {
             return true;
         }
@@ -554,7 +554,7 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
     string? k = t:singleStringShape(keyOperand.semType);
     if k is string {
         t:MappingAtomicType? mat = t:mappingAtomicType(tc, mappingType);
-        if mat != () && mat.rest == t:NEVER {
+        if mat != () && t:isNeverInner(mat.rest) {
             return mat.names.indexOf(k);
         }
     }

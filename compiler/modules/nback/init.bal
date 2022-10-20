@@ -199,10 +199,10 @@ function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) re
     foreach FunctionRef fr in functionRefs {
         initStructValues.push(fr);
     }
-    t:SemType restType = atomic.rest;
+    t:SemType restType = t:cellInner(atomic.rest);
     initStructValues.push(getMemberType(cx, restType));
     initStructValues.push(getFillerDesc(cx, restType));
-    llvm:ConstValue[] llMembers = from var ty in atomic.members.initial select getMemberType(cx, ty);
+    llvm:ConstValue[] llMembers = from var ty in atomic.members.initial let var tyInner = t:cellInner(ty) select getMemberType(cx, tyInner);
     initStructValues.push(cx.llContext.constArray(LLVM_MEMBER_TYPE, llMembers));
     return cx.llContext.constStruct(initStructValues);    
 }
@@ -215,8 +215,8 @@ function createMappingDescType(t:Context tc, t:SemType semType) returns llvm:Str
 
 function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(cx.tc, semType);
-    llvm:ConstValue[] llFields = from var ty in mat.types let var tyDeref = t:cellDeref(ty) select getMemberType(cx, tyDeref);
-    t:SemType rest = t:cellDeref(mat.rest);
+    llvm:ConstValue[] llFields = from var ty in mat.types let var tyInner = t:cellInner(ty) select getMemberType(cx, tyInner);
+    t:SemType rest = t:cellInner(mat.rest);
     return cx.llContext.constStruct([
         llvm:constInt(LLVM_TID, tid),
         llvm:constInt("i32", llFields.length()),
@@ -467,7 +467,7 @@ function createStringSubtypeStruct(InitModuleContext cx, t:ComplexSemType semTyp
 function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
     t:ListAtomicType? lat = t:listAtomicType(cx.tc, semType);
     if lat != () {
-        t:SemType rest = lat.rest;
+        t:SemType rest = t:cellInner(lat.rest);
         if rest is t:BasicTypeBitSet && lat.members.fixedLength == 0 {
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_ARRAY);
         }
@@ -478,13 +478,13 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
 function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
     t:MappingAtomicType? mat = t:mappingAtomicType(cx.tc, semType);
     if mat != () {
-        t:SemType rest = t:cellDeref(mat.rest);
+        t:SemType rest = t:cellInner(mat.rest);
         if rest == t:NEVER {
             t:BasicTypeBitSet[] fieldTypes = [];
             foreach var ty in mat.types {
-                t:SemType tyDeref = t:cellDeref(ty);
-                if tyDeref is t:BasicTypeBitSet {
-                    fieldTypes.push(tyDeref);
+                t:SemType tyInner = t:cellInner(ty);
+                if tyInner is t:BasicTypeBitSet {
+                    fieldTypes.push(tyInner);
                 }
                 else {
                     break;

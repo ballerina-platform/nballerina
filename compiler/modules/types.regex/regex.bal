@@ -129,7 +129,7 @@ function stringListToSemType(t:Env env, StringAsList stringList) returns t:SemTy
         return t:NIL;
     }
     t:ListDefinition definition = new;
-    return definition.define(env, [t:stringConst(stringList[0]), stringListToSemType(env, stringList[1])]);
+    return t:defineListTypeWrapped(definition, env, [t:stringConst(stringList[0]), stringListToSemType(env, stringList[1])], mut = t:CELL_MUT_NONE);
 }
 
 public function regexToSemType(t:Env env, string regex) returns t:SemType {
@@ -164,7 +164,7 @@ function intermediateTypeToSemType(RegexContext cx, t:Env env, IntermediateType 
         // JBUG: cast
         t:SemType[] operandTypes = from var operand in <IntermediateType[]>ty.operands select intermediateTypeToSemType(cx, env, operand);
         if ty is IntermediateListType {
-            return ty.defn.define(env, operandTypes);
+            return t:defineListTypeWrapped(ty.defn, env, operandTypes, mut = t:CELL_MUT_NONE);
         }
         t:SemType accumType = operandTypes[0];
         foreach int i in 1 ..< operandTypes.length() {

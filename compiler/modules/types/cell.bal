@@ -11,11 +11,11 @@ public type CellAtomicType readonly & record {|
     CellMutability mut;
 |};
 
-public function cellContaining(Env env, SemType ty, CellMutability mut) returns MemberSemType {
+public function cellContaining(Env env, SemType ty, CellMutability mut = CELL_MUT_LIMITED) returns CellSemType {
     CellAtomicType atomicCell = { ty, mut };
     Atom atom = env.cellAtom(atomicCell);
     BddNode bdd = bddAtom(atom);
-    return basicSubtype(BT_CELL, bdd);
+    return <CellSemType>basicSubtype(BT_CELL, bdd);
 }
 
 function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -128,10 +128,46 @@ function intersectCellAtomicType(CellAtomicType c1, CellAtomicType c2) returns C
     return { ty, mut };
 }
 
+function cellSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    SubtypeData subtypeData = bddSubtypeUnion(t1, t2);
+    return cellFixSubtypeData(subtypeData);
+}
+
+function cellSubtypeIntersect(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    SubtypeData subtypeData = bddSubtypeIntersect(t1, t2);
+    return cellFixSubtypeData(subtypeData);
+}
+
+function cellSubtypeDiff(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    SubtypeData subtypeData = bddSubtypeDiff(t1, t2);
+    return cellFixSubtypeData(subtypeData);
+}
+
+function cellSubtypeComplement(SubtypeData t) returns SubtypeData {
+    SubtypeData subtypeData = bddSubtypeComplement(t);
+    return cellFixSubtypeData(subtypeData);
+}
+
+// SubtypeData being a boolean would result in a BasicTypeBitSet which could either be 0 or 1 << BT_CELL.
+// This is to avoid cell type being a BasicTypeBitSet, as we don't want to lose the cell wrapper.
+function cellFixSubtypeData(SubtypeData subtypeData) returns SubtypeData {
+    if subtypeData !is boolean {
+        return subtypeData;
+    }
+
+    Atom atom;
+    if subtypeData is true {
+        atom = { index: 0, atomicType: CELL_ATOMIC_TOP };
+    } else {
+        atom = { index: 1, atomicType: CELL_ATOMIC_BOTTOM };
+    }
+    return bddAtom(atom);
+}
+
 final BasicTypeOps cellOps = {
-    union: bddSubtypeUnion,
-    intersect: bddSubtypeIntersect,
-    diff: bddSubtypeDiff,
-    complement: bddSubtypeComplement,
+    union: cellSubtypeUnion,
+    intersect: cellSubtypeIntersect,
+    diff: cellSubtypeDiff,
+    complement: cellSubtypeComplement,
     isEmpty: cellSubtypeIsEmpty
 };

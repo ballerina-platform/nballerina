@@ -5,3 +5,13 @@ import ballerina/test;
 function testTypesJson() returns error? {
     check testJsonTypes("tests.json");
 }
+
+@test:Config { enable: false } // TODO: enable with readonly type
+function testReadonlyTypesJson() returns error? {
+    check testJsonTypes("tests-readonly.json");
+}
+
+@test:Config {}
+function testMutableTypesJson() returns error? {
+    check testJsonTypes("tests-mutable.json");
+}

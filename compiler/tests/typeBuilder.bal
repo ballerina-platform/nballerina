@@ -139,7 +139,7 @@ class SemtypeBuilder {
         if rest != -1 {
             r = self.defns[rest];
         }
-        t:SemType t = (new t:ListDefinition()).define(self.cx.env, m, fixedLen, r);
+        t:SemType t = t:defineListTypeWrapped(new t:ListDefinition(), self.cx.env, m, fixedLen, r);
         return self.push(t); 
     }
 

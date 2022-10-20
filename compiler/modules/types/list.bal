@@ -2,7 +2,7 @@
 
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
-    SemType rest;
+    CellSemType rest;
 |};
 
 // Represent a fixed length semtype member list similar to a tuple.
@@ -11,7 +11,7 @@ public type ListAtomicType readonly & record {|
 // { initial: [string, int], fixedLength: 100 } means `int` is repeated 99 times to get a list of 100 members.
 // `fixedLength` must be `0` when `initial` is empty and the `fixedLength` must be at least `initial.length()`
 public type FixedLengthArray record {|
-    SemType[] initial;
+    CellSemType[] initial;
     int fixedLength;
 |};
 
@@ -19,7 +19,11 @@ public type FixedLengthArray record {|
 // The SemTypes in this list are not `never`.
 public type ListMemberTypes [Range[], SemType[]];
 
-public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns SemType {
+public function listAtomicTypeMemberAtInner(ListAtomicType atomic, int i) returns SemType {
+    return cellInner(listAtomicTypeMemberAt(atomic, i));
+}
+
+public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns CellSemType {
     if i < atomic.members.fixedLength {
         int initialLen = atomic.members.initial.length();
         return atomic.members.initial[ i < initialLen ? i : initialLen - 1];
@@ -29,10 +33,10 @@ public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns Sem
     }
 }
 
-public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns ListMemberTypes {
+public function listAtomicTypeAllMemberTypesInner(ListAtomicType atomicType) returns ListMemberTypes {
     Range[] ranges = [];
     SemType[] types = [];
-    SemType[] initial = atomicType.members.initial;
+    SemType[] initial = from var i in atomicType.members.initial select cellInner(i);
     int initialLength = initial.length();
     int fixedLength = atomicType.members.fixedLength;
     if initialLength != 0 {
@@ -44,8 +48,9 @@ public function listAtomicTypeAllMemberTypes(ListAtomicType atomicType) returns 
             ranges[initialLength - 1] = { min: initialLength - 1, max: fixedLength - 1 };
         }
     }
-    if atomicType.rest != NEVER {
-        types.push(atomicType.rest);
+    SemType rest = cellInner(atomicType.rest);
+    if !isNever(rest) {
+        types.push(rest);
         ranges.push({ min: fixedLength, max: int:MAX_VALUE });
     }
     return [ranges, types];
@@ -69,7 +74,7 @@ public class ListDefinition {
         }
     }
 
-    public function define(Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER) returns ComplexSemType {
+    public function define(Env env, CellSemType[] initial = [], int fixedLength = initial.length(), CellSemType rest = cellContaining(env, NEVER)) returns ComplexSemType {
         FixedLengthArray members = fixedLengthNormalize({ initial, fixedLength });
         ListAtomicType atomicType = { members: members.cloneReadOnly(), rest };
         Atom atom;
@@ -93,7 +98,7 @@ public class ListDefinition {
 }
 
 function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
-    SemType[] initial = array.initial;
+    CellSemType[] initial = array.initial;
     int i = initial.length() - 1;
     if i <= 0 {
         return array;
@@ -109,9 +114,18 @@ function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
     return { initial: initial.slice(0, i + 2), fixedLength: array.fixedLength };
 }
 
-public function tuple(Env env, SemType... members) returns SemType {
-    ListDefinition def = new;
-    return def.define(env, members);
+public function defineListTypeWrapped(ListDefinition ld, Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
+    CellSemType[] initialCells = from var i in initial select cellContaining(env, i, mut);
+    CellSemType restCell = cellContaining(env, rest, mut);
+    return ld.define(env, initialCells, fixedLength, restCell);
+}
+
+public function tupleTypeWrapped(Env env, SemType... members) returns SemType {
+    return defineListTypeWrapped(new ListDefinition(), env, members);
+}
+
+public function tupleTypeWrappedRo(Env env, SemType... members) returns SemType {
+    return defineListTypeWrapped(new ListDefinition(), env, members, mut = CELL_MUT_NONE);
 }
 
 function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -124,10 +138,11 @@ function listBddIsEmpty(Context cx, Bdd b) returns boolean {
 
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
     FixedLengthArray members;
-    SemType rest;
+    CellSemType rest;
     if pos == () {
-        members = { initial: [], fixedLength: 0 };
-        rest = TOP;
+        ListAtomicType listAtomicTop = createListAtomicTop(cx);
+        members = listAtomicTop.members;
+        rest = listAtomicTop.rest;
     }
     else {
         // combine all the positive tuples using intersection
@@ -147,7 +162,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                var intersected = listIntersectWith(members, rest, lt.members, lt.rest);
+                var intersected = listIntersectWith(cx.env, members, rest, lt.members, lt.rest);
                 if intersected is () {
                     return true;
                 }
@@ -158,8 +173,8 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             return true;
         }
         // Ensure that we can use isNever on rest in listInhabited
-        if rest !== NEVER && isEmpty(cx, rest) {
-            rest = NEVER;
+        if !isNeverInner(rest) && isEmpty(cx, rest) {
+            rest = cellContaining(cx.env, NEVER);
         }
     }
     int[] indices = listSamples(cx, members, rest, neg);
@@ -174,13 +189,13 @@ function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, L
     ListAtomicType atom = atoms[0];
     foreach int i in 1 ..< atoms.length() {
         ListAtomicType next = atoms[i];
-        var tmpAtom = listIntersectWith(atom.members, atom.rest, next.members, next.rest);
+        var tmpAtom = listIntersectWith(env, atom.members, atom.rest, next.members, next.rest);
         if tmpAtom is () {
             return ();
         }
         var [members, rest] = tmpAtom;
         foreach SemType member in members.initial {
-            if isNever(member) {
+            if isNeverInner(member) {
                 return ();
             }
         }
@@ -190,17 +205,17 @@ function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, L
     return [semType, atom];
 }
 
-function listIntersectWith(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns [FixedLengthArray, SemType]? {
+function listIntersectWith(Env env, FixedLengthArray members1, CellSemType rest1, FixedLengthArray members2, CellSemType rest2) returns [FixedLengthArray, CellSemType]? {
     if listLengthsDisjoint(members1, rest1, members2, rest2) {
         return ();
     }
     return [
         {
-            initial: (from int i in 0 ..< int:max(members1.initial.length(), members2.initial.length())
-                      select intersect(listMemberAt(members1, rest1, i), listMemberAt(members2, rest2, i))),
+            initial: from int i in 0 ..< int:max(members1.initial.length(), members2.initial.length())
+            select intersectMemberSemTypes(env, listMemberAt(members1, rest1, i), listMemberAt(members2, rest2, i)),
             fixedLength: int:max(members1.fixedLength, members2.fixedLength)
         },
-        intersect(rest1, rest2)
+        intersectMemberSemTypes(env, rest1, rest2)
     ];
 }
 
@@ -221,7 +236,7 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
     }
     else {
         final ListAtomicType nt = cx.listAtomType(neg.atom);
-        if nRequired > 0 && isNever(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
+        if nRequired > 0 && isNeverInner(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
             // Skip this negative if it is always shorter than the minimum required by the positive
             return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
         }
@@ -347,12 +362,12 @@ function listSamples(Context cx, FixedLengthArray members, SemType rest, Conjunc
     return indices;
 }
 
-function listSampleTypes(Context cx, FixedLengthArray members, SemType rest, int[] indices) returns [SemType[], int] {
-    SemType[] memberTypes = [];
+function listSampleTypes(Context cx, FixedLengthArray members, CellSemType rest, int[] indices) returns [CellSemType[], int] {
+    CellSemType[] memberTypes = [];
     int nRequired = 0;
     foreach int i in 0 ..< indices.length() {
         int index = indices[i];
-        SemType t = listMemberAt(members, rest, index);
+        CellSemType t = listMemberAt(members, rest, index);
         if isEmpty(cx, t) {
             break;
         }
@@ -365,24 +380,28 @@ function listSampleTypes(Context cx, FixedLengthArray members, SemType rest, int
     return [memberTypes, nRequired];
 }
 
-function listLengthsDisjoint(FixedLengthArray members1, SemType rest1, FixedLengthArray members2, SemType rest2) returns boolean {
+function listLengthsDisjoint(FixedLengthArray members1, CellSemType rest1, FixedLengthArray members2, CellSemType rest2) returns boolean {
     int len1 = members1.fixedLength;
     int len2 = members2.fixedLength;
     if len1 < len2 {
-        return isNever(rest1);
+        return isNeverInner(rest1);
     }
     if len2 < len1 {
-        return isNever(rest2);
+        return isNeverInner(rest2);
     }
     return false;
 }
 
-function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
+public function listMemberAtInner(FixedLengthArray fixedArray, CellSemType rest, int index) returns SemType {
+    return cellInner(listMemberAt(fixedArray, rest, index));
+}
+
+function listMemberAt(FixedLengthArray fixedArray, CellSemType rest, int index) returns CellSemType {
     if index < fixedArray.fixedLength {
         return fixedArrayGet(fixedArray, index);
     }
     return rest;
-} 
+}
 
 function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean {
     foreach var t in array.initial {
@@ -393,26 +412,26 @@ function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean 
     return false;
 }
 
-function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
+function fixedArrayGet(FixedLengthArray members, int index) returns CellSemType {
     int memberLen = members.initial.length();
     int i = int:min(index, memberLen - 1);
     return members.initial[i];
 }
 
 function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {
-    return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
+    return { initial: shallowCopyCellTypes(array.initial), fixedLength: array.fixedLength };
 }
 
-function bddListMemberType(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {
+function bddListMemberTypeInner(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
     else {
-        return union(bddListMemberType(cx, b.left, key,
-                                       intersect(listAtomicMemberType(cx.listAtomType(b.atom), key),
+        return union(bddListMemberTypeInner(cx, b.left, key,
+                                       intersect(listAtomicMemberTypeInner(cx.listAtomType(b.atom), key),
                                                  accum)),
-                     union(bddListMemberType(cx, b.middle, key, accum),
-                           bddListMemberType(cx, b.right, key, accum)));
+                     union(bddListMemberTypeInner(cx, b.middle, key, accum),
+                           bddListMemberTypeInner(cx, b.right, key, accum)));
     }
 }
 
@@ -421,18 +440,18 @@ function bddListAllRanges(Context cx, Bdd b, Range[] accum) returns Range[] {
         return b ? accum : [];
     }
     else {
-        var [atomRanges, _] = listAtomicTypeAllMemberTypes(cx.listAtomType(b.atom));
+        var [atomRanges, _] = listAtomicTypeAllMemberTypesInner(cx.listAtomType(b.atom));
         return distinctRanges(bddListAllRanges(cx, b.left, distinctRanges(atomRanges, accum)),
                               distinctRanges(bddListAllRanges(cx, b.middle, accum), 
                                              bddListAllRanges(cx, b.right, accum)));
     }
 }
 
-function listAtomicMemberType(ListAtomicType atomic, IntSubtype|true key) returns SemType {
-    return listAtomicMemberTypeAt(atomic.members, atomic.rest, key);
+function listAtomicMemberTypeInner(ListAtomicType atomic, IntSubtype|true key) returns SemType {
+    return listAtomicMemberTypeAtInner(atomic.members, atomic.rest, key);
 }
 
-function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSubtype|true key) returns SemType {
+function listAtomicMemberTypeAtInner(FixedLengthArray fixedArray, CellSemType rest, IntSubtype|true key) returns SemType {
     if key is IntSubtype {
         SemType m = NEVER;
         int initLen = fixedArray.initial.length();
@@ -440,29 +459,29 @@ function listAtomicMemberTypeAt(FixedLengthArray fixedArray, SemType rest, IntSu
         if fixedLen != 0 {
             foreach var i in 0 ..< initLen {
                 if intSubtypeContains(key, i) {
-                    m = union(m, fixedArrayGet(fixedArray, i));
+                    m = union(m, cellInner(fixedArrayGet(fixedArray, i)));
                 }
             }
             if intSubtypeOverlapRange(key, { min: initLen, max: fixedLen - 1 }) {
-                m = union(m, fixedArrayGet(fixedArray, fixedLen - 1));
+                m = union(m, cellInner(fixedArrayGet(fixedArray, fixedLen - 1)));
             }
         }
         if fixedLen == 0 || intSubtypeMax(key) > fixedLen - 1 {
-            m = union(m, rest);
+            m = union(m, cellInner(rest));
         }
         return m;
     }
-    SemType m = rest;
+    SemType m = cellInner(rest);
     if fixedArray.fixedLength > 0 {
         foreach var ty in fixedArray.initial {
-            m = union(m, ty);
+            m = union(m, cellInner(ty));
         }
     }
     return m;
 }
 
-function listAtomicApplicableMemberTypes(ListAtomicType atomic, IntSubtype|true indexType) returns SemType[] {
-    var [ranges, memberTypes] = listAtomicTypeAllMemberTypes(atomic);
+function listAtomicApplicableMemberTypesInner(ListAtomicType atomic, IntSubtype|true indexType) returns SemType[] {
+    var [ranges, memberTypes] = listAtomicTypeAllMemberTypesInner(atomic);
     if indexType == true {
         return memberTypes;
     }

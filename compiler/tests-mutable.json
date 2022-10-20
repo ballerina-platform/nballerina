@@ -1,0 +1,4 @@
+[
+    ["proper_subtype", ["|", ["tuple", "int", "int"], ["tuple", "int", "nil"]],
+                       ["tuple", "int", ["|", "int", "nil"]]]
+]
