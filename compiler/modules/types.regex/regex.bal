@@ -2,10 +2,11 @@ import wso2/nballerina.types as t;
 
 type StringAsList ()|[string:Char, StringAsList];
 
-type RegexPattern Concat|End|Star|Or;
+type RegexPattern Concat|End|Star|Or|Skip;
 
 type Concat "concat";
 type End "end";
+type Skip "skip";
 
 type Star record {|
     PatternRange range;
@@ -184,9 +185,14 @@ function intermediateTerminalTypeToSemType(IntermediateTerminalType ty) returns 
 }
 
 function regexToIntermediateType(RegexContext cx, string regex, int index, int end, IntermediateType restTy, boolean noPrefix=false) returns IntermediateType {
-    RegexPattern pattern = nextPattern(regex, index, end + 1);
+    int currentIndex = index;
+    RegexPattern pattern = nextPattern(regex, currentIndex, end + 1);
+    while pattern is Skip {
+        pattern = nextPattern(regex, currentIndex + 1, end + 1);
+        currentIndex += 1;
+    }
     if pattern is Concat {
-        return concatToSemType(cx, regex, index, end, restTy);
+        return concatToSemType(cx, regex, currentIndex, end, restTy);
     }
     else if pattern is Star {
         return starToIntermediateType(cx, regex, pattern, end, restTy, noPrefix);
@@ -251,10 +257,10 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
     if index >= end {
         return "end";
     }
-    if regex[index] is ")"|"*"|"|" {
+    if regex[index] is "*"|"|" {
         panic error("unexpected start position " + index.toString());
     }
-    var [lhs, lhsWrapped] = readPattern(regex, index, end);
+    var [lhs, lhsWrapped] = readPattern(regex, index, end, false);
     int endIndex = lhsWrapped ? (lhs.endIndex + 2) : (lhs.endIndex + 1);
     if end > endIndex && endIndex < regex.length() {
         string op = regex[endIndex];
@@ -263,19 +269,19 @@ function nextPattern(string regex, int index, int end) returns RegexPattern {
             return { range: lhs, nextIndex };
         }
         else if op == "|" {
-            var [rhs, rhsWrapped] = readPattern(regex, endIndex + 1, end);
+            var [rhs, rhsWrapped] = readPattern(regex, endIndex + 1, end, true);
             int nextIndex = rhsWrapped ? (rhs.endIndex + 2) : (rhs.endIndex + 1);
             nextIndex = skipTillEnd(regex, nextIndex);
             return { lhs, rhs, nextIndex };
         }
     }
-    return "concat";
+    return regex[index] is "("|")" ? "skip" : "concat";
 }
 
-function readPattern(string regex, int index, int end) returns [PatternRange, boolean] {
+function readPattern(string regex, int index, int end, boolean isRhs) returns [PatternRange, boolean] {
     if regex[index] != "(" {
         int endIndex = index;
-        while endIndex < end && regex[endIndex] !is "("|"|"|"*"|")" {
+        while endIndex < end && regex[endIndex] !is "("|"*"|")" && (isRhs || regex[endIndex] != "|") {
             endIndex += 1;
         }
         if endIndex < end && regex[endIndex] == "*" {
