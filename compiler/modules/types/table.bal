@@ -2,15 +2,14 @@
 
 public function tableContaining(Env env, SemType mappingType) returns SemType {
     SemType listType = defineListTypeWrapped(new, env, rest = mappingType);
-    CellSemType cellType = cellContaining(env, listType);
-    Bdd bdd = <Bdd>subtypeData(cellType, BT_CELL);
+    Bdd bdd = <Bdd>subtypeData(listType, BT_LIST);
     return createBasicSemType(BT_TABLE, bdd);
 }
 
 final BasicTypeOps tableOps = {
-    union: cellSubtypeUnion,
-    intersect: cellSubtypeIntersect,
-    diff: cellSubtypeDiff,
-    complement: cellSubtypeComplement,
-    isEmpty: cellSubtypeIsEmpty
+    union: bddSubtypeUnion,
+    intersect: bddSubtypeIntersect,
+    diff: bddSubtypeDiff,
+    complement: bddSubtypeComplement,
+    isEmpty: listSubtypeIsEmpty
 };
