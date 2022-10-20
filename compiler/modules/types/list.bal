@@ -1,7 +1,5 @@
 // Implementation specific to basic type list.
 
-import ballerina/io;
-
 public type ListAtomicType readonly & record {|
     readonly & FixedLengthArray members;
     SemType rest;
@@ -218,7 +216,6 @@ function listIntersectWith(Context cx, FixedLengthArray members1, SemType rest1,
 // `nRequired` is the number of members of `memberTypes` that are required by P.
 // `neg` represents N.
 
-int isEmptyLevel = 0;
 function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRequired, Conjunction? neg) returns boolean {
     if neg == () {
         return true;
@@ -269,16 +266,7 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
        
         foreach int i in 0 ..< memberTypes.length() {
             SemType d = memoDiff(cx, memberTypes[i], listMemberAt(nt.members, nt.rest, indices[i]));
-            boolean e;
-            int beforeCount = cx.listMemo.length();
-            isEmptyLevel += 1;
-            e = isEmpty(cx, d);
-            isEmptyLevel -= 1;
-            int afterCount = cx.listMemo.length();
-            if afterCount == beforeCount + 1 {
-                io:println(afterCount, "@" , isEmptyLevel);
-            }
-            if !e {
+            if !isEmpty(cx, d) {
                 SemType[] t = memberTypes.clone();
                 t[i] = d;
                 // We need to make index i be required
@@ -572,11 +560,53 @@ function listSubtypeIntersect(Context cx, SubtypeData t1, SubtypeData t2) return
 }
 
 function listSubtypeDiff(Context cx, SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    Bdd b = memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
-    if b != false && cx.listMemo[b] == () {
-        //io:println("fresh BDD: ", bddToString(b));
+    MemoBddCache cache = new (cx.listMemo);
+    // This is checking if t1 and t2 are disjoint (i.e intersection(t1, t2) is empty). If so diff(t1, t2) == t1.
+    if listIsEmptySimple(cx, bddIntersect(cache, <Bdd> t1, <Bdd> t2)) == true {
+        return t1;
     }
-    return b;
+    return memoSubtypeDiff(cx.listMemo, <Bdd>t1, <Bdd>t2);
+}
+
+function listIsEmptySimple(Context cx, Bdd bdd) returns boolean? {
+    BddMemo? m = cx.listMemo[bdd];
+    if m != () && m.empty is boolean {
+        return <boolean>m.empty;
+    }
+    boolean empty = bddEvery(cx, bdd, (), (), listFormulaIsDefinitelyEmpty);
+    if empty == true {
+        cx.listMemo.put({ bdd, empty }); // handle both memoized values being () and not in memo
+        return true;
+    }
+    return ();
+}
+
+function listFormulaIsDefinitelyEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+    if neg != () || pos == () {
+        return false;
+    }
+    var { members, rest } = cx.listAtomType(pos.atom);
+    Conjunction? current = pos.next;
+    while current != () {
+        var { members: currentMembers, rest: currentRest } = cx.listAtomType(current.atom);
+        var intersection = listIntersectWith(cx, members, rest, currentMembers, currentRest); 
+        // Here we are checking if any of the members in the intersection are never.
+        // Not having any such members is a necessary (but not sufficient) condition for the intersection to be not empty
+        if intersection == () || fixedArrayDefinitelyEmpty(intersection[0]) == true {
+            return true;
+        }
+        current = current.next;
+    }
+    return false;
+}
+
+function fixedArrayDefinitelyEmpty(FixedLengthArray array) returns true? {
+    foreach int i in 0 ..< array.fixedLength {
+        if isNever(fixedArrayGet(array, i)) {
+            return true;
+        }
+    }
+    return ();
 }
 
 final BasicTypeOps listOps = {
