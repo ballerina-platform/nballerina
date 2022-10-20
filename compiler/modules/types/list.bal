@@ -590,12 +590,9 @@ function listFormulaIsDefinitelyEmpty(Context cx, Conjunction? pos, Conjunction?
     while current != () {
         var { members: currentMembers, rest: currentRest } = cx.listAtomType(current.atom);
         var intersection = listIntersectWith(cx, members, rest, currentMembers, currentRest); 
-        if intersection == () {
-            return false;
-        }
         // Here we are checking if any of the members in the intersection are never.
         // Not having any such members is a necessary (but not sufficient) condition for the intersection to be not empty
-        if fixedArrayDefinitelyEmpty(intersection[0]) == true {
+        if intersection == () || fixedArrayDefinitelyEmpty(intersection[0]) == true {
             return true;
         }
         current = current.next;
