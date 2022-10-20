@@ -578,10 +578,14 @@ public function union(SemType t1, SemType t2) returns SemType {
 }
 
 public function intersect(SemType t1, SemType t2) returns SemType {
-    return memoIntersect((), t1, t2);
+    return maybeRoIntersect((), t1, t2);
 }
 
-public function memoIntersect(Context? cx, SemType t1, SemType t2) returns SemType {
+public function memoIntersect(Context cx, SemType t1, SemType t2) returns SemType {
+    return maybeRoIntersect(cx, t1, t2);
+}
+
+function maybeRoIntersect(Context? cx, SemType t1, SemType t2) returns SemType {
     BasicTypeBitSet all1;
     BasicTypeBitSet all2;
     BasicTypeBitSet some1;
