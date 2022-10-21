@@ -176,13 +176,13 @@ function cellAtomType(Atom atom) returns CellAtomicType {
     return <CellAtomicType>(<TypeAtom>atom).atomicType;
 }
 
-// See memoSubtypeIsEmpty for what these mean.
+// See memoSubtypeIsFiniteAndEmpty for what these mean.
 type MemoEmpty boolean|"loop"|"provisional"|();
 
 type BddMemo record {|
     readonly Bdd bdd;
     MemoEmpty empty = ();
-    boolean isFinite = true;
+    boolean finite = true;
 |};
 
 type BddMemoTable table<BddMemo> key(bdd);
@@ -1645,16 +1645,4 @@ function init() {
         {}, // object
         cellOps // cell
     ];
-}
-
-public function isSemTypeRecursive(SemType semType) returns boolean {
-    // Only list and mapping can be recursive
-    if semType !is ComplexSemType || semType.subtypeDataList.length() == 0 {
-        return false;
-    }
-    ProperSubtypeData subTypeData = semType.subtypeDataList[0];
-    if subTypeData !is BddNode {
-        return false;
-    }
-    return subTypeData.atom is RecAtom && subTypeData.left is true && subTypeData.middle is false && subTypeData.right is false;
 }

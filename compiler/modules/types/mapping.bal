@@ -86,11 +86,11 @@ isolated function fieldName(CellField f) returns string {
 }
 
 function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return mappingSubtypeIsFiniteAndEmpty(cx, t).isEmpty;
+    return mappingSubtypeIsFiniteAndEmpty(cx, t).empty;
 }
 
 function mappingSubtypeIsFinite(Context cx, SubtypeData t) returns boolean {
-    return mappingSubtypeIsFiniteAndEmpty(cx, t).isFinite;
+    return mappingSubtypeIsFiniteAndEmpty(cx, t).finite;
 }
 
 function mappingSubtypeIsFiniteAndEmpty(Context cx, SubtypeData t) returns MemoizedEmptinessCheckResult {

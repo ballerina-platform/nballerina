@@ -16,9 +16,10 @@ function and(Atom atom, Conjunction? next) returns Conjunction {
 type BddIsEmptyPredicate function(Context cx, Bdd b) returns boolean;
 
 type MemoizedEmptinessCheckResult record {|
-    boolean isEmpty;
-    boolean isFinite;
+    boolean empty;
+    boolean finite;
 |};
+
 // Memoization logic
 // Castagna's paper does not deal with this fully.
 // Although he calls it memoization, it is not, strictly speaking, just memoization,
@@ -39,12 +40,12 @@ function memoSubtypeIsFiniteAndEmpty(Context cx, BddMemoTable memoTable, BddIsEm
     if mm != () {
         MemoEmpty res = mm.empty;
         if res is boolean {
-            return { isEmpty: res, isFinite: mm.isFinite };
+            return { empty: res, finite: mm.finite };
         }
         else if res != () {
             // We've got a loop.
             mm.empty = "loop";
-            return { isEmpty: true, isFinite: false };
+            return { empty: true, finite: false };
         }
         // nil case is same as not having a memo, so fall through
         m = mm;
@@ -57,7 +58,7 @@ function memoSubtypeIsFiniteAndEmpty(Context cx, BddMemoTable memoTable, BddIsEm
     int initStackDepth = cx.memoStack.length();
     cx.memoStack.push(m);
     boolean isEmpty = isEmptyPredicate(cx, b);
-    m.isFinite = !(isEmpty && m.empty == "loop");
+    m.finite = !(isEmpty && m.empty == "loop");
     if !isEmpty || initStackDepth == 0 {
         foreach int i in initStackDepth + 1 ..< cx.memoStack.length() {
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
@@ -68,7 +69,7 @@ function memoSubtypeIsFiniteAndEmpty(Context cx, BddMemoTable memoTable, BddIsEm
         cx.memoStack.setLength(initStackDepth);
         m.empty = isEmpty;
     }
-    return { isEmpty, isFinite: m.isFinite };
+    return { empty: isEmpty, finite: m.finite };
 }
 
 type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;

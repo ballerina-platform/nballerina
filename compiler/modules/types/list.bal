@@ -129,11 +129,11 @@ public function tupleTypeWrappedRo(Env env, SemType... members) returns SemType 
 }
 
 function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return listSubtypeIsFiniteAndEmpty(cx, t).isEmpty;
+    return listSubtypeIsFiniteAndEmpty(cx, t).empty;
 }
 
 function listSubtypeIsFinite(Context cx, SubtypeData t) returns boolean {
-    return listSubtypeIsFiniteAndEmpty(cx, t).isFinite;
+    return listSubtypeIsFiniteAndEmpty(cx, t).finite;
 }
 
 function listSubtypeIsFiniteAndEmpty(Context cx, SubtypeData t) returns MemoizedEmptinessCheckResult {

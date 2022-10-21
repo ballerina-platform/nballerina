@@ -26,11 +26,11 @@ public class FunctionDefinition {
 }
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return functionSubtypeIsFiniteAndEmpty(cx, t).isEmpty;
+    return functionSubtypeIsFiniteAndEmpty(cx, t).empty;
 }
 
 function functionSubtypeIsFinite(Context cx, SubtypeData t) returns boolean {
-    return functionSubtypeIsFiniteAndEmpty(cx, t).isFinite;
+    return functionSubtypeIsFiniteAndEmpty(cx, t).finite;
 }
 
 function functionSubtypeIsFiniteAndEmpty(Context cx, SubtypeData t) returns MemoizedEmptinessCheckResult {

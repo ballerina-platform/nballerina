@@ -165,6 +165,5 @@ final BasicTypeOps cellOps = {
     diff: cellSubtypeDiff,
     complement: cellSubtypeComplement,
     isEmpty: cellSubtypeIsEmpty,
-    // TODO: can these be infinite
     isFinite: alwaysFinite
 };
