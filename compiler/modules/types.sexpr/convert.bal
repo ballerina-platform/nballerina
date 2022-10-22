@@ -21,7 +21,7 @@ public function semTypeFromSexpr(t:Env env, map<Atom> bindings, Type tySExpr) re
         }
         return intSubtype;
     }
-    else if tySExpr is Union|Intersection {
+    else if tySExpr is Union|Intersection|Not {
         // JBUG `is Union` evaluates to true even if it is an Intersection, therefor let's test tySExpr[0] instead
         "&"|"!"|"|" op = tySExpr[0];
         if op == "!" {
