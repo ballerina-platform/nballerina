@@ -1646,3 +1646,31 @@ function init() {
         cellOps // cell
     ];
 }
+
+public function isMemberNever(Context cx, SemType ty) returns boolean {
+    boolean listSubtype = isSubtype(cx, LIST, ty);
+    boolean mappingSubtype = isSubtype(cx, MAPPING, ty);
+    if ty !is ComplexSemType || !(listSubtype || mappingSubtype) {
+        return false;
+    }
+    foreach var subtype in ty.subtypeDataList {
+        if subtype !is BddNode {
+            continue;
+        }
+        SemType[] members;
+        if listSubtype {
+            ListAtomicType atomicTy = cx.listAtomType(subtype.atom);
+            members = from int i in 0 ..< atomicTy.members.fixedLength select listAtomicTypeMemberAt(atomicTy, i);
+        }
+        else {
+            MappingAtomicType atomicTy = cx.mappingAtomType(subtype.atom);
+            members = from string name in atomicTy.names select mappingAtomicTypeMemberAt(atomicTy, name);
+        }
+        foreach SemType member in members {
+            if isNever(member) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
