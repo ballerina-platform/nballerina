@@ -62,7 +62,7 @@ function memoSubtypeIsFiniteAndEmpty(Context cx, BddMemoTable memoTable, BddIsEm
     if !isEmpty || initStackDepth == 0 {
         foreach int i in initStackDepth + 1 ..< cx.memoStack.length() {
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
-            if memoEmpty == "provisional" {
+            if memoEmpty is "provisional"|"loop" {
                 cx.memoStack[i].empty = isEmpty ? isEmpty : ();
             }
         }
