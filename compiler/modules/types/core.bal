@@ -44,6 +44,12 @@ public isolated class Env {
         // Please refer to the cellFixSubtypeData() in cell.bal
         _ = self.cellAtom(CELL_ATOMIC_TOP);
         _ = self.cellAtom(CELL_ATOMIC_BOTTOM);
+        // We are reserving the next three indexes of atomTable to represent typeAtoms related to mapping top list type.
+        // This is to avoid passing down env argument when doing tableSubtypeComplement and tableSubtypeDiff operations.
+        // Please refer to the tableBddComplement() in bdd.bal
+        _ = self.mappingAtom(MAPPING_ATOMIC_TOP);
+        _ = self.cellAtom(CELL_ATOMIC_MAPPING_TOP);
+        _ = self.listAtom(LIST_ATOMIC_MAPPING_TOP);
     }
 
     // Tests whether the Env is ready for use.
@@ -1114,7 +1120,7 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
 }
 
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
-    MappingAtomicType mappingAtomicTop = createMappingAtomicTop(cx);
+    MappingAtomicType mappingAtomicTop = MAPPING_ATOMIC_TOP;
     if t is BasicTypeBitSet {
         return t == MAPPING ? mappingAtomicTop : ();
     }
@@ -1240,6 +1246,22 @@ public function isNeverInner(CellSemType t) returns boolean {
 
 final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
 final CellAtomicType CELL_ATOMIC_BOTTOM = { ty: NEVER, mut: CELL_MUT_LIMITED };
+final CellAtomicType CELL_ATOMIC_MAPPING_TOP = { ty: MAPPING_SEMTYPE_TOP, mut: CELL_MUT_LIMITED };
+
+final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: CELL_SEMTYPE_TOP };
+final ListAtomicType LIST_ATOMIC_MAPPING_TOP = { members: {initial: [], fixedLength: 0}, rest: CELL_SEMTYPE_MAPPING_LIST_TOP };
+
+final Atom CELL_ATOM_TOP = { index: 0, atomicType: CELL_ATOMIC_TOP };
+final Atom CELL_ATOM_BOTTOM = { index: 1, atomicType: CELL_ATOMIC_BOTTOM };
+final Atom MAPPING_ATOM_TOP = { index: 2, atomicType: MAPPING_ATOMIC_TOP };
+final Atom CELL_ATOM_MAPPING_TOP = { index: 3, atomicType: CELL_ATOMIC_MAPPING_TOP };
+final Atom LIST_ATOM_MAPPING_TOP = { index: 4, atomicType: LIST_ATOMIC_MAPPING_TOP };
+
+final BddNode MAPPING_ARRAY_TOP_BDD = bddAtom(LIST_ATOM_MAPPING_TOP);
+
+final SemType MAPPING_SEMTYPE_TOP = basicSubtype(BT_MAPPING, bddAtom(MAPPING_ATOM_TOP));
+final CellSemType CELL_SEMTYPE_TOP = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_TOP));
+final CellSemType CELL_SEMTYPE_MAPPING_LIST_TOP = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_MAPPING_TOP));
 
 public function cellAtomicType(SemType t) returns CellAtomicType? {
     if t is BasicTypeBitSet {
@@ -1566,17 +1588,6 @@ public function createAnydata(Context context) returns SemType {
     _ = defineMappingTypeWrapped(mapDef, env, [], ad);
     context.anydataMemo = ad;
     return ad;
-}
-
-public function createMappingAtomicTop(Context context) returns MappingAtomicType {
-    MappingAtomicType? memo = context.mappingAtomicTopMemo;
-    if memo != () {
-        return memo;
-    }
-    var { ty, mut } = CELL_ATOMIC_TOP;
-    MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, ty, mut) };
-    context.mappingAtomicTopMemo = mat;
-    return mat;
 }
 
 public function createListAtomicTop(Context context) returns ListAtomicType {

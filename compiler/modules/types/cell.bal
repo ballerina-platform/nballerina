@@ -157,9 +157,9 @@ function cellSubtypeDataEnsureProper(SubtypeData subtypeData) returns SubtypeDat
 
     Atom atom;
     if subtypeData is true {
-        atom = { index: 0, atomicType: CELL_ATOMIC_TOP };
+        atom = CELL_ATOM_TOP;
     } else {
-        atom = { index: 1, atomicType: CELL_ATOMIC_BOTTOM };
+        atom = CELL_ATOM_BOTTOM;
     }
     return bddAtom(atom);
 }
