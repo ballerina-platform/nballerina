@@ -29,10 +29,6 @@ function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return memoSubtypeIsEmpty(cx, cx.functionMemo, functionBddIsEmpty, <Bdd>t);
 }
 
-function functionSubtypeIsFinite(Context cx, SubtypeData t) returns boolean {
-    return !memoSubtypeIsInfinite(cx, cx.functionMemo, functionBddIsEmpty, <Bdd>t);
-}
-
 function functionBddIsEmpty(Context cx, Bdd b) returns boolean {
     return bddEvery(cx, b, (), (), functionFormulaIsEmpty);
 }

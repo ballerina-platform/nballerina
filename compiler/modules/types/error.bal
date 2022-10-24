@@ -26,10 +26,6 @@ function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return memoSubtypeIsEmpty(cx, cx.mappingMemo, errorBddIsEmpty, <Bdd>t);
 }
 
-function errorSubtypeIsFinite(Context cx, SubtypeData t) returns boolean {
-    return !memoSubtypeIsInfinite(cx, cx.mappingMemo, errorBddIsEmpty, <Bdd>t);
-}
-
 function errorBddIsEmpty(Context cx, Bdd b) returns boolean {
     return bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty);
 }

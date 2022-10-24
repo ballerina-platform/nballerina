@@ -1,4 +1,5 @@
 import wso2/nballerina.comm.lib;
+import wso2/nballerina.comm.err;
 
 // There is an integer for each basic type.
 
@@ -1649,7 +1650,7 @@ public function isMemberNever(Context cx, SemType ty) returns boolean {
     }
     foreach var subtype in ty.subtypeDataList {
         if subtype !is BddNode {
-            continue;
+            panic err:impossible("expect subtype to be BddNode");
         }
         SemType[] members;
         if listSubtype {
