@@ -86,15 +86,11 @@ isolated function fieldName(CellField f) returns string {
 }
 
 function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return mappingSubtypeIsFiniteAndEmpty(cx, t).empty;
+    return memoSubtypeIsEmpty(cx, cx.mappingMemo, mappingBddIsEmpty, <Bdd>t);
 }
 
-function mappingSubtypeIsFinite(Context cx, SubtypeData t) returns boolean {
-    return mappingSubtypeIsFiniteAndEmpty(cx, t).finite;
-}
-
-function mappingSubtypeIsFiniteAndEmpty(Context cx, SubtypeData t) returns MemoizedEmptinessCheckResult {
-    return memoSubtypeIsFiniteAndEmpty(cx, cx.mappingMemo, mappingBddIsEmpty, <Bdd>t);
+function mappingSubtypeIsInfinite(Context cx, SubtypeData t) returns boolean {
+    return memoSubtypeIsInfinite(cx, cx.mappingMemo, mappingBddIsEmpty, <Bdd>t);
 }
 
 function mappingBddIsEmpty(Context cx, Bdd b) returns boolean {
@@ -417,6 +413,5 @@ final BasicTypeOps mappingOps = {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: mappingSubtypeIsEmpty,
-    isFinite: mappingSubtypeIsFinite
+    isEmpty: mappingSubtypeIsEmpty
 };

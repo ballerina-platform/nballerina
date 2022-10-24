@@ -73,6 +73,5 @@ final BasicTypeOps floatOps = {
     diff: floatSubtypeDiff,
     complement: floatSubtypeComplement,
     // Empty float sets don't use subtype representation.
-    isEmpty: notIsEmpty,
-    isFinite: alwaysFinite
+    isEmpty: notIsEmpty
 };

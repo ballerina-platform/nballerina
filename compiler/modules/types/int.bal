@@ -297,6 +297,5 @@ final BasicTypeOps intOps = {
     intersect: intSubtypeIntersect,
     diff: intSubtypeDiff,
     complement: intSubtypeComplement,
-    isEmpty: notIsEmpty,
-    isFinite: alwaysFinite
+    isEmpty: notIsEmpty
 };

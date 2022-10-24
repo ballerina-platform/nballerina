@@ -129,15 +129,11 @@ public function tupleTypeWrappedRo(Env env, SemType... members) returns SemType 
 }
 
 function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return listSubtypeIsFiniteAndEmpty(cx, t).empty;
+    return memoSubtypeIsEmpty(cx, cx.listMemo, listBddIsEmpty, <Bdd>t);
 }
 
-function listSubtypeIsFinite(Context cx, SubtypeData t) returns boolean {
-    return listSubtypeIsFiniteAndEmpty(cx, t).finite;
-}
-
-function listSubtypeIsFiniteAndEmpty(Context cx, SubtypeData t) returns MemoizedEmptinessCheckResult {
-    return memoSubtypeIsFiniteAndEmpty(cx, cx.listMemo, listBddIsEmpty, <Bdd>t);
+function listSubtypeIsInfinite(Context cx, SubtypeData t) returns boolean {
+    return memoSubtypeIsInfinite(cx, cx.listMemo, listBddIsEmpty, <Bdd>t);
 }
 
 function listBddIsEmpty(Context cx, Bdd b) returns boolean {
@@ -586,6 +582,5 @@ final BasicTypeOps listOps = {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: listSubtypeIsEmpty,
-    isFinite: listSubtypeIsFinite
+    isEmpty: listSubtypeIsEmpty
 };

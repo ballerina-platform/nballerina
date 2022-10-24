@@ -55,7 +55,7 @@ function nonEmptyTypeNoDefer(ModuleSymbols mod, t:SemType semType, s:ModuleLevel
     if (td is s:BinaryTypeDesc && td.op is "&") || t:isMemberNever(mod.tc, semType) {
         return err:semantic("intersection must not be empty", loc);
     }
-    if !t:isFinite(mod.tc, semType) {
+    if t:isInfinite(mod.tc, semType) {
         return err:semantic("invalid recursive type (contains no finite shapes)", loc);
     }
     mod.emptyNonRecursiveTypeLocation = loc;

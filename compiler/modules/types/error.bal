@@ -23,15 +23,11 @@ public function errorDistinct(int distinctId) returns SemType {
 }
 
 function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return errorSubtypeIsFiniteAndEmpty(cx, t).empty;
+    return memoSubtypeIsEmpty(cx, cx.mappingMemo, errorBddIsEmpty, <Bdd>t);
 }
 
 function errorSubtypeIsFinite(Context cx, SubtypeData t) returns boolean {
-    return errorSubtypeIsFiniteAndEmpty(cx, t).finite;
-}
-
-function errorSubtypeIsFiniteAndEmpty(Context cx, SubtypeData t) returns MemoizedEmptinessCheckResult {
-    return memoSubtypeIsFiniteAndEmpty(cx, cx.mappingMemo, errorBddIsEmpty, <Bdd>t);
+    return !memoSubtypeIsInfinite(cx, cx.mappingMemo, errorBddIsEmpty, <Bdd>t);
 }
 
 function errorBddIsEmpty(Context cx, Bdd b) returns boolean {
@@ -43,6 +39,5 @@ final BasicTypeOps errorOps = {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: errorSubtypeIsEmpty,
-    isFinite: errorSubtypeIsFinite
+    isEmpty: errorSubtypeIsEmpty
 };

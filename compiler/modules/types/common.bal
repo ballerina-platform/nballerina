@@ -15,11 +15,6 @@ function and(Atom atom, Conjunction? next) returns Conjunction {
 
 type BddIsEmptyPredicate function(Context cx, Bdd b) returns boolean;
 
-type MemoizedEmptinessCheckResult record {|
-    boolean empty;
-    boolean finite;
-|};
-
 // Memoization logic
 // Castagna's paper does not deal with this fully.
 // Although he calls it memoization, it is not, strictly speaking, just memoization,
@@ -34,18 +29,21 @@ type MemoizedEmptinessCheckResult record {|
 // This follows Frisch's approach of undoing memoizations that turn out to be wrong.
 // (I did not succeed in fully understanding his approach, so I am not
 // completely sure if we are doing the same.)
-function memoSubtypeIsFiniteAndEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns MemoizedEmptinessCheckResult {
+function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns boolean {
     BddMemo? mm = memoTable[b];
     BddMemo m;
     if mm != () {
         MemoEmpty res = mm.empty;
+        if res == "infinite" {
+            return true;
+        }
         if res is boolean {
-            return { empty: res, finite: mm.finite };
+            return res;
         }
         else if res != () {
             // We've got a loop.
             mm.empty = "loop";
-            return { empty: true, finite: false };
+            return true;
         }
         // nil case is same as not having a memo, so fall through
         m = mm;
@@ -58,18 +56,27 @@ function memoSubtypeIsFiniteAndEmpty(Context cx, BddMemoTable memoTable, BddIsEm
     int initStackDepth = cx.memoStack.length();
     cx.memoStack.push(m);
     boolean isEmpty = isEmptyPredicate(cx, b);
-    m.finite = !(isEmpty && m.empty == "loop");
+    boolean infinite = isEmpty && m.empty == "loop";
     if !isEmpty || initStackDepth == 0 {
         foreach int i in initStackDepth + 1 ..< cx.memoStack.length() {
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
-            if memoEmpty is "provisional"|"loop" {
+            if memoEmpty is "provisional"|"loop"|"infinite" {
                 cx.memoStack[i].empty = isEmpty ? isEmpty : ();
             }
         }
         cx.memoStack.setLength(initStackDepth);
         m.empty = isEmpty;
     }
-    return { empty: isEmpty, finite: m.finite };
+    if infinite {
+        m.empty = "infinite";    
+    }
+    return isEmpty;
+}
+
+function memoSubtypeIsInfinite(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns boolean {
+    // This assume we have already checked (and confirmed) type to be empty
+    BddMemo mm = memoTable.get(b);
+    return mm.empty == "infinite";
 }
 
 type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;
@@ -174,8 +181,4 @@ function shallowCopyStrings(string[] v) returns string[] {
 
 function notIsEmpty(Context cx, SubtypeData d) returns boolean {
     return false;
-}
-
-function alwaysFinite(Context cx, SubtypeData d) returns boolean {
-    return true;
 }

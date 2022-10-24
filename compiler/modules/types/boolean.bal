@@ -54,6 +54,5 @@ final BasicTypeOps booleanOps = {
     intersect: booleanSubtypeIntersect,
     diff: booleanSubtypeDiff,
     complement: booleanSubtypeComplement,
-    isEmpty: notIsEmpty,
-    isFinite: alwaysFinite
+    isEmpty: notIsEmpty
 };

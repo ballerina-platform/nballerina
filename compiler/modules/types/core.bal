@@ -176,13 +176,12 @@ function cellAtomType(Atom atom) returns CellAtomicType {
     return <CellAtomicType>(<TypeAtom>atom).atomicType;
 }
 
-// See memoSubtypeIsFiniteAndEmpty for what these mean.
-type MemoEmpty boolean|"loop"|"provisional"|();
+// See memoSubtypeIsEmpty for what these mean.
+type MemoEmpty boolean|"loop"|"infinite"|"provisional"|();
 
 type BddMemo record {|
     readonly Bdd bdd;
     MemoEmpty empty = ();
-    boolean finite = true;
 |};
 
 type BddMemoTable table<BddMemo> key(bdd);
@@ -297,7 +296,6 @@ type BasicTypeOps readonly & record {|
     BinOp diff = binOpPanic;
     UnaryOp complement = unaryOpPanic;
     UnaryTypeCheckOp isEmpty = unaryTypeCheckOpPanic;
-    UnaryTypeCheckOp isFinite = unaryTypeCheckOpPanic;
 |};
 
 final readonly & (BasicSubtype[]) EMPTY_SUBTYPES = [];
@@ -755,23 +753,19 @@ public function isNever(SemType t) returns boolean {
     return t is BasicTypeBitSet && t == 0;
 }
 
-public function isFinite(Context cx, SemType t) returns boolean {
-    if t is BasicTypeBitSet {
-        return true; 
+public function isInfinite(Context cx, SemType t) returns boolean {
+    boolean listSubtype = isSubtypeSimple(t, LIST);
+    boolean mappingSubtype = isSubtypeSimple(t, MAPPING);
+    if t !is ComplexSemType || !(listSubtype||mappingSubtype) {
+        return false;
     }
-    else {
-        if t.all != 0 {
-            return true; 
+    foreach var subtype in t.subtypeDataList {
+        boolean infinite = listSubtype ? listSubtypeIsInfinite(cx, subtype) : mappingSubtypeIsInfinite(cx, subtype);
+        if infinite {
+            return true;
         }
-        foreach var st in unpackComplexSemType(t) {
-            var [code, data] = st;
-            var isFinite = ops[code].isFinite;
-            if !isFinite(cx, data) {
-                return false;
-            }
-        }
-        return true;
     }
+    return false;
 }
 
 public function isEmpty(Context cx, SemType t) returns boolean {
@@ -1648,8 +1642,8 @@ function init() {
 }
 
 public function isMemberNever(Context cx, SemType ty) returns boolean {
-    boolean listSubtype = isSubtype(cx, LIST, ty);
-    boolean mappingSubtype = isSubtype(cx, MAPPING, ty);
+    boolean listSubtype = isSubtypeSimple(ty, LIST);
+    boolean mappingSubtype = isSubtypeSimple(ty, MAPPING);
     if ty !is ComplexSemType || !(listSubtype || mappingSubtype) {
         return false;
     }

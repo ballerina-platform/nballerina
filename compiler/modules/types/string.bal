@@ -209,6 +209,5 @@ final BasicTypeOps stringOps = {
     diff: stringSubtypeDiff,
     complement: stringSubtypeComplement,
     // Empty string sets don't use subtype representation.
-    isEmpty: notIsEmpty,
-    isFinite: alwaysFinite
+    isEmpty: notIsEmpty
 };
