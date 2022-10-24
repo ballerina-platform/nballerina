@@ -56,7 +56,7 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     int initStackDepth = cx.memoStack.length();
     cx.memoStack.push(m);
     boolean isEmpty = isEmptyPredicate(cx, b);
-    boolean infinite = isEmpty && m.empty == "loop";
+    boolean infinite = isEmpty && (m.empty == "loop");
     if !isEmpty || initStackDepth == 0 {
         foreach int i in initStackDepth + 1 ..< cx.memoStack.length() {
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
