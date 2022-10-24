@@ -28,7 +28,7 @@ function exprBinaryRemainder() returns Module {
 
     builder.positionAtEnd(bb9);
     Value R10 = builder.load(R4);
-    Value R11 = builder.iCmp("eq", R10, constInt("i64",-9223372036854775808));
+    Value R11 = builder.iCmp("eq", R10, constInt("i64", int:MIN_VALUE));
     
     BasicBlock bb16 = foo.appendBasicBlock();
     BasicBlock bb12 = foo.appendBasicBlock();

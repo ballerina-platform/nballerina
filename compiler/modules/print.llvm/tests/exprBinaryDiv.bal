@@ -26,7 +26,7 @@ function exprBinaryDiv() returns Module {
 
     builder.positionAtEnd(bb7);
     Value R8 = builder.load(R3);
-    Value R9 = builder.iCmp("eq", R8, constInt("i64",-9223372036854775808));
+    Value R9 = builder.iCmp("eq", R8, constInt("i64", int:MIN_VALUE));
     builder.condBr(R9, bb10, bb14);
 
     builder.positionAtEnd(bb10);
