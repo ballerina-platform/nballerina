@@ -8,3 +8,6 @@ build
 .vscode
 .classpath
 .project
+
+jni_config.json
+reflection_config.json

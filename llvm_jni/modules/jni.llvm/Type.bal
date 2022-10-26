@@ -61,7 +61,7 @@ public function constInt(Type ty, int value) returns ConstValue {
 
 
 public function constFloat(FloatType ty, float val) returns ConstValue {
-   return new (jLLVMConstReal(typeToLLVMType(ty, ()), val));
+    return new (jLLVMConstReal(typeToLLVMType(ty, ()), val));
 }
 
 public function constNull(PointerType ty) returns PointerValue {

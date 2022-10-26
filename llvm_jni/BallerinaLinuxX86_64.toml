@@ -1,0 +1,24 @@
+[package]
+org = "wso2"
+name = "nballerina"
+version = "0.1.0"
+[build-options]
+observabilityIncluded = false
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.7.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-platform-1.5.7.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.7-linux-x86_64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-13.0.1-1.5.7.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-platform-13.0.1-1.5.7.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-13.0.1-1.5.7-linux-x86_64.jar"

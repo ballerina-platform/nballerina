@@ -1,0 +1,7 @@
+{
+  "resources": [
+    {"pattern": "org/*"},
+    {"pattern": ".*/*.so"},
+    {"pattern": "balrt_inline.bc" }
+  ]
+}

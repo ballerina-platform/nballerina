@@ -1,5 +1,11 @@
 import ballerina/jballerina.java;
 
+function loadJavaCpp(handle c) returns handle = @java:Method {
+    name: "load",
+    'class: "org.bytedeco.javacpp.Loader",
+    paramTypes: ["java.lang.Class"]
+} external;
+
 function jGetClass(handle receiver) returns handle = @java:Method {
     name: "getClass",
     'class: "java.lang.Object",
