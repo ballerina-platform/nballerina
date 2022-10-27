@@ -93,6 +93,15 @@ function bddEveryPositive(Context cx, Bdd b, Conjunction? pos, Conjunction? neg,
     }
 }
 
+function bddPosMaybeEmpty(Bdd b) returns boolean {
+    if b is boolean {
+        return b;
+    }
+    else {
+        return bddPosMaybeEmpty(b.middle) || bddPosMaybeEmpty(b.right);
+    }
+}
+
 function andIfPositive(Atom atom, Conjunction? next) returns Conjunction? {
     if atom is int && atom < 0 {
         return next;
