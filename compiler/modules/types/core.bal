@@ -178,6 +178,8 @@ function cellAtomType(Atom atom) returns CellAtomicType {
 }
 
 // See memoSubtypeIsEmpty for what these mean.
+// loop means type has a recursive component
+// inifinite means type is empty and have a recursive component 
 type MemoEmpty boolean|"loop"|"infinite"|"provisional"|();
 
 type BddMemo record {|
