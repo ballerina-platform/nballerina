@@ -178,8 +178,9 @@ function cellAtomType(Atom atom) returns CellAtomicType {
 }
 
 // See memoSubtypeIsEmpty for what these mean.
-// loop means type has a recursive component
-// inifinite means type only have empty and recursive components
+// loop means type has a recursive shape
+// cyclic means type definition repeats infinitely.
+// In other words the type only has one or more recursive shapes and zero or more empty shapes.
 type MemoEmpty boolean|"loop"|"cyclic"|"provisional"|();
 
 type BddMemo record {|

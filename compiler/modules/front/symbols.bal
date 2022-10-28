@@ -14,7 +14,7 @@ type ModuleSymbols record {|
     boolean allowAllTypes = false;
     ResolvedType[] deferredEmptinessChecks = [];
     // We need only one to give an error
-    d:Location? emptyNonRecursiveTypeLocation = ();
+    d:Location? emptyNonCyclicTypeLocation = ();
 |};
 
 type ResolvedType record {|
