@@ -179,8 +179,8 @@ function cellAtomType(Atom atom) returns CellAtomicType {
 
 // See memoSubtypeIsEmpty for what these mean.
 // loop means type has a recursive component
-// inifinite means type is empty and have a recursive component 
-type MemoEmpty boolean|"loop"|"infinite"|"provisional"|();
+// inifinite means type only have empty and recursive components
+type MemoEmpty boolean|"loop"|"cyclic"|"provisional"|();
 
 type BddMemo record {|
     readonly Bdd bdd;
@@ -756,15 +756,18 @@ public function isNever(SemType t) returns boolean {
     return t is BasicTypeBitSet && t == 0;
 }
 
-public function isInfinite(Context cx, SemType t) returns boolean {
+public function isCyclic(Context cx, SemType t) returns boolean {
+    if !isEmpty(cx, t) {
+        return false;
+    }
     boolean listSubtype = isSubtypeSimple(t, LIST);
     boolean mappingSubtype = isSubtypeSimple(t, MAPPING);
     if t !is ComplexSemType || !(listSubtype||mappingSubtype) {
         return false;
     }
     foreach var subtype in t.subtypeDataList {
-        boolean infinite = listSubtype ? listSubtypeIsInfinite(cx, subtype) : mappingSubtypeIsInfinite(cx, subtype);
-        if infinite {
+        boolean cyclic = listSubtype ? listSubtypeIsCyclic(cx, subtype) : mappingSubtypeIsCyclic(cx, subtype);
+        if cyclic {
             return true;
         }
     }

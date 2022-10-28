@@ -34,7 +34,7 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     BddMemo m;
     if mm != () {
         MemoEmpty res = mm.empty;
-        if res == "infinite" {
+        if res == "cyclic" {
             return true;
         }
         if res is boolean {
@@ -56,27 +56,27 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     int initStackDepth = cx.memoStack.length();
     cx.memoStack.push(m);
     boolean isEmpty = isEmptyPredicate(cx, b);
-    boolean infinite = isEmpty && (m.empty == "loop");
+    boolean cyclic = isEmpty && (m.empty == "loop");
     if !isEmpty || initStackDepth == 0 {
         foreach int i in initStackDepth + 1 ..< cx.memoStack.length() {
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
-            if memoEmpty is "provisional"|"loop"|"infinite" {
+            if memoEmpty is "provisional"|"loop"|"cyclic" {
                 cx.memoStack[i].empty = isEmpty ? isEmpty : ();
             }
         }
         cx.memoStack.setLength(initStackDepth);
         m.empty = isEmpty;
     }
-    if infinite {
-        m.empty = "infinite";    
+    if cyclic {
+        m.empty = "cyclic";    
     }
     return isEmpty;
 }
 
-function memoSubtypeIsInfinite(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns boolean {
+function memoSubtypeIsCyclic(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns boolean {
     // This assume we have already checked (and confirmed) type to be empty
     BddMemo mm = memoTable.get(b);
-    return mm.empty == "infinite";
+    return mm.empty == "cyclic";
 }
 
 type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;

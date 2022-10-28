@@ -89,8 +89,8 @@ function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return memoSubtypeIsEmpty(cx, cx.mappingMemo, mappingBddIsEmpty, <Bdd>t);
 }
 
-function mappingSubtypeIsInfinite(Context cx, SubtypeData t) returns boolean {
-    return memoSubtypeIsInfinite(cx, cx.mappingMemo, mappingBddIsEmpty, <Bdd>t);
+function mappingSubtypeIsCyclic(Context cx, SubtypeData t) returns boolean {
+    return memoSubtypeIsCyclic(cx, cx.mappingMemo, mappingBddIsEmpty, <Bdd>t);
 }
 
 function mappingBddIsEmpty(Context cx, Bdd b) returns boolean {
