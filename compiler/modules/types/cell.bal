@@ -41,7 +41,7 @@ function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negLi
             }
 
             cellAtomType = cx.cellAtomType(p.atom);
-            combined = intersect(combined, cellAtomType.t);
+            combined = memoIntersect(cx, combined, cellAtomType.t);
 
             minMut = <CellMutability>int:min(minMut, cellAtomType.mut);
             p = p.next;

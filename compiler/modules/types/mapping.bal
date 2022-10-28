@@ -351,8 +351,8 @@ function bddMappingMemberType(Context cx, Bdd b, StringSubtype|true key, SemType
     }
     else {
         return union(bddMappingMemberType(cx, b.left, key,
-                                          intersect(mappingAtomicMemberType(cx.mappingAtomType(b.atom), key),
-                                                    accum)),
+                                          memoIntersect(cx, mappingAtomicMemberType(cx.mappingAtomType(b.atom), key),
+                                                        accum)),
                      union(bddMappingMemberType(cx, b.middle, key, accum),
                            bddMappingMemberType(cx, b.right, key, accum)));
     }

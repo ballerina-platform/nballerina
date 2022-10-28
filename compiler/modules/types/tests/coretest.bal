@@ -32,7 +32,7 @@ function test1() {
 function disjoint(Context cx, SemType t1, SemType t2) {
     test:assertFalse(isSubtype(cx, t1, t2));
     test:assertFalse(isSubtype(cx, t2, t1));
-    test:assertTrue(isEmpty(cx, intersect(t1, t2)));
+    test:assertTrue(isEmpty(cx, memoIntersect(cx, t1, t2)));
 }
 
 @test:Config{}
