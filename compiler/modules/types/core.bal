@@ -44,6 +44,12 @@ public isolated class Env {
         // Please refer to the cellFixSubtypeData() in cell.bal
         _ = self.cellAtom(CELL_ATOMIC_TOP);
         _ = self.cellAtom(CELL_ATOMIC_BOTTOM);
+        // We are reserving the next three indexes of atomTable to represent typeAtoms related to mapping top list type.
+        // This is to avoid passing down env argument when doing tableSubtypeComplement and tableSubtypeDiff operations.
+        // Please refer to the tableBddComplement() in bdd.bal
+        _ = self.mappingAtom(MAPPING_ATOMIC_TOP);
+        _ = self.cellAtom(CELL_ATOMIC_MAPPING_TOP);
+        _ = self.listAtom(LIST_ATOMIC_MAPPING_TOP);
     }
 
     // Tests whether the Env is ready for use.
@@ -665,15 +671,7 @@ public function intersectMemberSemTypes(Env env, CellSemType t1, CellSemType t2)
     return cellContaining(env, ty, mut);
 }
 
-public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
-    return maybeRoDiff(t1, t2, cx);
-}
-
 public function diff(SemType t1, SemType t2) returns SemType {
-    return maybeRoDiff(t1, t2, ());
-}
-
-function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicTypeBitSet all1;
     BasicTypeBitSet all2;
     BasicTypeBitSet some1;
@@ -721,39 +719,16 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     BasicSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if cx != () && code == BT_TABLE {
-            // read-only diff for mutable basic type
-            if data1 == () {
-                // data1 was all
-                data = true;
-            }
-            else if data2 == () {
-                // data2 was none
-                data = data1;
-            }
-            else {
-                var diff = ops[code].diff;
-                var isEmpty = ops[code].isEmpty;
-                if isEmpty(cx, diff(data1, data2)) {
-                    data = false;
-                }
-                else {
-                    data = data1;
-                }
-            }
-        } else {
-            // normal diff or read-only basic type
-            if data1 == () {
-                var complement = ops[code].complement;
-                data = complement(<SubtypeData>data2);
-            }
-            else if data2 == () {
-                data = data1;
-            }
-            else {
-                var diff = ops[code].diff;
-                data = diff(data1, data2);
-            }
+        if data1 == () {
+            var complement = ops[code].complement;
+            data = complement(<SubtypeData>data2);
+        }
+        else if data2 == () {
+            data = data1;
+        }
+        else {
+            var diff = ops[code].diff;
+            data = diff(data1, data2);
         }
         // JBUG `data` is not narrowed properly if you swap the order by doing `if data == true {} else if data != false {}`
         if data !is boolean {
@@ -1145,7 +1120,7 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
 }
 
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
-    MappingAtomicType mappingAtomicTop = createMappingAtomicTop(cx);
+    MappingAtomicType mappingAtomicTop = MAPPING_ATOMIC_TOP;
     if t is BasicTypeBitSet {
         return t == MAPPING ? mappingAtomicTop : ();
     }
@@ -1271,6 +1246,22 @@ public function isNeverInner(CellSemType t) returns boolean {
 
 final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
 final CellAtomicType CELL_ATOMIC_BOTTOM = { ty: NEVER, mut: CELL_MUT_LIMITED };
+final CellAtomicType CELL_ATOMIC_MAPPING_TOP = { ty: MAPPING_SEMTYPE_TOP, mut: CELL_MUT_LIMITED };
+
+final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: CELL_SEMTYPE_TOP };
+final ListAtomicType LIST_ATOMIC_MAPPING_TOP = { members: {initial: [], fixedLength: 0}, rest: CELL_SEMTYPE_MAPPING_LIST_TOP };
+
+final Atom CELL_ATOM_TOP = { index: 0, atomicType: CELL_ATOMIC_TOP };
+final Atom CELL_ATOM_BOTTOM = { index: 1, atomicType: CELL_ATOMIC_BOTTOM };
+final Atom MAPPING_ATOM_TOP = { index: 2, atomicType: MAPPING_ATOMIC_TOP };
+final Atom CELL_ATOM_MAPPING_TOP = { index: 3, atomicType: CELL_ATOMIC_MAPPING_TOP };
+final Atom LIST_ATOM_MAPPING_TOP = { index: 4, atomicType: LIST_ATOMIC_MAPPING_TOP };
+
+final BddNode MAPPING_ARRAY_TOP_BDD = bddAtom(LIST_ATOM_MAPPING_TOP);
+
+final SemType MAPPING_SEMTYPE_TOP = basicSubtype(BT_MAPPING, bddAtom(MAPPING_ATOM_TOP));
+final CellSemType CELL_SEMTYPE_TOP = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_TOP));
+final CellSemType CELL_SEMTYPE_MAPPING_LIST_TOP = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_MAPPING_TOP));
 
 public function cellAtomicType(SemType t) returns CellAtomicType? {
     if t is BasicTypeBitSet {
@@ -1591,23 +1582,12 @@ public function createAnydata(Context context) returns SemType {
     }
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType tableTy = tableContaining(mapDef.getSemType(env));
+    SemType tableTy = tableContaining(env, mapDef.getSemType(env));
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = defineListTypeWrapped(listDef, env, rest = ad);
     _ = defineMappingTypeWrapped(mapDef, env, [], ad);
     context.anydataMemo = ad;
     return ad;
-}
-
-public function createMappingAtomicTop(Context context) returns MappingAtomicType {
-    MappingAtomicType? memo = context.mappingAtomicTopMemo;
-    if memo != () {
-        return memo;
-    }
-    var { ty, mut } = CELL_ATOMIC_TOP;
-    MappingAtomicType mat = { names: [], types: [], rest: cellContaining(context.env, ty, mut) };
-    context.mappingAtomicTopMemo = mat;
-    return mat;
 }
 
 public function createListAtomicTop(Context context) returns ListAtomicType {
