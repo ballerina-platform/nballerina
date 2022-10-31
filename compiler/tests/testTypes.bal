@@ -6,7 +6,7 @@ function testTypesJson() returns error? {
     check testJsonTypes("tests.json");
 }
 
-@test:Config { enable: false } // TODO: enable with readonly type
+@test:Config
 function testReadonlyTypesJson() returns error? {
     check testJsonTypes("tests-readonly.json");
 }

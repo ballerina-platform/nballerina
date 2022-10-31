@@ -31,12 +31,12 @@ type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType;
 // All the SemTypes used in any type operation (e.g. isSubtype) must have been created using the Env.
 public isolated class Env {
     private final table<TypeAtom> key(atomicType) atomTable = table [];
-    private final ListAtomicType?[] recListAtoms = [];
-    private final MappingAtomicType?[] recMappingAtoms = [];
+    private final ListAtomicType?[] recListAtoms = [ LIST_ATOMIC_RO ];
+    private final MappingAtomicType?[] recMappingAtoms = [ MAPPING_ATOMIC_RO ];
     private final FunctionAtomicType?[] recFunctionAtoms = [];
     // Count of the total number of non-nil members
     // of recListAtoms, recMappingAtoms and recFunctionAtoms
-    private int recAtomCount = 0;
+    private int recAtomCount = 2;
 
     public isolated function init() {
         // We are reserving the first two indexes of atomTable to represent cell top and bottom typeAtoms. 
@@ -50,6 +50,12 @@ public isolated class Env {
         _ = self.mappingAtom(MAPPING_ATOMIC_TOP);
         _ = self.cellAtom(CELL_ATOMIC_MAPPING_TOP);
         _ = self.listAtom(LIST_ATOMIC_MAPPING_TOP);
+        // We are reserving the next four indexes of atomTable to represent typeAtoms related to readonly type.
+        // This is to avoid requiring context when referring to readonly type.
+        _ = self.cellAtom(CELL_ATOMIC_RO);
+        _ = self.mappingAtom(MAPPING_ATOMIC_RO);
+        _ = self.cellAtom(CELL_ATOMIC_MAPPING_RO);
+        _ = self.listAtom(LIST_ATOMIC_MAPPING_RO);
     }
 
     // Tests whether the Env is ready for use.
@@ -430,7 +436,19 @@ public final SemType XML_ELEMENT = xmlSingleton(XML_PRIMITIVE_ELEMENT_RO | XML_P
 public final SemType XML_COMMENT = xmlSingleton(XML_PRIMITIVE_COMMENT_RO | XML_PRIMITIVE_COMMENT_RW);
 public final SemType XML_TEXT = xmlSequence(xmlSingleton(XML_PRIMITIVE_TEXT));
 public final SemType XML_PI = xmlSingleton(XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_PI_RW);
-public final SemType XML_RO = createXmlSemType(xmlRoSubtype);
+public final SemType XML_RO = createXmlSemType(XML_SUBTYPE_RO);
+
+public final ComplexSemType READONLY = {
+    all: basicTypeUnion(BT_INHERENTLY_IMMUTABLE),
+    some: basicTypeUnion((1 << BT_LIST) | (1 << BT_MAPPING) | (1 << BT_TABLE) | (1 << BT_XML)),
+    subtypeDataList:[bddAtom(0), bddAtom(0), LIST_SUBTYPE_MAPPING_RO, XML_SUBTYPE_RO]
+};
+
+final ComplexSemType MAPPING_RO = {
+    all:0,
+    some: MAPPING,
+    subtypeDataList: [bddAtom(0)]
+};
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
@@ -1247,21 +1265,33 @@ public function isNeverInner(CellSemType t) returns boolean {
 final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
 final CellAtomicType CELL_ATOMIC_BOTTOM = { ty: NEVER, mut: CELL_MUT_LIMITED };
 final CellAtomicType CELL_ATOMIC_MAPPING_TOP = { ty: MAPPING_SEMTYPE_TOP, mut: CELL_MUT_LIMITED };
+final CellAtomicType CELL_ATOMIC_RO = { ty: READONLY, mut: CELL_MUT_NONE };
+final CellAtomicType CELL_ATOMIC_MAPPING_RO = { ty: MAPPING_RO, mut: CELL_MUT_NONE };
 
 final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: CELL_SEMTYPE_TOP };
-final ListAtomicType LIST_ATOMIC_MAPPING_TOP = { members: {initial: [], fixedLength: 0}, rest: CELL_SEMTYPE_MAPPING_LIST_TOP };
+final ListAtomicType LIST_ATOMIC_MAPPING_TOP = { members: {initial: [], fixedLength: 0}, rest: CELL_SEMTYPE_MAPPING_TOP };
 
 final Atom CELL_ATOM_TOP = { index: 0, atomicType: CELL_ATOMIC_TOP };
 final Atom CELL_ATOM_BOTTOM = { index: 1, atomicType: CELL_ATOMIC_BOTTOM };
 final Atom MAPPING_ATOM_TOP = { index: 2, atomicType: MAPPING_ATOMIC_TOP };
 final Atom CELL_ATOM_MAPPING_TOP = { index: 3, atomicType: CELL_ATOMIC_MAPPING_TOP };
 final Atom LIST_ATOM_MAPPING_TOP = { index: 4, atomicType: LIST_ATOMIC_MAPPING_TOP };
+final Atom CELL_ATOM_RO = { index: 5, atomicType: CELL_ATOMIC_RO };
+final Atom MAPPING_ATOM_RO = { index: 6, atomicType: MAPPING_ATOMIC_RO };
+final Atom CELL_ATOM_MAPPING_RO = { index: 7, atomicType: CELL_ATOMIC_MAPPING_RO };
+final Atom LIST_ATOM_MAPPING_RO = { index: 8, atomicType: LIST_ATOMIC_MAPPING_RO };
 
-final BddNode MAPPING_ARRAY_TOP_BDD = bddAtom(LIST_ATOM_MAPPING_TOP);
+final BddNode MAPPING_SUBTYPE_ARRAY_TOP = bddAtom(LIST_ATOM_MAPPING_TOP);
+final BddNode MAPPING_SUBTYPE_RO = bddAtom(MAPPING_ATOM_RO);
+final BddNode LIST_SUBTYPE_MAPPING_RO = bddAtom(LIST_ATOM_MAPPING_RO);
 
 final SemType MAPPING_SEMTYPE_TOP = basicSubtype(BT_MAPPING, bddAtom(MAPPING_ATOM_TOP));
+final SemType MAPPING_SEMTYPE_RO = basicSubtype(BT_MAPPING, bddAtom(MAPPING_ATOM_RO));
+
 final CellSemType CELL_SEMTYPE_TOP = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_TOP));
-final CellSemType CELL_SEMTYPE_MAPPING_LIST_TOP = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_MAPPING_TOP));
+final CellSemType CELL_SEMTYPE_MAPPING_TOP = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_MAPPING_TOP));
+final CellSemType CELL_SEMTYPE_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_RO));
+final CellSemType CELL_SEMTYPE_MAPPING_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_MAPPING_RO));
 
 public function cellAtomicType(SemType t) returns CellAtomicType? {
     if t is BasicTypeBitSet {
@@ -1545,16 +1575,6 @@ public function singleNumericType(SemType semType) returns BasicTypeBitSet? {
 
 public function typeContext(Env env) returns Context {
     return new(env);
-}
-
-public function createReadOnly(Context context) returns SemType {
-    SemType? memo = context.readOnlyMemo;
-    if memo != () {
-        return memo;
-    }
-    SemType ro = union(basicTypeUnion(BT_INHERENTLY_IMMUTABLE), XML_RO);
-    context.readOnlyMemo = ro;
-    return ro;
 }
 
 public function createJson(Context context) returns SemType {

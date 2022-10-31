@@ -1,7 +1,7 @@
 // Implementation specific to basic type table.
 
-public function tableContaining(Env env, SemType mappingType) returns SemType {
-    SemType listType = defineListTypeWrapped(new, env, rest = mappingType);
+public function tableContaining(Env env, SemType mappingType, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
+    SemType listType = defineListTypeWrapped(new, env, rest = mappingType, mut = mut);
     Bdd bdd = <Bdd>subtypeData(listType, BT_LIST);
     return createBasicSemType(BT_TABLE, bdd);
 }
@@ -10,7 +10,7 @@ function tableSubtypeComplement(SubtypeData t) returns SubtypeData {
     // `(map<any|error>)[]` is the top subtype of the table type.
     // bddComplement() would give complement w.r.t `(any|error)[]`.
     // Therefore, intersecting bddComplement() result with `(map<any|error>)[]` here.
-    return bddIntersect(bddComplement(<Bdd>t), MAPPING_ARRAY_TOP_BDD);
+    return bddIntersect(bddComplement(<Bdd>t), MAPPING_SUBTYPE_ARRAY_TOP);
 }
 
 function tableSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -18,7 +18,7 @@ function tableSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     // The goal of this is to ensure that listSubtypeIsEmpty call beneath does
     // not get an empty posList, because it will interpret that
     // as `(any|error)[]` rather than `(map<any|error>)[]`.
-    b = bddPosMaybeEmpty(b) ? bddIntersect(b, MAPPING_ARRAY_TOP_BDD) : b;
+    b = bddPosMaybeEmpty(b) ? bddIntersect(b, MAPPING_SUBTYPE_ARRAY_TOP) : b;
     return listSubtypeIsEmpty(cx, b);
 }
 

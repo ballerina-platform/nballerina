@@ -31,8 +31,8 @@ const int XML_PRIMITIVE_RW_MASK = XML_PRIMITIVE_ELEMENT_RW | XML_PRIMITIVE_PI_RW
 const int XML_PRIMITIVE_SINGLETON = XML_PRIMITIVE_RO_SINGLETON | XML_PRIMITIVE_RW_MASK;
 const int XML_PRIMITIVE_ALL_MASK = XML_PRIMITIVE_RO_MASK | XML_PRIMITIVE_RW_MASK;
 
-final XmlSubtype xmlRoSubtype = { primitives: XML_PRIMITIVE_RO_MASK, sequence: bddAtom(XML_PRIMITIVE_RO_SINGLETON) };
-final XmlSubtype xmlTopSubtype = { primitives: XML_PRIMITIVE_ALL_MASK, sequence: true };
+final XmlSubtype XML_SUBTYPE_RO = { primitives: XML_PRIMITIVE_RO_MASK, sequence: bddAtom(XML_PRIMITIVE_RO_SINGLETON) };
+final XmlSubtype XML_SUBTYPE_TOP = { primitives: XML_PRIMITIVE_ALL_MASK, sequence: true };
 
 function xmlSingleton(int primitives) returns SemType {
     return createXmlSemType(createXmlSubtype(primitives, false));
@@ -105,7 +105,7 @@ function xmlSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
 }
 
 function xmlSubtypeComplement(SubtypeData d) returns SubtypeData {
-    XmlSubtype top = xmlTopSubtype;
+    XmlSubtype top = XML_SUBTYPE_TOP;
     return xmlSubtypeDiff(top, d);
 }
 
