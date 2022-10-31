@@ -35,9 +35,12 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     if mm != () {
         MemoEmpty res = mm.empty;
         if res == "cyclic" {
+            // Type definition repeats infinitely. (i.e type only has one or more recursive shapes and zero or more empty shapes.)
+            // Since we define types inductively we consider these to be empty
             return true;
         }
         if res is boolean {
+            // We know whether b is empty or not for certain
             return res;
         }
         else if res != () {
@@ -74,7 +77,7 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
 }
 
 function memoSubtypeIsCyclic(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns boolean {
-    // This assume we have already checked (and confirmed) type to be empty
+    // This assume that we have tested (and so memoized) whether the type is empty. 
     BddMemo mm = memoTable.get(b);
     return mm.empty == "cyclic";
 }
