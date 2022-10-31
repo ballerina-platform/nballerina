@@ -35,7 +35,7 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     if mm != () {
         MemoEmpty res = mm.empty;
         if res == "cyclic" {
-            // Type definition repeats infinitely. (i.e type only has one or more recursive shapes and zero or more empty shapes.)
+            // These are types with no non-recursive non-empty shapes (ex: A = [A];)
             // Since we define types inductively we consider these to be empty
             return true;
         }

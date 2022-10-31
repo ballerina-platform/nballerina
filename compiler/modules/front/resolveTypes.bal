@@ -59,7 +59,7 @@ function nonEmptyTypeNoDefer(ModuleSymbols mod, t:SemType semType, s:ModuleLevel
         return;
     }
     if t:isCyclic(mod.tc, semType) {
-        return err:semantic("invalid recursive type (contains only cyclic shapes)", loc);
+        return err:semantic("invalid cyclic type", loc);
     }
     mod.emptyNonCyclicTypeLocation = loc;
 }
