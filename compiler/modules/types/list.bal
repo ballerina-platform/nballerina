@@ -132,8 +132,8 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return memoSubtypeIsEmpty(cx, cx.listMemo, listBddIsEmpty, <Bdd>t);
 }
 
-function listSubtypeIsCyclic(Context cx, SubtypeData t) returns boolean {
-    return memoSubtypeIsCyclic(cx, cx.listMemo, listBddIsEmpty, <Bdd>t);
+function listBddIsCyclic(Context cx, Bdd b) returns boolean {
+    return memoSubtypeIsCyclic(cx, cx.listMemo, listBddIsEmpty, b);
 }
 
 function listBddIsEmpty(Context cx, Bdd b) returns boolean {

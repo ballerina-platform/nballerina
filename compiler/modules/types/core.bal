@@ -1,5 +1,4 @@
 import wso2/nballerina.comm.lib;
-import wso2/nballerina.comm.err;
 
 // There is an integer for each basic type.
 
@@ -761,13 +760,10 @@ public function isCyclic(Context cx, SemType t) returns boolean {
     if !isEmpty(cx, t) {
         return false;
     }
+    BddNode[] subtypes = toBddSubtypes(cx, t);
     boolean listSubtype = isSubtypeSimple(t, LIST);
-    boolean mappingSubtype = isSubtypeSimple(t, MAPPING);
-    if t !is ComplexSemType || !(listSubtype||mappingSubtype) {
-        return false;
-    }
-    foreach var subtype in t.subtypeDataList {
-        boolean cyclic = listSubtype ? listSubtypeIsCyclic(cx, subtype) : mappingSubtypeIsCyclic(cx, subtype);
+    foreach var subtype in subtypes {
+        boolean cyclic = listSubtype ? listBddIsCyclic(cx, subtype) : mappingBddIsCyclic(cx, subtype);
         if cyclic {
             return true;
         }
@@ -1649,29 +1645,37 @@ function init() {
 }
 
 public function isMemberNever(Context cx, SemType ty) returns boolean {
-    boolean listSubtype = isSubtypeSimple(ty, LIST);
-    boolean mappingSubtype = isSubtypeSimple(ty, MAPPING);
-    if ty !is ComplexSemType || !(listSubtype || mappingSubtype) {
-        return false;
-    }
-    foreach var subtype in ty.subtypeDataList {
-        if subtype !is BddNode {
-            panic err:impossible("expect subtype to be BddNode");
-        }
-        SemType[] members;
-        if listSubtype {
-            ListAtomicType atomicTy = cx.listAtomType(subtype.atom);
-            members = from int i in 0 ..< atomicTy.members.fixedLength select listAtomicTypeMemberAt(atomicTy, i);
-        }
-        else {
-            MappingAtomicType atomicTy = cx.mappingAtomType(subtype.atom);
-            members = from string name in atomicTy.names select mappingAtomicTypeMemberAt(atomicTy, name);
-        }
-        foreach SemType member in members {
-            if isNever(member) {
-                return true;
-            }
+    SemType[] members = toMemberSemtypes(cx, ty);
+    foreach SemType member in members {
+        if isNever(member) {
+            return true;
         }
     }
     return false;
+}
+
+function toMemberSemtypes(Context cx, SemType ty) returns SemType[] {
+    BddNode[] subtypes = toBddSubtypes(cx, ty);
+    SemType[] members = [];
+    boolean listSubtype = isSubtypeSimple(ty, LIST);
+    foreach var subtype in subtypes {
+        if listSubtype {
+            ListAtomicType atomicTy = cx.listAtomType(subtype.atom);
+            members.push(...from int i in 0 ..< atomicTy.members.fixedLength select listAtomicTypeMemberAt(atomicTy, i));
+        }
+        else {
+            MappingAtomicType atomicTy = cx.mappingAtomType(subtype.atom);
+            members.push(...from string name in atomicTy.names select mappingAtomicTypeMemberAt(atomicTy, name));
+        }
+    }
+    return members;
+}
+
+function toBddSubtypes(Context cx, SemType ty) returns BddNode[] {
+    boolean listSubtype = isSubtypeSimple(ty, LIST);
+    boolean mappingSubtype = isSubtypeSimple(ty, MAPPING);
+    if ty !is ComplexSemType || !(listSubtype || mappingSubtype) {
+        return [];
+    }
+    return from var subtype in ty.subtypeDataList select <BddNode>subtype;
 }

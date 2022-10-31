@@ -27,7 +27,5 @@ final BasicTypeOps tableOps = {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: tableSubtypeComplement,
-    isEmpty: tableSubtypeIsEmpty,
-    // TODO: fix this with new table
-    isFinite: mappingSubtypeIsFinite
+    isEmpty: tableSubtypeIsEmpty
 };
