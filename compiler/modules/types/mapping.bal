@@ -1,6 +1,6 @@
 // Implementation specific to basic type list.
 
-public type Field [string, SemType];
+public type Field [string, SemType, boolean];
 
 public type CellField [string, CellSemType];
 
@@ -67,7 +67,7 @@ public class MappingDefinition {
 }
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
-    CellField[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1], mut)];
+    CellField[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1], f[2] ? CELL_MUT_NONE : mut)];
     CellSemType restCell = cellContaining(env, rest, mut);
     return md.define(env, cellFields, restCell);
 }

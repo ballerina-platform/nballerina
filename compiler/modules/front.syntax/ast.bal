@@ -440,6 +440,7 @@ public type FieldDesc record {|
     *PositionFields;
     string name;
     TypeDesc typeDesc;
+    boolean ro = false;
 |};
 
 public const INCLUSIVE_RECORD_TYPE_DESC = true;

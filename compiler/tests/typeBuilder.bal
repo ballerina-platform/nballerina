@@ -39,7 +39,7 @@ type TypeBuilder object {
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
 
-    function mapping([string, int][] fields = [], int rest = -1) returns int;
+    function mapping([string, int, boolean][] fields = [], int rest = -1) returns int;
 
     function union(int i1, int i2) returns int;
 };
@@ -143,8 +143,8 @@ class SemtypeBuilder {
         return self.push(t); 
     }
 
-    function mapping([string, int][] fields = [], int rest = -1) returns int {
-        [string, t:SemType][] fs = from var [name, index] in fields select [name, self.defns[index]];
+    function mapping([string, int, boolean][] fields = [], int rest = -1) returns int {
+        [string, t:SemType, boolean][] fs = from var [name, index, ro] in fields select [name, self.defns[index], ro];
         t:SemType r = t:NEVER;
         if rest != -1 {
             r = self.defns[rest];
@@ -436,8 +436,8 @@ class AstBasedTypeDefBuilder {
         return self.createTypeDef(td);
     }
 
-    function mapping([string, int][] fields = [], int rest = -1) returns int {
-        s:FieldDesc[] fs = from var [name, index] in fields select self.createField(name, index);
+    function mapping([string, int, boolean][] fields = [], int rest = -1) returns int {
+        s:FieldDesc[] fs = from var [name, index, ro] in fields select self.createField(name, index, ro);
         s:TypeDesc? r = ();
         if rest != -1 {
             r = self.createTypeDescRef(rest);
@@ -447,10 +447,10 @@ class AstBasedTypeDefBuilder {
         return self.createTypeDef(td);
     }
 
-    function createField(string name, int index) returns s:FieldDesc {
+    function createField(string name, int index, boolean ro) returns s:FieldDesc {
         var [startPos, endPos] = self.calculatePosition();
         s:TypeDescRef typeDesc = self.createTypeDescRef(index);
-        return { startPos, endPos, name, typeDesc };
+        return { startPos, endPos, name, typeDesc, ro };
     }
 
     function neverType() returns int {
