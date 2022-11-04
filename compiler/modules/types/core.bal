@@ -438,17 +438,18 @@ public final SemType XML_TEXT = xmlSequence(xmlSingleton(XML_PRIMITIVE_TEXT));
 public final SemType XML_PI = xmlSingleton(XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_PI_RW);
 public final SemType XML_RO = createXmlSemType(XML_SUBTYPE_RO);
 
-public final ComplexSemType READONLY = {
-    all: basicTypeUnion(BT_INHERENTLY_IMMUTABLE),
-    some: basicTypeUnion((1 << BT_LIST) | (1 << BT_MAPPING) | (1 << BT_TABLE) | (1 << BT_XML)),
-    subtypeDataList:[bddAtom(0), bddAtom(0), LIST_SUBTYPE_MAPPING_RO, XML_SUBTYPE_RO]
-};
+const BDD_REC_ATOM_READONLY = 0;
 
-final ComplexSemType MAPPING_RO = {
-    all:0,
-    some: MAPPING,
-    subtypeDataList: [bddAtom(0)]
-};
+public final ComplexSemType READONLY = createComplexSemType(
+    basicTypeUnion(BT_INHERENTLY_IMMUTABLE),
+[
+    [BT_LIST, bddAtom(BDD_REC_ATOM_READONLY)],
+    [BT_MAPPING, bddAtom(BDD_REC_ATOM_READONLY)],
+    [BT_TABLE, LIST_SUBTYPE_MAPPING_RO],
+    [BT_XML, XML_SUBTYPE_RO]
+]);
+
+final ComplexSemType MAPPING_RO = createComplexSemType(0, [[BT_MAPPING, bddAtom(BDD_REC_ATOM_READONLY)]]);
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
