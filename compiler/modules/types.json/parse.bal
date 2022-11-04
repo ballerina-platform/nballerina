@@ -52,7 +52,7 @@ function parseType(t:Context tc, Binding? b, json j, Path path) returns t:SemTyp
         Json => { return t:createJson(tc); }
         Any => { return t:ANY; }
         Never => { return t:NEVER; }
-        ReadOnly => { return t:createReadOnly(tc); }
+        ReadOnly => { return t:READONLY; }
         true => { return t:booleanConst(true); }
         false => { return t:booleanConst(false); }
         // Should be able to use match patterns here
@@ -158,7 +158,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
                 return parseError("'error' must be followed by a string", parent, 0);
             }
             t:SemType detail = check parseType(tc, b, jlist[1], pathAppend(parent, 1));
-            return t:errorDetail(detail);
+            return t:errorDetail(tc, detail);
         }
         "string" => {
             if jlist.length() != 2 {

@@ -176,7 +176,7 @@ function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
     if t:mappingAtomicType(tc, targetType) == () && t:listAtomicType(tc, targetType) == () {
         return tagged;
     }
-    return <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, structureExactifyFunction, [tagged, scaffold.getExactify(t:diff(targetType, t:createReadOnly(tc)))]);
+    return <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, structureExactifyFunction, [tagged, scaffold.getExactify(t:diff(targetType, t:READONLY))]);
 }
 
 // If we can perform the type test by testing whether the value belongs to a BasicTypeBitSet, then return that bit set.

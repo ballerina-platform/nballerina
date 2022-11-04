@@ -56,6 +56,9 @@ public function listAtomicTypeAllMemberTypesInner(ListAtomicType atomicType) ret
     return [ranges, types];
 }
 
+final ListAtomicType LIST_ATOMIC_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_RO };
+final ListAtomicType LIST_ATOMIC_MAPPING_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_MAPPING_RO };
+
 public class ListDefinition {
     *Definition;
     private RecAtom? rec = ();

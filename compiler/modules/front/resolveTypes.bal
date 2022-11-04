@@ -158,7 +158,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             "handle" => { return t:HANDLE; }
             "json" => { return t:createJson(mod.tc); }
             "never" => { return t:NEVER; }
-            "readonly" => { return t:createReadOnly(mod.tc); }
+            "readonly" => { return t:READONLY; }
             "typedesc" => { return t:TYPEDESC; }
             "xml" => { return t:XML; }
         }
@@ -334,7 +334,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if td is s:ErrorTypeDesc {
-        return t:errorDetail(check resolveTypeDesc(mod, modDefn, depth, td.detail));
+        return t:errorDetail(mod.tc, check resolveTypeDesc(mod, modDefn, depth, td.detail));
     }
     // JBUG #33722 work around incorrect type narrowing
     s:TypeDesc td2 = td;

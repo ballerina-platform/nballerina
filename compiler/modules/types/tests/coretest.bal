@@ -225,6 +225,18 @@ function listTest() {
 }
 
 @test:Config{}
+function roListTest() {
+    Env env = new;
+    Context cx = typeContext(env);
+    SemType t1 = intersect(basicType(BT_LIST), READONLY);
+    ListDefinition ld = new;
+    SemType t2 = defineListTypeWrapped(ld, env, rest = TOP);
+    SemType t = diff(t1, t2);
+    boolean b = isEmpty(cx, t);
+    test:assertTrue(b);
+}
+
+@test:Config{}
 function testIntSubtypeWidenUnsigned() {
     test:assertTrue(<boolean> intSubtypeWidenUnsigned(true));
     test:assertTrue(<boolean> intSubtypeWidenUnsigned([{ min: -1, max: 10 }]));
