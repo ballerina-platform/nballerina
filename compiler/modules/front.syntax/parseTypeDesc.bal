@@ -328,6 +328,11 @@ function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
             return parseError(tok);
         }
         Position fieldStartPos = tok.currentStartPos();
+        boolean ro = false;
+        if tok.current() == "readonly" {
+            ro = true;
+            check tok.advance();
+        }
         TypeDesc td = check parseTypeDesc(tok);
         if tok.current() == "..." {
             rest = td;
@@ -335,7 +340,7 @@ function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
             check tok.expect(";");
         }
         else {
-            fields.push(check parseFieldDesc(tok, td, fieldStartPos));
+            fields.push(check parseFieldDesc(tok, td, ro, fieldStartPos));
         }
     }
     Position endPos = tok.currentEndPos();
@@ -348,16 +353,21 @@ function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
     FieldDesc[] fields = [];
     while tok.current() != "}" {
         Position fieldStartPos = tok.currentStartPos();
+        boolean ro = false;
+        if tok.current() == "readonly" {
+            ro = true;
+            check tok.advance();
+        }
         TypeDesc td = check parseTypeDesc(tok);
-        fields.push(check parseFieldDesc(tok, td, fieldStartPos));
+        fields.push(check parseFieldDesc(tok, td, ro, fieldStartPos));
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();
     return { startPos, endPos, fields, rest: INCLUSIVE_RECORD_TYPE_DESC };
 }
 
-function parseFieldDesc(Tokenizer tok, TypeDesc typeDesc, Position startPos) returns FieldDesc|err:Syntax {
+function parseFieldDesc(Tokenizer tok, TypeDesc typeDesc, boolean ro, Position startPos) returns FieldDesc|err:Syntax {
     string name = check tok.expectIdentifier();
     Position endPos = check tok.expectEnd(";");
-    return { startPos, endPos, name, typeDesc };
+    return { startPos, endPos, name, typeDesc, ro };
 }
