@@ -39,7 +39,7 @@ result/%.diff: result/%.exe expect/%.txt
 
 result/%.exe:
 	mkdir -p result
-	$(CLANG) -o $@ ./objects/$*.o ./objects/$*._init.o $(RT)
+	$(CLANG) `llvm-config --ldflags --system-libs` -o $@ ./objects/$*.o ./objects/$*._init.o $(RT)
 
 expect/%.txt: ../../../testbuild/testSuite/$(tdir)/%.bal
 	@mkdir -p expect
