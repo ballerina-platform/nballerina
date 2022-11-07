@@ -35,6 +35,9 @@ RT_INLINE=../../../runtime/balrt_inline.bc
 test: all
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) testIntermediate
 
+testNative: allNative
+	$(MAKE) -f ../../native-sub.mk tdir=$(tdir) testNative
+
 all:
 ifeq ($(COMPILER_OUTPUT),ll)
 	if test $(COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
@@ -42,6 +45,10 @@ else
 	if test $(OBJECT_COMPILER) -nt compile.stamp; then rm -f compile.stamp; fi
 endif
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) compile
+
+allNative:
+	if test $(COMPILER_NATIVE) -nt compile.stamp; then rm -f compile.stamp; fi
+	$(MAKE) -f ../../native-sub.mk tdir=$(tdir) compile
 
 compile: compile.stamp
 
