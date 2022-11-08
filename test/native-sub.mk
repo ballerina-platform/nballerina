@@ -8,6 +8,8 @@ test_cases = $(basename $(notdir $(bal_files)))
 expect_files = $(addsuffix .txt, $(addprefix expect/, $(test_cases)))
 diff_files = $(addsuffix .diff, $(addprefix result/, $(test_cases)))
 exe_files = $(addsuffix .exe, $(addprefix result/, $(test_cases)))
+mod_object_files = $(wildcard result/*-[vpo].*.o)
+
 compile: compile.stamp
 
 ifeq ($(bal_files),)
@@ -16,9 +18,13 @@ compile.stamp:
 	@touch $@
 else
 compile.stamp: $(bal_files)
-	mkdir -p objects
-	$(COMPILER_NATIVE) --outDir objects $?
-# FIXME: remove this once native compiler can accept output dir
+	-rm -fr objectsnew
+	mkdir -p objectsnew
+	$(COMPILER_NATIVE) --outDir objectsnew $?
+	mkdir -p result
+	cd objectsnew; for f in *.o; do cmp -s $$f ../result/$$f || mv $$f ../result/; done
+	-rm -fr objectsnew
+	@touch $@
 endif
 
 # This compiles, runs and checks the output of objects/*.o
@@ -37,10 +43,6 @@ fail.txt: $(diff_files)
 result/%.diff: result/%.exe expect/%.txt
 	-../../runcheck.sh $^ >$@
 
-result/%.exe:
-	mkdir -p result
-	$(CLANG) `llvm-config --ldflags --system-libs` -o $@ ./objects/$*.o ./objects/$*._init.o $(RT)
-
 expect/%.txt: ../../../testbuild/testSuite/$(tdir)/%.bal
 	@mkdir -p expect
 	../../expect.sh $< >$@
@@ -49,3 +51,7 @@ clean:
 	-rm -rf actual compile.stamp expect fail.txt objects result
 
 .PHONY: clean compileNative testNative
+
+.SECONDEXPANSION:
+$(exe_files): $$(patsubst %.exe,%.o,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.o, $(mod_object_files)) $(RT)
+	$(CLANG) `llvm-config --ldflags --system-libs` $(CFLAGS) -g -o $@ $^
