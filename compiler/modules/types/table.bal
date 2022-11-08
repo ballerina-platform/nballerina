@@ -7,10 +7,7 @@ public function tableContaining(Env env, SemType mappingType, CellMutability mut
 }
 
 function tableSubtypeComplement(SubtypeData t) returns SubtypeData {
-    // `(map<any|error>)[]` is the top subtype of the table type.
-    // bddComplement() would give complement w.r.t `(any|error)[]`.
-    // Therefore, intersecting bddComplement() result with `(map<any|error>)[]` here.
-    return bddIntersect(bddComplement(<Bdd>t), MAPPING_SUBTYPE_ARRAY_TOP);
+    return bddSubtypeDiff(MAPPING_SUBTYPE_ARRAY_TOP, t);
 }
 
 function tableSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {

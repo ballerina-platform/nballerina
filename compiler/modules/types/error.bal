@@ -23,10 +23,7 @@ public function errorDistinct(int distinctId) returns SemType {
 }
 
 function errorSubtypeComplement(SubtypeData t) returns SubtypeData {
-    // `readonly & map<readonly>` is the top subtype of the error type.
-    // bddComplement() would give complement w.r.t `map<any|error>``.
-    // Therefore, intersecting bddComplement() result with `readonly & map<readonly>` here.
-    return bddIntersect(bddComplement(<Bdd>t), MAPPING_SUBTYPE_RO);
+    return bddSubtypeDiff(MAPPING_SUBTYPE_RO, t);
 }
 
 function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
