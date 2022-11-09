@@ -46,10 +46,6 @@ else
 endif
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) compile
 
-allNative:
-	if test $(COMPILER_NATIVE) -nt compile.stamp; then rm -f compile.stamp; fi
-	$(MAKE) -f ../../native-sub.mk tdir=$(tdir) compile
-
 compile: compile.stamp
 
 ifeq ($(bal_files),)

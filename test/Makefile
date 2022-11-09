@@ -1,4 +1,4 @@
-TARGETS=test all compile testll testNative
+TARGETS=test all compile testll
 
 TDIRS= $(sort $(basename $(notdir $(wildcard ../compiler/testSuite/*))))
 

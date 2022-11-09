@@ -134,14 +134,13 @@ task createJniCofig(type: Exec) {
         commandLine "bash", "-c", 'find ./modules/jni.llvm -maxdepth 1 -name "*.bal"| xargs python3 jniConfigGen.py'
 }
 
-
 task buildNativeImage(type: Exec) {
         workingDir "${tmpBuildDir}/target/bin"
         commandLine 'native-image',
                     '--no-fallback',
                     '-H:MaxDuplicationFactor=100',
                     '-H:ResourceConfigurationFiles=../../../llvm_jni/resource_config.json',
-                    '-H:ReflectionConfigurationFiles=../../../llvm_jni/reflection_config.json,../../../llvm_jni/reflection_workaround.json',
+                    '-H:ReflectionConfigurationFiles=../../../llvm_jni/reflection_config.json',
                     '-H:JNIConfigurationFiles=../../../llvm_jni/jni_config.json,../../../llvm_jni/jni_workaround.json',
                     '-jar',
                     'nballerina.jar'
