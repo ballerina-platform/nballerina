@@ -16,15 +16,15 @@ IMMEDIATE_FLAG = (0x20) << TAG_SHIFT
 TAG_MASK = 0xFF
 UT_MASK = 0x1F
 
-TAG_NIL = 0x00
+TAG_NIL     = 0x00
 TAG_BOOLEAN = 0x01
-TAG_INT = 0x07
-TAG_FLOAT = 0x08
-TAG_DECIMAL = 0x09
-TAG_STRING = 0x0A
-TAG_ERROR = 0x0B
-TAG_LIST_RW = 0x12
-TAG_MAPPING_RW = 0x13
+TAG_INT     = 0x02
+TAG_FLOAT   = 0x03
+TAG_DECIMAL = 0x04
+TAG_STRING  = 0x05
+TAG_ERROR   = 0x06
+TAG_LIST    = 0xC
+TAG_MAPPING = 0xD
 
 INT_MAX = (2**64) -1
 
@@ -67,13 +67,13 @@ class TaggedPrinter:
             return self.tagged_str_to_string(tagged_ptr)
         if tag == TAG_ERROR:
             return self.error_to_string(tagged_ptr)
-        if tag == TAG_LIST_RW:
+        if tag == TAG_LIST:
             return self.list_to_string(tagged_ptr, printer_stack)
-        if tag == TAG_MAPPING_RW:
+        if tag == TAG_MAPPING:
             return self.map_to_string(tagged_ptr, printer_stack)
         if tag == TAG_DECIMAL:
             return self.decimal_to_string(tagged_ptr)
-        raise Exception("Unimplemented tag")
+        return f"Unimplemented tag: {tag} ptr value: {ptr_val}"
 
     def decimal_to_string(self, tagged_ptr):
         ptr = extract_ptr(int(tagged_ptr))
