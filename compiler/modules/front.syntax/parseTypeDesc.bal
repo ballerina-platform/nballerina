@@ -368,6 +368,11 @@ function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
 
 function parseFieldDesc(Tokenizer tok, TypeDesc typeDesc, boolean ro, Position startPos) returns FieldDesc|err:Syntax {
     string name = check tok.expectIdentifier();
+    boolean opt = false;
+    if tok.current() == "?" {
+        opt = true;
+        check tok.advance();
+    }
     Position endPos = check tok.expectEnd(";");
-    return { startPos, endPos, name, typeDesc, ro };
+    return { startPos, endPos, name, typeDesc, ro, opt };
 }

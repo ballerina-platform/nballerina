@@ -485,7 +485,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? 
     }
     t:SemType memberType = t:mappingMemberTypeInner(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
     if insn.name == INSN_MAPPING_GET && !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, keyOperand.semType) {
-        memberType = t:union(memberType, t:NIL);
+        memberType = t:suppressUndefAndAddNil(memberType);
     }
     if !vc.isSameType(memberType, insn.result.semType) {
         return vc.invalidErr("instruction result type is not same as member type", insn.pos);

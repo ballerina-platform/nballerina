@@ -21,3 +21,5 @@ public const BT_TABLE   = 0xE;
 public const BT_XML     = 0xF;
 public const BT_OBJECT  = 0x10;
 public const BT_CELL    = 0x11;
+
+public const BT_UNDEF   = 0x12;

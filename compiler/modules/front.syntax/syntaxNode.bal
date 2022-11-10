@@ -601,7 +601,7 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SubSyntaxNo
 }
 
 function syntaxNodeFromFieldDesc(FieldDesc fd) returns SubSyntaxNode {
-    return finishWithSemiColon(fd, fd.ro ? { token: "readonly" } : (), syntaxNodeFromTypeDesc(fd.typeDesc), { name: fd.name, pos: () });
+    return finishWithSemiColon(fd, fd.ro ? { token: "readonly" } : (), syntaxNodeFromTypeDesc(fd.typeDesc), { name: fd.name, pos: () }, fd.opt ? { token: "?" } : ());
 }
 
 function finishWithSemiColon(AstNode astNode, SubSyntaxNode[]|SubSyntaxNode?... nodes) returns NonTerminalSyntaxNode {

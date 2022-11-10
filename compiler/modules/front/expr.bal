@@ -559,7 +559,7 @@ function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register ma
             name = bir:INSN_MAPPING_FILLING_GET;
         }
         else {
-            memberType = t:union(memberType, t:NIL);
+            memberType = t:suppressUndefAndAddNil(memberType);
         }
     }
     bir:TmpRegister result = cx.createTmpRegister(memberType, pos);

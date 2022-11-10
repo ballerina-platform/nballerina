@@ -232,10 +232,13 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             td.defn = d;
             // JBUG this panics if done with `from` and there's an error is resolveTypeDesc
             t:Field[] fields = [];
-            foreach var { name, typeDesc, ro } in td.fields {
+            foreach var { name, typeDesc, ro, opt } in td.fields {
                 t:SemType fieldTy = check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc);
                 if t:isNever(fieldTy) {
                     return err:semantic("record field can't be never", s:locationInDefn(modDefn, { startPos: typeDesc.startPos, endPos: typeDesc.endPos }));
+                }
+                if opt {
+                    fieldTy = t:union(fieldTy, t:UNDEF);
                 }
                 fields.push([name, fieldTy, ro]);
             }
@@ -250,9 +253,11 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             t:SemType rest;
             if restTd is s:TypeDesc {
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+                rest = t:union(rest, t:UNDEF);
             }
             else if restTd == s:INCLUSIVE_RECORD_TYPE_DESC {
                 rest = t:createAnydata(mod.tc);
+                rest = t:union(rest, t:UNDEF);
             }
             else {
                 rest = t:NEVER;

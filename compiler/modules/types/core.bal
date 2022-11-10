@@ -14,7 +14,7 @@ public type BasicTypeCode
     BT_NIL|BT_BOOLEAN|BT_INT|BT_FLOAT|BT_DECIMAL
     |BT_STRING|BT_ERROR|BT_TYPEDESC|BT_HANDLE|BT_FUNCTION
     |BT_FUTURE|BT_STREAM
-    |BT_LIST|BT_MAPPING|BT_TABLE|BT_XML|BT_OBJECT|BT_CELL;
+    |BT_LIST|BT_MAPPING|BT_TABLE|BT_XML|BT_OBJECT|BT_CELL|BT_UNDEF;
 
 type Atom RecAtom|TypeAtom;
 
@@ -413,6 +413,7 @@ public final BasicTypeBitSet LIST = basicType(BT_LIST);
 public final BasicTypeBitSet MAPPING = basicType(BT_MAPPING);
 public final BasicTypeBitSet TABLE = basicType(BT_TABLE);
 public final BasicTypeBitSet CELL = basicType(BT_CELL);
+public final BasicTypeBitSet UNDEF = basicType(BT_UNDEF);
 
 // matches all functions
 public final BasicTypeBitSet FUNCTION = basicType(BT_FUNCTION);
@@ -1246,6 +1247,17 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
     }
 }
 
+public function suppressUndef(SemType t) returns SemType {
+    if !containsUndef(t) {
+        return t;
+    }
+    return intersect(t, basicTypeUnion((1 << (BT_UNDEF)) - 1));
+}
+
+public function suppressUndefAndAddNil(SemType t) returns SemType {
+    return union(suppressUndef(t), NIL);
+}
+
 public function isCell(SemType t) returns boolean {
     if t is BasicTypeBitSet {
         return false;
@@ -1502,6 +1514,15 @@ public function containsConst(SemType t, SingleValue v) returns boolean {
     }
 }
 
+public function containsUndef(SemType t) returns boolean {
+    if t is BasicTypeBitSet {
+        return (t & (1 << BT_UNDEF)) != 0;
+    }
+    else {
+        return <boolean>getComplexSubtypeData(t, BT_UNDEF);
+    }
+}
+
 public function containsNil(SemType t) returns boolean {
     if t is BasicTypeBitSet {
         return (t & (1 << BT_NIL)) != 0;
@@ -1643,7 +1664,8 @@ function init() {
         tableOps, // table
         xmlOps, // xml
         {}, // object
-        cellOps // cell
+        cellOps, // cell
+        {} // undef
     ];
 }
 

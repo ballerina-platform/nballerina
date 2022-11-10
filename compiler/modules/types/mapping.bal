@@ -400,10 +400,21 @@ function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean re
     }
     else {
         return bddMappingMemberRequired(cx, b.left, k,
-                                        requiredOnPath || stringSubtypeContainedIn(k, cx.mappingAtomType(b.atom).names))
+                                        requiredOnPath || stringSubtypeContainedIn(k, requiredMappingMembers(cx.mappingAtomType(b.atom))))
                && bddMappingMemberRequired(cx, b.middle, k, requiredOnPath)
                && bddMappingMemberRequired(cx, b.right, k, requiredOnPath);
     }
+}
+
+function requiredMappingMembers(MappingAtomicType mat) returns string[] {
+    string[] requiredMembers = [];
+    foreach int i in 0 ..< mat.types.length() {
+        SemType t = cellInner(mat.types[i]);
+        if !containsUndef(t) {
+            requiredMembers.push(mat.names[i]);
+        }
+    }
+    return requiredMembers;
 }
 
 final BasicTypeOps mappingOps = {
