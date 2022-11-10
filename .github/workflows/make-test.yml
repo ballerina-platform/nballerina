@@ -28,8 +28,8 @@ jobs:
       - name: Install LLVM (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install llvm@12
-          echo "/usr/local/opt/llvm@12/bin" >> $GITHUB_PATH
+          brew install llvm@13
+          echo "/usr/local/opt/llvm@13/bin" >> $GITHUB_PATH
           echo "LLVM_SUFFIX=" >> $GITHUB_ENV
       - name: Cache jBallerina
         id: cache-jbal
