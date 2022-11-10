@@ -14,7 +14,7 @@ COMPILER_JAR=../../../build/compiler/bin/nballerina.jar
 JAVA ?= $(shell ../../findJava.sh)
 bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[vpo].bal)
 # These are usd in phase 3
-LLVM_SUFFIX ?=-12
+LLVM_SUFFIX ?=-13
 CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 CFLAGS ?= -O2
