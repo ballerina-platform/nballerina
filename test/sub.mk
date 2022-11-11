@@ -1,3 +1,4 @@
+# TODO: update comment
 # The default target is `test`, which runs in 3 phases
 # 1. Remove the compile.stamp file if the compiler jar has changes
 # 2. Compile the .bal test cases into .ll files
@@ -10,6 +11,8 @@
 # You can do `make -f ../../sub.mk tdir=$(basename "$PWD") testll` to test the ll files.
 # Failing tests are listed in fail.txt
 COMPILER_JAR=../../../build/compiler/bin/nballerina.jar
+JNI_COMPILER_JAR=../../../testbuild/target/bin/nballerina.jar
+COMPILE_MODE ?= default
 # This is used in phase 2
 JAVA ?= $(shell ../../findJava.sh)
 bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[vpo].bal)
@@ -21,6 +24,7 @@ CFLAGS ?= -O2
 ll_files = $(wildcard ll/*.ll)
 mod_ll_files = $(wildcard ll/*-[vpo].*.ll)
 mod_bc_files = $(addsuffix .bc, $(addprefix result/, $(basename $(notdir $(mod_ll_files)))))
+mod_object_files = $(wildcard result/*-[vpo].*.o)
 test_cases = $(basename $(notdir $(bal_files)))
 expect_files = $(addsuffix .txt, $(addprefix expect/, $(test_cases)))
 diff_files = $(addsuffix .diff, $(addprefix result/, $(test_cases)))
@@ -32,7 +36,11 @@ test: all
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) testll
 
 all:
+ifeq ($(COMPILE_MODE),default)
 	if test $(COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
+else
+	if test $(JNI_COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
+endif
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) compile
 
 compile: compile.stamp
@@ -41,7 +49,7 @@ ifeq ($(bal_files),)
 # sub dir only contains e cases
 compile.stamp:
 	@touch $@
-else
+else ifeq ($(COMPILE_MODE),default)
 compile.stamp: $(bal_files)
 	-rm -fr llnew
 	mkdir -p llnew
@@ -50,9 +58,15 @@ compile.stamp: $(bal_files)
 	cd llnew; for f in *.ll; do cmp -s $$f ../ll/$$f || mv $$f ../ll/; done
 	-rm -fr llnew
 	@touch $@
+else
+compile.stamp: $(bal_files)
+	mkdir -p result
+	$(JAVA) -jar $(JNI_COMPILER_JAR) --outDir result $?
+	@touch $@
 endif
 
 # This compiles, runs and checks the output of ll/*.ll
+# TODO: different name (ie. without ll but we can't use test)
 testll: fail.txt $(expect_files) $(exe_files)
 
 fail.txt: $(diff_files)
@@ -82,6 +96,12 @@ clean:
 
 .PHONY: all test clean compile testll
 
+ifeq ($(COMPILE_MODE),default)
 .SECONDEXPANSION:
 $(exe_files): $$(patsubst %.exe,%.bc,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.bc, $(mod_bc_files)) $(RT)
 	$(CLANG) $(CFLAGS) -g -o $@ $^ 
+else
+.SECONDEXPANSION:
+$(exe_files): $$(patsubst %.exe,%.o,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.o, $(mod_object_files)) $(RT)
+	$(CLANG) $(CFLAGS) -lm -o $@ $^
+endif
