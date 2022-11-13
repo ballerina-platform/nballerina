@@ -196,9 +196,6 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
-        if test.left == "CYCLE" || test.right == "CYCLE" {
-            return testCyclicType(tc, m, test);
-        }
         t:SemType left = resolveTestSemtype(tc, m, test.left);
         t:SemType right = resolveTestSemtype(tc, m, test.right);
 
@@ -220,26 +217,6 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             }
         }
     }
-}
-
-function testCyclicType(t:Context tc, map<t:SemType> m, s:TypeTest test) returns error? {
-    t:SemType ty;
-    string tyName;
-    if test.left == "CYCLE" {
-        ty = resolveTestSemtype(tc, m, test.right);
-        tyName = test.right.toString();
-    }
-    else {
-        ty = resolveTestSemtype(tc, m, test.left);
-        tyName = test.left.toString();
-    }
-    if test.op == "=" {
-        return test:assertTrue(t:isCyclic(tc, ty), string `expect ${tyName} to be cyclic`);
-    }
-    else if test.op == "<>" {
-        return test:assertFalse(t:isCyclic(tc, ty), string `expect ${tyName} not to be cyclic`);
-    }
-    return error("unsupported operation with CYCLE");
 }
 
 function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeProjection tn) returns t:SemType {

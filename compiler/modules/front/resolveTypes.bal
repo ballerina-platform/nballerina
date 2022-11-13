@@ -55,9 +55,6 @@ function nonEmptyTypeNoDefer(ModuleSymbols mod, t:SemType semType, s:ModuleLevel
     if (td is s:BinaryTypeDesc && td.op is "&") || t:isMemberNever(mod.tc, semType) {
         return err:semantic("intersection must not be empty", loc);
     }
-    if mod.allowAllTypes {
-        return;
-    }
     if t:isCyclic(mod.tc, semType) {
         return err:semantic("invalid cyclic type", loc);
     }
