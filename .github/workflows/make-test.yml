@@ -34,9 +34,8 @@ jobs:
       - name: Install LLVM (ubuntu)
         if: runner.os == 'Linux'
         run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 13
+          sudo apt-get update
+          sudo apt-get install -y llvm-13 clang-13
       - name: Cache jBallerina
         id: cache-jbal
         uses: actions/cache@v2
