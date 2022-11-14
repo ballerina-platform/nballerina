@@ -105,8 +105,7 @@ function xmlSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
 }
 
 function xmlSubtypeComplement(SubtypeData d) returns SubtypeData {
-    XmlSubtype top = XML_SUBTYPE_TOP;
-    return xmlSubtypeDiff(top, d);
+    return xmlSubtypeDiff(XML_SUBTYPE_TOP, d);
 }
 
 function xmlSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {

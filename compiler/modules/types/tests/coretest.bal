@@ -213,15 +213,33 @@ function stringTest() {
 }
 
 @test:Config{}
-function listTest() {
+function listTopTest() {
     SemType t1 = basicType(BT_LIST);
     Env env = new;
     ListDefinition ld = new;
     SemType t2 = defineListTypeWrapped(ld, env, rest = TOP);
-    SemType t = diff(t1, t2);
+    SemType d1 = diff(t1, t2);
+    SemType d2 = diff(t2, t1);
     Context cx = typeContext(env);
-    boolean b = isEmpty(cx, t);
-    test:assertTrue(b);
+    boolean b1 = isEmpty(cx, d1);
+    boolean b2 = isEmpty(cx, d2);
+    test:assertTrue(b1);
+    test:assertTrue(b2);
+}
+
+@test:Config{}
+function mappingTopTest() {
+    SemType t1 = basicType(BT_MAPPING);
+    Env env = new;
+    MappingDefinition md = new;
+    SemType t2 = defineMappingTypeWrapped(md, env, [], rest = TOP);
+    SemType d1 = diff(t1, t2);
+    SemType d2 = diff(t2, t1);
+    Context cx = typeContext(env);
+    boolean b1 = isEmpty(cx, d1);
+    boolean b2 = isEmpty(cx, d2);
+    test:assertTrue(b1);
+    test:assertTrue(b2);
 }
 
 @test:Config{}
