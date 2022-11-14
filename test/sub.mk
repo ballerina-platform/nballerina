@@ -1,6 +1,6 @@
 # The default target is `test`, which runs in 3 phases
 # 1. Remove the compile.stamp file if the compiler jar has changes
-# 2. If COMPILE_MODE is default: compile the .bal test cases into .ll files 
+# 2. If COMPILER_OUTPUT is ll: compile the .bal test cases into .ll files 
 # 	 Else: compile the .bal test cases into .o files (using the jni version of the compiler)
 # 3. Compile, execute and check the output of .ll/.o files
 # Phase 2 only updates .ll if they have changed.
@@ -11,8 +11,8 @@
 # You can do `make -f ../../sub.mk tdir=$(basename "$PWD") testIntermediate` to test the ll/o files.
 # Failing tests are listed in fail.txt
 COMPILER_JAR=../../../build/compiler/bin/nballerina.jar
-JNI_COMPILER_JAR=../../../testbuild/target/bin/nballerina.jar
-COMPILE_MODE ?= default
+OBJECT_COMPILER=../../../testbuild/target/bin/nballerina.jar
+COMPILER_OUTPUT ?= ll
 # This is used in phase 2
 JAVA ?= $(shell ../../findJava.sh)
 bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[vpo].bal)
@@ -36,10 +36,10 @@ test: all
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) testIntermediate
 
 all:
-ifeq ($(COMPILE_MODE),default)
+ifeq ($(COMPILER_OUTPUT),ll)
 	if test $(COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
 else
-	if test $(JNI_COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
+	if test $(OBJECT_COMPILER) -nt compile.stamp; then rm -f compile.stamp; fi
 endif
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) compile
 
@@ -49,7 +49,7 @@ ifeq ($(bal_files),)
 # sub dir only contains e cases
 compile.stamp:
 	@touch $@
-else ifeq ($(COMPILE_MODE),default)
+else ifeq ($(COMPILER_OUTPUT),ll)
 compile.stamp: $(bal_files)
 	-rm -fr llnew
 	mkdir -p llnew
@@ -61,7 +61,7 @@ compile.stamp: $(bal_files)
 else
 compile.stamp: $(bal_files)
 	mkdir -p result
-	$(JAVA) -jar $(JNI_COMPILER_JAR) --outDir result $?
+	$(JAVA) -jar $(OBJECT_COMPILER) --outDir result $?
 	@touch $@
 endif
 
@@ -95,7 +95,7 @@ clean:
 
 .PHONY: all test clean compile testIntermediate
 
-ifeq ($(COMPILE_MODE),default)
+ifeq ($(COMPILER_OUTPUT),ll)
 .SECONDEXPANSION:
 $(exe_files): $$(patsubst %.exe,%.bc,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.bc, $(mod_bc_files)) $(RT)
 	$(CLANG) $(CFLAGS) -g -o $@ $^ 
