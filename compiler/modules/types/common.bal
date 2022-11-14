@@ -35,7 +35,6 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     if mm != () {
         MemoEmpty res = mm.empty;
         if res == "cyclic" {
-            // These are types with no non-recursive non-empty shapes (ex: A = [A];)
             // Since we define types inductively we consider these to be empty
             return true;
         }
@@ -59,7 +58,7 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     int initStackDepth = cx.memoStack.length();
     cx.memoStack.push(m);
     boolean isEmpty = isEmptyPredicate(cx, b);
-    boolean cyclic = isEmpty && (m.empty == "loop");
+    boolean isLoop = m.empty == "loop";
     if !isEmpty || initStackDepth == 0 {
         foreach int i in initStackDepth + 1 ..< cx.memoStack.length() {
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
@@ -68,10 +67,10 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
             }
         }
         cx.memoStack.setLength(initStackDepth);
-        m.empty = isEmpty;
-    }
-    if cyclic {
-        m.empty = "cyclic";    
+        // The only way that we have found that this can be empty is by going through a loop.
+        // This means that the shapes in the type would all be infinite.
+        // But we define types inductively, which means we only consider finite shapes.
+        m.empty = isLoop && isEmpty ? "cyclic" : isEmpty;
     }
     return isEmpty;
 }
