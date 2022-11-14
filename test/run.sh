@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
-LLVM_LINK="llvm-link${LLVM_SUFFIX--12}"
-CLANG="clang${LLVM_SUFFIX--12}"
+LLVM_LINK="llvm-link${LLVM_SUFFIX--13}"
+CLANG="clang${LLVM_SUFFIX--13}"
 b=`basename $1 .ll`
 $LLVM_LINK $1 ../runtime/balrt_inline.bc -o $b.bc
 $LLVM_LINK $b._init.ll ../runtime/balrt_inline.bc -o $b._init.bc

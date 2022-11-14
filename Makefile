@@ -1,5 +1,5 @@
 BAL?=bal
-LLVM_SUFFIX?=-12
+LLVM_SUFFIX?=-13
 CLANG?=clang$(LLVM_SUFFIX)
 CFLAGS=-O2
 JAVA?=$(shell test/findJava.sh)
