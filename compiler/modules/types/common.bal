@@ -34,11 +34,17 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     BddMemo m;
     if mm != () {
         MemoEmpty res = mm.empty;
+        if res == "cyclic" {
+            // Since we define types inductively we consider these to be empty
+            return true;
+        }
         if res is boolean {
+            // We know whether b is empty or not for certain
             return res;
         }
         else if res != () {
             // We've got a loop.
+            mm.empty = "loop";
             return true;
         }
         // nil case is same as not having a memo, so fall through
@@ -52,17 +58,27 @@ function memoSubtypeIsEmpty(Context cx, BddMemoTable memoTable, BddIsEmptyPredic
     int initStackDepth = cx.memoStack.length();
     cx.memoStack.push(m);
     boolean isEmpty = isEmptyPredicate(cx, b);
+    boolean isLoop = m.empty == "loop";
     if !isEmpty || initStackDepth == 0 {
         foreach int i in initStackDepth + 1 ..< cx.memoStack.length() {
             MemoEmpty memoEmpty = cx.memoStack[i].empty;
-            if memoEmpty == "provisional" {
+            if memoEmpty is "provisional"|"loop"|"cyclic" {
                 cx.memoStack[i].empty = isEmpty ? isEmpty : ();
             }
         }
         cx.memoStack.setLength(initStackDepth);
-        m.empty = isEmpty;
+        // The only way that we have found that this can be empty is by going through a loop.
+        // This means that the shapes in the type would all be infinite.
+        // But we define types inductively, which means we only consider finite shapes.
+        m.empty = isLoop && isEmpty ? "cyclic" : isEmpty;
     }
     return isEmpty;
+}
+
+function memoSubtypeIsCyclic(Context cx, BddMemoTable memoTable, BddIsEmptyPredicate isEmptyPredicate, Bdd b) returns boolean {
+    // This assume that we have tested (and so memoized) whether the type is empty. 
+    BddMemo mm = memoTable.get(b);
+    return mm.empty == "cyclic";
 }
 
 type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;

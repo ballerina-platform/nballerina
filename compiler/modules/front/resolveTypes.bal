@@ -39,7 +39,7 @@ function finishDeferredEmptinessChecks(ModuleSymbols mod) returns ResolveTypeErr
         // XXX When we can give multiple errors we should check all the deferred emptiness checks
         check nonEmptyTypeNoDefer(mod, semType, modDefn, td);
     }
-    d:Location? emptyLoc = mod.emptyNonRecursiveTypeLocation;
+    d:Location? emptyLoc = mod.emptyNonCyclicTypeLocation;
     if emptyLoc !is () {
         return err:semantic("intersection must not be empty", emptyLoc);
     }
@@ -52,13 +52,13 @@ function nonEmptyTypeNoDefer(ModuleSymbols mod, t:SemType semType, s:ModuleLevel
     d:Position startPos = td.startPos;
     d:Position endPos = td.endPos;
     d:Location loc = s:locationInDefn(modDefn, { startPos, endPos });
-    if td is s:BinaryTypeDesc && td.op is "&" {
+    if (td is s:BinaryTypeDesc && td.op is "&") || t:isMemberNever(mod.tc, semType) {
         return err:semantic("intersection must not be empty", loc);
     }
-    if t:isSemTypeRecursive(semType) {
-        return err:semantic("invalid recursive type (contains no finite shapes)", loc);
+    if t:isCyclic(mod.tc, semType) {
+        return err:semantic("invalid cyclic type", loc);
     }
-    mod.emptyNonRecursiveTypeLocation = loc;
+    mod.emptyNonCyclicTypeLocation = loc;
 }
 
 function resolveDefn(ModuleSymbols mod, s:ModuleLevelDefn defn) returns ResolveTypeError? {

@@ -183,7 +183,7 @@ function cellAtomType(Atom atom) returns CellAtomicType {
 }
 
 // See memoSubtypeIsEmpty for what these mean.
-type MemoEmpty boolean|"provisional"|();
+type MemoEmpty boolean|"loop"|"cyclic"|"provisional"|();
 
 type BddMemo record {|
     readonly Bdd bdd;
@@ -770,6 +770,21 @@ public function complement(SemType t) returns SemType {
 
 public function isNever(SemType t) returns boolean {
     return t is BasicTypeBitSet && t == 0;
+}
+
+public function isCyclic(Context cx, SemType t) returns boolean {
+    if !isEmpty(cx, t) {
+        return false;
+    }
+    BddNode[] subtypes = toBddSubtypes(cx, t);
+    boolean listSubtype = isSubtypeSimple(t, LIST);
+    foreach var subtype in subtypes {
+        boolean cyclic = listSubtype ? listBddIsCyclic(cx, subtype) : mappingBddIsCyclic(cx, subtype);
+        if cyclic {
+            return true;
+        }
+    }
+    return false;
 }
 
 public function isEmpty(Context cx, SemType t) returns boolean {
@@ -1647,14 +1662,38 @@ function init() {
     ];
 }
 
-public function isSemTypeRecursive(SemType semType) returns boolean {
-    // Only list and mapping can be recursive
-    if semType !is ComplexSemType || semType.subtypeDataList.length() == 0 {
-        return false;
+public function isMemberNever(Context cx, SemType ty) returns boolean {
+    SemType[] members = toMemberSemtypes(cx, ty);
+    foreach SemType member in members {
+        if isNever(member) {
+            return true;
+        }
     }
-    ProperSubtypeData subTypeData = semType.subtypeDataList[0];
-    if subTypeData !is BddNode {
-        return false;
+    return false;
+}
+
+function toMemberSemtypes(Context cx, SemType ty) returns SemType[] {
+    BddNode[] subtypes = toBddSubtypes(cx, ty);
+    SemType[] members = [];
+    boolean listSubtype = isSubtypeSimple(ty, LIST);
+    foreach var subtype in subtypes {
+        if listSubtype {
+            ListAtomicType atomicTy = cx.listAtomType(subtype.atom);
+            members.push(...from int i in 0 ..< atomicTy.members.fixedLength select listAtomicTypeMemberAt(atomicTy, i));
+        }
+        else {
+            MappingAtomicType atomicTy = cx.mappingAtomType(subtype.atom);
+            members.push(...from string name in atomicTy.names select mappingAtomicTypeMemberAt(atomicTy, name));
+        }
     }
-    return subTypeData.atom is RecAtom && subTypeData.left is true && subTypeData.middle is false && subTypeData.right is false;
+    return members;
+}
+
+function toBddSubtypes(Context cx, SemType ty) returns BddNode[] {
+    boolean listSubtype = isSubtypeSimple(ty, LIST);
+    boolean mappingSubtype = isSubtypeSimple(ty, MAPPING);
+    if ty !is ComplexSemType || !(listSubtype || mappingSubtype) {
+        return [];
+    }
+    return from var subtype in ty.subtypeDataList select <BddNode>subtype;
 }
