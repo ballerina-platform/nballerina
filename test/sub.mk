@@ -11,8 +11,9 @@
 # You can do `make -f ../../sub.mk tdir=$(basename "$PWD") testIntermediate` to test the ll/o files.
 # Failing tests are listed in fail.txt
 COMPILER_JAR=../../../build/compiler/bin/nballerina.jar
-OBJECT_COMPILER=../../../testbuild/target/bin/nballerina.jar
+OBJECT_COMPILER ?=../../../testbuild/target/bin/nballerina.jar
 COMPILER_OUTPUT ?= ll
+WHICH_OBJECT_COMPILER = $(suffix $(OBJECT_COMPILER))
 # This is used in phase 2
 JAVA ?= $(shell ../../findJava.sh)
 bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[vpo].bal)
@@ -34,9 +35,6 @@ RT_INLINE=../../../runtime/balrt_inline.bc
 
 test: all
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) testIntermediate
-
-testNative: allNative
-	$(MAKE) -f ../../native-sub.mk tdir=$(tdir) testNative
 
 all:
 ifeq ($(COMPILER_OUTPUT),ll)
@@ -64,7 +62,11 @@ compile.stamp: $(bal_files)
 else
 compile.stamp: $(bal_files)
 	mkdir -p result
-	$(JAVA) -jar $(OBJECT_COMPILER) --outDir result $?
+	if [ "$(WHICH_OBJECT_COMPILER)" = ".jar" ]; then \
+		$(JAVA) -jar $(OBJECT_COMPILER) --outDir result $?; \
+	else \
+		$(OBJECT_COMPILER) --outDir result $?; \
+	fi
 	@touch $@
 endif
 
