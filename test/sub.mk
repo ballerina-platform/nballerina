@@ -61,7 +61,7 @@ compile.stamp: $(bal_files)
 else
 compile.stamp: $(bal_files)
 	mkdir -p result
-	$(JAVA) -jar $(OBJECT_COMPILER) --outDir result $?
+	$(JAVA) -jar $(OBJECT_COMPILER) --target x86_64-pc-linux-gnu --outDir result $?
 	@touch $@
 endif
 
@@ -102,5 +102,5 @@ $(exe_files): $$(patsubst %.exe,%.bc,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.b
 else
 .SECONDEXPANSION:
 $(exe_files): $$(patsubst %.exe,%.o,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.o, $(mod_object_files)) $(RT)
-	$(CLANG) $(CFLAGS) -lm -o $@ $^
+	$(CLANG) $(CFLAGS) -flto -g -o $@ $^
 endif
