@@ -152,15 +152,15 @@ public distinct class Module {
 
     function runOptimizationPasses() {
         self.runFunctionLevelOptimizationPasses();
-        handle passManagerRef = jLLVMCreatePassManager();
-        jLLVMAddFunctionInliningPass(passManagerRef);
-        jLLVMAddAlwaysInlinerPass(passManagerRef);
-        jLLVMAddCFGSimplificationPass(passManagerRef);
-        jLLVMAddAggressiveInstCombinerPass(passManagerRef);
-        jLLVMAddAggressiveDCEPass(passManagerRef);
-        // TODO: ignore result
-        int result = jLLVMRunPassManager(passManagerRef, self.LLVMModule);
-        io:println(result == 1 ? "module optimized" : "module not optimized");
+        // handle passManagerRef = jLLVMCreatePassManager();
+        // jLLVMAddFunctionInliningPass(passManagerRef);
+        // jLLVMAddAlwaysInlinerPass(passManagerRef);
+        // jLLVMAddCFGSimplificationPass(passManagerRef);
+        // jLLVMAddAggressiveInstCombinerPass(passManagerRef);
+        // jLLVMAddAggressiveDCEPass(passManagerRef);
+        // // TODO: ignore result
+        // int result = jLLVMRunPassManager(passManagerRef, self.LLVMModule);
+        // io:println(result == 1 ? "module optimized" : "module not optimized");
     }
 
     function runFunctionLevelOptimizationPasses() {
