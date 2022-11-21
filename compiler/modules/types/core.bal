@@ -1015,6 +1015,10 @@ public function stringSubtype(SemType t) returns StringSubtype|boolean {
     return <boolean|StringSubtype>subtypeData(t, BT_STRING);
 }
 
+public function xmlSubtype(SemType t) returns XmlSubtype|boolean {
+    return <boolean|XmlSubtype>subtypeData(t, BT_XML);
+}
+
 // Constraints on a subtype of `int`.
 public type IntSubtypeConstraints readonly & record {|
     // all values in the subtype are >= min
