@@ -77,7 +77,7 @@ public class ListDefinition {
         }
     }
 
-    public function define(Env env, CellSemType[] initial = [], int fixedLength = initial.length(), CellSemType rest = cellContaining(env, NEVER)) returns ComplexSemType {
+    public function define(Env env, CellSemType[] initial = [], int fixedLength = initial.length(), CellSemType rest = cellContaining(env, NEVER)) returns SemType {
         FixedLengthArray members = fixedLengthNormalize({ initial, fixedLength });
         ListAtomicType atomicType = { members: members.cloneReadOnly(), rest };
         Atom atom;
@@ -85,6 +85,9 @@ public class ListDefinition {
         if rec != () {
             atom = rec;
             env.setRecListAtomType(rec, atomicType);
+        }
+        else if fixedLength == 0 && rest == CELL_SEMTYPE_TOP {
+            return LIST;
         }
         else {
             atom = env.listAtom(atomicType);

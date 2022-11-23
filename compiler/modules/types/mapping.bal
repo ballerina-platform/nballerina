@@ -52,6 +52,9 @@ public class MappingDefinition {
             atom = rec;
             env.setRecMappingAtomType(rec, atomicType);
         }
+        else if fields.length() == 0 && rest == CELL_SEMTYPE_TOP {
+            return MAPPING;
+        }
         else {
             atom = env.mappingAtom(atomicType);
         }

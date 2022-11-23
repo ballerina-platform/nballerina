@@ -2,18 +2,16 @@
 
 public function errorDetail(Context cx, SemType detail) returns SemType {
     SubtypeData sd = bddIntersect(<Bdd>subtypeData(detail, BT_MAPPING), MAPPING_SUBTYPE_RO);
-    if sd is boolean {
-        if sd {
-            return ERROR;
-         }
-        else {
-            // XXX This should be reported as an error
-            return NEVER;
-        }
+    if sd == MAPPING_SUBTYPE_RO || sd == true {
+        return ERROR;
     }
-    else {
-        return basicSubtype(BT_ERROR, sd);
+    if sd == false {
+        // XXX This should be reported as an error
+        return NEVER;
     }
+    // JBUG #30598 Narrowing does not recognize that true|false is the same as boolean
+    return basicSubtype(BT_ERROR, <ProperSubtypeData>sd);
+
 }
 
 // distinctId must be >= 0

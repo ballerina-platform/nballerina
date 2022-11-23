@@ -3,6 +3,9 @@
 public function tableContaining(Env env, SemType mappingType, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
     SemType listType = defineListTypeWrapped(new, env, rest = mappingType, mut = mut);
     Bdd bdd = <Bdd>subtypeData(listType, BT_LIST);
+    if bdd == MAPPING_SUBTYPE_ARRAY_TOP {
+        return TABLE;
+    }
     return createBasicSemType(BT_TABLE, bdd);
 }
 
