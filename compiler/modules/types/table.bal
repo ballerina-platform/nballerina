@@ -6,7 +6,7 @@ public function tableContaining(Env env, SemType mappingType, CellMutability mut
     return createBasicSemType(BT_TABLE, bdd);
 }
 
-function tableSubtypeComplement(SubtypeData t) returns SubtypeData {
+function tableSubtypeComplement(ProperSubtypeData t) returns SubtypeData {
     return bddSubtypeDiff(MAPPING_SUBTYPE_ARRAY_TOP, t);
 }
 

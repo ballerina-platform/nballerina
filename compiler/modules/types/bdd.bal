@@ -134,33 +134,37 @@ isolated function bddComplement(Bdd b) returns Bdd {
         return !b;
     }
     else {
-        if b.right === false {
-            return bddCreate(b.atom,
-                          false,
-                          bddComplement(bddUnion(b.left, b.middle)),
-                          bddComplement(b.middle));
-        }
-        else if b.left === false {
-            return bddCreate(b.atom,
-                          bddComplement(b.middle),
-                          bddComplement(bddUnion(b.right, b.middle)),
-                          false);
-        }
-        else if b.middle === false {
-             return bddCreate(b.atom,
-                           bddComplement(b.left),
-                           bddComplement(bddUnion(b.left, b.right)),
-                           bddComplement(b.right));
-        }
-        else {
-            // There is a typo in the Frisch PhD thesis for this formula.
-            // (It has left and right swapped.)
-            // Castagna (the PhD supervisor) confirms that this is the correct formula.
-            return bddCreate(b.atom,
-                          bddComplement(bddUnion(b.left, b.middle)),
-                          false,
-                          bddComplement(bddUnion(b.right, b.middle)));
-        }
+        return bddNodeComplement(<BddNode>b);
+    }
+}
+
+isolated function bddNodeComplement(BddNode b) returns Bdd {
+    if b.right === false {
+        return bddCreate(b.atom,
+                        false,
+                        bddComplement(bddUnion(b.left, b.middle)),
+                        bddComplement(b.middle));
+    }
+    else if b.left === false {
+        return bddCreate(b.atom,
+                        bddComplement(b.middle),
+                        bddComplement(bddUnion(b.right, b.middle)),
+                        false);
+    }
+    else if b.middle === false {
+        return bddCreate(b.atom,
+                        bddComplement(b.left),
+                        bddComplement(bddUnion(b.left, b.right)),
+                        bddComplement(b.right));
+    }
+    else {
+        // There is a typo in the Frisch PhD thesis for this formula.
+        // (It has left and right swapped.)
+        // Castagna (the PhD supervisor) confirms that this is the correct formula.
+        return bddCreate(b.atom,
+                        bddComplement(bddUnion(b.left, b.middle)),
+                        false,
+                        bddComplement(bddUnion(b.right, b.middle)));
     }
 }
 

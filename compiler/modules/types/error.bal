@@ -22,7 +22,7 @@ public function errorDistinct(int distinctId) returns SemType {
     return basicSubtype(BT_ERROR, bdd);
 }
 
-function errorSubtypeComplement(SubtypeData t) returns SubtypeData {
+function errorSubtypeComplement(ProperSubtypeData t) returns SubtypeData {
     return bddSubtypeDiff(MAPPING_SUBTYPE_RO, t);
 }
 

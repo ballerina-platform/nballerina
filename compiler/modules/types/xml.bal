@@ -83,28 +83,28 @@ function createXmlSemType(XmlSubtype|boolean xmlSubtype) returns SemType {
     }
 }
 
-function xmlSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
+function xmlSubtypeUnion(ProperSubtypeData d1, ProperSubtypeData d2) returns SubtypeData {
     XmlSubtype v1 = <XmlSubtype>d1;
     XmlSubtype v2 = <XmlSubtype>d2;
     int primitives = v1.primitives | v2.primitives;
     return createXmlSubtype(primitives, bddUnion(v1.sequence, v2.sequence));
 }
 
-function xmlSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeData {
+function xmlSubtypeIntersect(ProperSubtypeData d1, ProperSubtypeData d2) returns SubtypeData {
     XmlSubtype v1 = <XmlSubtype>d1;
     XmlSubtype v2 = <XmlSubtype>d2;
     int primitives = v1.primitives & v2.primitives;
     return createXmlSubtypeOrEmpty(primitives, bddIntersect(v1.sequence, v2.sequence));
 }
 
-function xmlSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
+function xmlSubtypeDiff(ProperSubtypeData d1, ProperSubtypeData d2) returns SubtypeData {
     XmlSubtype v1 = <XmlSubtype>d1;
     XmlSubtype v2 = <XmlSubtype>d2;
     int primitives = v1.primitives & ~v2.primitives;
     return createXmlSubtypeOrEmpty(primitives, bddDiff(v1.sequence, v2.sequence));
 }
 
-function xmlSubtypeComplement(SubtypeData d) returns SubtypeData {
+function xmlSubtypeComplement(ProperSubtypeData d) returns SubtypeData {
     return xmlSubtypeDiff(XML_SUBTYPE_TOP, d);
 }
 
