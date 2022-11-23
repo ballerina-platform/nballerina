@@ -757,6 +757,9 @@ public function diff(SemType t1, SemType t2) returns SemType {
             int c = code;
             all |= <BasicTypeBitSet>(1 << c);
         }
+        // The `some` variable above is only used for iterating over the possible basic types which could have been resulted in a some.
+        // The actual `some` is calcuated from `subtypes` array at `createComplexSemType(all, subtypes)`.
+        // Therefore, no need to consider `data == false` case here and remove the basic type bit from `some`.
     }
     if subtypes.length() == 0 {
         return all;
