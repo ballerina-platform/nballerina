@@ -61,7 +61,7 @@ compile.stamp: $(bal_files)
 else
 compile.stamp: $(bal_files)
 	mkdir -p result
-	$(JAVA) -jar $(OBJECT_COMPILER) --target x86_64-pc-linux-gnu --outDir result $?
+	$(JAVA) -jar $(OBJECT_COMPILER) --outDir result $?
 	@touch $@
 endif
 

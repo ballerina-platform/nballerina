@@ -40,7 +40,7 @@ public distinct class Module {
         self.LLVMModule = jLLVMModuleCreateWithNameInContext(java:fromString(moduleName), context.LLVMContext);
     }
 
-    function addFunction(string fnName, FunctionType fnType, boolean isDefn=false) returns Function {
+    function addFunction(string fnName, FunctionType fnType, boolean isDefn) returns Function {
         handle llvmFunction = jLLVMAddFunction(self.LLVMModule, java:fromString(fnName), typeToLLVMType(fnType, self.context));
         Function fn = new (llvmFunction, fnType, self.context);
         if isDefn {
