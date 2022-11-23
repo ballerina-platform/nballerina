@@ -20,7 +20,7 @@ bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[vpo].bal)
 LLVM_SUFFIX ?=-13
 CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
-CFLAGS ?= -O2
+CFLAGS ?= -O2 -lm
 ll_files = $(wildcard ll/*.ll)
 mod_ll_files = $(wildcard ll/*-[vpo].*.ll)
 mod_bc_files = $(addsuffix .bc, $(addprefix result/, $(basename $(notdir $(mod_ll_files)))))
@@ -102,5 +102,5 @@ $(exe_files): $$(patsubst %.exe,%.bc,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.b
 else
 .SECONDEXPANSION:
 $(exe_files): $$(patsubst %.exe,%.o,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.o, $(mod_object_files)) $(RT)
-	$(CLANG) $(CFLAGS) -flto -g -o $@ $^
+	$(CLANG) $(CFLAGS) -g -o $@ $^
 endif
