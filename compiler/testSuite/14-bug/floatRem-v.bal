@@ -1,13 +1,13 @@
 import ballerina/io;
 
 public function main() {
-    float a = getRandomFloat(5, 100000);
-    float b = getRandomFloat(89, 20000);
-    io:println(a % b);
-    io:println(b % a);
+    float a = getFloat(5, 100000);
+    float b = getFloat(89, 20000);
+    io:println(a % b); // @output 124449.35999998456
+    io:println(b % a); // @output 124471.21999999792
 }
 
-function getRandomFloat(int seed, int iterations) returns float {
+function getFloat(int seed, int iterations) returns float {
     float[] buffer = [1.0, 5.5, 3.3, 7.5, 9.5, 10.54];
     float currentVal = 0;
     int bufferSize = buffer.length();
