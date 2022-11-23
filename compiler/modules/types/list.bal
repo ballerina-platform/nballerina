@@ -150,7 +150,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     FixedLengthArray members;
     CellSemType rest;
     if pos == () {
-        ListAtomicType listAtomicTop = createListAtomicTop(cx);
+        ListAtomicType listAtomicTop = LIST_ATOMIC_TOP;
         members = listAtomicTop.members;
         rest = listAtomicTop.rest;
     }

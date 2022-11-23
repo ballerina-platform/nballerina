@@ -242,9 +242,6 @@ public class Context {
     SemType? jsonMemo = ();
     SemType? readOnlyMemo = ();
 
-    MappingAtomicType? mappingAtomicTopMemo = ();
-    ListAtomicType? listAtomicTopMemo = ();
-
     function init(Env env) {
         self.env = env;
     }
@@ -1052,7 +1049,7 @@ public function listAllMemberTypesInner(Context cx, SemType t) returns ListMembe
 }
 
 public function listAtomicType(Context cx, SemType t) returns ListAtomicType? {
-    ListAtomicType listAtomicTop = createListAtomicTop(cx);
+    ListAtomicType listAtomicTop = LIST_ATOMIC_TOP;
     if t is BasicTypeBitSet {
         return t == LIST ? listAtomicTop : ();
     }
@@ -1283,7 +1280,8 @@ final CellAtomicType CELL_ATOMIC_RO = { ty: READONLY, mut: CELL_MUT_NONE };
 final CellAtomicType CELL_ATOMIC_MAPPING_RO = { ty: MAPPING_RO, mut: CELL_MUT_NONE };
 
 final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: CELL_SEMTYPE_TOP };
-final ListAtomicType LIST_ATOMIC_MAPPING_TOP = { members: {initial: [], fixedLength: 0}, rest: CELL_SEMTYPE_MAPPING_TOP };
+final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_TOP };
+final ListAtomicType LIST_ATOMIC_MAPPING_TOP = { members: {initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_MAPPING_TOP };
 
 final Atom CELL_ATOM_TOP = { index: 0, atomicType: CELL_ATOMIC_TOP };
 final Atom CELL_ATOM_BOTTOM = { index: 1, atomicType: CELL_ATOMIC_BOTTOM };
@@ -1618,17 +1616,6 @@ public function createAnydata(Context context) returns SemType {
     _ = defineMappingTypeWrapped(mapDef, env, [], ad);
     context.anydataMemo = ad;
     return ad;
-}
-
-public function createListAtomicTop(Context context) returns ListAtomicType {
-    ListAtomicType? memo = context.listAtomicTopMemo;
-    if memo != () {
-        return memo;
-    }
-    var { ty, mut } = CELL_ATOMIC_TOP;
-    ListAtomicType lat = { members: {initial: [], fixedLength: 0 }, rest: cellContaining(context.env, ty, mut) };
-    context.listAtomicTopMemo = lat;
-    return lat;
 }
 
 final readonly & BasicTypeOps[] ops;
