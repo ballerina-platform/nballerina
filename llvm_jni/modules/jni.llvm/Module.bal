@@ -131,18 +131,16 @@ public distinct class Module {
         }
         BytePointer cpu = new(jBytePointerFromString(java:fromString("generic")));
         BytePointer features = new(jBytePointerFromString(java:fromString("")));
+        int llvmOptLevel = getLLVMCodeGenOptLevel(optLevel);
         handle jTargetMachineRef = jLLVMCreateTargetMachine(jTargetRef,
                                                             targetTriple.jObject,
                                                             cpu.jObject,
                                                             features.jObject,
-                                                            getLLVMCodeGenOptLevel(optLevel),
+                                                            llvmOptLevel,
                                                             getLLVMRelocMode(relocMode),
                                                             getLLVMCodeModel(codeModel));
         self.setModuleInfo(self.LLVMModule, targetTriple, jTargetMachineRef);
-        self.runOptimizationPasses();
-        
-        // TODO: remove this
-        check self.printModuleToFile(fileName+ ".ll");
+        self.runOptimizationPasses(llvmOptLevel);
         BytePointer emitError = new(jBytePointer());
         int isEmitError = jLLVMTargetMachineEmitToFile(jTargetMachineRef, self.LLVMModule, file.jObject, 1, emitError.jObject);
         if isEmitError != 0 {
@@ -150,28 +148,59 @@ public distinct class Module {
         }
     }
 
-    function runOptimizationPasses() {
-        self.runFunctionLevelOptimizationPasses();
-        // handle passManagerRef = jLLVMCreatePassManager();
-        // jLLVMAddFunctionInliningPass(passManagerRef);
-        // jLLVMAddAlwaysInlinerPass(passManagerRef);
-        // jLLVMAddCFGSimplificationPass(passManagerRef);
-        // jLLVMAddAggressiveInstCombinerPass(passManagerRef);
-        // jLLVMAddAggressiveDCEPass(passManagerRef);
-        // // TODO: ignore result
-        // int result = jLLVMRunPassManager(passManagerRef, self.LLVMModule);
-        // io:println(result == 1 ? "module optimized" : "module not optimized");
+    function runOptimizationPasses(int optLevel) {
+        handle functionPasses = jLLVMCreateFunctionPassManager(jLLVMCreateModuleProviderForExistingModule(self.LLVMModule));
+        handle modulePasses = jLLVMCreatePassManager();
+        self.populateFunctionPassManager(functionPasses, 2);
+        self.populateModulePassManager(modulePasses, 2);
+        // For all ignored return values they will be 1 if that function changed the module 0 otherwise
+        var _ = jLLVMInitializeFunctionPassManager(functionPasses);
+        foreach Function fn in self.functions {
+            var _  = jLLVMRunFunctionPassManager(functionPasses, fn.LLVMValueRef);
+        }
+        var _ = jLLVMFinalizeFunctionPassManager(functionPasses);
+        var _ = jLLVMRunPassManager(modulePasses, self.LLVMModule);
     }
 
-    function runFunctionLevelOptimizationPasses() {
-        handle functionPassManager = jLLVMCreateFunctionPassManager(jLLVMCreateModuleProviderForExistingModule(self.LLVMModule));
-        jLLVMAddCFGSimplificationPass(functionPassManager);
-        jLLVMAddInstructionCombiningPass(functionPassManager);
-        foreach Function fn in self.functions {
-            // TODO: ignore result
-            int result = jLLVMRunFunctionPassManager(functionPassManager, fn.LLVMValueRef);
-            io:println(result == 1 ? "\t function optimized" : "\t function not optimized");
+    // based on populateFunctionePassManager function in passManagerBuilder.cpp (llvm)
+    function populateFunctionPassManager(handle functionPassManager, int optLevel) {
+        if optLevel == 0 {
+            return;
         }
+        self.addAliasAnalysisPasses(functionPassManager);
+        jLLVMAddLowerExpectIntrinsicPass(functionPassManager);
+        jLLVMAddCFGSimplificationPass(functionPassManager);
+        jLLVMAddScalarReplAggregatesPass(functionPassManager);
+        jLLVMAddEarlyCSEPass(functionPassManager);
+    }
+
+    // based on populateModulePassManager function in passManagerBuilder.cpp (llvm)
+    function populateModulePassManager(handle modulePassesManager, int optLevel) {
+        self.addAliasAnalysisPasses(modulePassesManager);
+
+        jLLVMAddGlobalOptimizerPass(modulePassesManager);
+        jLLVMAddPromoteMemoryToRegisterPass(modulePassesManager);
+        jLLVMAddDeadArgEliminationPass(modulePassesManager);
+
+        jLLVMAddInstructionCombiningPass(modulePassesManager);
+        jLLVMAddCFGSimplificationPass(modulePassesManager);
+
+        jLLVMAddPruneEHPass(modulePassesManager);
+        jLLVMAddLowerConstantIntrinsicsPass(modulePassesManager);
+        
+        jLLVMAddStripDeadPrototypesPass(modulePassesManager);
+
+        if optLevel > 1 {
+            jLLVMAddGlobalDCEPass(modulePassesManager);
+            jLLVMAddConstantMergePass(modulePassesManager);
+        }
+        jLLVMAddCFGSimplificationPass(modulePassesManager);
+    }
+
+    function addAliasAnalysisPasses(handle passManagerRef) {
+        jLLVMAddBasicAliasAnalysisPass(passManagerRef);
+        jLLVMAddTypeBasedAliasAnalysisPass(passManagerRef);
+        jLLVMAddScopedNoAliasAAPass(passManagerRef);
     }
 
     function setModuleInfo(handle jLLVMModule, BytePointer targetTriple, handle jTargetMachineRef) {
@@ -472,60 +501,6 @@ function jLLVMSetDataLayout(handle moduleRef, handle targetDataLayoutRef) = @jav
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.javacpp.BytePointer"]
 } external;
 
-function jLLVMCreatePassManager() returns handle = @java:Method {
-    name: "LLVMCreatePassManager",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: []
-} external;
-
-function jLLVMAddCFGSimplificationPass(handle passManagerRef) = @java:Method {
-    name: "LLVMAddCFGSimplificationPass",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
-} external;
-
-function jLLVMAddDCEPass(handle passManagerRef) = @java:Method {
-    name: "LLVMAddDCEPass",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
-} external;
-
-function jLLVMAddFunctionInliningPass(handle passManagerRef) = @java:Method {
-    name: "LLVMAddFunctionInliningPass",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
-} external;
-
-function jLLVMAddAlwaysInlinerPass(handle passManagerRef) = @java:Method {
-    name: "LLVMAddAlwaysInlinerPass",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
-} external;
-
-function jLLVMAddAggressiveDCEPass(handle passManagerRef) = @java:Method {
-    name: "LLVMAddAggressiveDCEPass",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
-} external;
-
-function jLLVMAddInstructionCombiningPass(handle passManagerRef) = @java:Method {
-    name: "LLVMAddInstructionCombiningPass",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
-} external;
-
-function jLLVMAddAggressiveInstCombinerPass(handle passManagerRef) = @java:Method {
-    name: "LLVMAddAggressiveInstCombinerPass",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
-} external;
-
-function jLLVMRunPassManager(handle passManagerRef, handle moduleRef) returns int = @java:Method {
-    name: "LLVMRunPassManager",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef", "org.bytedeco.llvm.LLVM.LLVMModuleRef"]
-} external;
-
 function jLLVMCreateModuleProviderForExistingModule(handle moduleRef) returns handle = @java:Method {
     name: "LLVMCreateModuleProviderForExistingModule",
     'class: "org.bytedeco.llvm.global.LLVM",
@@ -538,8 +513,128 @@ function jLLVMCreateFunctionPassManager(handle moduleProviderRef) returns handle
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleProviderRef"]
 } external;
 
+function jLLVMCreatePassManager() returns handle = @java:Method {
+    name: "LLVMCreatePassManager",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
+} external;
+
+function jLLVMInitializeFunctionPassManager(handle passManagerRef) returns int = @java:Method {
+    name: "LLVMInitializeFunctionPassManager",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
 function jLLVMRunFunctionPassManager(handle passManagerRef, handle functionRef) returns int = @java:Method {
     name: "LLVMRunFunctionPassManager",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef", "org.bytedeco.llvm.LLVM.LLVMValueRef"]
+} external;
+
+function jLLVMFinalizeFunctionPassManager(handle passManagerRef) returns int = @java:Method {
+    name: "LLVMFinalizeFunctionPassManager",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMRunPassManager(handle passManagerRef, handle moduleRef) returns int = @java:Method {
+    name: "LLVMRunPassManager",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef", "org.bytedeco.llvm.LLVM.LLVMModuleRef"]
+} external;
+
+function jLLVMAddLowerExpectIntrinsicPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddLowerExpectIntrinsicPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddCFGSimplificationPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddCFGSimplificationPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddScalarReplAggregatesPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddScalarReplAggregatesPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddEarlyCSEPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddEarlyCSEPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddGlobalOptimizerPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddGlobalOptimizerPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddPromoteMemoryToRegisterPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddPromoteMemoryToRegisterPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddDeadArgEliminationPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddDeadArgEliminationPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddInstructionCombiningPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddInstructionCombiningPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddPruneEHPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddPruneEHPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddLowerConstantIntrinsicsPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddLowerConstantIntrinsicsPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddStripDeadPrototypesPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddStripDeadPrototypesPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddGlobalDCEPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddGlobalDCEPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddConstantMergePass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddConstantMergePass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddBasicAliasAnalysisPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddBasicAliasAnalysisPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddTypeBasedAliasAnalysisPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddTypeBasedAliasAnalysisPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMAddScopedNoAliasAAPass(handle passManagerRef) = @java:Method {
+    name: "LLVMAddScopedNoAliasAAPass",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
 } external;
