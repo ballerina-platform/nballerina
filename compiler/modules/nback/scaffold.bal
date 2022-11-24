@@ -146,6 +146,7 @@ class Scaffold {
     private final int nParams;
     private DIScaffold? diScaffold;
     final t:SemType returnType;
+    private final BlockNarrowRegBuilder[] narrowRegBuilders = [];
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
         self.mod = mod;
@@ -169,6 +170,7 @@ class Scaffold {
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock(b.name);
+        self.narrowRegBuilders.setLength(code.blocks.length());
 
         builder.positionAtEnd(entry);
         self.addresses = [];
@@ -371,6 +373,34 @@ class Scaffold {
         }
         else {
             return used;
+        }
+    }
+
+    function narrowRegBuilder(bir:Label label) returns BlockNarrowRegBuilder {
+        return self.narrowRegBuilders[label];
+    }
+
+    function scheduleBlockNarrowReg(bir:Label label, bir:NarrowRegister reg) {
+        self.narrowRegBuilders[label].schedule(reg);
+    }
+}
+
+class BlockNarrowRegBuilder {
+    private final table<bir:NarrowRegister> key(number) regs = table[];
+
+    function schedule(bir:NarrowRegister reg) {
+        self.regs.add(reg);
+    }
+
+    function markMerged(bir:Register[] regs) {
+        foreach var reg in regs {
+            _ = self.regs.removeIfHasKey(reg.number);
+        }
+    }
+
+    function finish(llvm:Builder builder, Scaffold scaffold) returns BuildError? {
+        foreach var reg in self.regs {
+            check buildNarrowReg(builder, scaffold, reg);
         }
     }
 }

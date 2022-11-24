@@ -1,4 +1,5 @@
 import wso2/nballerina.bir;
+import wso2/nballerina.comm.err;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
@@ -45,7 +46,10 @@ function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos
 function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock block) returns BuildError? {
     scaffold.setBasicBlock(block);
     builder.positionAtEnd(scaffold.basicBlock(block.label));
-    foreach var insn in block.insns {
+    bir:Insn[] insns = block.insns;
+    int typeMergeCount = check buildTypeMerges(builder, scaffold, block);
+    foreach int j in typeMergeCount ..< insns.length() {
+        bir:Insn insn = insns[j];
         scaffold.setCurrentPosition(builder, insn.pos);
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
@@ -116,9 +120,6 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:TypeBranchInsn {
             check buildTypeBranch(builder, scaffold, insn);
         }
-        else if insn is bir:TypeMergeInsn {
-            check buildTypeMerge(builder, scaffold, insn);
-        }
         else if insn is bir:AbnormalRetInsn {
             buildAbnormalRet(builder, scaffold, insn);
         }
@@ -143,12 +144,33 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:ConvertToDecimalInsn {
             check buildConvertToDecimal(builder, scaffold, insn);
         }
+        else if insn is bir:TypeMergeInsn {
+            panic err:impossible("type merge not at the head of basic block");
+        }
         else {
             bir:CatchInsn _ = insn;
             // nothing to do
             // scaffold.panicAddress uses this to figure out where to store the panic info
         }
     }
+}
+
+function buildTypeMerges(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock block) returns int|BuildError {
+    int typeMergeCount = 0;
+    BlockNarrowRegBuilder narrowRegBuilder = scaffold.narrowRegBuilder(block.label);
+    foreach var insn in block.insns {
+        if insn is bir:TypeMergeInsn {
+            scaffold.setCurrentPosition(builder, insn.pos);
+            check buildTypeMerge(builder, scaffold, insn);
+            narrowRegBuilder.markMerged(insn.operands);
+            typeMergeCount += 1;
+        }
+        else {
+            break;
+        }
+    }
+    check narrowRegBuilder.finish(builder, scaffold);
+    return typeMergeCount;
 }
 
 function buildBranch(llvm:Builder builder, Scaffold scaffold, bir:BranchInsn insn) returns BuildError? {
