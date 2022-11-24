@@ -151,8 +151,8 @@ public distinct class Module {
     function runOptimizationPasses(int optLevel) {
         handle functionPasses = jLLVMCreateFunctionPassManager(jLLVMCreateModuleProviderForExistingModule(self.LLVMModule));
         handle modulePasses = jLLVMCreatePassManager();
-        self.populateFunctionPassManager(functionPasses, 2);
-        self.populateModulePassManager(modulePasses, 2);
+        self.populateFunctionPassManager(functionPasses, optLevel);
+        self.populateModulePassManager(modulePasses, optLevel);
         // For all ignored return values they will be 1 if that function changed the module 0 otherwise
         var _ = jLLVMInitializeFunctionPassManager(functionPasses);
         foreach Function fn in self.functions {
