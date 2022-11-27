@@ -750,8 +750,7 @@ public function diff(SemType t1, SemType t2) returns SemType {
             data = data1;
         }
         else {
-            var diff = ops[code].diff;
-            data = diff == () ? subtypeDiff(code, data1, data2) : diff(data1, data2);
+            data = subtypeDiff(code, data1, data2);
         }
         // JBUG `data` is not narrowed properly if you swap the order by doing `if data == true {} else if data != false {}`
         if data !is boolean {
@@ -761,9 +760,7 @@ public function diff(SemType t1, SemType t2) returns SemType {
             int c = code;
             all |= <BasicTypeBitSet>(1 << c);
         }
-        // The `some` variable above is only used for iterating over the possible basic types which could have been resulted in a some.
-        // The actual `some` is calcuated from `subtypes` array at `createComplexSemType(all, subtypes)`.
-        // Therefore, no need to consider `data == false` case here and remove the basic type bit from `some`.
+        // No need to consider `data == false` case. The `some` variable above is not used to create the SemType
     }
     if subtypes.length() == 0 {
         return all;
@@ -772,6 +769,10 @@ public function diff(SemType t1, SemType t2) returns SemType {
 }
 
 function subtypeDiff(BasicTypeCode code, ProperSubtypeData d1, ProperSubtypeData d2) returns SubtypeData {
+    var diff = ops[code].diff;
+    if diff != () {
+        return diff(d1, d2);
+    }
     SubtypeData d2Complement = ops[code].complement(d2);
     if d2Complement is boolean {
         if d2Complement {

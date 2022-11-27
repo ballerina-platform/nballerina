@@ -134,7 +134,7 @@ isolated function bddComplement(Bdd b) returns Bdd {
         return !b;
     }
     else {
-        return bddNodeComplement(<BddNode>b);
+        return bddNodeComplement(b);
     }
 }
 
