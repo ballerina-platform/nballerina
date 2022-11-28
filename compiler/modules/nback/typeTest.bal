@@ -119,11 +119,8 @@ function buildTypeBranch(llvm:Builder builder, Scaffold scaffold, bir:TypeBranch
     llvm:BasicBlock ifTrue = scaffold.basicBlock(insn.ifTrue);
     llvm:BasicBlock ifFalse = scaffold.basicBlock(insn.ifFalse);
     builder.condBr(hasType, ifTrue, ifFalse);
-    builder.positionAtEnd(ifTrue);
-    check buildNarrowReg(builder, scaffold, insn.ifTrueRegister);
-    builder.positionAtEnd(ifFalse);
-    check buildNarrowReg(builder, scaffold, insn.ifFalseRegister);
-    // No need to positionAtEnd(originalBB) since this is a terminator
+    scaffold.scheduleBlockNarrowReg(insn.ifTrue, insn.ifTrueRegister);
+    scaffold.scheduleBlockNarrowReg(insn.ifFalse, insn.ifFalseRegister);
 }
 
 function buildNarrowReg(llvm:Builder builder, Scaffold scaffold, bir:NarrowRegister register) returns BuildError? {
