@@ -5,15 +5,16 @@ public function errorDetail(Context cx, SemType detail) returns SemType {
     if sd is boolean {
         if sd {
             return ERROR;
-         }
+        }
         else {
             // XXX This should be reported as an error
             return NEVER;
         }
     }
-    else {
-        return basicSubtype(BT_ERROR, sd);
+    if sd == MAPPING_SUBTYPE_RO {
+        return ERROR;
     }
+    return basicSubtype(BT_ERROR, sd);
 }
 
 // distinctId must be >= 0

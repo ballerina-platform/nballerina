@@ -336,3 +336,31 @@ function testIntSubtypeConstraints() {
     test:assertEquals(c13.max, 15);
     test:assertEquals(c13.all, false);
 }
+
+@test:Config{}
+function testMappingTopBasicTypeBitSet() {
+    Env env = new;
+    MappingDefinition md = new;
+    SemType t = defineMappingTypeWrapped(md, env, [], TOP);
+    test:assertTrue(t is BasicTypeBitSet);
+    test:assertTrue(t == MAPPING);
+}
+
+@test:Config{}
+function testListTopBasicTypeBitSet() {
+    Env env = new;
+    ListDefinition ld = new;
+    SemType t = defineListTypeWrapped(ld, env, rest = TOP);
+    test:assertTrue(t is BasicTypeBitSet);
+    test:assertTrue(t == LIST);
+}
+
+@test:Config{}
+function testTableTopBasicTypeBitSet() {
+    Env env = new;
+    MappingDefinition md = new;
+    SemType mappingTop = defineMappingTypeWrapped(md, env, [], TOP);
+    SemType t = tableContaining(env, mappingTop);
+    test:assertTrue(t is BasicTypeBitSet);
+    test:assertTrue(t == TABLE);
+}
