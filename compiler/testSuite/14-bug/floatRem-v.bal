@@ -7,6 +7,8 @@ public function main() {
     io:println(b % a); // @output 124471.21999999792
 }
 
+// We need to make sure llvm can't optimize this function to a constant value, if that happens llvm could convert
+// the `%` operation to a constant as well.
 function getFloat(int seed, int iterations) returns float {
     float[] buffer = [1.0, 5.5, 3.3, 7.5, 9.5, 10.54];
     float currentVal = 0;

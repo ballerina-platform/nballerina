@@ -162,7 +162,7 @@ public distinct class Module {
         var _ = jLLVMRunPassManager(modulePasses, self.LLVMModule);
     }
 
-    // based on populateFunctionePassManager function in passManagerBuilder.cpp (llvm)
+    // based on populateFunctionPassManager function in passManagerBuilder.cpp (llvm)
     function populateFunctionPassManager(handle functionPassManager, int optLevel) {
         if optLevel == 0 {
             return;
