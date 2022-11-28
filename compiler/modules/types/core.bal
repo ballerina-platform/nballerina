@@ -300,7 +300,7 @@ type BasicTypeOps readonly & record {|
     BinOp union = binOpPanic;
     BinOp intersect = binOpPanic;
     // diff can be implemented combining intersection and complement. i.e. diff = intersect(d1, complement(d2))
-    // () is used when we want the aformentioned formular as the diff. 
+    // () is used when we want the aformentioned formula as the diff. 
     BinOp? diff = ();
     // The top type of a basic type could be in the form of a ComplexSemType instead of being a BasicTypeBitSet.
     // Therefore, the complement will not always be a ProperSubtypeData.
@@ -777,7 +777,8 @@ function subtypeDiff(BasicTypeCode code, ProperSubtypeData d1, ProperSubtypeData
     if d2Complement is boolean {
         if d2Complement {
             return d1;
-        } else {
+        }
+        else {
             return false;
         }
     }
