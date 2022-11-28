@@ -50,10 +50,6 @@ function decimalSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns Subtype
     return createDecimalSubtype(allowed, values);
 }
 
-function decimalSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
-    return decimalSubtypeIntersect(d1, decimalSubtypeComplement(d2));
-}
-
 function decimalSubtypeComplement(SubtypeData d) returns SubtypeData {
     DecimalSubtype s = <DecimalSubtype>d;
     return createDecimalSubtype(!s.allowed, s.values);
@@ -70,7 +66,6 @@ function createDecimalSubtype(boolean allowed, decimal[] values) returns Subtype
 final BasicTypeOps decimalOps = {
     union: decimalSubtypeUnion,
     intersect: decimalSubtypeIntersect,
-    diff: decimalSubtypeDiff,
     complement: decimalSubtypeComplement,
     isEmpty: notIsEmpty
 };

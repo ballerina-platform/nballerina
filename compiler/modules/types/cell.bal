@@ -128,30 +128,30 @@ function intersectCellAtomicType(CellAtomicType c1, CellAtomicType c2) returns C
     return { ty, mut };
 }
 
-function cellSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+function cellSubtypeUnion(ProperSubtypeData t1, ProperSubtypeData t2) returns ProperSubtypeData {
     return cellSubtypeDataEnsureProper(bddSubtypeUnion(t1, t2));
 }
 
-function cellSubtypeIntersect(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+function cellSubtypeIntersect(ProperSubtypeData t1, ProperSubtypeData t2) returns ProperSubtypeData {
     return cellSubtypeDataEnsureProper(bddSubtypeIntersect(t1, t2));
 }
 
-function cellSubtypeDiff(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+function cellSubtypeDiff(ProperSubtypeData t1, ProperSubtypeData t2) returns ProperSubtypeData {
     return cellSubtypeDataEnsureProper(bddSubtypeDiff(t1, t2));
 }
 
-function cellSubtypeComplement(SubtypeData t) returns SubtypeData {
+function cellSubtypeComplement(ProperSubtypeData t) returns ProperSubtypeData {
     return cellSubtypeDataEnsureProper(bddSubtypeComplement(t));
 }
 
 // SubtypeData being a boolean would result in a BasicTypeBitSet which could either be 0 or 1 << BT_CELL.
 // This is to avoid cell type being a BasicTypeBitSet, as we don't want to lose the cell wrapper.
-function cellSubtypeDataEnsureProper(SubtypeData subtypeData) returns SubtypeData {
+function cellSubtypeDataEnsureProper(SubtypeData subtypeData) returns ProperSubtypeData {
     if subtypeData !is boolean {
         return subtypeData;
     }
     Atom atom;
-    if subtypeData is true {
+    if subtypeData {
         atom = CELL_ATOM_TOP;
     } else {
         atom = CELL_ATOM_BOTTOM;

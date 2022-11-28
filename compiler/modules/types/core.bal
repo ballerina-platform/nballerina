@@ -275,15 +275,15 @@ type SubtypeData ProperSubtypeData|boolean;
 
 type BasicSubtype [BasicTypeCode, ProperSubtypeData];
 
-type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
-type UnaryOp function(SubtypeData t) returns SubtypeData;
+type BinOp function(ProperSubtypeData t1, ProperSubtypeData t2) returns SubtypeData;
+type UnaryOp function(ProperSubtypeData t) returns SubtypeData;
 type UnaryTypeCheckOp function(Context cx, SubtypeData t) returns boolean;
 
-function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+function binOpPanic(ProperSubtypeData t1, ProperSubtypeData t2) returns SubtypeData {
     panic error("binary operation should not be called");
 }
 
-function unaryOpPanic(SubtypeData t) returns SubtypeData {
+function unaryOpPanic(ProperSubtypeData t) returns SubtypeData {
     panic error("unary operation should not be called");
 }
 
@@ -294,7 +294,11 @@ function unaryTypeCheckOpPanic(Context cx, SubtypeData t) returns boolean {
 type BasicTypeOps readonly & record {|
     BinOp union = binOpPanic;
     BinOp intersect = binOpPanic;
-    BinOp diff = binOpPanic;
+    // diff can be implemented combining intersection and complement. i.e. diff = intersect(d1, complement(d2))
+    // () is used when we want the aformentioned formula as the diff. 
+    BinOp? diff = ();
+    // The top type of a basic type could be in the form of a ComplexSemType instead of being a BasicTypeBitSet.
+    // Therefore, the complement will not always be a ProperSubtypeData.
     UnaryOp complement = unaryOpPanic;
     UnaryTypeCheckOp isEmpty = unaryTypeCheckOpPanic;
 |};
@@ -735,14 +739,13 @@ public function diff(SemType t1, SemType t2) returns SemType {
         SubtypeData data;
         if data1 == () {
             var complement = ops[code].complement;
-            data = complement(<SubtypeData>data2);
+            data = complement(<ProperSubtypeData>data2);
         }
         else if data2 == () {
             data = data1;
         }
         else {
-            var diff = ops[code].diff;
-            data = diff(data1, data2);
+            data = subtypeDiff(code, data1, data2);
         }
         // JBUG `data` is not narrowed properly if you swap the order by doing `if data == true {} else if data != false {}`
         if data !is boolean {
@@ -752,11 +755,29 @@ public function diff(SemType t1, SemType t2) returns SemType {
             int c = code;
             all |= <BasicTypeBitSet>(1 << c);
         }
+        // No need to consider `data == false` case. The `some` variable above is not used to create the SemType
     }
     if subtypes.length() == 0 {
         return all;
     }
     return createComplexSemType(all, subtypes);        
+}
+
+function subtypeDiff(BasicTypeCode code, ProperSubtypeData d1, ProperSubtypeData d2) returns SubtypeData {
+    var diff = ops[code].diff;
+    if diff != () {
+        return diff(d1, d2);
+    }
+    SubtypeData d2Complement = ops[code].complement(d2);
+    if d2Complement is boolean {
+        if d2Complement {
+            return d1;
+        }
+        else {
+            return false;
+        }
+    }
+    return ops[code].intersect(d1, d2Complement);
 }
 
 public function complement(SemType t) returns SemType {

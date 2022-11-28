@@ -171,10 +171,6 @@ function stringSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeD
     );
 }
 
-function stringSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
-    return stringSubtypeIntersect(d1, stringSubtypeComplement(d2));
-}
-
 function stringSubtypeComplement(SubtypeData d) returns SubtypeData {
     var {char, nonChar} = <StringSubtype>d;
     if char.values.length() == 0 && nonChar.values.length() == 0 {
@@ -206,7 +202,6 @@ function createStringSubtype(CharStringSubtype char, NonCharStringSubtype nonCha
 final BasicTypeOps stringOps = {
     union: stringSubtypeUnion,
     intersect: stringSubtypeIntersect,
-    diff: stringSubtypeDiff,
     complement: stringSubtypeComplement,
     // Empty string sets don't use subtype representation.
     isEmpty: notIsEmpty
