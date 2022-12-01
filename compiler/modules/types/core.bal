@@ -768,7 +768,8 @@ function subtypeDiff(BasicTypeCode code, ProperSubtypeData d1, ProperSubtypeData
     if diff != () {
         return diff(d1, d2);
     }
-    SubtypeData d2Complement = ops[code].complement(d2);
+    var complement = ops[code].complement;
+    SubtypeData d2Complement = complement(d2);
     if d2Complement is boolean {
         if d2Complement {
             return d1;
@@ -777,7 +778,8 @@ function subtypeDiff(BasicTypeCode code, ProperSubtypeData d1, ProperSubtypeData
             return false;
         }
     }
-    return ops[code].intersect(d1, d2Complement);
+    var intersect = ops[code].intersect;
+    return intersect(d1, d2Complement);
 }
 
 public function complement(SemType t) returns SemType {
