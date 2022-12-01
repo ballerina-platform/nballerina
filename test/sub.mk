@@ -12,17 +12,12 @@
 # You can do `make -f ../../sub.mk tdir=$(basename "$PWD") compile` to compile all changed test cases from .bal to .ll/.o files
 # You can do `make -f ../../sub.mk tdir=$(basename "$PWD") testIntermediate` to test the ll/o files.
 # Failing tests are listed in fail.txt
-# This version of the compiler output .ll given a .bal files (using print.llvm)
-LL_COMPILER=../../../build/compiler/bin/nballerina.jar
-# This version of the compiler output .o (which also contains the RT_INLINE) given a .bal files (using jni.llvm)
-O_COMPILER ?=../../../testbuild/target/bin/nballerina.jar
+COMPILER?=../../../build/compiler/bin/nballerina.jar
 # This is the extension of files used in phase 3. Based on this we determine which version of the compiler to use
 LINK_FILE_EXTENSION ?= .bc
 ifeq ($(LINK_FILE_EXTENSION),.bc)
-	COMPILER=$(LL_COMPILER)
 	COMPILER_OUTPUT_DIR=ll
 else
-	COMPILER=$(O_COMPILER)
 	COMPILER_OUTPUT_DIR=result
 endif
 # This is used in phase 2
