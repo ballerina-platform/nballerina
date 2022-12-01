@@ -98,9 +98,9 @@ clean:
 ifeq ($(COMPILER_OUTPUT),ll)
 .SECONDEXPANSION:
 $(exe_files): $$(patsubst %.exe,%.bc,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.bc, $(mod_bc_files)) $(RT)
-	$(CLANG) $(CFLAGS) -g -o $@ $^ 
+	$(CLANG) $(CFLAGS) -g -o $@ $^ -lm
 else
 .SECONDEXPANSION:
 $(exe_files): $$(patsubst %.exe,%.o,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.o, $(mod_object_files)) $(RT)
-	$(CLANG) $(CFLAGS) -lm -o $@ $^
+	$(CLANG) $(CFLAGS) -g -o $@ $^ -lm
 endif
