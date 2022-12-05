@@ -40,7 +40,7 @@ function xmlSingleton(int primitives) returns SemType {
 
 public function xmlSequence(SemType constituentType) returns SemType {
     if constituentType == NEVER {
-        return xmlSequence(xmlSingleton(XML_PRIMITIVE_NEVER));
+        return xmlSingleton(XML_PRIMITIVE_NEVER);
     }
     if constituentType is BasicTypeBitSet {
         return constituentType;

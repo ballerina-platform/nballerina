@@ -364,3 +364,17 @@ function testTableTopBasicTypeBitSet() {
     test:assertTrue(t is BasicTypeBitSet);
     test:assertTrue(t == TABLE);
 }
+
+function xmlPrimitiveTest() {
+    assertXmlPrimitive(XML_ELEMENT);
+    assertXmlPrimitive(xmlSequence(NEVER));
+}
+
+// assert xml type's length is less than two
+function assertXmlPrimitive(SemType xmlType) {
+    boolean|XmlSubtype subtype = xmlSubtype(xmlType);
+    test:assertTrue(subtype is XmlSubtype);
+    XmlSubtype  properSubtype = <XmlSubtype>subtype;
+    test:assertEquals(properSubtype.sequence, false);
+    test:assertNotEquals(properSubtype.primitives, 0);
+}
