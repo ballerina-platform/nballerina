@@ -16,6 +16,9 @@ dependencies {
         implementation 'org.bytedeco:llvm-platform:13.0.1-1.5.7'
 }
 
+String balConfig = 'Ballerina.toml'
+String linux64BalConfig = 'BallerinaLinuxX86_64.toml'
+
 String platformLibs = 'target/platform-libs'
 String tmpBuildDir = '../testbuild'
 String compilerDir = '../compiler'
@@ -73,8 +76,15 @@ task copyLocalDependencies(type: Copy) {
 copyLocalDependencies.dependsOn(copyDependencies)
 
 task copyBalConfig(type: Copy) {
-        from 'Ballerina.toml'
-        into tmpBuildDir
+        if (project.hasProperty('linux64Only')) {
+                from linux64BalConfig
+                into tmpBuildDir
+                rename(linux64BalConfig, "Ballerina.toml")
+        }
+        else {
+                from balConfig
+                into tmpBuildDir
+        }
 }
 copyBalConfig.dependsOn(copyLocalDependencies, copyNbal)
 
@@ -113,11 +123,34 @@ task cleanBuildArtificats(type: Delete) {
 }
 cleanBuildArtificats.mustRunAfter(buildWithRuntime)
 
+task cleanJniConfig(type: Exec) {
+        workingDir "${tmpBuildDir}/target/bin"
+        commandLine 'zip', '-d', 'nballerina.jar', './META-INF/native-image/*'
+}
+cleanJniConfig.dependsOn(buildWithRuntime)
+
+task createJniCofig(type: Exec) {
+        workingDir "."
+        commandLine "bash", "-c", 'find ./modules/jni.llvm -maxdepth 1 -name "*.bal"| xargs python3 jniConfigGen.py'
+}
+
+task buildNativeImage(type: Exec) {
+        workingDir "${tmpBuildDir}/target/bin"
+        commandLine 'native-image',
+                    '--no-fallback',
+                    '-H:MaxDuplicationFactor=100',
+                    '-H:ResourceConfigurationFiles=../../../llvm_jni/resource_config.json',
+                    '-H:ReflectionConfigurationFiles=../../../llvm_jni/reflection_config.json',
+                    '-H:JNIConfigurationFiles=../../../llvm_jni/jni_config.json,../../../llvm_jni/jni_workaround.json',
+                    '-jar',
+                    'nballerina.jar'
+}
+buildNativeImage.dependsOn(buildWithRuntime, createJniCofig, cleanBuildArtificats, cleanJniConfig)
+
 task buildNBalCompilerBase(type: Exec) {
         workingDir compilerDir
         commandLine 'bal', 'build'
 }
-
 
 task compileExpectedTestCases(type: Exec) {
         workingDir testDir

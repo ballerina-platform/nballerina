@@ -8,6 +8,7 @@ distinct class PointerPointer {
     int size;
 
     function init(int size) {
+         _ = loadJavaCpp(checkpanic java:getClass("org.bytedeco.llvm.global.LLVM"));
         self.jObject = jPointerPointer(size);
         self.index = 0;
         self.size = size;

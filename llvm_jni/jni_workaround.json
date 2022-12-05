@@ -1,0 +1,76 @@
+[
+    {
+        "name": "org.bytedeco.javacpp.Pointer",
+        "methods": [
+            {
+                "name": "init"
+            }
+        ],
+        "fields": [
+            {
+                "name": "address"
+            },
+            {
+                "name": "position"
+            },
+            {
+                "name": "limit"
+            },
+            {
+                "name": "capacity"
+            },
+            {
+                "name": "deallocator"
+            }
+        ]
+    },
+    {
+        "name": "org.bytedeco.javacpp.Pointer$NativeDeallocator",
+        "fields": [
+            {
+                "name": "ownerAddress"
+            }
+        ]
+    },
+    {
+        "name": "org.bytedeco.javacpp.Loader",
+        "methods": [
+            {
+                "name": "putMemberOffset"
+            }
+        ]
+    },
+    {
+        "name": "java.lang.Object",
+        "methods": [
+            {
+                "name": "toString"
+            }
+        ]
+    },
+    {
+        "name": "java.nio.Buffer",
+        "methods": [
+            {
+                "name": "array"
+            },
+            {
+                "name": "arrayOffset"
+            }
+        ],
+        "fields": [
+            {
+                "name": "position"
+            },
+            {
+                "name": "mark"
+            },
+            {
+                "name": "limit"
+            },
+            {
+                "name": "capacity"
+            }
+        ]
+    }
+]
