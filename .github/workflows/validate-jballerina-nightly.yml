@@ -37,7 +37,7 @@ jobs:
       - name: Install jBallerina
         run: |
           echo "${{ env.JBALLERINA_NAME }}/bin/" >> $GITHUB_PATH
-          echo "JAVA=${{ env.JBALLERINA_NAME }}/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_ENV
+          echo "JAVA=${{ env.JBALLERINA_NAME }}/dependencies/jdk-11.0.15+10-jre/bin/java" >> $GITHUB_ENV
       - name: Test
         run: |
           make -j2 test
