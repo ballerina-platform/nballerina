@@ -66,65 +66,45 @@ public function semTypeFromSexpr(t:Env env, map<Atom> bindings, Type tySExpr) re
 }
 
 public function semTypeFromAtomSexpr(t:Env env, map<Atom> bindings, Atom atomSexpr) returns t:SemType {
-    // JBUG #37085 can't use if-elses with type checks
-    // Nor can we use match due to below, have to use a combination of both
-    // JBUG if we a match clause ["mapping", var members] , 1) it matches ["mapping", var fixed, var rest], 2) type of atomSexpr becomes 'other'
     match atomSexpr {
-        ["list", var m] => {
-            // JBUG cast. inline variable when fixed 
-            var members = <Type[]>m;
-            int len = members.length();
-            if atomSexpr is RepeatingTuple {
-                // JBUG current case matches ["list", var members, var len]
-                len = atomSexpr[2];
-            }
-            t:SemType[] initial = from var member in members select semTypeFromSexpr(env, bindings, member);
+        ["list", var members] => {
+            t:SemType[] initial = from var member in <Type[]>members select semTypeFromSexpr(env, bindings, member);
             t:ListDefinition d = new;
-            return t:defineListTypeWrapped(d, env, initial, len);
+            return t:defineListTypeWrapped(d, env, initial, (<Type[]>members).length());
+        }
+        ["list", var members, var fixedLength] => {
+            t:SemType[] initial = from var member in <Type[]>members select semTypeFromSexpr(env, bindings, member);
+            t:ListDefinition d = new;
+            return t:defineListTypeWrapped(d, env, initial, <int>fixedLength);
         }
         ["array", var members] => {
             t:ListDefinition d = new;
             return t:defineListTypeWrapped(d, env, rest = semTypeFromSexpr(env, bindings, <Type>members));
         }
-    }
-
-    match atomSexpr {
-        // JBUG #37176 can't merge this with above match-stmt
-        // JBUG #37136 cannot use ["cell", var t, var m]
-        // JBUG ["cell"] matches ["cell", var t, var m]
-        ["cell"] => {
-            Type t = <Type>atomSexpr[1];
-            string s = <string>atomSexpr[2];
-            t:CellMutability m;
-            match s {
+        ["cell", var ty, var mutabilityStr] => {
+            t:CellMutability mutability;
+            match mutabilityStr {
                 "none" => {
-                    m = t:CELL_MUT_NONE;
+                    mutability = t:CELL_MUT_NONE;
                 }
                 "limited" => {
-                    m = t:CELL_MUT_LIMITED;
+                    mutability = t:CELL_MUT_LIMITED;
                 }
-                "unlimited"|_ => {
-                    m = t:CELL_MUT_UNLIMITED;
+                "unlimited"|_ => { // JBUG shouldn't need _
+                    mutability = t:CELL_MUT_UNLIMITED;
                 }
             }
-            t:SemType semType = semTypeFromSexpr(env, bindings, t);
-            return t:cellContaining(env, semType, m);
+            t:SemType semType = semTypeFromSexpr(env, bindings, <Type>ty);
+            return t:cellContaining(env, semType, mutability);
+        }
+        ["mapping", var rest] => {
+            t:MappingDefinition d = new;
+            return t:defineMappingTypeWrapped(d, env, [], semTypeFromSexpr(env, bindings, <Type>rest));
+        }
+        ["mapping", var fields, var rest] => {
+            t:MappingDefinition d = new;
+            return t:defineMappingTypeWrapped(d, env, <t:Field[]><anydata>fields, semTypeFromSexpr(env, bindings, <Type>rest));
         }
     }
-
-    // atomSexpr is an array starting with "mapping"
-    Type rest;
-    t:Field[] fields;
-    int mappingLen = atomSexpr.length();
-    // JBUG `atomSexpr is OpenMapping` is always false
-    if mappingLen == 3 {
-        fields = from var f in (<OpenMapping>atomSexpr)[1] select [f[0].str, semTypeFromSexpr(env, bindings, f[1])];
-        rest = <Type>atomSexpr[2];
-    }
-    else {
-        fields = [];
-        rest = <Type>atomSexpr[1];
-    }
-    t:MappingDefinition d = new;
-    return t:defineMappingTypeWrapped(d, env, fields, semTypeFromSexpr(env, bindings, rest));
+    panic err:impossible("impossible sexpr atom:" + atomSexpr.toString());
 }

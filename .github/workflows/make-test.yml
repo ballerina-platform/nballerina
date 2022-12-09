@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     env:
-      JBAL_VERSION: '2201.2.0'
+      JBAL_VERSION: '2201.3.0'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -47,7 +47,7 @@ jobs:
         run: |
           sudo dpkg -i $HOME/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb
           echo "/usr/lib/ballerina/bin" >> $GITHUB_PATH
-          echo "/usr/lib/ballerina/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_PATH
+          echo "/usr/lib/ballerina/dependencies/jdk-11.0.15+10-jre/bin/java" >> $GITHUB_PATH
       - name: Download jBallerina pkg
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'macOs'
         run: |
@@ -58,7 +58,7 @@ jobs:
           installer -pkg  $HOME/ballerina-$JBAL_VERSION-swan-lake-macos-x64.pkg -target CurrentUserHomeDirectory
           chmod +x "$HOME/Library/Ballerina/bin/bal"
           echo "$HOME/Library/Ballerina/bin" >> $GITHUB_PATH
-          echo "JAVA=$HOME/Library/Ballerina/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_ENV
+          echo "JAVA=$HOME/Library/Ballerina/dependencies/jdk-11.0.15+10-jre/bin/java" >> $GITHUB_ENV
       - name: Test
         run: |
           echo "useing clang=`which clang` llvm-as=`which llvm-as` bal=`which bal`"
@@ -73,7 +73,7 @@ jobs:
 
   test-jni:
     env:
-      JBAL_VERSION: '2201.2.0'
+      JBAL_VERSION: '2201.3.0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -93,7 +93,7 @@ jobs:
         run: |
           sudo dpkg -i $HOME/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb
           echo "/usr/lib/ballerina/bin" >> $GITHUB_PATH
-          echo "/usr/lib/ballerina/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_PATH
+          echo "/usr/lib/ballerina/dependencies/jdk-11.0.15+10-jre/bin/java" >> $GITHUB_PATH
       - name: Cache Gradle
         uses: actions/cache@v2
         with:

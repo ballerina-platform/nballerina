@@ -11,8 +11,8 @@ function stmtAssignLiteral() returns Module {
     builder.store(constInt("i64", 42), R1);
     builder.store(constInt("i64", 43), R1);
     builder.store(constInt("i64", 44), R1);
-    builder.store(constInt("i64", 9223372036854775807), R1);
-    builder.store(constInt("i64", -9223372036854775808), R1);
+    builder.store(constInt("i64", int:MAX_VALUE), R1);
+    builder.store(constInt("i64", int:MIN_VALUE), R1);
     builder.ret();
     return m;
 }
