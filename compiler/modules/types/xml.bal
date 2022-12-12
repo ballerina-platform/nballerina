@@ -20,7 +20,7 @@ public type XmlSubtype readonly & record {|
     int primitives;
     // This is a logical combination of the allowed sequences types. The `atom` field of
     // the `BddNode` is a bitwise-or of XML_PRIMTIVE_* (except for XML_PRIMITIVE_NEVER).
-    // It represents a sequence or more singletons, where the allowed singletons
+    // It represents a sequence of two or more singletons, where the allowed singletons
     // are those whose bit is set in the `atom` field.
     Bdd sequence;
 |};
