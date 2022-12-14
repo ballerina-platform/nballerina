@@ -18,6 +18,19 @@ public distinct class Context {
         return new (modName, self);
     }
 
+    public function constInt(Type ty, int value) returns ConstValue {
+        DataValue val = new (jLLVMConstInt(typeToLLVMType(self, ty), value, 0));
+        return val;
+    }
+
+    public function constFloat(FloatType ty, float val) returns ConstValue {
+       return new (jLLVMConstReal(typeToLLVMType(self, ty), val));
+    }
+
+    public function constNull(PointerType ty) returns PointerValue {
+        return new (jLLVMConstPointerNull(typeToLLVMType(self, ty)));
+    }
+
     public function constString(byte[] bytes) returns ConstValue {
         return new (jLLVMConstStringInContext(self.LLVMContext, java:fromString(checkpanic string:fromBytes(bytes)), bytes.length(), 1));
     }
@@ -29,7 +42,7 @@ public distinct class Context {
 
     public function constArray(Type elementType, ConstValue[] values) returns ConstValue {
         PointerPointer elements = PointerPointerFromValues(values);
-        handle ty = typeToLLVMType(elementType, self);
+        handle ty = typeToLLVMType(self, elementType);
         return new (jLLVMConstArray(ty, elements.jObject, values.length()));
     }
 
@@ -44,15 +57,15 @@ public distinct class Context {
     }
 
     public function constBitCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
-        return new (jLLVMConstBitCast(ptr.LLVMValueRef, typeToLLVMType(destTy, self)));
+        return new (jLLVMConstBitCast(ptr.LLVMValueRef, typeToLLVMType(self, destTy)));
     }
 
     public function constAddrSpaceCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
-        return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(destTy, self)));
+        return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(self, destTy)));
     }
 
     public function constPtrToInt(ConstPointerValue constantValue, IntType toType) returns ConstValue {
-        return new (jLLVMConstPtrToInt(constantValue.LLVMValueRef, typeToLLVMType(toType, self)));
+        return new (jLLVMConstPtrToInt(constantValue.LLVMValueRef, typeToLLVMType(self, toType)));
     }
 
     public function structCreateNamed(string name) returns StructType {
@@ -70,7 +83,7 @@ public distinct class Context {
             var data = entry[1];
             if data[1] === namedStructTy {
                 handle jType = data[0];
-                PointerPointer elements = PointerPointerFromTypes(elementTypes, self);
+                PointerPointer elements = PointerPointerFromTypes(self, elementTypes);
                 jLLVMStructSetBody(jType, elements.jObject, elementTypes.length(), 0);
                 return;
             }

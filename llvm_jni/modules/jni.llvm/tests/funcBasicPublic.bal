@@ -13,7 +13,7 @@ function funcBasicPublic() returns Module {
     FunctionDefn bar = m.addFunctionDefn("bar", {returnType: "i64", paramTypes: []});
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
-    builder.ret(constInt("i64",42));
+    builder.ret(context.constInt("i64",42));
     return m;
 }
 

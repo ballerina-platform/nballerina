@@ -5,7 +5,7 @@ function alias() returns Module {
     Builder builder = context.createBuilder();
     Module m = context.createModule();
 
-    ConstPointerValue g = m.addGlobal("i64", "g", initializer=constInt("i64", 5),
+    ConstPointerValue g = m.addGlobal("i64", "g", initializer=context.constInt("i64", 5),
                                       addressSpace=1, linkage="internal");
     ConstPointerValue a = m.addAlias("i64", g, "a", addressSpace=1);
     ConstPointerValue _ = m.addAlias("i64", g, "b", linkage="internal", addressSpace=1);

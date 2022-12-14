@@ -6,7 +6,7 @@ function stmtFuncCallWithLiterals() returns Module{
     Module m = context.createModule();
     FunctionDefn f1 = foo1(builder, m);
     FunctionDefn f2 = foo2(builder, m);
-    FunctionDefn f3 = foo3(builder, m);
+    FunctionDefn f3 = foo3(context, builder, m);
     FunctionDefn f4 = foo4(builder, m);
     FunctionDefn test = m.addFunctionDefn("test", {returnType:"void", paramTypes:[]});
     BasicBlock bb5 = test.appendBasicBlock();
@@ -14,7 +14,7 @@ function stmtFuncCallWithLiterals() returns Module{
     PointerValue R1 = builder.alloca("i64");
     PointerValue R2 = builder.alloca("i64");
     _ = builder.call(f1, []);
-    _ = builder.call(f2, [constInt("i64", 42), constInt("i64", 43)]);
+    _ = builder.call(f2, [context.constInt("i64", 42), context.constInt("i64", 43)]);
     Value R3;
     Value|() R_3 = builder.call(f3, []);
     if R_3 is Value{
@@ -24,7 +24,7 @@ function stmtFuncCallWithLiterals() returns Module{
     }
     builder.store(R3, R1);
     Value R4;
-    Value|() R_4 = builder.call(f4, [constInt("i64", 12), constInt("i64", 13)]);
+    Value|() R_4 = builder.call(f4, [context.constInt("i64", 12), context.constInt("i64", 13)]);
     if R_4 is Value{
         R4 = R_4;
     } else {
@@ -57,11 +57,11 @@ function foo2(Builder builder, Module m) returns FunctionDefn{
     return foo2;
 }
 
-function foo3(Builder builder, Module m) returns FunctionDefn{
+function foo3(Context context, Builder builder, Module m) returns FunctionDefn{
     FunctionDefn foo3 = m.addFunctionDefn("foo3", {returnType:"i64", paramTypes:[]});
     BasicBlock bb3 = foo3.appendBasicBlock();
     builder.positionAtEnd(bb3);
-    Value C1 = constInt("i64", 21);
+    Value C1 = context.constInt("i64", 21);
     builder.ret(C1);
     return foo3;
 }
