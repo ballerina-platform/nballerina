@@ -124,6 +124,10 @@ final bir:ModuleId runtimeModule = {
     names: ["runtime"]
 };
 
+type Context object {
+    function llContext() returns llvm:Context;
+};
+
 function buildCheckPanicCode(llvm:Builder builder, Scaffold scaffold, llvm:Value valWithErr, bir:Position pos) returns llvm:Value {
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errBlock = scaffold.addBasicBlock();
@@ -409,12 +413,6 @@ function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperan
         return builder.load(scaffold.address(operand));
     }
 }
-
-
-// TODO: move this to hte top of file
-type Context object {
-    function llContext() returns llvm:Context;
-};
 
 function buildConstNil(Context cx) returns llvm:ConstPointerValue => cx.llContext().constNull(LLVM_NIL_TYPE);
 
