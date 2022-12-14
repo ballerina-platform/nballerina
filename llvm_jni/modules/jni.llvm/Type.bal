@@ -58,34 +58,42 @@ public type Value DataValue|Function;
 
 public readonly distinct class DataValue {
     handle LLVMValueRef;
+    Type ty;
 
-    function init(handle valueRef) {
+    function init(handle valueRef, Type ty) {
         self.LLVMValueRef = valueRef;
+        self.ty = ty;
     }
 }
 
 public readonly class PointerValue {
     *DataValue;
+    PointerType ty;
     handle LLVMValueRef;
-    function init(handle valueRef) {
+    function init(handle valueRef, PointerType ty) {
         self.LLVMValueRef = valueRef;
+        self.ty = ty;
     }
 }
 
 public readonly class ConstValue {
     *DataValue;
     handle LLVMValueRef;
-    function init(handle valueRef) {
+    int? operand;
+    function init(handle valueRef, Type ty, int? operand=()) {
         self.LLVMValueRef = valueRef;
+        self.ty = ty;
+        self.operand = operand;
     }
 }
 
 public readonly class ConstPointerValue {
-    *DataValue;
     *PointerValue;
-    handle LLVMValueRef;
-    function init(handle valueRef) {
+    int? operand;
+    function init(handle valueRef, PointerType ty) {
         self.LLVMValueRef = valueRef;
+        self.ty = ty;
+        self.operand = ();
     }
 }
 

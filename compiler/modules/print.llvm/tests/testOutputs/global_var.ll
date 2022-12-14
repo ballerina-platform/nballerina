@@ -6,8 +6,8 @@
 @g6 = external addrspace(3) global i64, align 8
 @g7 = global {i64, i64} {i64 1, i64 2}
 define i64 @testFn() {
-  %1 = ptrtoint i64* @g1 to i64
-  %2 = ptrtoint i64 addrspace(2)* @g2 to i64
+  %1 = ptrtoint ptr @g1 to i64
+  %2 = ptrtoint ptr addrspace(2) @g2 to i64
   %3 = add i64 %1, %2
   ret i64 %3
 }

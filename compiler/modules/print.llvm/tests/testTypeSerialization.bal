@@ -17,7 +17,7 @@ function testPointerTypeSerialization() {
     foreach var ty in intTypes {
         PointerType pTy = pointerType(ty);
         string out = typeToString(pTy, context);
-        test:assertEquals(out, string `${<string>ty}*`);
+        test:assertEquals(out, string `ptr`);
     }
 }
 

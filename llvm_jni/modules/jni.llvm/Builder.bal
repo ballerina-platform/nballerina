@@ -1,4 +1,5 @@
 import ballerina/jballerina.java;
+import wso2/nballerina.comm.err;
 
 function intPredicateToInt(IntPredicate predicate) returns int {
     match predicate {
@@ -108,8 +109,7 @@ public distinct class Builder {
     }
 
     public function alloca(SingleValueType ty, Alignment? align = (), string? name = ()) returns PointerValue {
-        string regName = self.extractName(name);
-        PointerValue val = new (jLLVMBuildAlloca(self.LLVMBuilder, typeToLLVMType(self.context, ty), java:fromString(regName)));
+        PointerValue val = new (jLLVMBuildAlloca(self.LLVMBuilder, typeToLLVMType(self.context, ty), java:fromString(self.extractName(name))), pointerType(ty));
         if align != () {
             self.setAlignment(val, align);
         }
@@ -117,8 +117,8 @@ public distinct class Builder {
     }
 
     public function load(PointerValue ptr, Alignment? align = (), string? name = ()) returns Value {
-        string regName = self.extractName(name);
-        Value val = new (jLLVMBuildLoad(self.LLVMBuilder, ptr.LLVMValueRef, java:fromString(regName)));
+        Type ty = ptr.ty.pointsTo;
+        Value val = new (jLLVMBuildLoad(self.LLVMBuilder, typeToLLVMType(self.context, ty), ptr.LLVMValueRef, java:fromString(self.extractName(name))), ty);
         if align != () {
             self.setAlignment(val, align);
         }
@@ -126,7 +126,7 @@ public distinct class Builder {
     }
 
     public function store(Value val, PointerValue ptr, Alignment? align = ()) {
-        Value tmpVal = new (jLLVMBuildStore(self.LLVMBuilder, val.LLVMValueRef, ptr.LLVMValueRef));
+        Value tmpVal = new (jLLVMBuildStore(self.LLVMBuilder, val.LLVMValueRef, ptr.LLVMValueRef), ptr.ty.pointsTo);
         if align != () {
             self.setAlignment(tmpVal, align);
         }
@@ -134,17 +134,18 @@ public distinct class Builder {
 
     public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         string regName = self.extractName(name);
+        Type ty = sameNumberType(lhs, rhs);
         match op {
             "add" => {
-                Value val = new (jLLVMBuildNSWAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                Value val = new (jLLVMBuildNSWAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
                 return val;
             }
             "mul" => {
-                Value val = new (jLLVMBuildNSWMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                Value val = new (jLLVMBuildNSWMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
                 return val;
             }
             "sub" => {
-                Value val = new (jLLVMBuildNSWSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                Value val = new (jLLVMBuildNSWSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
                 return val;
 
             }
@@ -170,72 +171,70 @@ public distinct class Builder {
 
     function binaryOpWrap(BinaryOp op, Value lhs, Value rhs, string? name = ()) returns Value {
         string regName = self.extractName(name);
+        Type ty = sameNumberType(lhs, rhs);
         match op {
             "add" => {
-                return new (jLLVMBuildAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "mul" => {
-                return new (jLLVMBuildMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "sub" => {
-                return new (jLLVMBuildSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "sdiv" => {
-                return new (jLLVMBuildSDiv(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildSDiv(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "srem" => {
-                return new (jLLVMBuildSRem(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildSRem(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "xor" => {
-                return new (jLLVMBuildXor(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildXor(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "or" => {
-                return new (jLLVMBuildOr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildOr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "and" => {
-                return new (jLLVMBuildAnd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildAnd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "shl" => {
-                return new (jLLVMBuildShl(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildShl(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "ashr" => {
-                return new (jLLVMBuildAShr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildAShr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "lshr" => {
-                return new (jLLVMBuildLShr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildLShr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "fadd" => {
-                return new (jLLVMBuildFAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildFAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "fsub" => {
-                return new (jLLVMBuildFSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildFSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "fmul" => {
-                return new (jLLVMBuildFMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildFMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "fdiv" => {
-                return new (jLLVMBuildFDiv(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildFDiv(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "frem" => {
-                return new (jLLVMBuildFRem(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+                return new (jLLVMBuildFRem(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
         }
         panic error(string `op: ${<string>op} not implemented`);
     }
 
     public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name = ()) returns Value {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildICmp(self.LLVMBuilder, intPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
+        return new DataValue (jLLVMBuildICmp(self.LLVMBuilder, intPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(self.extractName(name))), "i1");
     }
 
     public function fCmp(FloatPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildFCmp(self.LLVMBuilder, floatPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
+        return new (jLLVMBuildFCmp(self.LLVMBuilder, floatPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(self.extractName(name))), sameNumberType(lhs, rhs));
     }
 
     public function bitCast(PointerValue val, PointerType destTy, string? name = ()) returns PointerValue {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildBitCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
+        return new (jLLVMBuildBitCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(self.extractName(name))), destTy);
     }
 
     public function ret(Value? val = ()) {
@@ -247,28 +246,23 @@ public distinct class Builder {
     }
 
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name = ()) returns Value {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildPtrToInt(self.LLVMBuilder, ptr.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
+        return new (jLLVMBuildPtrToInt(self.LLVMBuilder, ptr.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(self.extractName(name))), destTy);
     }
 
     public function zExt(Value val, IntType destTy, string? name = ()) returns Value {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildZExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
+        return new (jLLVMBuildZExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(self.extractName(name))), destTy);
     }
 
     public function sExt(Value val, IntType destTy, string? name = ()) returns Value {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildSExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
+        return new (jLLVMBuildSExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(self.extractName(name))), destTy);
     }
 
     public function trunc(Value val, IntType destTy, string? name = ()) returns Value {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildTrunc(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
+        return new (jLLVMBuildTrunc(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(self.extractName(name))), destTy);
     }
 
     public function fNeg(Value val, string? name=()) returns Value {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildFNeg(self.LLVMBuilder, val.LLVMValueRef, java:fromString(reg)));
+        return new (jLLVMBuildFNeg(self.LLVMBuilder, val.LLVMValueRef, java:fromString(self.extractName(name))), val.ty);
     }
 
     public function unreachable() {
@@ -277,17 +271,27 @@ public distinct class Builder {
 
     public function call(Function|PointerValue fn, Value[] args, string? name = ()) returns Value? {
         string reg = self.extractName(name);
-        PointerPointer arr = PointerPointerFromValues(args);
-        handle llvmVal = jLLVMBuildCall(self.LLVMBuilder, fn.LLVMValueRef, arr.jObject, args.length(), java:fromString(reg));
-        if jLLVMGetReturnType(jLLVMGetCalledFunctionType(llvmVal)).toString() == typeToLLVMType(self.context, "void").toString() {
-            return;
+        FunctionType fnTy;
+        if fn !is Function {
+            Type ty = fn.ty.pointsTo; 
+            if ty !is FunctionType {
+                panic err:illegalArgument("not a function pointer");
+            }
+            fnTy = ty;
         }
-        return new (llvmVal);
+        else {
+            fnTy = fn.fnType;
+        }
+        PointerPointer arr = PointerPointerFromValues(args);
+        RetType retTy = fnTy.returnType;
+        handle llvmTy = fn is Function ? fn.LLVMTypeRef : typeToLLVMType(self.context, fnTy);
+        handle llvmVal = jLLVMBuildCall(self.LLVMBuilder, llvmTy, fn.LLVMValueRef, arr.jObject, args.length(), java:fromString(reg));
+        return retTy != "void" ? new (llvmVal, retTy) : ();
     }
 
     public function extractValue(Value value, int index, string? name = ()) returns Value {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildExtractValue(self.LLVMBuilder, value.LLVMValueRef, index, java:fromString(reg)));
+        return new (jLLVMBuildExtractValue(self.LLVMBuilder, value.LLVMValueRef, index, java:fromString(self.extractName(name))),
+                                           getTypeAtIndex(<StructType>value.ty, index, self.context));
     }
 
     public function br(BasicBlock destination) {
@@ -299,23 +303,20 @@ public distinct class Builder {
     }
 
     public function getElementPtr(PointerValue ptr, Value[] indices, "inbounds"? inbounds = (), string? name = ()) returns PointerValue {
-        string reg = self.extractName(name);
-        PointerPointer arr = PointerPointerFromValues(indices);
-        if inbounds != () {
-            return new (jLLVMBuildInBoundsGEP(self.LLVMBuilder, ptr.LLVMValueRef, arr.jObject, indices.length(), java:fromString(reg)));
-        } else {
-            return new (jLLVMBuildGEP(self.LLVMBuilder, ptr.LLVMValueRef, arr.jObject, indices.length(), java:fromString(reg)));
-        }
+        var builderFn = inbounds != () ? jLLVMBuildInBoundsGEP : jLLVMBuildGEP;
+        return new (builderFn(self.LLVMBuilder, typeToLLVMType(self.context, ptr.ty.pointsTo), ptr.LLVMValueRef,
+                              PointerPointerFromValues(indices).jObject, indices.length(), java:fromString(self.extractName(name))),
+                              gepResultType(self.context, ptr, indices));
     }    
     
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         string reg = self.extractName(name);
-        return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
+        return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)), destTy);
     }
 
     public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
+        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)), destTy);
     }
 
     public function setCurrentDebugLocation(Metadata? dbLocation) {
@@ -330,6 +331,27 @@ public distinct class Builder {
             return name;
         }
     }
+}
+
+function gepResultType(Context context, PointerValue ptr, Value[] indices) returns PointerType {
+    Type resultType = ptr.ty;
+    int resultAddressSpace = 0;
+    foreach var index in indices {
+        if resultType is PointerType {
+            resultAddressSpace = resultType.addressSpace;
+            resultType = resultType.pointsTo;
+        }
+        else if resultType is ArrayType {
+            resultType = resultType.elementType;
+        }
+        else if resultType is StructType {
+            if index !is ConstValue || index.operand !is int {
+                panic err:illegalArgument("structures can be index only using i32 constants"); 
+            }
+            resultType = getTypeAtIndex(resultType, <int>index.operand, context);
+        }
+    }
+    return pointerType(resultType, resultAddressSpace);
 }
 
 function jLLVMCreateBuilderInContext(handle context) returns handle = @java:Method {
@@ -350,10 +372,10 @@ function jLLVMBuildAlloca(handle builder, handle typeRef, handle name) returns h
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "java.lang.String"]
 } external;
 
-function jLLVMBuildLoad(handle builder, handle ptr, handle name) returns handle = @java:Method {
-    name: "LLVMBuildLoad",
+function jLLVMBuildLoad(handle builder, handle ty, handle ptr, handle name) returns handle = @java:Method {
+    name: "LLVMBuildLoad2",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;
 
 function jLLVMBuildStore(handle builder, handle val, handle ptr) returns handle = @java:Method {
@@ -537,10 +559,10 @@ function jLLVMBuildUnreachable(handle builder) returns handle = @java:Method {
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef"]
 } external;
 
-function jLLVMBuildCall(handle builder, handle fn, handle args, int numArgs, handle name) returns handle = @java:Method {
-    name: "LLVMBuildCall",
+function jLLVMBuildCall(handle builder, handle ty, handle fn, handle args, int numArgs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildCall2",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
 } external;
 
 function jLLVMBuildExtractValue(handle builder, handle aggVal, int index, handle name) returns handle = @java:Method {
@@ -561,16 +583,16 @@ function jLLVMBuildCondBr(handle builder, handle cond, handle then, handle other
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMBasicBlockRef", "org.bytedeco.llvm.LLVM.LLVMBasicBlockRef"]
 } external;
 
-function jLLVMBuildGEP(handle builder, handle pointer, handle indices, int numArgs, handle name) returns handle = @java:Method {
-    name: "LLVMBuildGEP",
+function jLLVMBuildGEP(handle builder, handle ty, handle pointer, handle indices, int numArgs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildGEP2",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
 } external;
 
-function jLLVMBuildInBoundsGEP(handle builder, handle pointer, handle indices, int numArgs, handle name) returns handle = @java:Method {
-    name: "LLVMBuildInBoundsGEP",
+function jLLVMBuildInBoundsGEP(handle builder, handle ty, handle pointer, handle indices, int numArgs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildInBoundsGEP2",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
 } external;
 
 

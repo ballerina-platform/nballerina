@@ -3,8 +3,8 @@ import ballerina/jballerina.java.arrays as jarrays;
 import ballerina/io;
 
 function intrinsicNameToId(IntrinsicFunctionName name) returns int {
-    string str_name = "llvm." + name;
-    return jLLVMLookupIntrinsicID(java:fromString(str_name), str_name.length());
+    string full_name = "llvm." + name;
+    return jLLVMLookupIntrinsicID(java:fromString(full_name), full_name.length());
 }
 
 public type LLVMCodeGenOptLevel string;
@@ -41,8 +41,9 @@ public distinct class Module {
     }
 
     function addFunction(string fnName, FunctionType fnType, boolean isDefn) returns Function {
-        handle llvmFunction = jLLVMAddFunction(self.LLVMModule, java:fromString(fnName), typeToLLVMType(self.context, fnType));
-        Function fn = new (llvmFunction, fnType, self.context);
+        handle llvmTypeRef = typeToLLVMType(self.context, fnType);
+        handle llvmFunction = jLLVMAddFunction(self.LLVMModule, java:fromString(fnName), llvmTypeRef);
+        Function fn = new (llvmFunction, fnType, self.context, llvmTypeRef);
         if isDefn {
             self.functions.push(fn);
         }
@@ -111,9 +112,9 @@ public distinct class Module {
     public function printModuleToObjectFile(string fileName, *ObjectFileGenOptions opts) returns io:Error? {
         self.finalizeDIBuilder();
         self.linkInlineLibrary(); 
-
         string optLevel = opts.optLevel ?: "Default";
-        string relocMode = opts.relocMode ?: "Default";
+        // We are defaulting to PIC (Position Independent Code) since clang defaults to PIE (Position Independent Executable)
+        string relocMode = opts.relocMode ?: "PIC";
         string codeModel = opts.codeModel ?: "Default";
         BytePointer file = new(jBytePointerFromString(java:fromString(fileName)));
         BytePointer targetTriple;
@@ -211,7 +212,7 @@ public distinct class Module {
     }
 
     public function addGlobal(Type ty, string name, *GlobalProperties props) returns ConstPointerValue {
-        PointerValue val =  new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(self.context, ty), java:fromString(name), props.addressSpace));
+        ConstPointerValue val =  new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(self.context, ty), java:fromString(name), props.addressSpace), pointerType(ty, props.addressSpace));
         var initializer = props.initializer;
         if !(initializer is ()) {
             jLLVMSetInitializer(val.LLVMValueRef, initializer.LLVMValueRef);
@@ -231,8 +232,8 @@ public distinct class Module {
     }
 
     public function addAlias(Type aliasTy, ConstValue aliasee, string name, *GlobalSymbolProperties props) returns ConstPointerValue {
-        Type aliasInternalType = pointerType(aliasTy, props.addressSpace);
-        ConstPointerValue val = new(jLLVMAddAlias(self.LLVMModule, typeToLLVMType(self.context, aliasInternalType), aliasee.LLVMValueRef, java:fromString(name)));
+        ConstPointerValue val = new(jLLVMAddAlias(self.LLVMModule, typeToLLVMType(self.context, aliasTy), props.addressSpace,
+                                    aliasee.LLVMValueRef, java:fromString(name)), pointerType(aliasTy, props.addressSpace));
         self.setGlobalSymbolProperties(val, props);
         return val;
     }
@@ -246,17 +247,12 @@ public distinct class Module {
 
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         int id = intrinsicNameToId(name);
-        if name is IntegerArithmeticIntrinsicName {
-            FunctionType fnType = {returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"]};
-            PointerPointer paramTypes = PointerPointerFromTypes(self.context, fnType.paramTypes);
-            return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);
-        }
-        else {
-            FunctionType fnType = {returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"]};
-            PointerPointer paramTypes = PointerPointerFromTypes(self.context, fnType.paramTypes);
-            return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);
-
-        }
+        FunctionType fnType = name is IntegerArithmeticIntrinsicName ? {returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"]} :
+                                                                       {returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"]};
+        PointerPointer paramTypes = PointerPointerFromTypes(self.context, fnType.paramTypes);
+        int paramCount = fnType.paramTypes.length();
+        return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, paramCount), fnType, self.context,
+                    jLLVMIntrinsicGetType(self.context.LLVMContext, id, paramTypes.jObject, paramCount));
     }
 
     public function setTarget(TargetTriple targetTriple) {
@@ -265,7 +261,6 @@ public distinct class Module {
     }
 
 }
-
 
 function getLLVMCodeGenOptLevel(LLVMCodeGenOptLevel codeGenLevel) returns int {
     match codeGenLevel {
@@ -471,10 +466,10 @@ function jLLVMAddModuleFlag(handle m, int behavior, handle k, int kLen, handle v
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "int", "java.lang.String", "long", "org.bytedeco.llvm.LLVM.LLVMMetadataRef"]
 } external;
 
-function jLLVMAddAlias(handle m, handle ty, handle aliasee, handle name) returns handle = @java:Method {
-    name: "LLVMAddAlias",
+function jLLVMAddAlias(handle m, handle valueTy, int addressSpace, handle aliasee, handle name) returns handle = @java:Method {
+    name: "LLVMAddAlias2",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "int", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;
 
 function jLLVMDIBuilderFinalize(handle dBuilder) = @java:Method {
@@ -637,4 +632,22 @@ function jLLVMAddScopedNoAliasAAPass(handle passManagerRef) = @java:Method {
     name: "LLVMAddScopedNoAliasAAPass",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
+} external;
+
+function jLLVMWriteBitcodeToFile(handle moduleRef, handle fileName) returns int = @java:Method {
+    name: "LLVMWriteBitcodeToFile",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "java.lang.String"]
+} external;
+
+function jLLVMVerifyModule(handle moduleRef, int action, handle err) returns int = @java:Method {
+    name: "LLVMVerifyModule",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "int", "org.bytedeco.javacpp.BytePointer"]
+} external;
+
+function jLLVMIntrinsicGetType(handle context, int id, handle params, int paramCount) returns handle = @java:Method {
+    name: "LLVMIntrinsicGetType",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "int", "org.bytedeco.javacpp.PointerPointer", "long"]
 } external;

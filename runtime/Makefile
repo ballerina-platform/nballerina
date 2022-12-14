@@ -1,4 +1,4 @@
-LLVM_SUFFIX?=-13
+LLVM_SUFFIX?=-15
 export CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 OPT ?= opt$(LLVM_SUFFIX)
