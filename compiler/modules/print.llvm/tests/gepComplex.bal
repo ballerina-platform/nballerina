@@ -14,11 +14,11 @@ function gepComplex() returns Module {
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
 
-    PointerValue v0 = builder.getElementPtr(g1, [constInt("i32", 1)]);
-    PointerValue v1 = builder.getElementPtr(v0, [constInt("i32", 0), constInt("i32", 2)]);
-    PointerValue v2 = builder.getElementPtr(v1, [constInt("i32", 0), constInt("i32", 1)]);
-    PointerValue v3 = builder.getElementPtr(v2, [constInt("i64", 0), constInt("i64", 5)]);
-    _ = builder.getElementPtr(v3, [constInt("i64", 0), constInt("i64", 13)]);
+    PointerValue v0 = builder.getElementPtr(g1, [context.constInt("i32", 1)]);
+    PointerValue v1 = builder.getElementPtr(v0, [context.constInt("i32", 0), context.constInt("i32", 2)]);
+    PointerValue v2 = builder.getElementPtr(v1, [context.constInt("i32", 0), context.constInt("i32", 1)]);
+    PointerValue v3 = builder.getElementPtr(v2, [context.constInt("i64", 0), context.constInt("i64", 5)]);
+    _ = builder.getElementPtr(v3, [context.constInt("i64", 0), context.constInt("i64", 13)]);
     builder.ret();
 
     Type arrTy3 = arrayType(pointerType("i64", 1), 10);
@@ -29,7 +29,7 @@ function gepComplex() returns Module {
     bb = bar.appendBasicBlock();
     builder.positionAtEnd(bb);
 
-    PointerValue t0 = builder.getElementPtr(g2, [constInt("i32", 1),constInt("i32", 2), constInt("i32", 1), constInt("i32", 4)]);
+    PointerValue t0 = builder.getElementPtr(g2, [context.constInt("i32", 1),context.constInt("i32", 2), context.constInt("i32", 1), context.constInt("i32", 4)]);
     builder.ret(t0);
     return m;
 }
@@ -48,7 +48,7 @@ function gepComplexInbounds() returns Module {
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
 
-    _ = builder.getElementPtr(g1, [constInt("i32", 1)], "inbounds");
+    _ = builder.getElementPtr(g1, [context.constInt("i32", 1)], "inbounds");
     builder.ret();
     return m;
 }
@@ -79,7 +79,7 @@ function testGepComplexTypeCheck1() returns error? {
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
 
-    error|PointerValue v0 = trap builder.getElementPtr(g1, [constInt("i32", 0),constInt("i64", 1)]);
+    error|PointerValue v0 = trap builder.getElementPtr(g1, [context.constInt("i32", 0),context.constInt("i64", 1)]);
     if v0 !is error {
         test:assertFail("Struct indexing by non i32 constants allowed");
     }
@@ -100,7 +100,7 @@ function testGepComplexTypeCheck2() returns error? {
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
     Value v1 = builder.ptrToInt(g2, "i32");
-    error|PointerValue v0 = trap builder.getElementPtr(g1, [constInt("i32", 0), v1]);
+    error|PointerValue v0 = trap builder.getElementPtr(g1, [context.constInt("i32", 0), v1]);
     if v0 !is error {
         test:assertFail("Struct indexing by i32 variables allowed");
     }
@@ -117,8 +117,8 @@ function testGepComplexTypeCheck3() returns error? {
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType:"void", paramTypes:[]});
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
-    PointerValue v0 = builder.getElementPtr(g1, [constInt("i64", 10)]);
-    error|PointerValue v1 = builder.getElementPtr(v0, [constInt("i64", 10)]);
+    PointerValue v0 = builder.getElementPtr(g1, [context.constInt("i64", 10)]);
+    error|PointerValue v1 = builder.getElementPtr(v0, [context.constInt("i64", 10)]);
     if v1 !is error {
         test:assertFail("Struct indexing by not i32 constant allowed");
     }

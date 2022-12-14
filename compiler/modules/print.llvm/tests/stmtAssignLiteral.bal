@@ -8,11 +8,11 @@ function stmtAssignLiteral() returns Module {
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     PointerValue R1 = builder.alloca("i64");
-    builder.store(constInt("i64", 42), R1);
-    builder.store(constInt("i64", 43), R1);
-    builder.store(constInt("i64", 44), R1);
-    builder.store(constInt("i64", int:MAX_VALUE), R1);
-    builder.store(constInt("i64", int:MIN_VALUE), R1);
+    builder.store(context.constInt("i64", 42), R1);
+    builder.store(context.constInt("i64", 43), R1);
+    builder.store(context.constInt("i64", 44), R1);
+    builder.store(context.constInt("i64", int:MAX_VALUE), R1);
+    builder.store(context.constInt("i64", int:MIN_VALUE), R1);
     builder.ret();
     return m;
 }

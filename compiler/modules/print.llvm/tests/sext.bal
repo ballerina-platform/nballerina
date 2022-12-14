@@ -7,7 +7,7 @@ function sext() returns Module {
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "void", paramTypes: ["i8"]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
-    _ = builder.sExt(constInt("i8", 10), "i64");
+    _ = builder.sExt(context.constInt("i8", 10), "i64");
     Value a = foo.getParam(0);
     _ = builder.sExt(a, "i64");
     return m;

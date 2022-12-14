@@ -12,11 +12,11 @@ function stmtDeclLiteral() returns Module {
     PointerValue R3 = builder.alloca("i64");
     PointerValue R4 = builder.alloca("i64");
     PointerValue R5 = builder.alloca("i64");
-    builder.store(constInt("i64", 42), R1);
-    builder.store(constInt("i64", 43), R2);
-    builder.store(constInt("i64", 44), R3);
-    builder.store(constInt("i64", int:MAX_VALUE), R4);
-    builder.store(constInt("i64", int:MIN_VALUE), R5);
+    builder.store(context.constInt("i64", 42), R1);
+    builder.store(context.constInt("i64", 43), R2);
+    builder.store(context.constInt("i64", 44), R3);
+    builder.store(context.constInt("i64", int:MAX_VALUE), R4);
+    builder.store(context.constInt("i64", int:MIN_VALUE), R5);
     builder.ret();
     return m;
 }

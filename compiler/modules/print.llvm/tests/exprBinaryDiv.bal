@@ -15,7 +15,7 @@ function exprBinaryDiv() returns Module {
     builder.store(R0, R3);
     builder.store(R1, R4);
     Value R5 = builder.load(R4);
-    Value R6 = builder.iCmp("eq", R5, constInt("i64", 0));
+    Value R6 = builder.iCmp("eq", R5, context.constInt("i64", 0));
 
     BasicBlock bb7 = foo.appendBasicBlock();
     BasicBlock bb10 = foo.appendBasicBlock();
@@ -26,12 +26,12 @@ function exprBinaryDiv() returns Module {
 
     builder.positionAtEnd(bb7);
     Value R8 = builder.load(R3);
-    Value R9 = builder.iCmp("eq", R8, constInt("i64", int:MIN_VALUE));
+    Value R9 = builder.iCmp("eq", R8, context.constInt("i64", int:MIN_VALUE));
     builder.condBr(R9, bb10, bb14);
 
     builder.positionAtEnd(bb10);
     Value R11 = builder.load(R4);
-    Value R12 = builder.iCmp("eq", R11, constInt("i64", -1));
+    Value R12 = builder.iCmp("eq", R11, context.constInt("i64", -1));
     builder.condBr(R12, bb13, bb14);
 
     builder.positionAtEnd(bb13);

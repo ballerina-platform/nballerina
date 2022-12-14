@@ -25,7 +25,7 @@ function dIBuilder() returns Module {
     builder.setCurrentDebugLocation(loc);
     _ = builder.call(testFn, []);
     builder.setCurrentDebugLocation(());
-    builder.ret(constInt("i64",0));
+    builder.ret(context.constInt("i64",0));
 
     return m;
 }

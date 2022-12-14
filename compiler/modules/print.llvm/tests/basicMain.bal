@@ -7,7 +7,7 @@ function basicMain() returns Module {
     FunctionDefn mainFunction = m.addFunctionDefn("main", {returnType: "i64", paramTypes: []});
     BasicBlock initBlock = mainFunction.appendBasicBlock();
     builder.positionAtEnd(initBlock);
-    builder.ret(constInt("i64",0));
+    builder.ret(context.constInt("i64",0));
     return m;
 }
 

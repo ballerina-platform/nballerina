@@ -122,7 +122,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
     else {
         llvm:BasicBlock zeroDivisorBlock = scaffold.addBasicBlock();
         llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
-        builder.condBr(builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, 0)), zeroDivisorBlock, continueBlock);
+        builder.condBr(builder.iCmp("eq", rhs, buildConstInt(scaffold, 0)), zeroDivisorBlock, continueBlock);
         builder.positionAtEnd(zeroDivisorBlock);
         builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_DIVIDE_BY_ZERO, insn.pos), scaffold.panicAddress());
         builder.br(scaffold.getOnPanic());
@@ -130,8 +130,8 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         continueBlock = scaffold.addBasicBlock();
         llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
         builder.condBr(builder.iBitwise("and",
-                                        builder.iCmp("eq", lhs, llvm:constInt(LLVM_INT, int:MIN_VALUE)),
-                                        builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, -1))),
+                                        builder.iCmp("eq", lhs, buildConstInt(scaffold, int:MIN_VALUE)),
+                                        builder.iCmp("eq", rhs, buildConstInt(scaffold, -1))),
                        overflowBlock,
                        continueBlock);
         builder.positionAtEnd(overflowBlock);
@@ -142,7 +142,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
             builder.br(scaffold.getOnPanic());
         }
         else {
-            builder.store(llvm:constInt(LLVM_INT, 0), scaffold.address(insn.result));
+            builder.store(buildConstInt(scaffold, 0), scaffold.address(insn.result));
             llvm:BasicBlock b = scaffold.addBasicBlock();
             builder.br(b);
             joinBlock = b;
@@ -200,7 +200,7 @@ function buildBitwiseBinary(llvm:Builder builder, Scaffold scaffold, bir:IntBitw
     llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
     if insn.op is bir:BitwiseShiftOp {
-        rhs = builder.iBitwise("and", llvm:constInt(LLVM_INT, 0x3F), rhs);
+        rhs = builder.iBitwise("and", buildConstInt(scaffold, 0x3F), rhs);
     }
     llvm:IntBitwiseOp op = binaryBitwiseOp.get(insn.op);
     llvm:Value result = builder.iBitwise(op, lhs, rhs);
@@ -286,7 +286,7 @@ function buildConvertToDecimal(llvm:Builder builder, Scaffold scaffold, bir:Conv
 function buildConvertIntToDecimal(llvm:Builder builder, Scaffold scaffold, llvm:Value intVal, bir:ConvertToDecimalInsn insn) {
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errBlock = scaffold.addBasicBlock();
-    builder.condBr(llvm:constInt(LLVM_BOOLEAN, 0), errBlock, continueBlock);
+    builder.condBr(buildConstBoolean(scaffold, false), errBlock, continueBlock);
     builder.positionAtEnd(errBlock);
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
@@ -351,7 +351,7 @@ function buildBinaryIntIntrinsic(bir:ArithmeticBinaryOp op) returns llvm:Intrins
 // Build a value as REPR_FLOAT
 function buildFloat(llvm:Builder builder, Scaffold scaffold, bir:FloatOperand operand) returns llvm:Value {
     if operand is bir:FloatConstOperand {
-        return llvm:constFloat(LLVM_DOUBLE, operand.value);
+        return buildConstDouble(scaffold, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));
