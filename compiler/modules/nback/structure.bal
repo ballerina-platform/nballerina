@@ -186,12 +186,12 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     ListRepr repr = listAtomicTypeToSpecializedListRepr(atomic) ?: GENERIC_LIST_REPR;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(listType);
     llvm:PointerValue struct = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, repr.construct,
-                                                                           [inherentType, buildConstInt(scaffold, length)]);
+                                                                           [inherentType, constInt(scaffold, length)]);
 
     if length > 0 {
         // de-refer the member array from the list struct
         llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct,
-                                                                                        [buildConstInt(scaffold, 0), buildConstIndex(scaffold, 3)],
+                                                                                        [constInt(scaffold, 0), constIndex(scaffold, 3)],
                                                                                         "inbounds"),
                                                                   ALIGN_HEAP);
 
@@ -199,10 +199,10 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
         foreach int i in 0 ..< length {
             llvm:Value val = check buildWideRepr(builder, scaffold, insn.operands[i], repr.memberRepr, t:listAtomicTypeMemberAtInner(atomic, i));
             builder.store(listReprConvertToHeapType(builder, repr, val),
-                          builder.getElementPtr(array, [buildConstInt(scaffold, 0), buildConstInt(scaffold, i)], "inbounds"));
+                          builder.getElementPtr(array, [constInt(scaffold, 0), constInt(scaffold, i)], "inbounds"));
         }
-        builder.store(buildConstInt(scaffold, length),
-                      builder.getElementPtr(struct, [buildConstInt(scaffold, 0), buildConstIndex(scaffold, 1)], "inbounds"));
+        builder.store(constInt(scaffold, length),
+                      builder.getElementPtr(struct, [constInt(scaffold, 0), constIndex(scaffold, 1)], "inbounds"));
     }
     builder.store(buildTaggedPtr(builder, scaffold, builder.bitCast(struct, LLVM_TAGGED_PTR), TAG_LIST|FLAG_EXACT), scaffold.address(insn.result));
 }
@@ -227,13 +227,13 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     else {
         // struct is the untagged pointer to the struct
         llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
-                                                                                   [taggedStruct, buildConstInt(scaffold, POINTER_MASK)]),
+                                                                                   [taggedStruct, constInt(scaffold, POINTER_MASK)]),
                                                    heapPointerType(llListType));
         llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
         llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
         builder.condBr(builder.iCmp("ult",
                                     index,
-                                    builder.load(builder.getElementPtr(struct, [buildConstInt(scaffold, 0), buildConstIndex(scaffold, 1)]), ALIGN_HEAP)),
+                                    builder.load(builder.getElementPtr(struct, [constInt(scaffold, 0), constIndex(scaffold, 1)]), ALIGN_HEAP)),
                        continueBlock,
                        outOfBoundsBlock);
         builder.positionAtEnd(outOfBoundsBlock);
@@ -244,8 +244,8 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
             bbJoin = buildSpecializedListGet(builder, scaffold, taggedStruct, struct, index, reprIfExact, insn.result);
         }
         ListAccess la = listAccess(scaffold.getRepr(insn.result));
-        llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [buildConstInt(scaffold, 0), buildConstIndex(scaffold, 0)]), ALIGN_HEAP);
-        llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [buildConstInt(scaffold, 0), buildConstIndex(scaffold, la.descBaseIndex + LIST_DESC_GET_OFFSET)]), ALIGN_HEAP);
+        llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [constInt(scaffold, 0), constIndex(scaffold, 0)]), ALIGN_HEAP);
+        llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [constInt(scaffold, 0), constIndex(scaffold, la.descBaseIndex + LIST_DESC_GET_OFFSET)]), ALIGN_HEAP);
         member = <llvm:Value>builder.call(func, [taggedStruct, index]);
         memberTmpRepr = la.repr;
     }
@@ -273,9 +273,9 @@ function buildSpecializedListGet(llvm:Builder builder, Scaffold scaffold, llvm:V
     llvm:Value isExact = buildIsExact(builder, scaffold, taggedStruct);
     builder.condBr(isExact, bbExact, bbInexact);
     builder.positionAtEnd(bbExact);
-    llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [buildConstInt(scaffold, 0), buildConstIndex(scaffold, 3)]), ALIGN_HEAP);
+    llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [constInt(scaffold, 0), constIndex(scaffold, 3)]), ALIGN_HEAP);
     array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberHeapLlvm, 0)));
-    llvm:Value value = builder.load(builder.getElementPtr(array, [buildConstInt(scaffold, 0), index], "inbounds"), ALIGN_HEAP);
+    llvm:Value value = builder.load(builder.getElementPtr(array, [constInt(scaffold, 0), index], "inbounds"), ALIGN_HEAP);
     buildStoreRepr(builder, scaffold, listReprConvertFromHeapType(builder, repr, value), result, repr.memberRepr);
     builder.br(bbJoin);
     builder.positionAtEnd(bbInexact);
@@ -288,7 +288,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     bir:Operand newMemberOperand = insn.operands[2];
     llvm:Value taggedStruct = builder.load(scaffold.address(listOperand));
     llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>buildFunctionCall(builder, scaffold, scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
-                                                                                    [taggedStruct, buildConstInt(scaffold, POINTER_MASK)]),
+                                                                                    [taggedStruct, constInt(scaffold, POINTER_MASK)]),
                                                heapPointerType(llListType));
     llvm:BasicBlock? bbJoin = ();
     t:SemType listType = listOperand.semType;
@@ -302,9 +302,9 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
         // Value build for calling list access (val) happens to be reuseable for specialized set. May change, eg: specialized boolean[]
         bbJoin = check buildSpecializedListSet(builder, scaffold, taggedStruct, struct, index, reprIfExact, val);
     }
-    llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [buildConstInt(scaffold, 0), buildConstIndex(scaffold, 0)]), ALIGN_HEAP);
+    llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [constInt(scaffold, 0), constIndex(scaffold, 0)]), ALIGN_HEAP);
     int offset = isListSetAlwaysInexact(tc, listType, indexOperand.semType, newMemberOperand.semType) ? LIST_DESC_INEXACT_SET_OFFSET : LIST_DESC_SET_OFFSET;
-    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [buildConstInt(scaffold, 0), buildConstIndex(scaffold, la.descBaseIndex + offset)]), ALIGN_HEAP);
+    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [constInt(scaffold, 0), constIndex(scaffold, la.descBaseIndex + offset)]), ALIGN_HEAP);
     llvm:Value err = <llvm:Value>builder.call(func, [taggedStruct, index, val]);
     buildCheckError(builder, scaffold, err, insn.pos);
     if bbJoin != () {
@@ -325,14 +325,14 @@ function buildSpecializedListSet(llvm:Builder builder, Scaffold scaffold, llvm:V
     llvm:BasicBlock bbSpecializedSet = scaffold.addBasicBlock();
     builder.condBr(builder.iCmp("ult",
                                 index,
-                                builder.load(builder.getElementPtr(struct, [buildConstInt(scaffold, 0), buildConstIndex(scaffold, 1)]), ALIGN_HEAP)),
+                                builder.load(builder.getElementPtr(struct, [constInt(scaffold, 0), constIndex(scaffold, 1)]), ALIGN_HEAP)),
                    bbSpecializedSet,
                    bbTaggedSet);
     builder.positionAtEnd(bbSpecializedSet);
-    llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [buildConstInt(scaffold, 0), buildConstIndex(scaffold, 3)]), ALIGN_HEAP);
+    llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [constInt(scaffold, 0), constIndex(scaffold, 3)]), ALIGN_HEAP);
     array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberHeapLlvm, 0)));
     llvm:Value heapVal = listReprConvertToHeapType(builder, repr, val);
-    builder.store(heapVal, builder.getElementPtr(array, [buildConstInt(scaffold, 0), index], "inbounds"));
+    builder.store(heapVal, builder.getElementPtr(array, [constInt(scaffold, 0), index], "inbounds"));
     builder.br(bbJoin);
     builder.positionAtEnd(bbTaggedSet);
     return bbJoin;
@@ -363,7 +363,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     t:SemType mappingType = insn.result.semType;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
     llvm:PointerValue m = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, mappingConstructFunction,
-                                                                      [inherentType, buildConstInt(scaffold, insn.operands.length())]);
+                                                                      [inherentType, constInt(scaffold, insn.operands.length())]);
     t:Context tc = scaffold.typeContext();
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(tc, mappingType);  
     foreach var [fieldName, operand] in mappingOrderFields(mat, insn.fieldNames, insn.operands) {
@@ -416,7 +416,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
     else {
         fill = false;
         rf = mappingIndexedGetFunction;
-        k = buildConstInt(scaffold, fieldIndex);
+        k = constInt(scaffold, fieldIndex);
     }
     llvm:Value mapping = builder.load(scaffold.address(mappingReg));
     llvm:Value memberWithErr = buildRuntimeFunctionCall(builder, scaffold, rf, [mapping, k]);
@@ -499,7 +499,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
     }
     else {
         rf = mappingIndexedSetFunction;
-        k = buildConstInt(scaffold, fieldIndex);
+        k = constInt(scaffold, fieldIndex);
     }
     t:SemType memberType = t:mappingMemberTypeInner(scaffold.typeContext(), mappingType, keyOperand.semType);
     // Note that we do not need to check the exactness of the mapping value, nor do we need
@@ -570,7 +570,7 @@ function buildMemberClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Val
 function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errorBlock = scaffold.addBasicBlock();
-    builder.condBr(builder.iCmp("eq", err, buildConstInt(scaffold, 0)),
+    builder.condBr(builder.iCmp("eq", err, constInt(scaffold, 0)),
                    continueBlock,
                    errorBlock);
     builder.positionAtEnd(errorBlock);

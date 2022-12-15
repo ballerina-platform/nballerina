@@ -49,7 +49,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     TypeTestedValue { hasType } = check buildTypeTestedValue(builder, scaffold, insn.operand, insn.pos, insn.semType);
     if insn.negated {
         buildStoreBoolean(builder, scaffold, 
-                          builder.iBitwise("xor", buildConstBoolean(scaffold, true), hasType), 
+                          builder.iBitwise("xor", constBoolean(scaffold, true), hasType), 
                           insn.result);
     }
     else {
@@ -96,8 +96,8 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
     else if baseRepr == BASE_REPR_INT {
         t:IntSubtypeConstraints? intConstraints = t:intSubtypeConstraints(semType);
         if intConstraints != () && intConstraints.all {
-            hasType = builder.iBitwise("and", builder.iCmp("sle", buildConstInt(scaffold, intConstraints.min), value),
-                builder.iCmp("sge", buildConstInt(scaffold, intConstraints.max), value));
+            hasType = builder.iBitwise("and", builder.iCmp("sle", constInt(scaffold, intConstraints.min), value),
+                builder.iCmp("sge", constInt(scaffold, intConstraints.max), value));
         }
         else {
             hasType = buildRuntimeFunctionCall(builder, scaffold, typeContainsIntFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
@@ -109,7 +109,7 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
     else {
         BASE_REPR_BOOLEAN _ = baseRepr;
         t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(<t:ComplexSemType>semType);
-        hasType = builder.iCmp("eq", value, buildConstBoolean(scaffold, sub.value));
+        hasType = builder.iCmp("eq", value, constBoolean(scaffold, sub.value));
     }
     return { hasType, valueToExactify, value, repr };
 }
@@ -200,13 +200,13 @@ function buildHasTagInSet(llvm:Builder builder, Scaffold scaffold, llvm:PointerV
     return builder.iCmp("ne",
                         builder.iBitwise("and",
                                          builder.iBitwise("shl",
-                                                          buildConstInt(scaffold, 1),
+                                                          constInt(scaffold, 1),
                                                           builder.iBitwise("lshr",
                                                                            // need to mask out the 0x20 bit
                                                                            builder.iBitwise("and",
                                                                                             buildTaggedPtrToInt(builder, tagged),
-                                                                                            buildConstInt(scaffold, TAG_MASK)),
-                                                                           buildConstInt(scaffold, TAG_SHIFT))),
-                                         buildConstInt(scaffold, bitSet)),
-                        buildConstInt(scaffold, 0));
+                                                                                            constInt(scaffold, TAG_MASK)),
+                                                                           constInt(scaffold, TAG_SHIFT))),
+                                         constInt(scaffold, bitSet)),
+                        constInt(scaffold, 0));
 }

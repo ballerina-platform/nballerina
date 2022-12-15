@@ -124,15 +124,11 @@ final bir:ModuleId runtimeModule = {
     names: ["runtime"]
 };
 
-type Context object {
-    function llContext() returns llvm:Context;
-};
-
 function buildCheckPanicCode(llvm:Builder builder, Scaffold scaffold, llvm:Value valWithErr, bir:Position pos) returns llvm:Value {
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errBlock = scaffold.addBasicBlock();
     llvm:Value panicCode = builder.extractValue(valWithErr, 1);
-    builder.condBr(builder.iCmp("ne", panicCode, buildConstInt(scaffold, 0)), errBlock, continueBlock);
+    builder.condBr(builder.iCmp("ne", panicCode, constInt(scaffold, 0)), errBlock, continueBlock);
     builder.positionAtEnd(errBlock);
     builder.store(buildErrorForPanic(builder, scaffold, panicCode, pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
@@ -141,11 +137,11 @@ function buildCheckPanicCode(llvm:Builder builder, Scaffold scaffold, llvm:Value
 }
 
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
-    return buildErrorForPackedPanic(builder, scaffold, buildConstInt(scaffold, panicIndex | (scaffold.lineNumber(pos) << 8)));
+    return buildErrorForPackedPanic(builder, scaffold, constInt(scaffold, panicIndex | (scaffold.lineNumber(pos) << 8)));
 }
 
 function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicIndex, bir:Position pos) returns llvm:PointerValue {
-    return buildErrorForPackedPanic(builder, scaffold, builder.iBitwise("or", panicIndex, buildConstInt(scaffold, scaffold.lineNumber(pos) << 8)));
+    return buildErrorForPackedPanic(builder, scaffold, builder.iBitwise("or", panicIndex, constInt(scaffold, scaffold.lineNumber(pos) << 8)));
 }
 
 function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic) returns llvm:PointerValue {
@@ -287,10 +283,10 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
 }
 
 function buildTaggedBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:Value {
-    return builder.getElementPtr(buildConstNilTaggedPtr(scaffold),
+    return builder.getElementPtr(constNilTaggedPtr(scaffold),
                                      [builder.iBitwise("or",
                                                        builder.zExt(value, LLVM_INT),
-                                                       buildConstInt(scaffold,TAG_BOOLEAN))]);
+                                                       constInt(scaffold,TAG_BOOLEAN))]);
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
@@ -299,9 +295,9 @@ function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value valu
 
 // only use when compile time know that IMMEDIATE_INT_MIN <= value && value <= IMMEDIATE_INT_MAX
 function buildImmediateTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
-    var low56 = builder.iBitwise("and", buildConstInt(scaffold, (1 << TAG_SHIFT) - 1), value);
-    var tagged = builder.iBitwise("or", buildConstInt(scaffold, FLAG_IMMEDIATE | TAG_INT), low56);
-    return builder.getElementPtr(buildConstNilTaggedPtr(scaffold), [tagged]);
+    var low56 = builder.iBitwise("and", constInt(scaffold, (1 << TAG_SHIFT) - 1), value);
+    var tagged = builder.iBitwise("or", constInt(scaffold, FLAG_IMMEDIATE | TAG_INT), low56);
+    return builder.getElementPtr(constNilTaggedPtr(scaffold), [tagged]);
 }
 
 function buildTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
@@ -309,7 +305,7 @@ function buildTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value va
 }
 
 function buildTaggedPtr(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue mem, int tag) returns llvm:PointerValue {
-    return builder.getElementPtr(mem, [buildConstInt(scaffold, tag)]);
+    return builder.getElementPtr(mem, [constInt(scaffold, tag)]);
 }
 
 function buildHasTag(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, int tag) returns llvm:Value {
@@ -318,8 +314,8 @@ function buildHasTag(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue 
 
 function buildTestTag(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, int tag, int mask) returns llvm:Value {
     return builder.iCmp("eq", builder.iBitwise("and", buildTaggedPtrToInt(builder, tagged),
-                                                       buildConstInt(scaffold, mask)),
-                              buildConstInt(scaffold, tag));
+                                                       constInt(scaffold, mask)),
+                              constInt(scaffold, tag));
 
 }
 
@@ -353,18 +349,18 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
             return [repr, check buildConstString(builder, scaffold, value)];
         }
         else if value == () {
-            return [REPR_NIL, buildConstNil(scaffold)];
+            return [REPR_NIL, constNil(scaffold)];
         }
         else if value is boolean {
-            return [REPR_BOOLEAN, buildConstBoolean(scaffold, value)];
+            return [REPR_BOOLEAN, constBoolean(scaffold, value)];
         }
         else if value is int {
             boolean alwaysInImmediateRange = IMMEDIATE_INT_MIN <= value && value <= IMMEDIATE_INT_MAX;
             IntRepr repr = { constraints: { min: value, max: value, all: true }, alwaysInImmediateRange };
-            return [repr, buildConstInt(scaffold, value)];
+            return [repr, constInt(scaffold, value)];
         }
         else if value is float {
-            return [REPR_FLOAT, buildConstDouble(scaffold, value)];
+            return [REPR_FLOAT, constDouble(scaffold, value)];
         }
         else {
             decimal _ = value;
@@ -382,7 +378,7 @@ function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) re
 }
 
 function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal decimalValue) returns llvm:Value {
-    return builder.getElementPtr(builder.addrSpaceCast(scaffold.getDecimal(decimalValue), LLVM_TAGGED_PTR), [buildConstInt(scaffold, TAG_DECIMAL)]);
+    return builder.getElementPtr(builder.addrSpaceCast(scaffold.getDecimal(decimalValue), LLVM_TAGGED_PTR), [constInt(scaffold, TAG_DECIMAL)]);
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {
@@ -397,7 +393,7 @@ function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand 
 // Build a value as REPR_INT
 function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operand) returns llvm:Value {
     if operand is bir:IntConstOperand {
-        return buildConstInt(scaffold, operand.value);
+        return constInt(scaffold, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));
@@ -407,28 +403,12 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
 // Build a value as REPR_BOOLEAN
 function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperand operand) returns llvm:Value {
     if operand is bir:BooleanConstOperand {
-        return buildConstBoolean(scaffold, operand.value);
+        return constBoolean(scaffold, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));
     }
 }
-
-function buildConstNil(Context cx) returns llvm:ConstPointerValue => cx.llContext().constNull(LLVM_NIL_TYPE);
-
-function buildConstNilTaggedPtr(Context cx) returns llvm:ConstPointerValue => cx.llContext().constNull(LLVM_TAGGED_PTR);
-
-function buildConstBoolean(Context cx, boolean b) returns llvm:ConstValue => cx.llContext().constInt(LLVM_BOOLEAN, b ? 1 : 0);
-
-function buildConstInt(Context cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_INT, val);
-
-function buildConstIndex(Context cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_INDEX, val);
-
-function buildConstTID(InitModuleContext cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_TID, val);
-
-function buildConstBitset(InitModuleContext cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_BITSET, val);
-
-function buildConstDouble(Context cx, float val) returns llvm:ConstValue => cx.llContext().constFloat(LLVM_DOUBLE, val);
 
 function heapPointerType(llvm:Type ty) returns llvm:PointerType {
     return llvm:pointerType(ty, HEAP_ADDR_SPACE);
@@ -445,6 +425,6 @@ function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:Fu
 }
 
 function buildIsExact(llvm:Builder builder, Scaffold scaffold, llvm:Value taggedPtr) returns llvm:Value {
-    llvm:Value masked = <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedPtr, buildConstInt(scaffold, FLAG_EXACT)]);
-    return builder.iCmp("ne", masked, buildConstNilTaggedPtr(scaffold));
+    llvm:Value masked = <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedPtr, constInt(scaffold, FLAG_EXACT)]);
+    return builder.iCmp("ne", masked, constNilTaggedPtr(scaffold));
 }

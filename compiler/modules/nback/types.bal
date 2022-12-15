@@ -67,6 +67,10 @@ final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType), 
                                               LLVM_INT,                                  // int64_t capacity
                                               heapPointerType(llvm:pointerType("i8"))]); // union {TaggedPtr, int64_t, float} *members
 
+type Context object {
+    function llContext() returns llvm:Context;
+};
+
 type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST;
 
 public type TypeUsage readonly & record {|
@@ -143,3 +147,19 @@ function mangleTypeSymbol(bir:ModuleId modId, TypeHowUsed howUsed, int index) re
     result += index.toString();
     return result;    
 }
+
+function constNil(Context cx) returns llvm:ConstPointerValue => cx.llContext().constNull(LLVM_NIL_TYPE);
+
+function constNilTaggedPtr(Context cx) returns llvm:ConstPointerValue => cx.llContext().constNull(LLVM_TAGGED_PTR);
+
+function constBoolean(Context cx, boolean b) returns llvm:ConstValue => cx.llContext().constInt(LLVM_BOOLEAN, b ? 1 : 0);
+
+function constInt(Context cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_INT, val);
+
+function constIndex(Context cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_INDEX, val);
+
+function constTid(InitModuleContext cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_TID, val);
+
+function constBitset(InitModuleContext cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_BITSET, val);
+
+function constDouble(Context cx, float val) returns llvm:ConstValue => cx.llContext().constFloat(LLVM_DOUBLE, val);
