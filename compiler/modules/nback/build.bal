@@ -128,7 +128,7 @@ function buildCheckPanicCode(llvm:Builder builder, Scaffold scaffold, llvm:Value
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errBlock = scaffold.addBasicBlock();
     llvm:Value panicCode = builder.extractValue(valWithErr, 1);
-    builder.condBr(builder.iCmp("ne", panicCode, constInt(scaffold, 0)), errBlock, continueBlock);
+    builder.condBr(builder.iCmp("ne", panicCode, scaffold.llContext().constInt("i64", 0)), errBlock, continueBlock);
     builder.positionAtEnd(errBlock);
     builder.store(buildErrorForPanic(builder, scaffold, panicCode, pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
@@ -286,7 +286,7 @@ function buildTaggedBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value 
     return builder.getElementPtr(constNilTaggedPtr(scaffold),
                                      [builder.iBitwise("or",
                                                        builder.zExt(value, LLVM_INT),
-                                                       constInt(scaffold,TAG_BOOLEAN))]);
+                                                       constInt(scaffold, TAG_BOOLEAN))]);
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
@@ -426,5 +426,5 @@ function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:Fu
 
 function buildIsExact(llvm:Builder builder, Scaffold scaffold, llvm:Value taggedPtr) returns llvm:Value {
     llvm:Value masked = <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedPtr, constInt(scaffold, FLAG_EXACT)]);
-    return builder.iCmp("ne", masked, constNilTaggedPtr(scaffold));
+    return builder.iCmp("ne", masked, scaffold.llContext().constNull(llvm:pointerType("i8", 1)));
 }

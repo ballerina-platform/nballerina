@@ -331,7 +331,7 @@ function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:V
     llvm:BasicBlock bbNil = scaffold.addBasicBlock();
     llvm:BasicBlock bbNotNil = scaffold.addBasicBlock();
     llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
-    llvm:Value isNil = builder.iCmp("eq", lhs, constNilTaggedPtr(scaffold));
+    llvm:Value isNil = builder.iCmp("eq", lhs, scaffold.llContext().constNull(llvm:pointerType("i8", 1)));
     builder.condBr(isNil, bbNil, bbNotNil);
     builder.positionAtEnd(bbNil);
     buildStoreBoolean(builder, scaffold, constBoolean(scaffold, false), result);
