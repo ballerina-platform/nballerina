@@ -168,7 +168,7 @@ final ListRepr GENERIC_LIST_REPR = { memberHeapLlvm: LLVM_TAGGED_PTR, memberRepr
 final readonly & map<ListRepr> SPECIALIZED_LIST_REPRS = {
     int_array: { memberHeapLlvm: LLVM_INT, memberRepr: REPR_INT, construct: listConstruct8Function },
     byte_array: { memberHeapLlvm: LLVM_BYTE, memberRepr: REPR_BYTE, construct: listConstruct1Function },
-    float_array: { memberHeapLlvm: LLVM_DOUBLE, memberRepr: REPR_FLOAT, construct: listConstruct8Function }
+    float_array: { memberHeapLlvm: LLVM_FLOAT, memberRepr: REPR_FLOAT, construct: listConstruct8Function }
 };
 
 function listTypeToSpecializedListRepr(t:Context tc, t:SemType listType) returns ListRepr? {

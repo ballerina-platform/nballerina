@@ -27,9 +27,9 @@ final readonly & llvm:FunctionType[] llListDescFuncTypes = [
     llvm:functionType(LLVM_INT, [LLVM_TAGGED_PTR, LLVM_INT]),
     llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_INT]),
     llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_INT]),
-    llvm:functionType(LLVM_DOUBLE, [LLVM_TAGGED_PTR, LLVM_INT]),
-    llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_DOUBLE]),
-    llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_DOUBLE])
+    llvm:functionType(LLVM_FLOAT, [LLVM_TAGGED_PTR, LLVM_INT]),
+    llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_FLOAT]),
+    llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_FLOAT])
 ];
 
 type ListReprPrefix "generic"|"int_array"|"byte_array"|"float_array";
@@ -162,4 +162,4 @@ function constTid(InitModuleContext cx, int val) returns llvm:ConstValue => cx.l
 
 function constBitset(InitModuleContext cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_BITSET, val);
 
-function constDouble(Context cx, float val) returns llvm:ConstValue => cx.llContext().constFloat(LLVM_DOUBLE, val);
+function constFloat(Context cx, float val) returns llvm:ConstValue => cx.llContext().constFloat(LLVM_FLOAT, val);

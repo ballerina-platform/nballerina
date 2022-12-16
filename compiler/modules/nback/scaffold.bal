@@ -9,7 +9,7 @@ type BuildError err:Semantic|err:Unimplemented|err:Internal;
 
 const LLVM_INT = "i64";
 const LLVM_BYTE = "i8";
-const LLVM_DOUBLE = "double";
+const LLVM_FLOAT = "double";
 const LLVM_BOOLEAN = "i1";
 const LLVM_VOID = "void";
 
@@ -61,7 +61,7 @@ type IntRepr readonly & record {|
 type FloatRepr readonly & record {|
     *ReprFields;
     BASE_REPR_FLOAT base = BASE_REPR_FLOAT;
-    LLVM_DOUBLE llvm = LLVM_DOUBLE;
+    LLVM_FLOAT llvm = LLVM_FLOAT;
     true alwaysImmediate = true;
 |};
 

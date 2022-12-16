@@ -360,7 +360,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
             return [repr, constInt(scaffold, value)];
         }
         else if value is float {
-            return [REPR_FLOAT, constDouble(scaffold, value)];
+            return [REPR_FLOAT, constFloat(scaffold, value)];
         }
         else {
             decimal _ = value;

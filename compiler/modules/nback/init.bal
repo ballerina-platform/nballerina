@@ -407,8 +407,8 @@ function createIntSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) 
             getSubtypeContainsFunc(cx, TYPE_KIND_INT),
             cx.llContext().constInt("i64", ranges.length()),
             cx.llContext().constArray(llIntRangeType,
-                                    from var r in ranges select cx.llContext().constStruct([constInt(cx, r.min),
-                                                                                          constInt(cx, r.max)]))
+                                      from var r in ranges select cx.llContext().constStruct([constInt(cx, r.min),
+                                                                                              constInt(cx, r.max)]))
         ]
     };
 }
@@ -420,12 +420,12 @@ function createFloatSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType
         panic err:impossible("empty list of float ranges in complex subtype");
     }
     return {
-        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", "i32", llvm:arrayType(LLVM_DOUBLE, len)],
+        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", "i32", llvm:arrayType(LLVM_FLOAT, len)],
         values: [
             getSubtypeContainsFunc(cx, TYPE_KIND_FLOAT),
             cx.llContext().constInt("i32", len),
             cx.llContext().constInt("i32", sub.allowed ? 1 : 0),
-            cx.llContext().constArray(LLVM_DOUBLE, from var d in sub.values select constDouble(cx, d))
+            cx.llContext().constArray(LLVM_FLOAT, from var d in sub.values select constFloat(cx, d))
         ]
     };
 }

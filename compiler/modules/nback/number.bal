@@ -63,7 +63,7 @@ final RuntimeFunction decimalFromFloatFunction = {
     name: "decimal_from_float",
     ty: {
         returnType: LLVM_TAGGED_WITH_PANIC_CODE,
-        paramTypes: [LLVM_DOUBLE]
+        paramTypes: [LLVM_FLOAT]
     },
     attrs: ["readonly"]
 };
@@ -260,7 +260,7 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
 }
 
 function buildConvertIntToFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value intVal, bir:ConvertToFloatInsn insn) {
-    buildStoreFloat(builder, scaffold, builder.sIToFP(intVal, LLVM_DOUBLE), insn.result);
+    buildStoreFloat(builder, scaffold, builder.sIToFP(intVal, LLVM_FLOAT), insn.result);
 }
 
 function buildConvertDecimalToFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value decimalVal, bir:ConvertToFloatInsn insn) {
@@ -351,7 +351,7 @@ function buildBinaryIntIntrinsic(bir:ArithmeticBinaryOp op) returns llvm:Intrins
 // Build a value as REPR_FLOAT
 function buildFloat(llvm:Builder builder, Scaffold scaffold, bir:FloatOperand operand) returns llvm:Value {
     if operand is bir:FloatConstOperand {
-        return constDouble(scaffold, operand.value);
+        return constFloat(scaffold, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));

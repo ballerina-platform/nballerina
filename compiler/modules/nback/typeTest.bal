@@ -24,7 +24,7 @@ final RuntimeFunction typeContainsFloatFunction = {
     name: "type_contains_float",
     ty: {
         returnType: LLVM_BOOLEAN,
-        paramTypes: [llvm:pointerType(llComplexType), LLVM_DOUBLE]
+        paramTypes: [llvm:pointerType(llComplexType), LLVM_FLOAT]
     },
     attrs: ["readonly"]
 };
