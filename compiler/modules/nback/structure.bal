@@ -570,7 +570,7 @@ function buildMemberClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Val
 function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errorBlock = scaffold.addBasicBlock();
-    builder.condBr(builder.iCmp("eq", err, scaffold.llContext().constInt("i64", 0)),
+    builder.condBr(builder.iCmp("eq", err, constI64(scaffold, 0)),
                    continueBlock,
                    errorBlock);
     builder.positionAtEnd(errorBlock);

@@ -162,4 +162,13 @@ function constTid(InitModuleContext cx, int val) returns llvm:ConstValue => cx.l
 
 function constBitset(InitModuleContext cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_BITSET, val);
 
+function constMemberType(Context cx, int val) returns llvm:ConstValue => cx.llContext().constInt(LLVM_MEMBER_TYPE, val);
+
+function constI64(Context cx, int val) returns llvm:ConstValue => cx.llContext().constInt("i64", val);
+
+function constI32(Context cx, int val) returns llvm:ConstValue => cx.llContext().constInt("i32", val);
+
+function constI16(Context cx, int val) returns llvm:ConstValue => cx.llContext().constInt("i16", val);
+
 function constFloat(Context cx, float val) returns llvm:ConstValue => cx.llContext().constFloat(LLVM_FLOAT, val);
+

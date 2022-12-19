@@ -128,7 +128,7 @@ function buildCheckPanicCode(llvm:Builder builder, Scaffold scaffold, llvm:Value
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errBlock = scaffold.addBasicBlock();
     llvm:Value panicCode = builder.extractValue(valWithErr, 1);
-    builder.condBr(builder.iCmp("ne", panicCode, scaffold.llContext().constInt("i64", 0)), errBlock, continueBlock);
+    builder.condBr(builder.iCmp("ne", panicCode, constI64(scaffold, 0)), errBlock, continueBlock);
     builder.positionAtEnd(errBlock);
     builder.store(buildErrorForPanic(builder, scaffold, panicCode, pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
