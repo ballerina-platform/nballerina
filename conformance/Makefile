@@ -1,19 +1,10 @@
 TARGETS=test
-TEST_SOURCE = ./ballerina-spec/conformance/lang/expressions/
-TDIR=$(sort $(shell find $(TEST_SOURCE) -name "*.balt" | xargs dirname | rev |cut -d '/' -f 1 | rev))
-TESTS=$(shell find $(TEST_SOURCE) -name "*.balt")
-TRANSFORMED_TESTS=$(shell find $(TEST_SOURCE) -name "*.balt" | sed -e "s/.\/ballerina-spec\/conformance\/lang/.\/tests/g")
+TEST_SOURCE=./ballerina-spec/conformance/lang/expressions/
 
-.DEFAULT_GOAL := test
-
-$(TRANSFORMED_TESTS): update
-
-update: $(TESTS)
-	git submodule foreach git pull origin master
-	rm -rf tests
-	mkdir -p tests
-	rm -rf out
-	bal run transform.bal -- $^ --skipList skiplist.txt
+test:
+	$(MAKE) -C . -f conformance.mk updateSpec
+	$(MAKE) -C . -f conformance.mk updateTests
+	$(MAKE) -C . -f conformance.mk test
 
 report: report/report.html
 
@@ -24,12 +15,4 @@ clean:
 	rm -rf out
 	rm -rf tests
 
-$(TARGETS): $(TDIR)
-
-$(TDIR): $(TRANSFORMED_TESTS)
-	if [ -d "tests/$@" ]; then \
-		mkdir -p out/$@ && \
-		$(MAKE) -C out/$@ -f ../../balt-sub.mk tdir=$@ balt_dir=../../tests/$@ $(MAKECMDGOALS); \
-	fi
-
-.PHONY: $(TARGETS) $(TDIR)
+.PHONY: $(TARGETS)
