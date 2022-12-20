@@ -1,6 +1,6 @@
 TARGETS=test updateSpec updateTests
 TEST_DESTINATION=./tests/
-TDIR=$(sort $(shell find $(TEST_SOURCE) -name "*.balt" | xargs dirname | rev |cut -d '/' -f 1 | rev))
+TDIR=$(sort $(shell find $(TEST_DESTINATION) -name "*.balt" | xargs dirname | rev |cut -d '/' -f 1 | rev))
 TESTS=$(shell find $(TEST_SOURCE) -name "*.balt")
 TRANSFORMED_TESTS=$(shell find $(TEST_DESTINATION) -name "*.balt")
 
