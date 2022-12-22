@@ -5,4 +5,7 @@ public function main() {
     int c = a <<
     b;
     io:println(c); // @output 8
+    c <<=
+     1;
+    io:println(c); // @output 16
 }
