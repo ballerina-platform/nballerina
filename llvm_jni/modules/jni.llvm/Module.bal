@@ -41,7 +41,7 @@ public distinct class Module {
     }
 
     function addFunction(string fnName, FunctionType fnType, boolean isDefn) returns Function {
-        handle llvmFunction = jLLVMAddFunction(self.LLVMModule, java:fromString(fnName), typeToLLVMType(fnType, self.context));
+        handle llvmFunction = jLLVMAddFunction(self.LLVMModule, java:fromString(fnName), typeToLLVMType(self.context, fnType));
         Function fn = new (llvmFunction, fnType, self.context);
         if isDefn {
             self.functions.push(fn);
@@ -57,7 +57,7 @@ public distinct class Module {
 
     public function addModuleFlag(ModuleFlagBehavior behavior, ModuleFlag flag) {
         var [keyObj, keyLen] = getStringProp(flag[0]);
-        Metadata val = intAsMetadata(flag[1]);
+        Metadata val = intAsMetadata(self.context, flag[1]);
         jLLVMAddModuleFlag(self.LLVMModule, moduleFlagBehaviorToInt.get(behavior), keyObj, keyLen, val.llvmMetadata);
     }
 
@@ -211,7 +211,7 @@ public distinct class Module {
     }
 
     public function addGlobal(Type ty, string name, *GlobalProperties props) returns ConstPointerValue {
-        PointerValue val =  new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(ty, self.context), java:fromString(name), props.addressSpace));
+        PointerValue val =  new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(self.context, ty), java:fromString(name), props.addressSpace));
         var initializer = props.initializer;
         if !(initializer is ()) {
             jLLVMSetInitializer(val.LLVMValueRef, initializer.LLVMValueRef);
@@ -232,7 +232,7 @@ public distinct class Module {
 
     public function addAlias(Type aliasTy, ConstValue aliasee, string name, *GlobalSymbolProperties props) returns ConstPointerValue {
         Type aliasInternalType = pointerType(aliasTy, props.addressSpace);
-        ConstPointerValue val = new(jLLVMAddAlias(self.LLVMModule, typeToLLVMType(aliasInternalType, self.context), aliasee.LLVMValueRef, java:fromString(name)));
+        ConstPointerValue val = new(jLLVMAddAlias(self.LLVMModule, typeToLLVMType(self.context, aliasInternalType), aliasee.LLVMValueRef, java:fromString(name)));
         self.setGlobalSymbolProperties(val, props);
         return val;
     }
@@ -248,12 +248,12 @@ public distinct class Module {
         int id = intrinsicNameToId(name);
         if name is IntegerArithmeticIntrinsicName {
             FunctionType fnType = {returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"]};
-            PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
+            PointerPointer paramTypes = PointerPointerFromTypes(self.context, fnType.paramTypes);
             return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);
         }
         else {
             FunctionType fnType = {returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"]};
-            PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
+            PointerPointer paramTypes = PointerPointerFromTypes(self.context, fnType.paramTypes);
             return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);
 
         }

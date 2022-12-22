@@ -18,9 +18,9 @@ function fnPtrCall() returns Module {
     PointerValue v2 = builder.alloca(structPtrTy);
     builder.store(arg, v2);
     Value v3 = builder.load(v2);
-    PointerValue v4 =  builder.getElementPtr(<PointerValue>v3, [constInt("i32", 0), constInt("i32", 0)], "inbounds");
+    PointerValue v4 =  builder.getElementPtr(<PointerValue>v3, [context.constInt("i32", 0), context.constInt("i32", 0)], "inbounds");
     Value v5 = builder.load(v4);
-    PointerValue v6 = builder.getElementPtr(<PointerValue>v5, [constInt("i64", 1)], "inbounds");
+    PointerValue v6 = builder.getElementPtr(<PointerValue>v5, [context.constInt("i64", 1)], "inbounds");
     Value v7 = builder.load(v6);
     Value v8 = builder.load(v2);
     PointerValue v9 = builder.bitCast(<PointerValue>v7, extFnPtrTy);

@@ -1,8 +1,8 @@
 import ballerina/jballerina.java;
 
-function typeToLLVMType(RetType ty, Context? context) returns handle {
+function typeToLLVMType(Context context, RetType ty) returns handle {
     if ty is PointerType {
-        handle baseType = typeToLLVMType(ty.pointsTo, context);
+        handle baseType = typeToLLVMType(context, ty.pointsTo);
         return jLLVMPointerType(baseType, ty.addressSpace);
     }
     if ty is StructType {
@@ -12,60 +12,46 @@ function typeToLLVMType(RetType ty, Context? context) returns handle {
                 return namedTy;
             }
         }
-        PointerPointer typeArr = PointerPointerFromTypes(ty.elementTypes);
+        PointerPointer typeArr = PointerPointerFromTypes(context, ty.elementTypes);
         int elementCount = ty.elementTypes.length();
         return jLLVMStructType(typeArr.jObject, elementCount, 0);
     }
     if ty is ArrayType {
-        handle elementType = typeToLLVMType(ty.elementType, context);
+        handle elementType = typeToLLVMType(context, ty.elementType);
         return jLLVMArrayType(elementType, ty.elementCount);
     }
     if ty is FunctionType {
-        handle returnType = typeToLLVMType(ty.returnType, context);
-        PointerPointer paramTypeArr = PointerPointerFromTypes(ty.paramTypes, context);
+        handle returnType = typeToLLVMType(context, ty.returnType);
+        PointerPointer paramTypeArr = PointerPointerFromTypes(context, ty.paramTypes);
         int paramTypeLen = ty.paramTypes.length();
         return jLLVMFunctionType(returnType, paramTypeArr.jObject, paramTypeLen, 0);
     }
     match ty {
         "void" => {
-            return jLLVMVoidType();
+            return jLLVMVoidTypeInContext(context.LLVMContext);
         }
         "i1" => {
-            return jLLVMInt1Type();
+            return jLLVMInt1TypeInContext(context.LLVMContext);
         }
         "i8" => {
-            return jLLVMInt8Type();
+            return jLLVMInt8TypeInContext(context.LLVMContext);
         }
         "i16" => {
-            return jLLVMInt16Type();
+            return jLLVMInt16TypeInContext(context.LLVMContext);
         }
         "i32" => {
-            return jLLVMInt32Type();
+            return jLLVMInt32TypeInContext(context.LLVMContext);
         }
         "i64" => {
-            return jLLVMInt64Type();
+            return jLLVMInt64TypeInContext(context.LLVMContext);
         }
         "double" => {
-            return jLLVMDoubleType();
+            return jLLVMDoubleTypeInContext(context.LLVMContext);
         }
         _ => {
             panic error(string `Type: ${<string>ty} is not implemented`);
         }
     }
-}
-
-public function constInt(Type ty, int value) returns ConstValue {
-    DataValue val = new (jLLVMConstInt(typeToLLVMType(ty, ()), value, 0));
-    return val;
-}
-
-
-public function constFloat(FloatType ty, float val) returns ConstValue {
-   return new (jLLVMConstReal(typeToLLVMType(ty, ()), val));
-}
-
-public function constNull(PointerType ty) returns PointerValue {
-    return new (jLLVMConstPointerNull(typeToLLVMType(ty, ())));
 }
 
 public type Value DataValue|Function;
@@ -103,46 +89,46 @@ public readonly class ConstPointerValue {
     }
 }
 
-function jLLVMVoidType() returns handle = @java:Method {
-    name: "LLVMVoidType",
+function jLLVMVoidTypeInContext(handle contextRef) returns handle = @java:Method {
+    name: "LLVMVoidTypeInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: []
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef"]
 } external;
 
-function jLLVMDoubleType() returns handle = @java:Method {
-    name: "LLVMDoubleType",
+function jLLVMDoubleTypeInContext(handle contextRef) returns handle = @java:Method {
+    name: "LLVMDoubleTypeInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: []
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef"]
 } external;
 
-function jLLVMInt64Type() returns handle = @java:Method {
-    name: "LLVMInt64Type",
+function jLLVMInt64TypeInContext(handle contextRef) returns handle = @java:Method {
+    name: "LLVMInt64TypeInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: []
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef"]
 } external;
 
-function jLLVMInt32Type() returns handle = @java:Method {
-    name: "LLVMInt32Type",
+function jLLVMInt32TypeInContext(handle contextRef) returns handle = @java:Method {
+    name: "LLVMInt32TypeInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: []
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef"]
 } external;
 
-function jLLVMInt16Type() returns handle = @java:Method {
-    name: "LLVMInt16Type",
+function jLLVMInt16TypeInContext(handle contextRef) returns handle = @java:Method {
+    name: "LLVMInt16TypeInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: []
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef"]
 } external;
 
-function jLLVMInt8Type() returns handle = @java:Method {
-    name: "LLVMInt8Type",
+function jLLVMInt8TypeInContext(handle contextRef) returns handle = @java:Method {
+    name: "LLVMInt8TypeInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: []
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef"]
 } external;
 
-function jLLVMInt1Type() returns handle = @java:Method {
-    name: "LLVMInt1Type",
+function jLLVMInt1TypeInContext(handle contextRef) returns handle = @java:Method {
+    name: "LLVMInt1TypeInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: []
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef"]
 } external;
 
 function jLLVMConstInt(handle ty, int value, int signExtend) returns handle = @java:Method {

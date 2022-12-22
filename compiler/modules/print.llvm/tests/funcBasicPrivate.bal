@@ -15,7 +15,7 @@ function funcBasicPrivate() returns Module {
     bar.setLinkage("internal");
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
-    builder.ret(constInt("i64",42));
+    builder.ret(context.constInt("i64",42));
     return m;
 }
 

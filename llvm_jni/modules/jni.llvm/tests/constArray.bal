@@ -4,7 +4,7 @@ function constArray() returns Module {
     Context context = new;
     Builder builder = context.createBuilder();
     Module m = context.createModule();
-    ConstValue[] elements = [constInt("i64", 1), constInt("i64", 10), constInt("i64", 100)];
+    ConstValue[] elements = [context.constInt("i64", 1), context.constInt("i64", 10), context.constInt("i64", 100)];
     ConstValue array = context.constArray("i64", elements);
 
     ArrayType retTy = arrayType("i64", 3);

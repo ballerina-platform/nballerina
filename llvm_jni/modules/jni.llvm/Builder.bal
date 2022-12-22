@@ -109,7 +109,7 @@ public distinct class Builder {
 
     public function alloca(SingleValueType ty, Alignment? align = (), string? name = ()) returns PointerValue {
         string regName = self.extractName(name);
-        PointerValue val = new (jLLVMBuildAlloca(self.LLVMBuilder, typeToLLVMType(ty, self.context), java:fromString(regName)));
+        PointerValue val = new (jLLVMBuildAlloca(self.LLVMBuilder, typeToLLVMType(self.context, ty), java:fromString(regName)));
         if align != () {
             self.setAlignment(val, align);
         }
@@ -235,7 +235,7 @@ public distinct class Builder {
 
     public function bitCast(PointerValue val, PointerType destTy, string? name = ()) returns PointerValue {
         string reg = self.extractName(name);
-        return new (jLLVMBuildBitCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
+        return new (jLLVMBuildBitCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
     }
 
     public function ret(Value? val = ()) {
@@ -248,22 +248,22 @@ public distinct class Builder {
 
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildPtrToInt(self.LLVMBuilder, ptr.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
+        return new (jLLVMBuildPtrToInt(self.LLVMBuilder, ptr.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
     }
 
     public function zExt(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildZExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
+        return new (jLLVMBuildZExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
     }
 
     public function sExt(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildSExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
+        return new (jLLVMBuildSExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
     }
 
     public function trunc(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildTrunc(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
+        return new (jLLVMBuildTrunc(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
     }
 
     public function fNeg(Value val, string? name=()) returns Value {
@@ -279,7 +279,7 @@ public distinct class Builder {
         string reg = self.extractName(name);
         PointerPointer arr = PointerPointerFromValues(args);
         handle llvmVal = jLLVMBuildCall(self.LLVMBuilder, fn.LLVMValueRef, arr.jObject, args.length(), java:fromString(reg));
-        if jLLVMGetReturnType(jLLVMGetCalledFunctionType(llvmVal)).toString() == typeToLLVMType("void", self.context).toString() {
+        if jLLVMGetReturnType(jLLVMGetCalledFunctionType(llvmVal)).toString() == typeToLLVMType(self.context, "void").toString() {
             return;
         }
         return new (llvmVal);
@@ -310,12 +310,12 @@ public distinct class Builder {
     
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         string reg = self.extractName(name);
-        return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
+        return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
     }
 
     public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
+        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)));
     }
 
     public function setCurrentDebugLocation(Metadata? dbLocation) {

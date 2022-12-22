@@ -65,50 +65,10 @@ function constValueWithBody(PointerType ty, string[] body) returns ConstPointerV
     string operand = concat(...words);
     return new (ty, operand);
 }
-// Corresponds to LLVMConstInt
-// XXX Need to think about SignExtend argument
-public function constInt(IntType ty, int val) returns ConstValue {
-    return new ConstValue(ty, val.toString());
-}
 
-final string posInf = floatBitsToHexString(1.0/0.0);
-final string negInf = floatBitsToHexString(-1.0/0.0);
+final string POS_INF = floatBitsToHexString(1.0/0.0);
+final string NEG_INF = floatBitsToHexString(-1.0/0.0);
 final string NAN = floatBitsToHexString(0.0/0.0);
-
-// Corresponds to LLVMConstReal
-public function constFloat(FloatType ty, float val) returns ConstValue {
-    string valRep;
-    // Special cases
-    if val.isInfinite() {
-        if val > 0.0 {
-            valRep = posInf;
-        }
-        else {
-            valRep = negInf;
-        }
-    }
-    else if val.isNaN() {
-        valRep = NAN;
-    }
-    else {
-        // General case
-        if float:abs(val).toString().length() > 7 {
-            // Resulting number has more than 7 digits so convert to hex format
-            valRep = floatBitsToHexString(val);
-        }
-        else {
-            // Set number in decimal format
-            // Change to E notation once balspec:#770 is done
-            valRep = val.toString();
-        }
-    }
-    return new ConstValue(ty, valRep);
-}
-
-// Corresponds to LLVMConstNull
-public function constNull(PointerType ty) returns ConstPointerValue {
-    return new ConstPointerValue(ty, "null");
-}
 
 // Corresponds to LLVMContextRef
 public class Context {
@@ -227,6 +187,47 @@ public class Context {
     // Corresponds to LLVMConstPtrToInt
     public function constPtrToInt(ConstPointerValue constantValue, IntType toType) returns ConstValue {
         return new ConstValue(toType, concat("ptrtoint", "(", typeToString(constantValue.ty, self), constantValue.operand, "to", typeToString(toType, self), ")"));
+    }
+
+    // Corresponds to LLVMConstInt
+    // XXX Need to think about SignExtend argument
+    public function constInt(IntType ty, int val) returns ConstValue {
+        return new ConstValue(ty, val.toString());
+    }
+
+    // Corresponds to LLVMConstReal
+    public function constFloat(FloatType ty, float val) returns ConstValue {
+        string valRep;
+        // Special cases
+        if val.isInfinite() {
+            if val > 0.0 {
+                valRep = POS_INF;
+            }
+            else {
+                valRep = NEG_INF;
+            }
+        }
+        else if val.isNaN() {
+            valRep = NAN;
+        }
+        else {
+            // General case
+            if float:abs(val).toString().length() > 7 {
+                // Resulting number has more than 7 digits so convert to hex format
+                valRep = floatBitsToHexString(val);
+            }
+            else {
+                // Set number in decimal format
+                // Change to E notation once balspec:#770 is done
+                valRep = val.toString();
+            }
+        }
+        return new ConstValue(ty, valRep);
+    }
+
+    // Corresponds to LLVMConstNull
+    public function constNull(PointerType ty) returns ConstPointerValue {
+        return new ConstPointerValue(ty, "null");
     }
 
     function output(Output out){

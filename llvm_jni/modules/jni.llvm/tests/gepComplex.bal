@@ -14,11 +14,11 @@ function gepComplex() returns Module {
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
 
-    PointerValue v0 = builder.getElementPtr(g1, [constInt("i32", 1)]);
-    PointerValue v1 = builder.getElementPtr(v0, [constInt("i32", 0), constInt("i32", 2)]);
-    PointerValue v2 = builder.getElementPtr(v1, [constInt("i32", 0), constInt("i32", 1)]);
-    PointerValue v3 = builder.getElementPtr(v2, [constInt("i64", 0), constInt("i64", 5)]);
-    PointerValue v4 = builder.getElementPtr(v3, [constInt("i64", 0), constInt("i64", 13)]);
+    PointerValue v0 = builder.getElementPtr(g1, [context.constInt("i32", 1)]);
+    PointerValue v1 = builder.getElementPtr(v0, [context.constInt("i32", 0), context.constInt("i32", 2)]);
+    PointerValue v2 = builder.getElementPtr(v1, [context.constInt("i32", 0), context.constInt("i32", 1)]);
+    PointerValue v3 = builder.getElementPtr(v2, [context.constInt("i64", 0), context.constInt("i64", 5)]);
+    PointerValue v4 = builder.getElementPtr(v3, [context.constInt("i64", 0), context.constInt("i64", 13)]);
     builder.ret(v4);
 
     Type arrTy3 = arrayType(pointerType("i64", 1), 10);
@@ -29,7 +29,7 @@ function gepComplex() returns Module {
     bb = bar.appendBasicBlock();
     builder.positionAtEnd(bb);
 
-    PointerValue t0 = builder.getElementPtr(g2, [constInt("i32", 1),constInt("i32", 2), constInt("i32", 1), constInt("i32", 4)]);
+    PointerValue t0 = builder.getElementPtr(g2, [context.constInt("i32", 1), context.constInt("i32", 2), context.constInt("i32", 1), context.constInt("i32", 4)]);
     builder.ret(t0);
     return m;
 }
@@ -48,11 +48,11 @@ function gepComplexInbounds() returns Module {
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
 
-    PointerValue v0 = builder.getElementPtr(g1, [constInt("i32", 1)], "inbounds");
-    PointerValue v1 = builder.getElementPtr(v0, [constInt("i32", 0), constInt("i32", 2)], "inbounds");
-    PointerValue v2 = builder.getElementPtr(v1, [constInt("i32", 0), constInt("i32", 1)], "inbounds");
-    PointerValue v3 = builder.getElementPtr(v2, [constInt("i64", 0), constInt("i64", 5)], "inbounds");
-    PointerValue v4 = builder.getElementPtr(v3, [constInt("i64", 0), constInt("i64", 13)], "inbounds");
+    PointerValue v0 = builder.getElementPtr(g1, [context.constInt("i32", 1)], "inbounds");
+    PointerValue v1 = builder.getElementPtr(v0, [context.constInt("i32", 0), context.constInt("i32", 2)], "inbounds");
+    PointerValue v2 = builder.getElementPtr(v1, [context.constInt("i32", 0), context.constInt("i32", 1)], "inbounds");
+    PointerValue v3 = builder.getElementPtr(v2, [context.constInt("i64", 0), context.constInt("i64", 5)], "inbounds");
+    PointerValue v4 = builder.getElementPtr(v3, [context.constInt("i64", 0), context.constInt("i64", 13)], "inbounds");
     builder.ret(v4);
     return m;
 }

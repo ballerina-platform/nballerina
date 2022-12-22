@@ -168,7 +168,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
             buildCompareDecimal(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
         }
         else if subtype == t:NIL {
-            buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, insn.op is "<="|">=" ? 1 : 0), insn.result);
+            buildStoreBoolean(builder, scaffold, constBoolean(scaffold, insn.op is "<="|">="), insn.result);
         }
         else {
             t:BasicTypeBitSet orderTypeMinusNil = subtype & ~t:NIL;
@@ -300,7 +300,7 @@ final readonly & table<TaggedCompareResultTransform> key(op) taggedCompareResult
 function buildCompareStore(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs, RuntimeFunction comparator) {
     TaggedCompareResultTransform transform = taggedCompareResultTransforms.get(insn.op);
     llvm:Value result = buildRuntimeFunctionCall(builder, scaffold, comparator, [lhs, rhs]);
-    buildStoreBoolean(builder, scaffold, builder.iCmp(transform.predicate, result, llvm:constInt(LLVM_INT, transform.compareResult)), insn.result);
+    buildStoreBoolean(builder, scaffold, builder.iCmp(transform.predicate, result, constInt(scaffold, transform.compareResult)), insn.result);
 }
 
 function buildCompareTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
@@ -331,10 +331,10 @@ function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:V
     llvm:BasicBlock bbNil = scaffold.addBasicBlock();
     llvm:BasicBlock bbNotNil = scaffold.addBasicBlock();
     llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
-    llvm:Value isNil = builder.iCmp("eq", lhs, llvm:constNull(llvm:pointerType("i8", 1)));
+    llvm:Value isNil = builder.iCmp("eq", lhs, scaffold.llContext().constNull(llvm:pointerType("i8", 1)));
     builder.condBr(isNil, bbNil, bbNotNil);
     builder.positionAtEnd(bbNil);
-    buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, 0), result);
+    buildStoreBoolean(builder, scaffold, constBoolean(scaffold, false), result);
     builder.br(bbJoin);
     builder.positionAtEnd(bbNotNil);
     return bbJoin;
@@ -351,14 +351,14 @@ function buildCompareFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPr
 function buildCompareString(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     buildStoreBoolean(builder, scaffold,
                       builder.iCmp(op, buildRuntimeFunctionCall(builder, scaffold, stringCmpFunction, [lhs, rhs]),
-                                   llvm:constInt(LLVM_INT, 0)),
+                                   constInt(scaffold, 0)),
                       result);
 }
 
 function buildCompareDecimal(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     buildStoreBoolean(builder, scaffold,
                       builder.iCmp(op, buildRuntimeFunctionCall(builder, scaffold, decimalCmpFunction, [lhs, rhs]),
-                                   llvm:constInt(LLVM_INT, 0)),
+                                   constInt(scaffold, 0)),
                       result);
 }
 

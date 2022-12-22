@@ -16,7 +16,7 @@ function exprBinaryRemainder() returns Module {
     builder.store(R0, R4);
     builder.store(R1, R5);
     Value R6 = builder.load(R5);
-    Value R7 = builder.iCmp("eq", R6, constInt("i64", 0));
+    Value R7 = builder.iCmp("eq", R6, context.constInt("i64", 0));
 
     BasicBlock bb8 = foo.appendBasicBlock();
     BasicBlock bb9 = foo.appendBasicBlock();
@@ -28,7 +28,7 @@ function exprBinaryRemainder() returns Module {
 
     builder.positionAtEnd(bb9);
     Value R10 = builder.load(R4);
-    Value R11 = builder.iCmp("eq", R10, constInt("i64", int:MIN_VALUE));
+    Value R11 = builder.iCmp("eq", R10, context.constInt("i64", int:MIN_VALUE));
     
     BasicBlock bb16 = foo.appendBasicBlock();
     BasicBlock bb12 = foo.appendBasicBlock();
@@ -37,12 +37,12 @@ function exprBinaryRemainder() returns Module {
 
     builder.positionAtEnd(bb12);
     Value R13 = builder.load(R5);
-    Value R14 = builder.iCmp("eq", R13, constInt("i64", -1));
+    Value R14 = builder.iCmp("eq", R13, context.constInt("i64", -1));
     BasicBlock bb15 = foo.appendBasicBlock();
     builder.condBr(R14, bb15, bb16);
 
     builder.positionAtEnd(bb15);
-    builder.store(constInt("i64", 0), R3);
+    builder.store(context.constInt("i64", 0), R3);
 
     BasicBlock bb20 = foo.appendBasicBlock();
     builder.br(bb20);

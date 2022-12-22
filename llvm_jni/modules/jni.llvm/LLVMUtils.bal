@@ -31,10 +31,10 @@ function PointerPointerFromValues(Value[] values) returns PointerPointer {
     return arr;
 }
 
-function PointerPointerFromTypes(Type[] values, Context? context=()) returns PointerPointer {
+function PointerPointerFromTypes(Context context, Type[] values) returns PointerPointer {
     PointerPointer arr = new (values.length());
     foreach var val in values {
-        arr.put(typeToLLVMType(val, context));
+        arr.put(typeToLLVMType(context, val));
     }
     return arr;
 }

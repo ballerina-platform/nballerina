@@ -13,15 +13,15 @@ function namedBB() returns Module {
     Value a = builder.binaryOpWrap("add", p1, p2);
     BasicBlock greater = mainFunction.appendBasicBlock("greater");
     BasicBlock less = mainFunction.appendBasicBlock("less");
-    Value isGreater = builder.iCmp("sge", a, constInt("i64", 10));
+    Value isGreater = builder.iCmp("sge", a, context.constInt("i64", 10));
     builder.condBr(isGreater, greater, less);
     builder.positionAtEnd(greater);
-    Value b_1 = builder.binaryOpWrap("sub", a, constInt("i64", 5));
+    Value b_1 = builder.binaryOpWrap("sub", a, context.constInt("i64", 5));
     builder.store(b_1, v);
     BasicBlock common = mainFunction.appendBasicBlock();
     builder.br(common);
     builder.positionAtEnd(less);
-    Value b_2 = builder.binaryOpWrap("add", a, constInt("i64", 5));
+    Value b_2 = builder.binaryOpWrap("add", a, context.constInt("i64", 5));
     builder.store(b_2, v);
     builder.br(common);
     builder.positionAtEnd(common);

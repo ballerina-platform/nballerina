@@ -10,7 +10,7 @@ function externalFunc() returns Module {
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     _ = builder.call(barVoid, []);
-    Value? R_1 = builder.call(bar, [constInt("i64", 0)]);
+    Value? R_1 = builder.call(bar, [context.constInt("i64", 0)]);
     Value R1;
     if R_1 is Value {
        R1 = R_1; 

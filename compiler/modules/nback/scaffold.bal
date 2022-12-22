@@ -9,7 +9,7 @@ type BuildError err:Semantic|err:Unimplemented|err:Internal;
 
 const LLVM_INT = "i64";
 const LLVM_BYTE = "i8";
-const LLVM_DOUBLE = "double";
+const LLVM_FLOAT = "double";
 const LLVM_BOOLEAN = "i1";
 const LLVM_VOID = "void";
 
@@ -61,7 +61,7 @@ type IntRepr readonly & record {|
 type FloatRepr readonly & record {|
     *ReprFields;
     BASE_REPR_FLOAT base = BASE_REPR_FLOAT;
-    LLVM_DOUBLE llvm = LLVM_DOUBLE;
+    LLVM_FLOAT llvm = LLVM_FLOAT;
     true alwaysImmediate = true;
 |};
 
@@ -129,6 +129,7 @@ type UsedSemType record {|
 |};
 
 class Scaffold {
+    *Context;
     private final Module mod;
     private final bir:File file;
     private final llvm:FunctionDefn llFunc;
@@ -190,6 +191,8 @@ class Scaffold {
             declareVariables(self, <DIScaffold>diScaffold, entry, code.registers);
         }
     }
+
+    function llContext() returns llvm:Context => self.mod.llContext;
 
     function saveParams(llvm:Builder builder) {
          foreach int i in 0 ..< self.nParams {
@@ -427,7 +430,7 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
             encoded |= (i < nBytes ? bytes[i] : 0xFF) << i*8;
         }
         encoded |= FLAG_IMMEDIATE|TAG_STRING;
-        return context.constGetElementPtr(llvm:constNull(LLVM_TAGGED_PTR), [llvm:constInt(LLVM_INT, encoded)]);
+        return context.constGetElementPtr(context.constNull(LLVM_TAGGED_PTR), [context.constInt(LLVM_INT, encoded)]);
     }
     // if nBytes == nCodePoints && nBytes <= 0xFF {
     //     // We want the total size including the header to be a multiple of 8
@@ -438,13 +441,13 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
     // }
     else if nBytes <= 0xFFFF {
         int nBytesPadded = padBytes(bytes, 4);
-        val = context.constStruct([llvm:constInt("i16", nBytes), llvm:constInt("i16", nCodePoints), context.constString(bytes)]);
+        val = context.constStruct([context.constInt("i16", nBytes), context.constInt("i16", nCodePoints), context.constString(bytes)]);
         ty = llvm:structType(["i16", "i16", llvm:arrayType("i8", nBytesPadded)]);
         variant = STRING_VARIANT_MEDIUM;
     }
     else {
         int nBytesPadded = padBytes(bytes, 16);
-        val = context.constStruct([llvm:constInt("i64", nBytes), llvm:constInt("i64", nCodePoints), context.constString(bytes)]);
+        val = context.constStruct([context.constInt("i64", nBytes), context.constInt("i64", nCodePoints), context.constString(bytes)]);
         ty = llvm:structType(["i64", "i64", llvm:arrayType("i8", nBytesPadded)]);
         variant = STRING_VARIANT_LARGE;
     }
@@ -456,13 +459,13 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
                                                unnamedAddr = true,
                                                linkage = "internal");
     return context.constGetElementPtr(context.constAddrSpaceCast(context.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_TAGGED_PTR),
-                                      [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
+                                      [context.constInt(LLVM_INT, TAG_STRING | <int>variant)]);
 }
 
 function addDecimalDefn(llvm:Context context, llvm:Module mod, int defnIndex, decimal val) returns llvm:ConstPointerValue {
     var [leastSignificantVal, mostSignificantVal] = lib:toLeDpd(val);
-    llvm:ConstValue lestSignificant = llvm:constInt("i64", leastSignificantVal);
-    llvm:ConstValue mostSignificant = llvm:constInt("i64", mostSignificantVal);
+    llvm:ConstValue lestSignificant = context.constInt("i64", leastSignificantVal);
+    llvm:ConstValue mostSignificant = context.constInt("i64", mostSignificantVal);
     llvm:ConstPointerValue ptr = mod.addGlobal(llvm:arrayType("i64", 2),
                                                decimalDefnSymbol(defnIndex),
                                                initializer = context.constArray("i64", [lestSignificant, mostSignificant]),

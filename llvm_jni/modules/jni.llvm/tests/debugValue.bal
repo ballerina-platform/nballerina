@@ -38,14 +38,14 @@ function debugVal() returns Module {
     PointerValue c = builder.alloca(pointerType("i8", 1));
     dIBuilder.insertDeclareAtEnd(value=b, varInfo=bMeta, expr=emptyExpr, debugLoc=loc1, block=initBlock);
     dIBuilder.insertDeclareAtEnd(value=c, varInfo=cMeta, expr=emptyExpr, debugLoc=loc1, block=initBlock);
-    Value initA = constInt("i64", 10);
+    Value initA = context.constInt("i64", 10);
     builder.store(initA, a);
-    builder.store(constInt("i64", 15), b);
+    builder.store(context.constInt("i64", 15), b);
     dIBuilder.insertDbgValueAtEnd(value=initA, varInfo=varMeta, expr=emptyExpr, debugLoc=loc1, block=initBlock);
     builder.setCurrentDebugLocation(loc2);
-    Value retVal = builder.iArithmeticWrap("add", builder.load(a), constInt("i64", 1));
+    Value retVal = builder.iArithmeticWrap("add", builder.load(a), context.constInt("i64", 1));
     dIBuilder.insertDbgValueAtEnd(value=retVal, varInfo=varMeta, expr=emptyExpr, debugLoc=loc2, block=initBlock);
-    builder.store(constInt("i64", 20), b);
+    builder.store(context.constInt("i64", 20), b);
     builder.setCurrentDebugLocation(loc3);
     builder.ret(retVal);
     return m;

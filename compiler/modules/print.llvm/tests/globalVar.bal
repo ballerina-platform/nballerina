@@ -4,7 +4,7 @@ function globalVar() returns Module {
     Context context = new;
     Builder builder = context.createBuilder();
     Module m = context.createModule();
-    ConstValue const1 = context.constStruct([constInt("i64", 1), constInt("i64", 2)]);
+    ConstValue const1 = context.constStruct([context.constInt("i64", 1), context.constInt("i64", 2)]);
     Type const1Ty = structType(["i64", "i64"]);
 
     PointerValue g = m.addGlobal("i64", "g1");

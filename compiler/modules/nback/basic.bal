@@ -252,7 +252,7 @@ function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr,
                       scaffold.address(reg));
     }
     else {
-         builder.store(buildConstNil(), scaffold.address(reg));
+         builder.store(constNil(scaffold), scaffold.address(reg));
     }
 }
 
@@ -275,7 +275,7 @@ function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorC
     llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(errorConstructFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),
-                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.pos))
+                                                    constInt(scaffold, scaffold.lineNumber(insn.pos))
                                                 ]);
     scaffold.clearDebugLocation(builder);
     builder.store(value, scaffold.address(insn.result));
@@ -292,6 +292,6 @@ function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringCo
 
 function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
     buildStoreBoolean(builder, scaffold,
-                      builder.iBitwise("xor", llvm:constInt(LLVM_BOOLEAN, 1), builder.load(scaffold.address(insn.operand))),
+                      builder.iBitwise("xor", constBoolean(scaffold, true), builder.load(scaffold.address(insn.operand))),
                       insn.result);
 }

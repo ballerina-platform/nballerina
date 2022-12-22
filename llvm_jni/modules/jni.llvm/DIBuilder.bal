@@ -8,8 +8,8 @@ public distinct class Metadata {
     }
 }
 
-function intAsMetadata(int value) returns Metadata {
-    Value val = constInt("i32", value);
+function intAsMetadata(Context cx, int value) returns Metadata {
+    Value val = cx.constInt("i32", value);
     return new(jLLVMValueAsMetadata(val.LLVMValueRef));
 }
 

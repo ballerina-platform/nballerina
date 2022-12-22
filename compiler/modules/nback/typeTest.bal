@@ -24,7 +24,7 @@ final RuntimeFunction typeContainsFloatFunction = {
     name: "type_contains_float",
     ty: {
         returnType: LLVM_BOOLEAN,
-        paramTypes: [llvm:pointerType(llComplexType), LLVM_DOUBLE]
+        paramTypes: [llvm:pointerType(llComplexType), LLVM_FLOAT]
     },
     attrs: ["readonly"]
 };
@@ -49,7 +49,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     TypeTestedValue { hasType } = check buildTypeTestedValue(builder, scaffold, insn.operand, insn.pos, insn.semType);
     if insn.negated {
         buildStoreBoolean(builder, scaffold, 
-                          builder.iBitwise("xor", llvm:constInt(LLVM_BOOLEAN, 1), hasType), 
+                          builder.iBitwise("xor", constBoolean(scaffold, true), hasType), 
                           insn.result);
     }
     else {
@@ -86,7 +86,7 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
         llvm:PointerValue tagged = <llvm:PointerValue>value;
         t:BasicTypeBitSet? bitSet = testTypeAsBasicBitSet(scaffold.typeContext(), operand.semType, semType);
         if bitSet != () {
-            hasType = buildHasTagInSet(builder, tagged, bitSet);
+            hasType = buildHasTagInSet(builder, scaffold, tagged, bitSet);
         }
         else {
             hasType = buildRuntimeFunctionCall(builder, scaffold, typeContainsFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), tagged]);
@@ -96,8 +96,8 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
     else if baseRepr == BASE_REPR_INT {
         t:IntSubtypeConstraints? intConstraints = t:intSubtypeConstraints(semType);
         if intConstraints != () && intConstraints.all {
-            hasType = builder.iBitwise("and", builder.iCmp("sle", llvm:constInt(LLVM_INT, intConstraints.min), value),
-                builder.iCmp("sge", llvm:constInt(LLVM_INT, intConstraints.max), value));
+            hasType = builder.iBitwise("and", builder.iCmp("sle", constInt(scaffold, intConstraints.min), value),
+                builder.iCmp("sge", constInt(scaffold, intConstraints.max), value));
         }
         else {
             hasType = buildRuntimeFunctionCall(builder, scaffold, typeContainsIntFunction, [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
@@ -109,7 +109,7 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
     else {
         BASE_REPR_BOOLEAN _ = baseRepr;
         t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(<t:ComplexSemType>semType);
-        hasType = builder.iCmp("eq", value, llvm:constInt(LLVM_BOOLEAN, sub.value ? 1 : 0));
+        hasType = builder.iCmp("eq", value, constBoolean(scaffold, sub.value));
     }
     return { hasType, valueToExactify, value, repr };
 }
@@ -192,21 +192,21 @@ function testTypeAsBasicBitSet(t:Context tc, t:SemType sourceType, t:SemType tar
     return ();
 }
 
-function buildHasTagInSet(llvm:Builder builder, llvm:PointerValue tagged, t:BasicTypeBitSet bitSet) returns llvm:Value {
+function buildHasTagInSet(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:BasicTypeBitSet bitSet) returns llvm:Value {
     t:BasicTypeCode? btCode = t:basicTypeCode(bitSet);
     if btCode != () {
-        return buildHasTag(builder, tagged, btCode << TAG_SHIFT);
+        return buildHasTag(builder, scaffold, tagged, btCode << TAG_SHIFT);
     }
     return builder.iCmp("ne",
                         builder.iBitwise("and",
                                          builder.iBitwise("shl",
-                                                          llvm:constInt(LLVM_INT, 1),
+                                                          constInt(scaffold, 1),
                                                           builder.iBitwise("lshr",
                                                                            // need to mask out the 0x20 bit
                                                                            builder.iBitwise("and",
                                                                                             buildTaggedPtrToInt(builder, tagged),
-                                                                                            llvm:constInt(LLVM_INT, TAG_MASK)),
-                                                                           llvm:constInt(LLVM_INT, TAG_SHIFT))),
-                                         llvm:constInt(LLVM_INT, bitSet)),
-                        llvm:constInt(LLVM_INT, 0));
+                                                                                            constInt(scaffold, TAG_MASK)),
+                                                                           constInt(scaffold, TAG_SHIFT))),
+                                         constInt(scaffold, bitSet)),
+                        constInt(scaffold, 0));
 }
