@@ -137,17 +137,13 @@ public distinct class Builder {
         Type ty = sameNumberType(lhs, rhs);
         match op {
             "add" => {
-                Value val = new (jLLVMBuildNSWAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
-                return val;
+                return new (jLLVMBuildNSWAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "mul" => {
-                Value val = new (jLLVMBuildNSWMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
-                return val;
+                return  new (jLLVMBuildNSWMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
             "sub" => {
-                Value val = new (jLLVMBuildNSWSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
-                return val;
-
+                return new (jLLVMBuildNSWSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)), ty);
             }
         }
         panic error("op not implemented");
@@ -310,13 +306,11 @@ public distinct class Builder {
     }    
     
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)), destTy);
+        return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(self.extractName(name))), destTy);
     }
 
     public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
-        string reg = self.extractName(name);
-        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(reg)), destTy);
+        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(self.context, destTy), java:fromString(self.extractName(name))), destTy);
     }
 
     public function setCurrentDebugLocation(Metadata? dbLocation) {

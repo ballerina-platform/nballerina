@@ -25,7 +25,7 @@ public distinct class Context {
     }
 
     public function constInt(Type ty, int value) returns ConstValue {
-        return new (jLLVMConstInt(typeToLLVMType(self, ty), value, 0),ty, value);
+        return new (jLLVMConstInt(typeToLLVMType(self, ty), value, 0), ty, value);
     }
 
     public function constFloat(FloatType ty, float val) returns ConstValue {

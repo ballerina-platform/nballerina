@@ -634,18 +634,6 @@ function jLLVMAddScopedNoAliasAAPass(handle passManagerRef) = @java:Method {
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
 } external;
 
-function jLLVMWriteBitcodeToFile(handle moduleRef, handle fileName) returns int = @java:Method {
-    name: "LLVMWriteBitcodeToFile",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "java.lang.String"]
-} external;
-
-function jLLVMVerifyModule(handle moduleRef, int action, handle err) returns int = @java:Method {
-    name: "LLVMVerifyModule",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "int", "org.bytedeco.javacpp.BytePointer"]
-} external;
-
 function jLLVMIntrinsicGetType(handle context, int id, handle params, int paramCount) returns handle = @java:Method {
     name: "LLVMIntrinsicGetType",
     'class: "org.bytedeco.llvm.global.LLVM",
