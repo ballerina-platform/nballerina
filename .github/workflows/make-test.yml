@@ -28,9 +28,16 @@ jobs:
       - name: Install LLVM (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install llvm@13
-          echo "/usr/local/opt/llvm@13/bin" >> $GITHUB_PATH
+          brew install llvm@15
+          echo "/usr/local/opt/llvm@15/bin" >> $GITHUB_PATH
           echo "LLVM_SUFFIX=" >> $GITHUB_ENV
+      - name: Install LLVM (linux)
+        if: runner.os == 'Linux'
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+          sudo add-apt-repository deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main
+          sudo apt-get update
+          sudo apt-get install -y clang-15 llvm-15
       - name: Cache jBallerina
         id: cache-jbal
         uses: actions/cache@v2
