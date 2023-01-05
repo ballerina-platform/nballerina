@@ -457,8 +457,8 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     int cp2 = codePoints[i];
                     if cp2 == CP_LESS_THAN {
                         i += 1;
-                        if codePoints[i] == CP_EQUAL {
-                            i+=1;
+                        if i < len && codePoints[i] == CP_EQUAL {
+                            i += 1;
                             endFragment(FRAG_LESS_THAN_LESS_THAN_EQUAL, i, result);
                             continue;
                         }
