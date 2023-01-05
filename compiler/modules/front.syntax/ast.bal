@@ -182,7 +182,8 @@ public type GroupingExpr record {|
 |};
 
 public type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
-public type BinaryBitwiseOp "|" | "^" | "&" | "<<" | ">>" | ">>>";
+public type BitwiseShiftOp "<<" | ">>" | ">>>";
+public type BinaryBitwiseOp "|" | "^" | "&" | BitwiseShiftOp;
 public type BinaryLogicalOp "&&" | "||";
 public type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 public type BinaryEqualityOp  "==" | "!=" | "===" | "!==";

@@ -837,7 +837,7 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
     t:SemType lt = t:widenUnsigned(lhs.semType);
     t:SemType rt = t:widenUnsigned(rhs.semType);
     t:SemType resultType;
-    if op is "<<"|">>"|">>>" {
+    if op is s:BitwiseShiftOp {
         resultType = op is ">>"|">>>" && t:isSubtype(cx.mod.tc, lt, t:intWidthUnsigned(32)) ? lt : t:INT;
     }
     else {
