@@ -5,7 +5,7 @@ function ptrMaskIntrinsic() returns Module {
     Builder builder = context.createBuilder();
     Module m = context.createModule();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1)]});
-    FunctionDecl mask = m.getIntrinsicDeclaration("ptrmask.p1i8.i64");
+    FunctionDecl mask = m.getIntrinsicDeclaration("ptrmask.p1.i64");
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
     Value arg = foo.getParam(0);
