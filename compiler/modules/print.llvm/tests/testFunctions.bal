@@ -10,7 +10,7 @@ function testLLVMOverflowArithmeticFunctionType(FunctionType fType) {
 function testArithmeticIntrinsicGeneration() {
     Context context = new;
     Module m = context.createModule();
-    IntrinsicFunctionName[] names = ["sadd.with.overflow.i64", "ssub.with.overflow.i64", "smul.with.overflow.i64"];
+    IntrinsicFunctionName[] names = ["sadd.with.overflow.i64.i64", "ssub.with.overflow.i64.i64", "smul.with.overflow.i64.i64"];
     foreach var name in names {
         FunctionDecl f = m.getIntrinsicDeclaration(name);
         testLLVMOverflowArithmeticFunctionType(f.functionType);
@@ -23,7 +23,7 @@ function testArithmeticIntrinsicGeneration() {
 function testIntrinsicRepeatedAddition() {
     Context context = new;
     Module m = context.createModule();
-    IntrinsicFunctionName name = "sadd.with.overflow.i64";
+    IntrinsicFunctionName name = "sadd.with.overflow.i64.i64";
     FunctionDecl f1 = m.getIntrinsicDeclaration(name);
     FunctionDecl f2 = m.getIntrinsicDeclaration(name);
     test:assertTrue(f1 === f2);
