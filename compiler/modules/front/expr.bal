@@ -836,7 +836,13 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
     ValueFlags resultFlags = leftFlags & rightFlags;
     t:SemType lt = t:widenUnsigned(lhs.semType);
     t:SemType rt = t:widenUnsigned(rhs.semType);
-    t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
+    t:SemType resultType;
+    if op is s:BitwiseShiftOp {
+        resultType = op is ">>"|">>>" && t:isSubtype(cx.mod.tc, lt, t:intWidthUnsigned(32)) ? lt : t:INT;
+    }
+    else {
+        resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
+    }
     if resultFlags != 0 {
         int value = bitwiseEval(op, leftValue, rightValue);
         if (resultFlags & VALUE_SINGLE_SHAPE) != 0 {

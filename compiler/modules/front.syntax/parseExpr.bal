@@ -198,7 +198,7 @@ function parseShiftExpr(Tokenizer tok) returns Expr|err:Syntax {
     Expr expr = check parseAdditiveExpr(tok);
     while true {
         Token? t = tok.current();
-        if t is ("<<"|">>>"|">>") {
+        if t is BitwiseShiftOp {
             Position opPos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseAdditiveExpr(tok);
