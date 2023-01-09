@@ -425,6 +425,6 @@ function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:Fu
 }
 
 function buildIsExact(llvm:Builder builder, Scaffold scaffold, llvm:Value taggedPtr) returns llvm:Value {
-    llvm:Value masked = <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedPtr, constInt(scaffold, FLAG_EXACT)]);
+    llvm:Value masked = <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1.i64"), [taggedPtr, constInt(scaffold, FLAG_EXACT)]);
     return builder.iCmp("ne", masked, scaffold.llContext().constNull(llvm:pointerType("i8", 1)));
 }

@@ -226,7 +226,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     }
     else {
         // struct is the untagged pointer to the struct
-        llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
+        llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1.i64"),
                                                                                    [taggedStruct, constInt(scaffold, POINTER_MASK)]),
                                                    heapPointerType(llListType));
         llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
@@ -287,7 +287,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     bir:IntOperand indexOperand = insn.operands[1];
     bir:Operand newMemberOperand = insn.operands[2];
     llvm:Value taggedStruct = builder.load(scaffold.address(listOperand));
-    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>buildFunctionCall(builder, scaffold, scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
+    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>buildFunctionCall(builder, scaffold, scaffold.getIntrinsicFunction("ptrmask.p1.i64"),
                                                                                     [taggedStruct, constInt(scaffold, POINTER_MASK)]),
                                                heapPointerType(llListType));
     llvm:BasicBlock? bbJoin = ();

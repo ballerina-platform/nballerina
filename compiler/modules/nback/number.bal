@@ -305,9 +305,9 @@ function buildDecimalNegate(llvm:Builder builder, Scaffold scaffold, bir:Decimal
 }
 
 final readonly & map<llvm:IntrinsicFunctionName> binaryIntIntrinsics = {
-    "+": "sadd.with.overflow.i64",
-    "-": "ssub.with.overflow.i64",
-    "*": "smul.with.overflow.i64"
+    "+": "sadd.with.overflow.i64.i64",
+    "-": "ssub.with.overflow.i64.i64",
+    "*": "smul.with.overflow.i64.i64"
 };
 
 final readonly & map<llvm:IntArithmeticOp> intArithmeticOps = {
