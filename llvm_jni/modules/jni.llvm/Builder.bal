@@ -280,9 +280,9 @@ public distinct class Builder {
         }
         PointerPointer arr = PointerPointerFromValues(args);
         RetType retTy = fnTy.returnType;
-        handle llvmTy = fn is Function ? fn.LLVMTypeRef : typeToLLVMType(self.context, fnTy);
-        handle llvmVal = jLLVMBuildCall(self.LLVMBuilder, llvmTy, fn.LLVMValueRef, arr.jObject, args.length(), java:fromString(reg));
-        return retTy != "void" ? new (llvmVal, retTy) : ();
+        handle llvmFnTy = fn is Function ? fn.LLVMTypeRef : typeToLLVMType(self.context, fnTy);
+        handle llvmRetVal = jLLVMBuildCall(self.LLVMBuilder, llvmFnTy, fn.LLVMValueRef, arr.jObject, args.length(), java:fromString(reg));
+        return retTy != "void" ? new (llvmRetVal, retTy) : ();
     }
 
     public function extractValue(Value value, int index, string? name = ()) returns Value {

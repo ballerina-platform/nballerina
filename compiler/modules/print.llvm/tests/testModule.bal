@@ -16,7 +16,7 @@ function testIntrinsicNamedFunctionDecln() {
     Module m = context.createModule();
     error|FunctionDecl fn = trap m.addFunctionDecl("sadd.with.overflow.i64.i64",{returnType:"i64", paramTypes:["i64"]});
     if fn !is error {
-        test:assertFail("Function declarations named as reserved intrinsic.i64.i64 allowed");
+        test:assertFail("Function declarations named as reserved intrinsic allowed");
     }
 }
 

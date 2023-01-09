@@ -3,8 +3,8 @@ import ballerina/jballerina.java.arrays as jarrays;
 import ballerina/io;
 
 function intrinsicNameToId(IntrinsicFunctionName name) returns int {
-    string full_name = "llvm." + name;
-    return jLLVMLookupIntrinsicID(java:fromString(full_name), full_name.length());
+    string str_name = "llvm." + name;
+    return jLLVMLookupIntrinsicID(java:fromString(str_name), str_name.length());
 }
 
 public type LLVMCodeGenOptLevel string;
