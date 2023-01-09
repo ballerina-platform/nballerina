@@ -88,3 +88,7 @@ function memberMappingDescSymbol(int n) returns string {
 function subtypeTypeDefnSymbol(int n) returns string {
     return "Type" + n.toString();
 }
+
+function fillerDescSymbol(int n) returns string {
+    return ".fillerDesc" + n.toString();
+}

@@ -286,3 +286,13 @@ static bool decimalListContains(const DecimalConstPtr *start, const DecimalConst
     // start == end, so there is no such member
     return false;
 }
+
+typedef struct DecimalFillerDesc {
+    TaggedPtr (*create)(struct DecimalFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    decQuad *val;
+} *DecimalFillerDescPtr;
+
+TaggedPtr decimalFillerCreate(DecimalFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    *hasIdentityPtr = false;
+    return createDecimal(fillerDesc->val);
+} 

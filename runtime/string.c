@@ -318,3 +318,15 @@ static bool stringListContains(const TaggedPtr *start, const TaggedPtr *end, Tag
     // start == end, so there is no such member
     return false;
 }
+
+typedef struct StringFillerDesc {
+    TaggedPtr (*create)(struct StringFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    TaggedPtr val;
+} *StringFillerDescPtr;
+
+TaggedPtr stringFillerCreate(StringFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    *hasIdentityPtr = false;
+    return fillerDesc->val;
+}
+
+const struct StringFillerDesc string_filler_desc = { &stringFillerCreate, (TaggedPtr)(IMMEDIATE_FLAG | (((uint64_t)TAG_STRING) << TAG_SHIFT) | (((uint64_t)1 << (7*8)) -  1)) };

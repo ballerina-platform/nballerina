@@ -59,3 +59,15 @@ static bool floatListContains(const double *start, const double *end, double d) 
     // start == end, so there is no such member
     return false;
 }
+
+typedef struct FloatFillerDesc {
+    TaggedPtr (*create)(struct FloatFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    double val;
+} *FloatFillerDescPtr;
+
+TaggedPtr floatFillerCreate(FloatFillerDescPtr fillerDesc, bool* hasIdentityPtr) {
+    *hasIdentityPtr = false;
+    return floatToTagged(fillerDesc->val);
+}
+
+const struct FloatFillerDesc float_filler_desc = { &floatFillerCreate, 0.0 };

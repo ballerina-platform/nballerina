@@ -124,6 +124,19 @@ typedef struct {
     Tid tid;
 } StructureDesc, *StructureDescPtr;
 
+typedef struct FillerDesc {
+    TaggedPtr (*create)(struct FillerDesc *fillerDesc, bool *hasIdentityPtr);
+} *FillerDescPtr;
+
+TaggedPtr fillerCreate(FillerDescPtr fillerDesc, bool *hasIdentityPtr);
+
+typedef struct ConstFillerDesc {
+    TaggedPtr (*create)(struct ConstFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    TaggedPtr constValue;
+} *ConstFillerDescPtr;
+
+TaggedPtr constFillerCreate(ConstFillerDescPtr fillerDesc, bool *hasIdentityPtr);
+
 // All mapping and list values start with this
 typedef GC struct {
     StructureDescPtr desc;
@@ -150,7 +163,7 @@ typedef struct {
     PanicCode (*inexactSetFloat)(TaggedPtr lp, int64_t index, double val);
     // the type of members with index >= minLength
     MemberType restType;
-    StructureDescPtr fillerDesc;
+    FillerDescPtr fillerDesc;
     // The types of the members at the start of the list.
     // For member with index i in 0 ..< nMemberTypes, the type is memberTypes[i]
     // For member with index i in nMemberTypes ..< minLength, the type is memberTypes[nMemberTypes - 1]
@@ -189,7 +202,7 @@ typedef struct {
     Tid tid;
     uint32_t nFields;
     MemberType restType;
-    StructureDescPtr fillerDesc;
+    FillerDescPtr fillerDesc;
     MemberType fieldTypes[];
 } MappingDesc, *MappingDescPtr;
 
@@ -447,7 +460,7 @@ typedef enum {
     FILL_COPY
 } Fillability;
 
-extern Fillability _bal_structure_create_filler(MemberType memberType, StructureDescPtr fillerDesc, TaggedPtr *valuePtr);
+TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability* fillability);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
