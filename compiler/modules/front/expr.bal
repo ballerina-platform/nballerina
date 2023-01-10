@@ -834,14 +834,14 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
     var [leftValue, leftFlags] = intOperandValue(lhs);
     var [rightValue, rightFlags] = intOperandValue(rhs);
     ValueFlags resultFlags = leftFlags & rightFlags;
-    t:SemType lt = t:widenUnsigned(lhs.semType);
-    t:SemType rt = t:widenUnsigned(rhs.semType);
+    t:SemType leftWidenedType = t:widenUnsigned(lhs.semType);
+    t:SemType rightWidenedType = t:widenUnsigned(rhs.semType);
     t:SemType resultType;
     if op is s:BitwiseShiftOp {
-        resultType = op is ">>"|">>>" && t:isSubtype(cx.mod.tc, lt, t:intWidthUnsigned(32)) ? lt : t:INT;
+        resultType = op is ">>"|">>>" && t:isSubtype(cx.mod.tc, leftWidenedType, t:intWidthUnsigned(32)) ? leftWidenedType : t:INT;
     }
     else {
-        resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
+        resultType = op == "&" ? t:intersect(leftWidenedType, rightWidenedType) : t:union(leftWidenedType, rightWidenedType);
     }
     if resultFlags != 0 {
         int value = bitwiseEval(op, leftValue, rightValue);
