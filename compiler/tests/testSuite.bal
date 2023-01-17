@@ -241,7 +241,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
         else if t:isSubtypeSimple(t, t:MAPPING) {
             if index is s:Identifier {
                 t:SemType kt = lookupSemtype(m, index);
-                return t:mappingMemberTypeInner(tc, t, kt);
+                return t:mappingMemberTypeInnerWithoutUndef(tc, t, kt);
             }
             test:assertFail("index for mapping projection must be a subtype of string");
         }

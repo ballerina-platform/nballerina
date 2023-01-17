@@ -14,7 +14,8 @@ public type BasicTypeCode
     BT_NIL|BT_BOOLEAN|BT_INT|BT_FLOAT|BT_DECIMAL
     |BT_STRING|BT_ERROR|BT_TYPEDESC|BT_HANDLE|BT_FUNCTION
     |BT_FUTURE|BT_STREAM
-    |BT_LIST|BT_MAPPING|BT_TABLE|BT_XML|BT_OBJECT|BT_CELL;
+    |BT_LIST|BT_MAPPING|BT_TABLE|BT_XML|BT_OBJECT|BT_CELL
+    |BT_UNDEF;
 
 type Atom RecAtom|TypeAtom;
 
@@ -48,12 +49,15 @@ public isolated class Env {
         // This is to avoid passing down env argument when doing tableSubtypeComplement operation.
         _ = self.cellAtom(CELL_ATOMIC_MAPPING_TOP);
         _ = self.listAtom(LIST_ATOMIC_MAPPING_TOP);
-        // We are reserving the next four indexes of atomTable to represent typeAtoms related to readonly type.
+        // We are reserving the next five indexes of atomTable to represent typeAtoms related to readonly type.
         // This is to avoid requiring context when referring to readonly type.
         _ = self.cellAtom(CELL_ATOMIC_RO);
         _ = self.mappingAtom(MAPPING_ATOMIC_RO);
         _ = self.cellAtom(CELL_ATOMIC_MAPPING_RO);
         _ = self.listAtom(LIST_ATOMIC_MAPPING_RO);
+        _ = self.cellAtom(CELL_ATOMIC_RO_OR_UNDEF);
+        // We are reserving the next index of atomTable to represent typeAtom required for mapping top type.
+        _ = self.cellAtom(CELL_ATOMIC_TOP_OR_UNDEF);
     }
 
     // Tests whether the Env is ready for use.
@@ -412,6 +416,7 @@ public final BasicTypeBitSet LIST = basicType(BT_LIST);
 public final BasicTypeBitSet MAPPING = basicType(BT_MAPPING);
 public final BasicTypeBitSet TABLE = basicType(BT_TABLE);
 public final BasicTypeBitSet CELL = basicType(BT_CELL);
+public final BasicTypeBitSet UNDEF = basicType(BT_UNDEF);
 
 // matches all functions
 public final BasicTypeBitSet FUNCTION = basicType(BT_FUNCTION);
@@ -424,6 +429,7 @@ public final BasicTypeBitSet FUTURE = basicType(BT_FUTURE);
 
 // this is SubtypeData|error
 public final BasicTypeBitSet TOP = basicTypeUnion(BT_MASK);
+public final BasicTypeBitSet TOP_OR_UNDEF = TOP | UNDEF;
 public final BasicTypeBitSet ANY = basicTypeUnion(BT_MASK & ~(1 << BT_ERROR));
 public final BasicTypeBitSet SIMPLE_OR_STRING = basicTypeUnion((1 << BT_NIL) | (1 << BT_BOOLEAN) | (1 << BT_INT) | (1 << BT_FLOAT) | (1 << BT_DECIMAL) | (1 << BT_STRING));
 public final BasicTypeBitSet NON_BEHAVIOURAL = basicTypeUnion((1 << BT_NIL) | (1 << BT_BOOLEAN) | (1 << BT_INT) | (1 << BT_FLOAT)| (1 << BT_DECIMAL) | (1 << BT_STRING)
@@ -448,6 +454,7 @@ public final ComplexSemType READONLY = createComplexSemType(
     [BT_XML, XML_SUBTYPE_RO]
 ]);
 
+final SemType READONLY_OR_UNDEF = union(READONLY, UNDEF);
 final ComplexSemType MAPPING_RO = createComplexSemType(0, [[BT_MAPPING, bddAtom(BDD_REC_ATOM_READONLY)]]);
 
 // Need this type to workaround slalpha4 bug.
@@ -686,7 +693,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
 
 public function intersectMemberSemTypes(Env env, CellSemType t1, CellSemType t2) returns CellSemType {
     var { ty, mut } = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
-    return cellContaining(env, ty, mut);
+    return cellContaining(env, ty, ty == UNDEF ? CELL_MUT_NONE : mut);
 }
 
 public function diff(SemType t1, SemType t2) returns SemType {
@@ -788,6 +795,10 @@ public function complement(SemType t) returns SemType {
 
 public function isNever(SemType t) returns boolean {
     return t is BasicTypeBitSet && t == 0;
+}
+
+public function isUndef(SemType t) returns boolean {
+    return t is BasicTypeBitSet && t == UNDEF;
 }
 
 public function isCyclic(Context cx, SemType t) returns boolean {
@@ -1101,6 +1112,10 @@ function bddListAtomicType(Env env, Bdd bdd, ListAtomicType top) returns ListAto
     return ();
 }
 
+public function mappingMemberTypeInnerWithoutUndef(Context cx, SemType t, SemType k) returns SemType {
+    return removeUndef(mappingMemberTypeInner(cx, t, k));
+}
+
 // This computes the spec operation called "member type of K in T",
 // for the case when T is a subtype of list, and K is either `int` or a singleton int.
 // This is what Castagna calls projection.
@@ -1206,24 +1221,14 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // This is what Castagna calls projection.
 public function mappingMemberTypeInner(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
-        return (t & MAPPING) != 0 ? TOP : NEVER;
+        return (t & MAPPING) != 0 ? TOP : UNDEF;
     }
     else {
         StringSubtype|boolean keyData = stringSubtype(k);
         if keyData == false {
-            return NEVER;
+            return UNDEF;
         }
-        return bddMappingMemberTypeInner(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP);
-    }
-}
-
-public function mappingMemberRequired(Context cx, SemType t, SemType k) returns boolean {
-    if t is BasicTypeBitSet || k !is ComplexSemType {
-        return false;
-    }
-    else {
-        StringSubtype stringSubType = <StringSubtype>getComplexSubtypeData(k, BT_STRING);
-        return bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), stringSubType, false);
+        return bddMappingMemberTypeInner(cx, <Bdd>getComplexSubtypeData(t, BT_MAPPING), <StringSubtype|true>keyData, TOP_OR_UNDEF);
     }
 }
 
@@ -1300,13 +1305,19 @@ public function isNeverInner(CellSemType t) returns boolean {
     return isNever(cellInner(t));
 }
 
+public function isUndefInner(CellSemType t) returns boolean {
+    return isUndef(cellInner(t));
+}
+
 final CellAtomicType CELL_ATOMIC_TOP = { ty: TOP, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
+final CellAtomicType CELL_ATOMIC_TOP_OR_UNDEF = { ty: TOP_OR_UNDEF, mut: CELL_MUT_LIMITED };
 final CellAtomicType CELL_ATOMIC_BOTTOM = { ty: NEVER, mut: CELL_MUT_LIMITED };
 final CellAtomicType CELL_ATOMIC_MAPPING_TOP = { ty: MAPPING, mut: CELL_MUT_LIMITED };
 final CellAtomicType CELL_ATOMIC_RO = { ty: READONLY, mut: CELL_MUT_NONE };
+final CellAtomicType CELL_ATOMIC_RO_OR_UNDEF = { ty: READONLY_OR_UNDEF, mut: CELL_MUT_NONE };
 final CellAtomicType CELL_ATOMIC_MAPPING_RO = { ty: MAPPING_RO, mut: CELL_MUT_NONE };
 
-final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: CELL_SEMTYPE_TOP };
+final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: CELL_SEMTYPE_TOP_OR_UNDEF };
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_TOP };
 final ListAtomicType LIST_ATOMIC_MAPPING_TOP = { members: {initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_MAPPING_TOP };
 
@@ -1318,14 +1329,18 @@ final Atom CELL_ATOM_RO = { index: 4, atomicType: CELL_ATOMIC_RO };
 final Atom MAPPING_ATOM_RO = { index: 5, atomicType: MAPPING_ATOMIC_RO };
 final Atom CELL_ATOM_MAPPING_RO = { index: 6, atomicType: CELL_ATOMIC_MAPPING_RO };
 final Atom LIST_ATOM_MAPPING_RO = { index: 7, atomicType: LIST_ATOMIC_MAPPING_RO };
+final Atom CELL_ATOM_RO_OR_UNDEF = { index: 8, atomicType: CELL_ATOMIC_RO_OR_UNDEF };
+final Atom CELL_ATOM_TOP_OR_UNDEF = { index: 9, atomicType: CELL_ATOMIC_TOP_OR_UNDEF };
 
 final BddNode MAPPING_SUBTYPE_ARRAY_TOP = bddAtom(LIST_ATOM_MAPPING_TOP);
 final BddNode MAPPING_SUBTYPE_RO = bddAtom(MAPPING_ATOM_RO);
 final BddNode LIST_SUBTYPE_MAPPING_RO = bddAtom(LIST_ATOM_MAPPING_RO);
 
 final CellSemType CELL_SEMTYPE_TOP = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_TOP));
+final CellSemType CELL_SEMTYPE_TOP_OR_UNDEF = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_TOP_OR_UNDEF));
 final CellSemType CELL_SEMTYPE_MAPPING_TOP = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_MAPPING_TOP));
 final CellSemType CELL_SEMTYPE_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_RO));
+final CellSemType CELL_SEMTYPE_RO_UNDEF = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_RO_OR_UNDEF));
 final CellSemType CELL_SEMTYPE_MAPPING_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_MAPPING_RO));
 
 public function cellAtomicType(SemType t) returns CellAtomicType? {
@@ -1536,6 +1551,26 @@ public function containsConst(SemType t, SingleValue v) returns boolean {
     }
 }
 
+public function replaceUndefWithNil(SemType t) returns SemType {
+    return union(diff(t, UNDEF), NIL);
+}
+
+public function removeUndef(SemType t) returns SemType {
+    if !containsUndef(t) {
+        return t;
+    }
+    return diff(t, UNDEF);
+}
+
+public function containsUndef(SemType t) returns boolean {
+    if t is BasicTypeBitSet {
+        return (t & (1 << BT_UNDEF)) != 0;
+    }
+    else {
+        return <boolean>getComplexSubtypeData(t, BT_UNDEF);
+    }
+}
+
 public function containsNil(SemType t) returns boolean {
     if t is BasicTypeBitSet {
         return (t & (1 << BT_NIL)) != 0;
@@ -1544,7 +1579,6 @@ public function containsNil(SemType t) returns boolean {
         return <boolean>getComplexSubtypeData(t, BT_NIL);
     }
 }
-
 
 public function containsConstString(SemType t, string s) returns boolean {
     if t is BasicTypeBitSet {
@@ -1666,7 +1700,8 @@ function init() {
         tableOps, // table
         xmlOps, // xml
         {}, // object
-        cellOps // cell
+        cellOps, // cell
+        {} // undef
     ];
 }
 

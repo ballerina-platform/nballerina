@@ -372,7 +372,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
                                              m,
                                              check buildConstString(builder, scaffold, fieldName),
                                              check buildWideRepr(builder, scaffold, operand, REPR_ANY,
-                                                                 t:mappingMemberTypeInner(tc, mappingType, t:stringConst(fieldName)))
+                                                                 t:mappingMemberTypeInnerWithoutUndef(tc, mappingType, t:stringConst(fieldName)))
                                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
@@ -501,7 +501,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         rf = mappingIndexedSetFunction;
         k = constInt(scaffold, fieldIndex);
     }
-    t:SemType memberType = t:mappingMemberTypeInner(scaffold.typeContext(), mappingType, keyOperand.semType);
+    t:SemType memberType = t:mappingMemberTypeInnerWithoutUndef(scaffold.typeContext(), mappingType, keyOperand.semType);
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
@@ -554,7 +554,7 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
     string? k = t:singleStringShape(keyOperand.semType);
     if k is string {
         t:MappingAtomicType? mat = t:mappingAtomicType(tc, mappingType);
-        if mat != () && t:isNeverInner(mat.rest) {
+        if mat != () && t:isUndefInner(mat.rest) {
             return mat.names.indexOf(k);
         }
     }

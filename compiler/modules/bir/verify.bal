@@ -448,7 +448,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
         return vc.invalidErr("inherent type of map is not atomic", insn.pos);
     }
     foreach int i in 0 ..< insn.operands.length() {
-        check validOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAtInner(mat, insn.fieldNames[i]), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
+        check validOperandType(vc, insn.operands[i], t:mappingAtomicTypeMemberAtInnerWithoutUndef(mat, insn.fieldNames[i]), "type of mapping constructor member is not allowed by the mapping type", insn.pos);
     }
     if insn.operands.length() < mat.names.length() {
         return vc.semanticErr("missing record fields in mapping constructor", insn.pos);
@@ -484,8 +484,10 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? 
         return vc.semanticErr("mapping get applied to non-mapping", insn.pos);
     }
     t:SemType memberType = t:mappingMemberTypeInner(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
-    if insn.name == INSN_MAPPING_GET && !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, keyOperand.semType) {
-        memberType = t:union(memberType, t:NIL);
+    if insn.name == INSN_MAPPING_GET && t:containsUndef(memberType) {
+        memberType = t:replaceUndefWithNil(memberType);
+    } else {
+        memberType = t:removeUndef(memberType);
     }
     if !vc.isSameType(memberType, insn.result.semType) {
         return vc.invalidErr("instruction result type is not same as member type", insn.pos);
@@ -498,7 +500,7 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns Error? 
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping set applied to non-mapping", insn.pos);
     }
-    t:SemType memberType = t:mappingMemberTypeInner(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
+    t:SemType memberType = t:mappingMemberTypeInnerWithoutUndef(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type", insn.pos);
 }
 

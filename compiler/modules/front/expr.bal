@@ -544,17 +544,18 @@ type MappingAccessType "."|"["|"fill";
 
 // if accessType is ".", k must be a string
 function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, Position pos) returns CodeGenError|RegExprEffect {
+    t:SemType memberType = t:mappingMemberTypeInner(cx.mod.tc, mapping.semType, k.semType);
     boolean maybeMissing = true;
-    if t:mappingMemberRequired(cx.mod.tc, mapping.semType, k.semType) {
+    if !t:containsUndef(memberType) {
         maybeMissing = false;
     }
     else if accessType == "." {
         string fieldName = (<bir:StringConstOperand>k).value;
         return cx.semanticErr(`field access to ${fieldName}} is invalid because field may not be present`, pos=pos);
     }
-    t:SemType memberType = t:mappingMemberTypeInner(cx.mod.tc, mapping.semType, k.semType);
     bir:INSN_MAPPING_FILLING_GET|bir:INSN_MAPPING_GET name = bir:INSN_MAPPING_GET;
     if maybeMissing {
+        memberType = t:diff(memberType, t:UNDEF);
         if accessType == "fill" {
             name = bir:INSN_MAPPING_FILLING_GET;
         }
@@ -937,7 +938,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
         }
         fieldPos[name] = f.startPos;
         if mat.names.indexOf(name) == () {
-            if t:isNeverInner(mat.rest) {
+            if t:isUndefInner(mat.rest) {
                 return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
             }
             else if f.isIdentifier && mat.names.length() > 0 {
@@ -945,7 +946,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
             }
         }
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInner(mat, name), f.value, "incorrect type for list member");
+        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInnerWithoutUndef(mat, name), f.value, "incorrect type for list member");
         operands.push(operand);
         fieldNames.push(name);
     }
@@ -989,7 +990,7 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
     t:MappingAtomicType? pos = alt.pos;
     if pos !is () {
         // SUBSET won't be right with record defaults
-        if t:isNeverInner(pos.rest) {
+        if t:isUndefInner(pos.rest) {
             if pos.names != fieldNames {
                 return false;
             }
