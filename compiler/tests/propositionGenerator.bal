@@ -409,16 +409,16 @@ function subtypeGenRecord(PropositionGenContext cx, PropositionPath path) return
     return { left, right };
 }
 
-function generateRecordFields(PropositionGenContext cx, PropositionPath path) returns [[string, int, boolean][], [string, int, boolean][]] {
+function generateRecordFields(PropositionGenContext cx, PropositionPath path) returns [Field[], Field[]] {
     int memberCount = cx.random.nextRange(cx.bounds.maxMemberCount);
     var [subtypes, supertypes] = generateNSubtypePropositions(cx, memberCount, propositionBranch(path));
-    [string, int, boolean][] subFields = [];
-    [string, int, boolean][] superFields = [];
+    Field[] subFields = [];
+    Field[] superFields = [];
     foreach int i in 0 ..< memberCount {
         int len = cx.random.nextRange(cx.bounds.maxStringConstLen);
         string label = cx.random.randomStringValue(len);
-        subFields.push([label, subtypes[i], false]);
-        superFields.push([label, supertypes[i], false]);
+        subFields.push({ name:label, index:subtypes[i] });
+        superFields.push({ name:label, index:supertypes[i] });
     }
     return [subFields, superFields];
 }

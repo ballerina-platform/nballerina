@@ -237,7 +237,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 if t:isNever(fieldTy) {
                     return err:semantic("record field can't be never", s:locationInDefn(modDefn, { startPos: typeDesc.startPos, endPos: typeDesc.endPos }));
                 }
-                fields.push([name, fieldTy, ro]);
+                fields.push({ name, fieldTy, ro });
             }
             map<s:FieldDesc> fieldsByName = {};
             foreach var fd in td.fields {

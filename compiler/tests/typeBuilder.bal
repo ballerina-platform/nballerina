@@ -39,7 +39,7 @@ type TypeBuilder object {
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
 
-    function mapping([string, int, boolean][] fields = [], int rest = -1) returns int;
+    function mapping(Field[] fields = [], int rest = -1) returns int;
 
     function union(int i1, int i2) returns int;
 };
@@ -143,8 +143,8 @@ class SemtypeBuilder {
         return self.push(t); 
     }
 
-    function mapping([string, int, boolean][] fields = [], int rest = -1) returns int {
-        [string, t:SemType, boolean][] fs = from var [name, index, ro] in fields select [name, self.defns[index], ro];
+    function mapping(Field[] fields = [], int rest = -1) returns int {
+        t:Field[] fs = from var { name, index, ro } in fields select { name, fieldTy: self.defns[index], ro };
         t:SemType r = t:NEVER;
         if rest != -1 {
             r = self.defns[rest];
@@ -163,6 +163,12 @@ class SemtypeBuilder {
 }
 
 type TypeDefnToStringTable table<record {| readonly string name; string defn; |}> key(name);
+
+type Field record {|
+    string name;
+    int index;
+    boolean ro = false;
+|};
 
 class AstBasedTypeDefBuilder {
     *TypeBuilder;
@@ -436,8 +442,8 @@ class AstBasedTypeDefBuilder {
         return self.createTypeDef(td);
     }
 
-    function mapping([string, int, boolean][] fields = [], int rest = -1) returns int {
-        s:FieldDesc[] fs = from var [name, index, ro] in fields select self.createField(name, index, ro);
+    function mapping(Field[] fields = [], int rest = -1) returns int {
+        s:FieldDesc[] fs = from var { name, index, ro } in fields select self.createField(name, index, ro);
         s:TypeDesc? r = ();
         if rest != -1 {
             r = self.createTypeDescRef(rest);
