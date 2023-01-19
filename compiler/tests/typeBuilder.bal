@@ -144,7 +144,7 @@ class SemtypeBuilder {
     }
 
     function mapping(Field[] fields = [], int rest = -1) returns int {
-        t:Field[] fs = from var { name, index, ro } in fields select { name, fieldTy: self.defns[index], ro };
+        t:Field[] fs = from var { name, index, ro } in fields select { name, ty: self.defns[index], ro };
         t:SemType r = t:NEVER;
         if rest != -1 {
             r = self.defns[rest];
