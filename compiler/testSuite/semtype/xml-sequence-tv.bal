@@ -38,3 +38,6 @@ type T xml:Text;
 
 // @type T = XT
 type XT xml<T>;
+
+// @type S < U
+type S U & !N & !E;
