@@ -1,18 +1,22 @@
-public type Any ()|string|boolean|int|Str|Any[];
+public type Data ()|Symbol|boolean|int|float|decimal|String|Data[];
 
-public type Str record {|
-    string str;
+public type Symbol string;
+public type String record {|
+    string s;
 |};
 
+const LINE_FEED   = 0x0A;
 const QUOTE       = 0x22;
 const OPEN_PAREN  = 0x28;
 const CLOSE_PAREN = 0x29;
 const MINUS       = 0x2D;
+const SEMICOLON   = 0x3B;
+const BACKSLASH   = 0x5C;
 type WS 0x09|0x0A|0x0D|0x20; // TAB|LF|CR|SPACE
 type DIGIT 0x30|0x31|0x32|0x33|0x34|0x35|0x36|0x37|0x38|0x39; // 0-9
 
 class Tokenizer {
-    int[] src;  
+    int[] src;
     int pos;
 
     function init(string src) {
@@ -20,20 +24,31 @@ class Tokenizer {
         self.pos = 0;
     }
 
-    function next() returns OPEN_PAREN|CLOSE_PAREN|string|Str|int|error {
-        int c = self.nextChar();
-        while c is WS {
+    function next() returns [OPEN_PAREN|CLOSE_PAREN]|string|String|int|error {
+        int c;
+        while true {
             c = self.nextChar();
+            if c == SEMICOLON {
+                while self.nextChar() != LINE_FEED {
+                }
+                c = self.nextChar();
+            }
+            if c !is WS {
+                break;
+            }
         }
-        if c == OPEN_PAREN || c == CLOSE_PAREN {
-            return c;
+        if c is OPEN_PAREN|CLOSE_PAREN {
+            return [c];
         }
         if c == QUOTE {
             int[] quoted = [];
             while true {
                 int q = self.nextChar();
-                if q == QUOTE {
-                    return { str: check string:fromCodePointInts(quoted) };
+                if q == BACKSLASH {
+                    q = self.nextChar();
+                }
+                else if q == QUOTE {
+                    return { s: check string:fromCodePointInts(quoted) };
                 }
                 quoted.push(q);
             }
@@ -54,8 +69,14 @@ class Tokenizer {
         }
     }
 
-    function eof() returns boolean {
-        return self.pos >= self.src.length();
+    public function hasNext() returns boolean {
+        foreach int i in self.pos ..< self.src.length() {
+            if self.src[i] == OPEN_PAREN {
+                self.pos = i + 1;
+                return true;
+            }
+        }
+        return false;
     }
 
     private function nextChar() returns int {
@@ -65,23 +86,23 @@ class Tokenizer {
     }
 }
 
-public function parse(string input) returns Any[]|error {
+public function parse(string input) returns Data[]|error {
     Tokenizer t = new(input);
-    Any[] topLevel = [];
-    while !t.eof() && t.next() == OPEN_PAREN {
+    Data[] topLevel = [];
+    while t.hasNext() {
         topLevel.push(check parseList(t));
     }
     return topLevel;
 }
 
-function parseList(Tokenizer t) returns Any|error {
-    Any[] result = [];
+function parseList(Tokenizer t) returns Data|error {
+    Data[] result = [];
     while true {
         match check t.next() {
-            OPEN_PAREN => {
+            [OPEN_PAREN] => {
                 result.push(check parseList(t));
             }
-            CLOSE_PAREN => {
+            [CLOSE_PAREN] => {
                 return result;
             }
             "true" => {

@@ -1,0 +1,4 @@
+(let ((boolean-map (map boolean))
+      (int-map (map int))
+      (int-or-boolean-map (map (| int boolean))))
+     (assert< (| int-map boolean-map) int-or-boolean-map))

@@ -38,13 +38,13 @@
 
 (let ((int-none-cell (cell int none))
       (int-limited-cell (cell int limited))
-      (byte-unlimited-cell (cell (int (0 255)) unlimited))
-      (byte-limited-cell (cell (int (0 255)) limited)))
+      (byte-unlimited-cell (cell (int-range 0 255) unlimited))
+      (byte-limited-cell (cell (int-range 0 255) limited)))
      (assert< (& int-none-cell int-limited-cell byte-unlimited-cell) byte-limited-cell))
 
 (let ((int-none-cell (cell int none))
       (int-limited-cell (cell int limited))
       (boolean-limited-cell (cell boolean limited))
-      (byte-limited-cell (cell (int (0 255)) limited))
-      (byte-none-cell (cell (int (0 255)) none)))
+      (byte-limited-cell (cell (int-range 0 255) limited))
+      (byte-none-cell (cell (int-range 0 255) none)))
      (assert= (& int-none-cell (| byte-limited-cell boolean-limited-cell)) byte-none-cell))

@@ -158,7 +158,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
                 return parseError("'error' must be followed by a string", parent, 0);
             }
             t:SemType detail = check parseType(tc, b, jlist[1], pathAppend(parent, 1));
-            return t:errorDetail(tc, detail);
+            return t:errorDetail(detail);
         }
         "string" => {
             if jlist.length() != 2 {
