@@ -1536,7 +1536,7 @@ function sameIntegralType(Value v1, Value v2) returns IntegralType {
 
 function typeToString(RetType ty, Context context, boolean forceInline=false) returns string {
     if ty is PointerType {
-        markNamedTypeAsUsed(ty, context);
+        includeNamedType(ty, context);
         if ty.addressSpace == 0 {
             return forceInline ? typeToString(ty.pointsTo, context) : "ptr";
         } else {
@@ -1599,9 +1599,9 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
 }
 
 // use to mark a named struct type as used (so we include that type in output) when it is referenced via a pointer
-function markNamedTypeAsUsed(RetType ty, Context context) {
+function includeNamedType(RetType ty, Context context) {
     if ty is PointerType {
-        markNamedTypeAsUsed(ty.pointsTo, context);
+        includeNamedType(ty.pointsTo, context);
     }
     else if ty is StructType {
         Type[] elementTypes = ty.name == () ? ty.elementTypes : context.getNamedStructBody(ty);
@@ -1609,17 +1609,17 @@ function markNamedTypeAsUsed(RetType ty, Context context) {
             return;
         }
         foreach Type element in elementTypes {
-            markNamedTypeAsUsed(element, context);
+            includeNamedType(element, context);
         }
     }
     else if ty is ArrayType {
-        markNamedTypeAsUsed(ty.elementType, context);
+        includeNamedType(ty.elementType, context);
     }
     else if ty is FunctionType {
         foreach Type paramType in ty.paramTypes {
-            markNamedTypeAsUsed(paramType, context);
+            includeNamedType(paramType, context);
         }
-        markNamedTypeAsUsed(ty.returnType, context);
+        includeNamedType(ty.returnType, context);
     }
 }
 
