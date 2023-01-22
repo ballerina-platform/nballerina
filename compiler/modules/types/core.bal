@@ -214,6 +214,12 @@ public type ListFiller readonly & record {|
     Filler[] memberFillers;
 |};
 
+public function listFillerSemType(Env env, ListFiller filler) returns SemType {
+    ListDefinition defn = new();
+    ListAtomicType atomicTy = filler.atomic;
+    return defn.define(env, atomicTy.members.initial, atomicTy.members.fixedLength, atomicTy.rest);
+}
+
 // Used in testing types.regex to create context without a Module
 public function contextFromEnv(Env env) returns Context {
     return new(env);

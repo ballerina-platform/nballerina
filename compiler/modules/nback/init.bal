@@ -89,6 +89,7 @@ class InitModuleContext {
     // because precomputed subtypes need to know all inherent types
     boolean inherentTypesComplete;
     table<FillerDescDefn> key(semtype) fillerDescDefns = table [];
+    int fillerDescCount = 0;
 
     function init(llvm:Context llContext, llvm:Module llMod, t:Context tc, InitTypes llTypes, boolean inherentTypesComplete) {
         self.llvmContext = llContext;
@@ -285,9 +286,7 @@ function fillerToFillerDesc(InitModuleContext cx, t:Filler fillerValue) returns 
 }
 
 function listFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:ConstPointerValue {
-    t:ListDefinition defn = new();
-    t:ListAtomicType atomicTy = filler.atomic;
-    t:SemType listTy = defn.define(cx.tc.env, atomicTy.members.initial, atomicTy.members.fixedLength, atomicTy.rest);
+    t:SemType listTy = t:listFillerSemType(cx.tc.env, filler);
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_LIST];
     if !defns.hasKey(listTy) {
         _ = addInherentTypeDefn(cx, memberListDescSymbol(defns.length()),
@@ -295,9 +294,10 @@ function listFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:
     }
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defns.get(listTy).ptr, llStructureDescPtrType);
     // fixed length lists will add multiple fillesDescDefns recursively
-    string name = ".list" + fillerDescSymbol(cx.fillerDescDefns.length());
-    return atomicTy.members.fixedLength == 0 ? finishListFillerDesc(cx, structDescPtr, name) : 
-                                               finishFixedLenghtListFillerDesc(cx, structDescPtr, name, filler);
+    cx.fillerDescCount += 1;
+    string name = fillerDescSymbol(cx.fillerDescCount);
+    return filler.atomic.members.fixedLength == 0 ? finishListFillerDesc(cx, structDescPtr, name) : 
+                                                    finishFixedLenghtListFillerDesc(cx, structDescPtr, name, filler);
 }
 
 function finishListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name) returns llvm:ConstPointerValue {
@@ -313,7 +313,7 @@ function finishFixedLenghtListFillerDesc(InitModuleContext cx, llvm:ConstPointer
     llvm:ConstValue fillers = cx.llContext().constArray(fillerDescPtrType, memberFillers);
     llvm:ConstValue fillerCount = constInt(cx, memberFillers.length());  
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, structDescPtr, fillerCount, fillers]);
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fixedLengthListFillerDescTy(filler.atomic.members.fixedLength),
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fixedLengthListFillerDescTy(memberFillers.length()),
                                                     name, initializer=initializer);
     return cx.llContext().constBitCast(ptr, fillerDescPtrType);
 }
@@ -359,7 +359,8 @@ type FillerCreateFn "floatFillerCreate"|"intFillerCreate"|"decimalFillerCreate"|
 
 function constValueFillerDesc(InitModuleContext cx, llvm:ConstValue value,
                               FillerCreateFn fillerCreateFn, llvm:Type fillerDescTy) returns llvm:ConstPointerValue {
-    string name = fillerDescSymbol(cx.fillerDescDefns.length());
+    cx.fillerDescCount += 1;
+    string name = fillerDescSymbol(cx.fillerDescCount);
     llvm:FunctionDecl decl = getInitRuntimeFunction(cx, fillerCreateFn, fillerCreateFnTy);
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, value]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fillerDescTy, name, initializer=initializer);
