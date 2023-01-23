@@ -901,7 +901,7 @@ function fillerToOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler, Ran
     }
     else {
         result = cx.createTmpRegister(t:mappingAtomicTypeToSemType(cx.mod.tc.env, filler));
-        // We don't have optinal mapping fields
+        // We don't have optional mapping fields
         insn = <bir:MappingConstructInsn> { fieldNames: [], operands: [], result, pos: range.startPos };
     }
     bb.insns.push(insn);

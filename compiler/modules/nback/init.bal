@@ -45,7 +45,7 @@ type SubtypeDefn record {|
 |};
 
 type FillerDescDefn record {|
-    readonly t:SemType semtype;
+    readonly t:SemType semType;
     readonly llvm:ConstPointerValue defn;
 |};
 
@@ -88,7 +88,7 @@ class InitModuleContext {
     // subtype definitions cannot be completed before inherent types are complete,
     // because precomputed subtypes need to know all inherent types
     boolean inherentTypesComplete;
-    table<FillerDescDefn> key(semtype) fillerDescDefns = table [];
+    table<FillerDescDefn> key(semType) fillerDescDefns = table [];
     int fillerDescCount = 0;
 
     function init(llvm:Context llContext, llvm:Module llMod, t:Context tc, InitTypes llTypes, boolean inherentTypesComplete) {
@@ -251,7 +251,7 @@ function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:
     }
     llvm:ConstPointerValue defn  = fillerToFillerDesc(cx, fillerValue);
     // This is to deal with recursive case
-    cx.fillerDescDefns.put({ semtype: memberType, defn });
+    cx.fillerDescDefns.put({ semType: memberType, defn });
     return cx.fillerDescDefns.get(memberType).defn;
 }
 
@@ -260,7 +260,7 @@ function fillerToFillerDesc(InitModuleContext cx, t:Filler fillerValue) returns 
         t:SingleValue val = fillerValue.value;
         if val is int {
             return val == 0 ? constFillerDesc(cx, "int_filler_desc") : intFillerDesc(cx, val);
-        } 
+        }
         else if val is boolean {
             return val ? constFillerDesc(cx, "true_filler_desc") : constFillerDesc(cx, "false_filler_desc");
         }
@@ -290,14 +290,14 @@ function listFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_LIST];
     if !defns.hasKey(listTy) {
         _ = addInherentTypeDefn(cx, memberListDescSymbol(defns.length()),
-                                listTy, STRUCTURE_LIST, "external"); 
+                                listTy, STRUCTURE_LIST, "external");
     }
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defns.get(listTy).ptr, llStructureDescPtrType);
     // fixed length lists will add multiple fillesDescDefns recursively
     cx.fillerDescCount += 1;
     string name = fillerDescSymbol(cx.fillerDescCount);
-    return filler.atomic.members.fixedLength == 0 ? finishListFillerDesc(cx, structDescPtr, name) : 
-                                                    finishFixedLenghtListFillerDesc(cx, structDescPtr, name, filler);
+    return filler.atomic.members.fixedLength == 0 ? finishListFillerDesc(cx, structDescPtr, name) :
+                                                    finishFixedLengthListFillerDesc(cx, structDescPtr, name, filler);
 }
 
 function finishListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name) returns llvm:ConstPointerValue {
@@ -307,11 +307,11 @@ function finishListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue struc
     return cx.llContext().constBitCast(ptr, fillerDescPtrType);
 }
 
-function finishFixedLenghtListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name, t:ListFiller filler) returns llvm:ConstPointerValue {
+function finishFixedLengthListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name, t:ListFiller filler) returns llvm:ConstPointerValue {
     llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_fixed_length_list_filler_create", fillerCreateFnTy);
     llvm:ConstPointerValue[] memberFillers = from t:Filler each in filler.memberFillers select fillerToFillerDesc(cx, each);
     llvm:ConstValue fillers = cx.llContext().constArray(fillerDescPtrType, memberFillers);
-    llvm:ConstValue fillerCount = constInt(cx, memberFillers.length());  
+    llvm:ConstValue fillerCount = constInt(cx, memberFillers.length());
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, structDescPtr, fillerCount, fillers]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fixedLengthListFillerDescTy(memberFillers.length()),
                                                     name, initializer=initializer);
@@ -330,7 +330,7 @@ function mappingFillerDesc(InitModuleContext cx, t:MappingAtomicType atomicTy) r
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_MAPPING];
     if !defns.hasKey(mappingTy) {
         _ = addInherentTypeDefn(cx, memberMappingDescSymbol(defns.length()),
-                                mappingTy, STRUCTURE_MAPPING, "external"); 
+                                mappingTy, STRUCTURE_MAPPING, "external");
     }
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defns.get(mappingTy).ptr, llStructureDescPtrType);
     return constValueFillerDesc(cx, structDescPtr, "mapping_filler_create", structFillerDescTy);

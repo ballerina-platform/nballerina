@@ -295,4 +295,4 @@ typedef struct DecimalFillerDesc {
 TaggedPtr _bal_decimal_filler_create(DecimalFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     *hasIdentityPtr = false;
     return createDecimal(fillerDesc->val);
-} 
+}

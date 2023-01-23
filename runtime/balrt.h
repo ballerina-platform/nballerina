@@ -460,7 +460,7 @@ typedef enum {
     FILL_COPY
 } Fillability;
 
-TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability * fillability);
+TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability *fillability);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);

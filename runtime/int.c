@@ -61,7 +61,7 @@ typedef struct IntFillerDesc {
     int64_t val;
 } *IntFillerDescPtr;
 
-TaggedPtr _bal_int_filler_create(IntFillerDescPtr fillerDesc, bool* hasIdentityPtr) {
+TaggedPtr _bal_int_filler_create(IntFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     *hasIdentityPtr = false;
     return intToTagged(fillerDesc->val);
 }
