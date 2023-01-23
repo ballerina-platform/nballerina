@@ -12,5 +12,5 @@ public function main() {
 
     T[][] c = [];
     c[1][1] = [5, true];
-    io:println(c); //@output [[],[[0,false],[5,true]]
+    io:println(c); //@output [[],[[0,false],[5,true]]]
 }

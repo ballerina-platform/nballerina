@@ -892,22 +892,28 @@ function fillerToOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler, Ran
     if filler is t:WrappedSingleValue {
         return singletonOperand(cx, filler.value);
     }
-    else if filler is t:ListFiller {
-        bir:TmpRegister result = cx.createTmpRegister(t:listFillerSemType(cx.mod.tc.env, filler));
+    bir:ListConstructInsn|bir:MappingConstructInsn insn;
+    bir:TmpRegister result;
+    if filler is t:ListFiller {
+        result = cx.createTmpRegister(t:listFillerSemType(cx.mod.tc.env, filler));
         bir:Operand[] operands = listFillerOperands(cx, bb, filler, 0, range);
-        bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: range.startPos }; 
-        bb.insns.push(insn);
-        return result;
+        insn = { operands: operands.cloneReadOnly(), result, pos: range.startPos }; 
     }
-    panic error("unimplemented");
+    else {
+        result = cx.createTmpRegister(t:mappingAtomicTypeToSemType(cx.mod.tc.env, filler));
+        // We don't have optinal mapping fields
+        insn = <bir:MappingConstructInsn> { fieldNames: [], operands: [], result, pos: range.startPos };
+    }
+    bb.insns.push(insn);
+    return result;
 }
 
 function listFillerOperands(ExprContext cx, bir:BasicBlock bb, t:ListFiller filler, int startingIndex, Range range) returns bir:Operand[] {
-t:Filler[] memberFillers = filler.memberFillers;
-t:ListAtomicType atomic = filler.atomic;
-t:Filler rest = memberFillers[memberFillers.length() - 1]; 
-  return from var i in startingIndex ..< atomic.members.fixedLength select i < memberFillers.length() ? 
-      fillerToOperand(cx, bb, memberFillers[i], range) : fillerToOperand(cx, bb, rest, range);
+    t:Filler[] memberFillers = filler.memberFillers;
+    t:ListAtomicType atomic = filler.atomic;
+    t:Filler rest = memberFillers[memberFillers.length() - 1]; 
+    return from var i in startingIndex ..< atomic.members.fixedLength select i < memberFillers.length() ? 
+                          fillerToOperand(cx, bb, memberFillers[i], range) : fillerToOperand(cx, bb, rest, range);
 }
 
 function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListConstructorExpr expr) returns [t:SemType, t:ListAtomicType]|ResolveTypeError {

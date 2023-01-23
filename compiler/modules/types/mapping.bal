@@ -20,6 +20,12 @@ public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) retur
     return i is int ? mat.types[i] : mat.rest;
 }
 
+public function mappingAtomicTypeToSemType(Env env, MappingAtomicType atomicTy) returns SemType {
+    MappingDefinition defn = new();
+    return defn.define(env, from int i in 0 ..< atomicTy.names.length() select [atomicTy.names[i], atomicTy.types[i]],
+                            atomicTy.rest);
+}
+
 final MappingAtomicType MAPPING_ATOMIC_RO = { names: [], types: [], rest: CELL_SEMTYPE_RO };
 
 public class MappingDefinition {

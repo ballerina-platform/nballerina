@@ -326,10 +326,7 @@ function fixedLengthListFillerDescTy(int fixedLength) returns llvm:Type {
 }
 
 function mappingFillerDesc(InitModuleContext cx, t:MappingAtomicType atomicTy) returns llvm:ConstPointerValue {
-    t:MappingDefinition defn = new();
-    t:SemType mappingTy = defn.define(cx.tc.env,
-                                      from int i in 0 ..< atomicTy.names.length() select [atomicTy.names[i], atomicTy.types[i]],
-                                      atomicTy.rest);
+    t:SemType mappingTy = t:mappingAtomicTypeToSemType(cx.tc.env, atomicTy);
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_MAPPING];
     if !defns.hasKey(mappingTy) {
         _ = addInherentTypeDefn(cx, memberMappingDescSymbol(defns.length()),
