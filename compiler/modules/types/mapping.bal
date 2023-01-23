@@ -11,7 +11,7 @@ public type MappingAtomicType readonly & record {|
     CellSemType rest;
 |};
 
-public function mappingAtomicTypeMemberAtInnerWithoutUndef(MappingAtomicType mat, string k) returns SemType {
+public function mappingAtomicTypeMemberAtInnerVal(MappingAtomicType mat, string k) returns SemType {
     return removeUndef(mappingAtomicTypeMemberAtInner(mat, k));
 }
 
@@ -24,7 +24,7 @@ public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) retur
     return i is int ? mat.types[i] : mat.rest;
 }
 
-final MappingAtomicType MAPPING_ATOMIC_RO = { names: [], types: [], rest: CELL_SEMTYPE_RO_UNDEF };
+final MappingAtomicType MAPPING_ATOMIC_RO = { names: [], types: [], rest: CELL_SEMTYPE_INNER_RO };
 
 public class MappingDefinition {
     *Definition;
@@ -56,7 +56,7 @@ public class MappingDefinition {
             atom = rec;
             env.setRecMappingAtomType(rec, atomicType);
         }
-        else if fields.length() == 0 && rest == CELL_SEMTYPE_TOP_OR_UNDEF {
+        else if fields.length() == 0 && rest == CELL_SEMTYPE_INNER {
             return MAPPING;
         }
         else {

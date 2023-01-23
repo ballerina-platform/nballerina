@@ -107,7 +107,7 @@ function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Type
 function isSubsetUnionType(t:SemType ty) returns boolean {
     return (ty is t:BasicTypeBitSet
             && ((t:isSubtypeSimple(ty, <t:BasicTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) && ty != t:NEVER)
-                || (ty == t:ANY || ty == t:TOP)));
+                || (ty == t:ANY || ty == t:VAL)));
 }
 
 function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns t:SemType|ResolveTypeError {
@@ -158,7 +158,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             "handle" => { return t:HANDLE; }
             "json" => { return t:createJson(mod.tc); }
             "never" => { return t:NEVER; }
-            "readonly" => { return t:READONLY; }
+            "readonly" => { return t:VAL_READONLY; }
             "typedesc" => { return t:TYPEDESC; }
             "xml" => { return t:XML; }
         }

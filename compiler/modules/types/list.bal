@@ -56,7 +56,7 @@ public function listAtomicTypeAllMemberTypesInner(ListAtomicType atomicType) ret
     return [ranges, types];
 }
 
-final ListAtomicType LIST_ATOMIC_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_RO };
+final ListAtomicType LIST_ATOMIC_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_VAL_RO };
 final ListAtomicType LIST_ATOMIC_MAPPING_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_MAPPING_RO };
 
 public class ListDefinition {
@@ -86,7 +86,7 @@ public class ListDefinition {
             atom = rec;
             env.setRecListAtomType(rec, atomicType);
         }
-        else if fixedLength == 0 && rest == CELL_SEMTYPE_TOP {
+        else if fixedLength == 0 && rest == CELL_SEMTYPE_VAL {
             return LIST;
         }
         else {

@@ -946,7 +946,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
             }
         }
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInnerWithoutUndef(mat, name), f.value, "incorrect type for list member");
+        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInnerVal(mat, name), f.value, "incorrect type for list member");
         operands.push(operand);
         fieldNames.push(name);
     }
@@ -1559,7 +1559,7 @@ function instantiateType(t:SemType ty, t:SemType memberType, t:SemType container
         counter.n += 1;
         return containerType;
     }
-    else if ty == t:TOP {
+    else if ty == t:VAL {
         counter.n += 1;
         return memberType;
     }

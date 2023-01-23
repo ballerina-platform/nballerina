@@ -3,14 +3,14 @@
 public function tableContaining(Env env, SemType mappingType, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
     SemType listType = defineListTypeWrapped(new, env, rest = mappingType, mut = mut);
     Bdd bdd = <Bdd>subtypeData(listType, BT_LIST);
-    if bdd == MAPPING_SUBTYPE_ARRAY_TOP {
+    if bdd == LIST_SUBTYPE_MAPPING {
         return TABLE;
     }
     return createBasicSemType(BT_TABLE, bdd);
 }
 
 function tableSubtypeComplement(ProperSubtypeData t) returns SubtypeData {
-    return bddSubtypeDiff(MAPPING_SUBTYPE_ARRAY_TOP, t);
+    return bddSubtypeDiff(LIST_SUBTYPE_MAPPING, t);
 }
 
 function tableSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -18,7 +18,7 @@ function tableSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     // The goal of this is to ensure that listSubtypeIsEmpty call beneath does
     // not get an empty posList, because it will interpret that
     // as `(any|error)[]` rather than `(map<any|error>)[]`.
-    b = bddPosMaybeEmpty(b) ? bddIntersect(b, MAPPING_SUBTYPE_ARRAY_TOP) : b;
+    b = bddPosMaybeEmpty(b) ? bddIntersect(b, LIST_SUBTYPE_MAPPING) : b;
     return listSubtypeIsEmpty(cx, b);
 }
 

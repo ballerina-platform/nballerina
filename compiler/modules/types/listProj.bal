@@ -3,7 +3,7 @@
 // Based on listMemberType
 public function listProjInner(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
-        return (t & LIST) != 0 ? TOP : NEVER;
+        return (t & LIST) != 0 ? VAL : NEVER;
     }
     else {
         IntSubtype|boolean keyData = intSubtype(k);
@@ -32,7 +32,7 @@ function listProjPathInner(Context cx, IntSubtype|true k, Conjunction? pos, Conj
     CellSemType rest;
     if pos == () {
         members = { initial: [], fixedLength: 0 };
-        rest = cellContaining(cx.env, TOP);
+        rest = cellContaining(cx.env, VAL);
     }
     else {
         // combine all the positive tuples using intersection

@@ -37,7 +37,7 @@ function sexprFormSemTypeInternal(SerializationContext sc, SemType ty) returns t
         return "never";
     }
     SplitSemType { all, some } = split(ty);
-    if all == TOP {
+    if all == VAL {
         return ["|", "any", "error"];
     }
     ts:Type[] disj = [];

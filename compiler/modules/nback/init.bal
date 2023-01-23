@@ -221,7 +221,7 @@ function createMappingDescType(t:Context tc, t:SemType semType) returns llvm:Str
 function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(cx.tc, semType);
     llvm:ConstValue[] llFields = from var ty in mat.types let var tyInner = t:cellInner(ty) select getMemberType(cx, tyInner);
-    t:SemType rest = t:removeUndef(t:cellInner(mat.rest));
+    t:SemType rest = t:cellInnerVal(mat.rest);
     return cx.llContext().constStruct([
         constTid(cx, tid),
         constI32(cx, llFields.length()),
@@ -483,7 +483,7 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
 function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
     t:MappingAtomicType? mat = t:mappingAtomicType(cx.tc, semType);
     if mat != () {
-        t:SemType rest = t:removeUndef(t:cellInner(mat.rest));
+        t:SemType rest = t:cellInnerVal(mat.rest);
         if rest == t:NEVER {
             t:BasicTypeBitSet[] fieldTypes = [];
             foreach var ty in mat.types {

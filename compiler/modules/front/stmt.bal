@@ -940,7 +940,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
     }
     else {
         var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, block1, initialBindings, lValue, reg.semType);
-        t:SemType memberType = t:mappingMemberTypeInnerWithoutUndef(cx.mod.tc, reg.semType, index.semType);
+        t:SemType memberType = t:mappingMemberTypeInnerVal(cx.mod.tc, reg.semType, index.semType);
         { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, initialBindings, memberType, expr);
         bir:MappingSetInsn insn =  { operands: [ reg, index, operand], pos: lValue.opPos };
         nextBlock.insns.push(insn);

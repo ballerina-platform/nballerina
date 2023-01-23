@@ -25,7 +25,7 @@ function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
     CellAtomicType combined;
     if posList == () {
-        combined = { ty: TOP, mut: CELL_MUT_UNLIMITED };
+        combined = { ty: VAL, mut: CELL_MUT_UNLIMITED };
     }
     else {
         combined = cellAtomType(posList.atom);
@@ -96,7 +96,7 @@ function cellMutUnlimitedInhabited(Context cx, SemType pos, Conjunction? negList
         if neg == () {
             break;
         }
-        if cellAtomType(neg.atom).mut == CELL_MUT_LIMITED && isSameType(cx, TOP, cellAtomType(neg.atom).ty) {
+        if cellAtomType(neg.atom).mut == CELL_MUT_LIMITED && isSameType(cx, VAL, cellAtomType(neg.atom).ty) {
             return false;
         }
         neg = neg.next;
@@ -152,9 +152,9 @@ function cellSubtypeDataEnsureProper(SubtypeData subtypeData) returns ProperSubt
     }
     Atom atom;
     if subtypeData {
-        atom = CELL_ATOM_TOP;
+        atom = CELL_ATOM_VAL;
     } else {
-        atom = CELL_ATOM_BOTTOM;
+        atom = CELL_ATOM_NEVER;
     }
     return bddAtom(atom);
 }
