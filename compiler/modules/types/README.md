@@ -48,3 +48,5 @@ the json file is an array of tests, where each test is a triple [R, T1 T2], wher
 - incomparable: T1 is not a subtype of T2 and T2 is not a subtype of T1
 
 An example input file is in [tests.json](../../tests.json).
+
+JSON representation is being replaced with s-expression based representation, and documented in the file [`types.sexpr/README.md`](../types.sexpr/README.md).

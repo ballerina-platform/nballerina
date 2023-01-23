@@ -20,14 +20,14 @@
       (cell-b (cell (| int boolean) unlimited)))
      (assert= cell-a cell-b))
 
-(assert< (int (0 255)) int)
-(let ((cell-a (cell (int (0 255)) none))
+(assert< (int-range 0 255) int)
+(let ((cell-a (cell (int-range 0 255) none))
       (cell-b (cell int none)))
      (assert< cell-a cell-b))
-(let ((cell-a (cell (int (0 255)) limited))
+(let ((cell-a (cell (int-range 0 255) limited))
       (cell-b (cell int limited)))
      (assert< cell-a cell-b))
-(let ((cell-a (cell (int (0 255)) unlimited))
+(let ((cell-a (cell (int-range 0 255) unlimited))
       (cell-b (cell int unlimited)))
      (assert< cell-a cell-b))     
 

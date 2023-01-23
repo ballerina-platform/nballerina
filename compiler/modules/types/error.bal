@@ -1,6 +1,6 @@
 // Implementation specific to basic type error.
 
-public function errorDetail(Context cx, SemType detail) returns SemType {
+public function errorDetail(SemType detail) returns SemType {
     SubtypeData sd = bddIntersect(<Bdd>subtypeData(detail, BT_MAPPING), MAPPING_SUBTYPE_RO);
     if sd is boolean {
         if sd {

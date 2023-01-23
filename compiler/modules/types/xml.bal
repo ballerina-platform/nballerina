@@ -126,7 +126,10 @@ function xmlFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retur
 }
 
 function xmlCollectAllPrimitives(Conjunction? con) returns int {
-    int bits = 0;
+    if con == () {
+        return 0;
+    }
+    int bits = XML_PRIMITIVE_ALL_MASK;
     Conjunction? current = con;
     while current != () {
         bits &= <int>current.atom;

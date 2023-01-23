@@ -3,22 +3,22 @@ import ballerina/io;
 import ballerina/test;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.sexpr;
-import wso2/nballerina.types as t;
+import wso2/nballerina.types.sexpr as ts;
 
 type Relation "assert<"|"assert<>"|"assert=";
-type Assertion [Relation, Type, Type];
-type Binding [string, Atom];
-type BoundAssertion ["let", Binding[], Assertion];
-type Test readonly & Assertion|BoundAssertion;
+type Assertion [Relation, ts:Type, ts:Type];
+type NameAtom [string, ts:Atom];
+type BoundAssertion ["let", NameAtom[], Assertion];
+type Test Assertion|BoundAssertion;
 
-const TEST_DATA_DIR = "modules/types.sexpr/tests/data";
+const TEST_DATA_DIR = "modules/types/tests/data";
 
-function listTypeTests() returns error|map<[string, int, sexpr:Any]> {
+function listTypeTests() returns error|map<[string, int, sexpr:Data]> {
     string absTestDataDir = check file:getAbsolutePath(TEST_DATA_DIR);
-    map<[string, int, sexpr:Any]> files = {};
+    map<[string, int, sexpr:Data]> files = {};
     foreach var file in checkpanic file:readDir(absTestDataDir) {
         string input = check io:fileReadString(file.absPath);
-        sexpr:Any[] tests = check sexpr:parse(input);
+        sexpr:Data[] tests = check sexpr:parse(input);
         int i = 0;
         foreach var test in tests {
             string name =  checkpanic file:relativePath(absTestDataDir, file.absPath) + "#" + i.toString();
@@ -32,25 +32,29 @@ function listTypeTests() returns error|map<[string, int, sexpr:Any]> {
 @test:Config {
     dataProvider: listTypeTests
 }
-function typeTests(string filename, int index, sexpr:Any testSexpr) returns error? {
+function testTypes(string filename, int index, sexpr:Data testSexpr) returns error? {
     Test test = check testSexpr.cloneWithType();
-    t:Env env = new;
-    t:Context tc = t:typeContext(env);
-    map<Atom> bindings = {};
-    Assertion assertion;
-    if test is BoundAssertion {
-        assertion = test[2];
-        foreach var [name, atom] in test[1] {
-            bindings[name] = atom;
+    Env env = new;
+    match test {
+        ["let", var nameAtoms, var assertion] => {
+            AtomTableSexpr atoms = {};
+            foreach var [name, atom] in <NameAtom[]>nameAtoms {
+                atoms[name] = atom;
+            }
+            check testTypeRelation(env, <Assertion>assertion, atomTableFromSexpr(env, atoms));
+        }
+        var assertion => {
+            check testTypeRelation(env, <Assertion>assertion, {});
         }
     }
-    else {
-        assertion = test;
-    }
+}
+
+function testTypeRelation(Env env, Assertion assertion, AtomTable atoms) returns error? {
+    Context tc = typeContext(env);
     var [relation, t1, t2] = assertion;
-    t:SemType st1 = semTypeFromSexpr(env, bindings, t1);
-    t:SemType st2 = semTypeFromSexpr(env, bindings, t2);
-    var actual = relationFromResult(t:isSubtype(tc, st1, st2), t:isSubtype(tc, st2, st1));
+    SemType st1 = fromSexpr(env, atoms, t1);
+    SemType st2 = fromSexpr(env, atoms, t2);
+    var actual = relationFromResult(isSubtype(tc, st1, st2), isSubtype(tc, st2, st1));
     string expected = relation.substring(6); // 6 = "assert".length()
     if actual != expected {
         string s1 = t1.toString();

@@ -424,6 +424,7 @@ public final BasicTypeBitSet TYPEDESC = basicType(BT_TYPEDESC);
 public final BasicTypeBitSet HANDLE = basicType(BT_HANDLE);
 
 public final BasicTypeBitSet XML = basicType(BT_XML);
+public final BasicTypeBitSet OBJECT = basicType(BT_OBJECT);
 public final BasicTypeBitSet STREAM = basicType(BT_STREAM);
 public final BasicTypeBitSet FUTURE = basicType(BT_FUTURE);
 
@@ -1021,13 +1022,32 @@ public function decimalSubtype(SemType t) returns DecimalSubtype|boolean {
     return <boolean|DecimalSubtype>subtypeData(t, BT_DECIMAL);
 }
 
-// Describes the subtype of string included in the type: true/false mean all or none of string
 public function stringSubtype(SemType t) returns StringSubtype|boolean {
     return <boolean|StringSubtype>subtypeData(t, BT_STRING);
 }
 
+public function listSubtype(SemType t) returns Bdd {
+    return <boolean|Bdd>subtypeData(t, BT_LIST);
+}
+
+public function mappingSubtype(SemType t) returns Bdd {
+    return <boolean|Bdd>subtypeData(t, BT_MAPPING);
+}
+
+public function tableSubtype(SemType t) returns Bdd {
+    return <boolean|Bdd>subtypeData(t, BT_TABLE);
+}
+
 public function xmlSubtype(SemType t) returns XmlSubtype|boolean {
     return <boolean|XmlSubtype>subtypeData(t, BT_XML);
+}
+
+public function errorSubtype(SemType t) returns Bdd {
+    return <boolean|Bdd>subtypeData(t, BT_ERROR);
+}
+
+public function functionSubtype(SemType t) returns Bdd {
+    return <boolean|Bdd>subtypeData(t, BT_FUNCTION);
 }
 
 // Constraints on a subtype of `int`.
