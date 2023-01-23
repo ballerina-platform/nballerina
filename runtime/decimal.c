@@ -292,7 +292,7 @@ typedef struct DecimalFillerDesc {
     decQuad *val;
 } *DecimalFillerDescPtr;
 
-TaggedPtr decimalFillerCreate(DecimalFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+TaggedPtr _bal_decimal_filler_create(DecimalFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     *hasIdentityPtr = false;
     return createDecimal(fillerDesc->val);
 } 

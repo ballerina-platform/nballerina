@@ -322,7 +322,7 @@ typedef struct MappingFillerDesc {
     MappingDescPtr mappingDesc;
 } *MappingFillerDescPtr;
 
-TaggedPtr mappingFillerCreate(MappingFillerDescPtr fillerDesc, bool* hasIdentityPtr) {
+TaggedPtr _bal_mapping_filler_create(MappingFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     *hasIdentityPtr = true;
     return _bal_mapping_construct(fillerDesc->mappingDesc, 0);
 }

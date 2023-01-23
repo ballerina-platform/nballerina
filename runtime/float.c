@@ -65,9 +65,9 @@ typedef struct FloatFillerDesc {
     double val;
 } *FloatFillerDescPtr;
 
-TaggedPtr floatFillerCreate(FloatFillerDescPtr fillerDesc, bool* hasIdentityPtr) {
+TaggedPtr _bal_float_filler_create(FloatFillerDescPtr fillerDesc, bool* hasIdentityPtr) {
     *hasIdentityPtr = false;
     return floatToTagged(fillerDesc->val);
 }
 
-const struct FloatFillerDesc float_filler_desc = { &floatFillerCreate, 0.0 };
+const struct FloatFillerDesc float_filler_desc = { &_bal_float_filler_create, 0.0 };

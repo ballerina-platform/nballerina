@@ -43,18 +43,18 @@ TaggedPtr constFillerCreate(ConstFillerDescPtr fillerDesc, bool *hasIdentityPtr)
 
 const struct ConstFillerDesc nil_filler_desc = { &constFillerCreate, 0 };
 
-TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability* fillability) {
+TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability *fillability) {
     if (fdp == NULL) {
         *fillability = FILL_NONE;
         return NULL;
     }
     bool hasIdentityPtr;
-    TaggedPtr fillerValue = fillerCreate(fdp, &hasIdentityPtr);
+    TaggedPtr fillerValue = _bal_filler_create(fdp, &hasIdentityPtr);
     *fillability = hasIdentityPtr ? FILL_EACH : FILL_COPY;
     return fillerValue;
 }
 
-TaggedPtr fillerCreate(FillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+TaggedPtr _bal_filler_create(FillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     TaggedPtr fillerValue = fillerDesc->create(fillerDesc, hasIdentityPtr);
     return fillerValue;
 }

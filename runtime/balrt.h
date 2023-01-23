@@ -128,7 +128,7 @@ typedef struct FillerDesc {
     TaggedPtr (*create)(struct FillerDesc *fillerDesc, bool *hasIdentityPtr);
 } *FillerDescPtr;
 
-TaggedPtr fillerCreate(FillerDescPtr fillerDesc, bool *hasIdentityPtr);
+TaggedPtr _bal_filler_create(FillerDescPtr fillerDesc, bool *hasIdentityPtr);
 
 typedef struct ConstFillerDesc {
     TaggedPtr (*create)(struct ConstFillerDesc *fillerDesc, bool *hasIdentityPtr);
@@ -460,7 +460,7 @@ typedef enum {
     FILL_COPY
 } Fillability;
 
-TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability* fillability);
+TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability * fillability);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);

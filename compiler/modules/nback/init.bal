@@ -301,14 +301,14 @@ function listFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:
 }
 
 function finishListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name) returns llvm:ConstPointerValue {
-    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "listFillerCreate", fillerCreateFnTy);
+    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_list_filler_create", fillerCreateFnTy);
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, structDescPtr]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(structFillerDescTy, name, initializer=initializer);
     return cx.llContext().constBitCast(ptr, fillerDescPtrType);
 }
 
 function finishFixedLenghtListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name, t:ListFiller filler) returns llvm:ConstPointerValue {
-    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "fixedLengthListFillerCreate", fillerCreateFnTy);
+    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_fixed_length_list_filler_create", fillerCreateFnTy);
     llvm:ConstPointerValue[] memberFillers = from t:Filler each in filler.memberFillers select fillerToFillerDesc(cx, each);
     llvm:ConstValue fillers = cx.llContext().constArray(fillerDescPtrType, memberFillers);
     llvm:ConstValue fillerCount = constInt(cx, memberFillers.length());  
@@ -333,32 +333,32 @@ function mappingFillerDesc(InitModuleContext cx, t:MappingAtomicType atomicTy) r
                                 mappingTy, STRUCTURE_MAPPING, "external"); 
     }
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defns.get(mappingTy).ptr, llStructureDescPtrType);
-    return constValueFillerDesc(cx, structDescPtr, "mappingFillerCreate", structFillerDescTy);
+    return constValueFillerDesc(cx, structDescPtr, "mapping_filler_create", structFillerDescTy);
 }
 
 function stringFillerDesc(InitModuleContext cx, string value) returns llvm:ConstPointerValue {
-    return constValueFillerDesc(cx, getInitString(cx, value), "stringFillerCreate", stringFillerDescTy);
+    return constValueFillerDesc(cx, getInitString(cx, value), "string_filler_create", stringFillerDescTy);
 }
 
 function decimalFillerDesc(InitModuleContext cx, decimal value) returns llvm:ConstPointerValue {
-    return constValueFillerDesc(cx, getInitDecimal(cx, value), "decimalFillerCreate", decimalFillerDescTy);
+    return constValueFillerDesc(cx, getInitDecimal(cx, value), "decimal_filler_create", decimalFillerDescTy);
 }
 
 function intFillerDesc(InitModuleContext cx, int value) returns llvm:ConstPointerValue {
-    return constValueFillerDesc(cx, constInt(cx, value), "intFillerCreate", intFillerDescTy);
+    return constValueFillerDesc(cx, constInt(cx, value), "int_filler_create", intFillerDescTy);
 }
 
 function floatFillerDesc(InitModuleContext cx, float value) returns llvm:ConstPointerValue {
-    return constValueFillerDesc(cx, constFloat(cx, value), "floatFillerCreate", floatFillerDescTy);
+    return constValueFillerDesc(cx, constFloat(cx, value), "float_filler_create", floatFillerDescTy);
 }
 
-type FillerCreateFn "floatFillerCreate"|"intFillerCreate"|"decimalFillerCreate"|"stringFillerCreate"|"mappingFillerCreate";
+type FillerCreateFn "float_filler_create"|"int_filler_create"|"decimal_filler_create"|"string_filler_create"|"mapping_filler_create";
 
 function constValueFillerDesc(InitModuleContext cx, llvm:ConstValue value,
                               FillerCreateFn fillerCreateFn, llvm:Type fillerDescTy) returns llvm:ConstPointerValue {
     cx.fillerDescCount += 1;
     string name = fillerDescSymbol(cx.fillerDescCount);
-    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, fillerCreateFn, fillerCreateFnTy);
+    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_" + fillerCreateFn, fillerCreateFnTy);
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, value]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fillerDescTy, name, initializer=initializer);
     return cx.llContext().constBitCast(ptr, fillerDescPtrType);

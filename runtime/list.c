@@ -544,14 +544,14 @@ typedef struct FixedLengthListFillerDesc {
     FillerDescPtr fillers[];
 } *FixedLengthListFillerDescPtr;
 
-TaggedPtr listFillerCreate(ListFillerDescPtr fillerDesc, bool* hasIdentityPtr) {
+TaggedPtr _bal_list_filler_create(ListFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     *hasIdentityPtr = true;
     ListDescPtr ldp = fillerDesc->listDesc;
     return ptrAddFlags(_bal_list_construct_8(ldp, ldp->minLength),
                       ((uint64_t)TAG_LIST << TAG_SHIFT)|EXACT_FLAG);
 }
 
-TaggedPtr fixedLengthListFillerCreate(FixedLengthListFillerDescPtr fillerDesc, bool* hasIdentityPtr) {
+TaggedPtr _bal_fixed_length_list_filler_create(FixedLengthListFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     *hasIdentityPtr = true;
     ListDescPtr ldp = fillerDesc->listDesc;
     int64_t fixedLen = ldp->minLength;
@@ -560,11 +560,11 @@ TaggedPtr fixedLengthListFillerCreate(FixedLengthListFillerDescPtr fillerDesc, b
     ListPtr lp = taggedToPtr(list);
     GC TaggedPtrArray *ap = &(lp->tpArray);
     int64_t fillerCount = fillerDesc->fillerCount;
-    FillerDescPtr* fillers = fillerDesc->fillers;
+    FillerDescPtr *fillers = fillerDesc->fillers;
     for (int64_t i = 0; i < fixedLen; i++) {
         FillerDescPtr filler = i < fillerCount ? fillers[i] : fillers[fillerCount - 1];
         bool ignored;
-        ap->members[i] = fillerCreate(filler, &ignored);    
+        ap->members[i] = _bal_filler_create(filler, &ignored);    
     }
     ap->length = fixedLen;
     return list;
