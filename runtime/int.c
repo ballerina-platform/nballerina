@@ -65,5 +65,3 @@ TaggedPtr _bal_int_filler_create(IntFillerDescPtr fillerDesc, bool *hasIdentityP
     *hasIdentityPtr = false;
     return intToTagged(fillerDesc->val);
 }
-
-const struct IntFillerDesc int_filler_desc = { &_bal_int_filler_create, 0 };

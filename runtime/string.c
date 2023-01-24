@@ -328,5 +328,3 @@ TaggedPtr _bal_string_filler_create(StringFillerDescPtr fillerDesc, bool *hasIde
     *hasIdentityPtr = false;
     return fillerDesc->val;
 }
-
-const struct StringFillerDesc string_filler_desc = { &_bal_string_filler_create, (TaggedPtr)(IMMEDIATE_FLAG | (((uint64_t)TAG_STRING) << TAG_SHIFT) | (((uint64_t)1 << (7*8)) -  1)) };

@@ -36,25 +36,35 @@ static bool tidListContains(const Tid *start, const Tid *end, Tid tid) {
     return false;
 }
 
-TaggedPtr constFillerCreate(ConstFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
-    *hasIdentityPtr = false;
-    return fillerDesc->constValue;
-}
-
-const struct ConstFillerDesc nil_filler_desc = { &constFillerCreate, 0 };
-
 TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability *fillability) {
     if (fdp == NULL) {
         *fillability = FILL_NONE;
         return NULL;
     }
     bool hasIdentityPtr;
-    TaggedPtr fillerValue = _bal_filler_create(fdp, &hasIdentityPtr);
-    *fillability = hasIdentityPtr ? FILL_EACH : FILL_COPY;
+    TaggedPtr fillerValue = filler_create(fdp, &hasIdentityPtr);
+    if (fillability != NULL) {
+        *fillability = hasIdentityPtr ? FILL_EACH : FILL_COPY;
+    }
     return fillerValue;
 }
 
-TaggedPtr _bal_filler_create(FillerDescPtr fillerDesc, bool *hasIdentityPtr) {
-    TaggedPtr fillerValue = fillerDesc->create(fillerDesc, hasIdentityPtr);
-    return fillerValue;
+TaggedPtr filler_create(FillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    return fillerDesc->create(fillerDesc, hasIdentityPtr);
 }
+
+typedef struct ConstFillerDesc {
+    TaggedPtr (*create)(struct ConstFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    TaggedPtr constValue;
+} *ConstFillerDescPtr;
+
+static TaggedPtr constFillerCreate(ConstFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    *hasIdentityPtr = false;
+    return fillerDesc->constValue;
+}
+
+const struct ConstFillerDesc _bal_nil_filler_desc = { &constFillerCreate, NIL };
+const struct ConstFillerDesc _bal_false_filler_desc = { &constFillerCreate, (TaggedPtr)TAGGED_FALSE };
+const struct ConstFillerDesc _bal_true_filler_desc = { &constFillerCreate, (TaggedPtr)TAGGED_TRUE };
+const struct ConstFillerDesc _bal_int_zero_filler_desc = { &constFillerCreate, (TaggedPtr)TAGGED_INT_ZERO };
+const struct ConstFillerDesc _bal_string_empty_filler_desc = { &constFillerCreate, (TaggedPtr)TAGGED_EMPTY_STRING };

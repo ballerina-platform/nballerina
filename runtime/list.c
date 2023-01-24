@@ -137,8 +137,7 @@ PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val
         ap->members[ap->length] = filler;
         for (int64_t i = ap->length + 1; i < index; i++) {
             if (fill == FILL_EACH) {
-                Fillability ignored;
-                filler = structCreateFiller(ldp->fillerDesc, &ignored);
+                filler = structCreateFiller(ldp->fillerDesc, NULL);
             }
             ap->members[i] = filler;
         }
@@ -182,8 +181,7 @@ TaggedPtrPanicCode _bal_list_filling_get(TaggedPtr p, int64_t index) {
         // Probably will only call this when FILL_EACH would be true,
         // but let's handle all cases.
         if (likely(fill == FILL_EACH)) {
-            Fillability ignored;
-            filler = structCreateFiller(ldp->fillerDesc, &ignored);
+            filler = structCreateFiller(ldp->fillerDesc, NULL);
         }
         ap->members[i] = filler;
     }
@@ -564,7 +562,7 @@ TaggedPtr _bal_fixed_length_list_filler_create(FixedLengthListFillerDescPtr fill
     for (int64_t i = 0; i < fixedLen; i++) {
         FillerDescPtr filler = i < fillerCount ? fillers[i] : fillers[fillerCount - 1];
         bool ignored;
-        ap->members[i] = _bal_filler_create(filler, &ignored);
+        ap->members[i] = filler_create(filler, &ignored);
     }
     ap->length = fixedLen;
     return list;

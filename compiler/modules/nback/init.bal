@@ -259,19 +259,19 @@ function fillerToFillerDesc(InitModuleContext cx, t:Filler fillerValue) returns 
     if fillerValue is t:WrappedSingleValue {
         t:SingleValue val = fillerValue.value;
         if val is int {
-            return val == 0 ? constFillerDesc(cx, "int_filler_desc") : intFillerDesc(cx, val);
+            return val == 0 ? constFillerDesc(cx, "int_zero_filler_desc") : intFillerDesc(cx, val);
         }
         else if val is boolean {
             return val ? constFillerDesc(cx, "true_filler_desc") : constFillerDesc(cx, "false_filler_desc");
         }
         else if val is float {
-            return val == 0.0 ? constFillerDesc(cx, "float_filler_desc") : floatFillerDesc(cx, val);
+            return val == 0.0 ? constFillerDesc(cx, "float_zero_filler_desc") : floatFillerDesc(cx, val);
         }
         else if val is decimal {
-            return val == 0d ? constFillerDesc(cx, "decimal_filler_desc") : decimalFillerDesc(cx, val);
+            return val == 0d ? constFillerDesc(cx, "decimal_zero_filler_desc") : decimalFillerDesc(cx, val);
         }
         else if val is string {
-            return val == "" ? constFillerDesc(cx, "string_filler_desc") : stringFillerDesc(cx, val);
+            return val == "" ? constFillerDesc(cx, "string_empty_filler_desc") : stringFillerDesc(cx, val);
         }
         else {
             return constFillerDesc(cx, "nil_filler_desc");
@@ -370,7 +370,7 @@ function constFillerDesc(InitModuleContext cx, string name) returns llvm:ConstPo
         return memo;
     }
     // We are special casing decimal since we don't have a const filler desc defined for decimals
-    llvm:ConstPointerValue fillerDesc = name == "decimal_filler_desc" ? decimalFillerDesc(cx, 0d) : cx.llMod.addGlobal(fillerDescTy, name);
+    llvm:ConstPointerValue fillerDesc = name == "decimal_zero_filler_desc" ? decimalFillerDesc(cx, 0d) : cx.llMod.addGlobal(fillerDescTy, "_bal_" + name);
     cx.constFillerDesc[name] = fillerDesc;
     return fillerDesc;
 }

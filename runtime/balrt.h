@@ -67,6 +67,11 @@ typedef int64_t CompareResult;
 #define IMMEDIATE_INT_MAX  (((int64_t)1 << (TAG_SHIFT - 1)) - 1)
 #define IMMEDIATE_INT_TRUNCATE(n) (n & (((int64_t)1 << TAG_SHIFT) - 1))
 
+#define TAGGED_FALSE (((uint64_t)TAG_BOOLEAN) << TAG_SHIFT)
+#define TAGGED_TRUE ((((uint64_t)TAG_BOOLEAN) << TAG_SHIFT) | 1)
+#define TAGGED_INT_ZERO ((((uint64_t)TAG_INT) << TAG_SHIFT) | IMMEDIATE_FLAG)
+#define TAGGED_EMPTY_STRING (IMMEDIATE_FLAG | (((uint64_t)TAG_STRING) << TAG_SHIFT) | (((uint64_t)1 << (7*8)) -  1))
+
 extern char *_bal_stack_guard;
 
 typedef GC char NODEREF *TaggedPtr;
@@ -124,18 +129,13 @@ typedef struct {
     Tid tid;
 } StructureDesc, *StructureDescPtr;
 
+// This is the abstract version of filler descriptor. Each type must 
+// implement there own version (or reuse a common version such as ConstFillerDesc)
 typedef struct FillerDesc {
     TaggedPtr (*create)(struct FillerDesc *fillerDesc, bool *hasIdentityPtr);
 } *FillerDescPtr;
 
-TaggedPtr _bal_filler_create(FillerDescPtr fillerDesc, bool *hasIdentityPtr);
-
-typedef struct ConstFillerDesc {
-    TaggedPtr (*create)(struct ConstFillerDesc *fillerDesc, bool *hasIdentityPtr);
-    TaggedPtr constValue;
-} *ConstFillerDescPtr;
-
-TaggedPtr constFillerCreate(ConstFillerDescPtr fillerDesc, bool *hasIdentityPtr);
+TaggedPtr filler_create(FillerDescPtr fillerDesc, bool *hasIdentityPtr);
 
 // All mapping and list values start with this
 typedef GC struct {
