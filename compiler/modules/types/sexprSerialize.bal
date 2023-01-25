@@ -347,7 +347,7 @@ function fromMappingAtom(SerializationContext sc, Atom atom) returns ts:Atom {
     foreach int i in 0 ..< mat.types.length() {
         fields.push([{ s: mat.names[i] }, sexprFormSemTypeInternal(sc, cellInner(mat.types[i]))]);
     }
-    SemType restSemType = cellInner(mat.rest);
+    SemType restSemType = cellInnerVal(mat.rest);
     if restSemType != NEVER {
         ts:Type rest = sexprFormSemTypeInternal(sc, restSemType);
         if fields.length() == 0 {

@@ -120,7 +120,7 @@ List atoms
 
 | Ballerina Syntax          | Sexpr               |
 |---------------------------|---------------------|
-| `(any\|error)[] & !int[]` | `(& list (! LT.9))` |
+| `(any\|error)[] & !int[]` | `(& list (! LT.11))` |
 
 Mapping atoms
 -------------
@@ -139,10 +139,10 @@ Table subtypes
 
 | Ballerina Syntax                      | Sexpr                                                                                                                                                                                         |
 |---------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `table<record {\| int k; int v; \|}>` | `(table MT.9)` where `(MT.9 (mapping (("k" int) ("v" int))))`                                                                                                                                 |
-| `table<record {\| int a; \|}> & !table<record {\| int b; \|}>` | `(& table (table MT.9) (! (table MT.12)))` where `(MT.9 (mapping (("a" int))))(MT.12 (mapping (("b" int))))`                                                         |
-| `table<record {\| int a; \|} \| record {\| int b; \|}> \| table<record {\| int c; \|}>` | `(\| (table (\| MT.9 MT.10)) (table MT.13))` where `(MT.9 (mapping (("a" int))))(MT.10 (mapping (("b" int))))(MT.13 (mapping (("c" int))))` |
-| `table<map<any\|error>> & !table<record {\| int a; \|}>` | `(& table (! (table MT.9)))` where `(MT.9 (mapping (("a" int))))`                                                                                                          |
+| `table<record {\| int k; int v; \|}>` | `(table MT.12)` where `(MT.12 (mapping (("k" int) ("v" int))))`                                                                                                                                 |
+| `table<record {\| int a; \|}> & !table<record {\| int b; \|}>` | `(& table (table MT.12) (! (table MT.15)))` where `(MT.12 (mapping (("a" int))))(MT.15 (mapping (("b" int))))`                                                         |
+| `table<record {\| int a; \|} \| record {\| int b; \|}> \| table<record {\| int c; \|}>` | `(\| (table (\| MT.12 MT.13)) (table MT.16))` where `(MT.12 (mapping (("a" int))))(MT.13 (mapping (("b" int))))(MT.16 (mapping (("c" int))))` |
+| `table<map<any\|error>> & !table<record {\| int a; \|}>` | `(& table (! (table MT.12)))` where `(MT.12 (mapping (("a" int))))`                                                                                                          |
 
 XML subtypes
 ============
@@ -199,4 +199,4 @@ Examples
 | `!string`                                 | `(! string)`                                                                 |
 | `!string:Char`                            | `(! char)`                                                                   |
 | `!"A"`                                    | `(! "A")`                                                                    |
-| `(any\|error)[] & !int[]`                 | `(& list (! LT.9))` where `(LT.9 (array int))`                               |
+| `(any\|error)[] & !int[]`                 | `(& list (! LT.11))` where `(LT.11 (array int))`                               |
