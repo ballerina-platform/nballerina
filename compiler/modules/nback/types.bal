@@ -16,15 +16,9 @@ const LLVM_PANIC_CODE = "i64";
 
 final llvm:StructType llStructureDescType = llvm:structType([LLVM_TID]);
 final llvm:PointerType llStructureDescPtrType = llvm:pointerType(llStructureDescType);
-// FIXME: what is the correct type for filler desc
-final llvm:PointerType fillerDescPtrType = llvm:pointerType(fillerDescTy);
-final llvm:FunctionType fillerCreateFuncTy = llvm:functionType(LLVM_TAGGED_PTR, [llvm:pointerType("i8"), llvm:pointerType(LLVM_BOOLEAN)]);
-final llvm:Type fillerDescTy = llvm:structType([llvm:pointerType(fillerCreateFuncTy)]);
-final llvm:Type intFillerDescTy = llvm:structType([llvm:pointerType(fillerCreateFuncTy), LLVM_INT]);
-final llvm:Type floatFillerDescTy = llvm:structType([llvm:pointerType(fillerCreateFuncTy), LLVM_FLOAT]);
-final llvm:Type decimalFillerDescTy = llvm:structType([llvm:pointerType(fillerCreateFuncTy), LLVM_DECIMAL_CONST]);
-final llvm:Type stringFillerDescTy = llvm:structType([llvm:pointerType(fillerCreateFuncTy), LLVM_TAGGED_PTR]);
-final llvm:Type structFillerDescTy = llvm:structType([llvm:pointerType(fillerCreateFuncTy), llStructureDescPtrType]);
+
+// This is an approximation, to share type between init.bal and types.bal
+final llvm:PointerType fillerDescPtrType = llvm:pointerType("i8");
 
 // This is an approximation, but close enough since we are only accessing the pointer in C.
 final llvm:StructType llComplexType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
