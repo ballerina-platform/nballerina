@@ -63,7 +63,7 @@ function cellMutNoneInhabited(Context cx, SemType pos, Conjunction? negList) ret
     SemType negListUnionResult = cellNegListUnion(negList);
     // We expect `isNever` condition to be `true` when there are no negative atoms.
     // Otherwise, we do `isEmpty` to conclude on the inhabitance.
-    return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
+    return negListUnionResult == NEVER || !isEmpty(cx, diff(pos, negListUnionResult));
 }
 
 function cellNegListUnion(Conjunction? negList) returns SemType {
@@ -104,7 +104,7 @@ function cellMutUnlimitedInhabited(Context cx, SemType pos, Conjunction? negList
     SemType negListUnionResult = cellNegListUnlimitedUnion(negList);
     // We expect `isNever` condition to be `true` when there are no negative atoms with unlimited mutability.
     // Otherwise, we do `isEmpty` to conclude on the inhabitance.
-    return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
+    return negListUnionResult == NEVER || !isEmpty(cx, diff(pos, negListUnionResult));
 }
 
 function cellNegListUnlimitedUnion(Conjunction? negList) returns SemType {

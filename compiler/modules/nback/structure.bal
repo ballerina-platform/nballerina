@@ -476,7 +476,7 @@ function isListMemberTypeExact(t:Context tc, t:SemType listType, bir:IntOperand 
 
 function isSameTypeWithin(t:Context tc, t:SemType semType, t:SemType within, t:SemType targetType) returns boolean {
     t:SemType ty = t:intersect(semType, within);
-    return t:isNever(ty) || t:isSameType(tc, ty, targetType);
+    return ty == t:NEVER || t:isSameType(tc, ty, targetType);
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {

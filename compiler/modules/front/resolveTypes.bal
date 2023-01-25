@@ -178,7 +178,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 // (i.e. there's a recursive type still under construction).
                 // To solve this, we would need to build a list of intersections to be checked later.
                 // But this is very unlikely to be a problem in practice.
-                if t:isNever(accumType)
+                if accumType == t:NEVER
                    || (accumType !is t:BasicTypeBitSet && env.isReady() && t:isEmpty(mod.tc, accumType)) {
                     return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPos[i - 1]));
                 }
@@ -234,7 +234,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             t:Field[] fields = [];
             foreach var { name, typeDesc, ro } in td.fields {
                 t:SemType fieldTy = check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc);
-                if t:isNever(fieldTy) {
+                if fieldTy == t:NEVER {
                     return err:semantic("record field can't be never", s:locationInDefn(modDefn, { startPos: typeDesc.startPos, endPos: typeDesc.endPos }));
                 }
                 fields.push([name, fieldTy, ro]);

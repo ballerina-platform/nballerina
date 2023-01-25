@@ -49,7 +49,7 @@ public function listAtomicTypeAllMemberTypesInner(ListAtomicType atomicType) ret
         }
     }
     SemType rest = cellInner(atomicType.rest);
-    if !isNever(rest) {
+    if rest != NEVER {
         types.push(rest);
         ranges.push({ min: fixedLength, max: int:MAX_VALUE });
     }

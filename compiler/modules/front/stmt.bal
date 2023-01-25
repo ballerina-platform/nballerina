@@ -1079,14 +1079,14 @@ function codeGenCheckingStmt(StmtContext cx, bir:BasicBlock bb, BindingChain? in
     t:SemType errorType = t:intersect(semType, t:ERROR);
     bir:BasicBlock block;
     t:SemType resultType;
-    if t:isNever(errorType) {
+    if errorType == t:NEVER {
         block = nextBlock;
         resultType = semType;
     }
     else {
         bir:Register operand = <bir:Register>o;
         resultType = t:diff(semType, t:ERROR);
-        if t:isNever(resultType) {
+        if resultType == t:NEVER {
             codeGenCheckingTerminator(nextBlock, checkingKeyword, operand, pos);
             return { block: () };
         }

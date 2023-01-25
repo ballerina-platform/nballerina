@@ -794,14 +794,6 @@ public function complement(SemType t) returns SemType {
     return diff(VAL, t);
 }
 
-public function isNever(SemType t) returns boolean {
-    return t is BasicTypeBitSet && t == 0;
-}
-
-public function isUndef(SemType t) returns boolean {
-    return t is BasicTypeBitSet && t == UNDEF;
-}
-
 public function isCyclic(Context cx, SemType t) returns boolean {
     if !isEmpty(cx, t) {
         return false;
@@ -842,7 +834,7 @@ public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean {
 }
 
 public function includesSome(SemType t1, SemType t2) returns boolean {
-    return !isNever(intersect(t1, t2));
+    return intersect(t1, t2) != NEVER;
 }
 
 public function isSubtypeSimple(SemType t1, BasicTypeBitSet t2) returns boolean {
@@ -1308,15 +1300,6 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
     }
 }
 
-public function isCell(SemType t) returns boolean {
-    if t is BasicTypeBitSet {
-        return false;
-    }
-    else {
-        return t.some == CELL;
-    }
-}
-
 public function cellInnerVal(CellSemType t) returns SemType {
     return removeUndef(cellInner(t));
 }
@@ -1326,11 +1309,11 @@ public function cellInner(CellSemType t) returns SemType {
 }
 
 public function isNeverInner(CellSemType t) returns boolean {
-    return isNever(cellInner(t));
+    return cellInner(t) == NEVER;
 }
 
 public function isUndefInner(CellSemType t) returns boolean {
-    return isUndef(cellInner(t));
+    return cellInner(t) == UNDEF;
 }
 
 final CellAtomicType CELL_ATOMIC_VAL = { ty: VAL, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
@@ -1732,7 +1715,7 @@ function init() {
 public function isMemberNever(Context cx, SemType ty) returns boolean {
     SemType[] members = toMemberSemtypes(cx, ty);
     foreach SemType member in members {
-        if isNever(member) {
+        if member == NEVER {
             return true;
         }
     }

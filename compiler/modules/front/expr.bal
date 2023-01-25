@@ -865,7 +865,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
     foreach var [i, member] in expr.members.enumerate() {
         bir:Operand operand;
         t:SemType requiredType =  t:listAtomicTypeMemberAtInner(atomicType, i);
-        if t:isNever(requiredType) {
+        if requiredType == t:NEVER {
             return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
         }
         { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
@@ -1282,13 +1282,13 @@ function codeGenCheckingExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
     var { result: o, block: nextBlock, binding } = check codeGenExpr(cx, bb, expected, expr);
     t:SemType semType = operandSemType(cx.mod.tc, o);
     t:SemType errorType =  t:intersect(semType, t:ERROR);
-    if t:isNever(errorType) {
+    if errorType == t:NEVER {
         return { result: o, block: nextBlock };
     }
     else {
         bir:Register operand = <bir:Register>o;
         t:SemType resultType = t:diff(semType, t:ERROR);
-        if t:isNever(resultType) {
+        if resultType == t:NEVER {
             // This has to be an error, otherwise type of expression would be `never``
             return cx.semanticErr(`operand of ${checkingKeyword} expression is always an error`, pos);
         }

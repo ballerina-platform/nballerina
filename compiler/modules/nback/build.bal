@@ -229,7 +229,7 @@ function operationWidens(Scaffold scaffold, bir:Register operand, t:SemType targ
     // Going from e.g. `int[]` to `int[]|map<any>` does not lose exactness,
     // but going from e.g. `int[]|map<int>` to `int[]|map<any>` does.
     t:SemType targetStructType = t:intersect(targetType, sourceStructUniformTypes);
-    if t:isNever(targetStructType) {
+    if targetStructType == t:NEVER {
         return false;
     }
     // Is the sourceStructType a _proper_ subtype of the targetStructType?
@@ -246,11 +246,11 @@ function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value tag
 // Does the tagged representation of semType use the exact bit for other purposes
 // (i.e. as part of immediate variant)
 function overloadsExactBit(t:SemType semType) returns boolean {
-    return !t:isNever(t:intersect(semType, t:union(t:STRING, t:INT)));
+    return t:intersect(semType, t:union(t:STRING, t:INT)) != t:NEVER;
 }
 
 function isPotentiallyExact(t:SemType semType) returns boolean {
-    return !t:isNever(t:intersect(semType, POTENTIALLY_EXACT));
+    return t:intersect(semType, POTENTIALLY_EXACT) != t:NEVER;
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
