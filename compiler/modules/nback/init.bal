@@ -301,14 +301,14 @@ function listFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:
 }
 
 function finishListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name) returns llvm:ConstPointerValue {
-    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_list_filler_create", fillerCreateFnTy);
+    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_list_filler_create", fillerCreateFuncTy);
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, structDescPtr]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(structFillerDescTy, name, initializer=initializer);
     return cx.llContext().constBitCast(ptr, fillerDescPtrType);
 }
 
 function finishFixedLengthListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name, t:ListFiller filler) returns llvm:ConstPointerValue {
-    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_fixed_length_list_filler_create", fillerCreateFnTy);
+    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_fixed_length_list_filler_create", fillerCreateFuncTy);
     llvm:ConstPointerValue[] memberFillers = from t:Filler each in filler.memberFillers select fillerToFillerDesc(cx, each);
     llvm:ConstValue fillers = cx.llContext().constArray(fillerDescPtrType, memberFillers);
     llvm:ConstValue fillerCount = constInt(cx, memberFillers.length());
@@ -319,7 +319,7 @@ function finishFixedLengthListFillerDesc(InitModuleContext cx, llvm:ConstPointer
 }
 
 function fixedLengthListFillerDescTy(int fixedLength) returns llvm:Type {
-    return llvm:structType([llvm:pointerType(fillerCreateFnTy),
+    return llvm:structType([llvm:pointerType(fillerCreateFuncTy),
                             llStructureDescPtrType,
                             "i64",
                             llvm:arrayType(fillerDescPtrType, fixedLength)]);
@@ -358,7 +358,7 @@ function constValueFillerDesc(InitModuleContext cx, llvm:ConstValue value,
                               FillerCreateFn fillerCreateFn, llvm:Type fillerDescTy) returns llvm:ConstPointerValue {
     cx.fillerDescCount += 1;
     string name = fillerDescSymbol(cx.fillerDescCount);
-    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_" + fillerCreateFn, fillerCreateFnTy);
+    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_" + fillerCreateFn, fillerCreateFuncTy);
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, value]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fillerDescTy, name, initializer=initializer);
     return cx.llContext().constBitCast(ptr, fillerDescPtrType);
