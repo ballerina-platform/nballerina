@@ -241,6 +241,6 @@ function fromListSexpr(SexprAtomParseContext pc, string name, ts:Type[] initialS
 function fromMappingSexpr(SexprAtomParseContext pc, string name, ts:Field[] fieldsSexpr = [], ts:Type restSexpr = "never") returns SemType {
     MappingDefinition d = new;
     pc.started[name] = d;
-    Field[] fields = from var [fieldName, fieldTy] in fieldsSexpr select [fieldName.s, fromSexprInternal(pc, fieldTy)];
+    Field[] fields = from var [fieldName, fieldTy] in fieldsSexpr select { name: fieldName.s, ty: fromSexprInternal(pc, fieldTy) };
     return defineMappingTypeWrapped(d, pc.env, fields, fromSexprInternal(pc, restSexpr));
 }
