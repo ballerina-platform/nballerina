@@ -913,7 +913,7 @@ function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boo
     if pos !is () {
         int minLength = pos.members.fixedLength;
         // This doesn't account for filling. See spec issue #1064
-        if t:isNeverInner(pos.rest) ? len != minLength : len < minLength {
+        if t:cellInner(pos.rest) == t:NEVER ? len != minLength : len < minLength {
             return false;
         }
     }
@@ -938,7 +938,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
         }
         fieldPos[name] = f.startPos;
         if mat.names.indexOf(name) == () {
-            if t:isUndefInner(mat.rest) {
+            if t:cellInner(mat.rest) == t:UNDEF {
                 return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
             }
             else if f.isIdentifier && mat.names.length() > 0 {
@@ -990,7 +990,7 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
     t:MappingAtomicType? pos = alt.pos;
     if pos !is () {
         // SUBSET won't be right with record defaults
-        if t:isUndefInner(pos.rest) {
+        if t:cellInner(pos.rest) == t:UNDEF {
             if pos.names != fieldNames {
                 return false;
             }

@@ -1125,7 +1125,7 @@ function bddListAtomicType(Env env, Bdd bdd, ListAtomicType top) returns ListAto
 }
 
 public function mappingMemberTypeInnerVal(Context cx, SemType t, SemType k) returns SemType {
-    return removeUndef(mappingMemberTypeInner(cx, t, k));
+    return diffWithUndef(mappingMemberTypeInner(cx, t, k));
 }
 
 // This computes the spec operation called "member type of K in T",
@@ -1301,19 +1301,11 @@ public function mappingAlternatives(Context cx, SemType t) returns MappingAltern
 }
 
 public function cellInnerVal(CellSemType t) returns SemType {
-    return removeUndef(cellInner(t));
+    return diffWithUndef(cellInner(t));
 }
 
 public function cellInner(CellSemType t) returns SemType {
     return (<CellAtomicType>cellAtomicType(t)).ty;
-}
-
-public function isNeverInner(CellSemType t) returns boolean {
-    return cellInner(t) == NEVER;
-}
-
-public function isUndefInner(CellSemType t) returns boolean {
-    return cellInner(t) == UNDEF;
 }
 
 final CellAtomicType CELL_ATOMIC_VAL = { ty: VAL, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
@@ -1328,27 +1320,27 @@ final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: CELL_
 final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_VAL };
 final ListAtomicType LIST_ATOMIC_MAPPING = { members: {initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_MAPPING };
 
-final Atom CELL_ATOM_VAL = { index: 0, atomicType: CELL_ATOMIC_VAL };
-final Atom CELL_ATOM_NEVER = { index: 1, atomicType: CELL_ATOMIC_NEVER };
-final Atom CELL_ATOM_MAPPING = { index: 2, atomicType: CELL_ATOMIC_MAPPING };
-final Atom LIST_ATOM_MAPPING = { index: 3, atomicType: LIST_ATOMIC_MAPPING };
-final Atom CELL_ATOM_VAL_RO = { index: 4, atomicType: CELL_ATOMIC_VAL_RO };
-final Atom MAPPING_ATOM_RO = { index: 5, atomicType: MAPPING_ATOMIC_RO };
-final Atom CELL_ATOM_MAPPING_RO = { index: 6, atomicType: CELL_ATOMIC_MAPPING_RO };
-final Atom LIST_ATOM_MAPPING_RO = { index: 7, atomicType: LIST_ATOMIC_MAPPING_RO };
-final Atom CELL_ATOM_INNER_RO = { index: 8, atomicType: CELL_ATOMIC_INNER_RO };
-final Atom CELL_ATOM_INNER = { index: 9, atomicType: CELL_ATOMIC_INNER };
+final Atom ATOM_CELL_VAL = { index: 0, atomicType: CELL_ATOMIC_VAL };
+final Atom ATOM_CELL_NEVER = { index: 1, atomicType: CELL_ATOMIC_NEVER };
+final Atom ATOM_CELL_MAPPING = { index: 2, atomicType: CELL_ATOMIC_MAPPING };
+final Atom ATOM_LIST_MAPPING = { index: 3, atomicType: LIST_ATOMIC_MAPPING };
+final Atom ATOM_CELL_VAL_RO = { index: 4, atomicType: CELL_ATOMIC_VAL_RO };
+final Atom ATOM_MAPPING_RO = { index: 5, atomicType: MAPPING_ATOMIC_RO };
+final Atom ATOM_CELL_MAPPING_RO = { index: 6, atomicType: CELL_ATOMIC_MAPPING_RO };
+final Atom ATOM_LIST_MAPPING_RO = { index: 7, atomicType: LIST_ATOMIC_MAPPING_RO };
+final Atom ATOM_CELL_INNER_RO = { index: 8, atomicType: CELL_ATOMIC_INNER_RO };
+final Atom ATOM_CELL_INNER = { index: 9, atomicType: CELL_ATOMIC_INNER };
 
-final BddNode LIST_SUBTYPE_MAPPING = bddAtom(LIST_ATOM_MAPPING);
-final BddNode MAPPING_SUBTYPE_RO = bddAtom(MAPPING_ATOM_RO);
-final BddNode LIST_SUBTYPE_MAPPING_RO = bddAtom(LIST_ATOM_MAPPING_RO);
+final BddNode LIST_SUBTYPE_MAPPING = bddAtom(ATOM_LIST_MAPPING); // represents (map<any|error>)[]
+final BddNode MAPPING_SUBTYPE_RO = bddAtom(ATOM_MAPPING_RO); // represents readonly & map<readonly>
+final BddNode LIST_SUBTYPE_MAPPING_RO = bddAtom(ATOM_LIST_MAPPING_RO); // represents readonly & (map<readonly>)[]
 
-final CellSemType CELL_SEMTYPE_VAL = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_VAL));
-final CellSemType CELL_SEMTYPE_INNER = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_INNER));
-final CellSemType CELL_SEMTYPE_MAPPING = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_MAPPING));
-final CellSemType CELL_SEMTYPE_VAL_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_VAL_RO));
-final CellSemType CELL_SEMTYPE_INNER_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_INNER_RO));
-final CellSemType CELL_SEMTYPE_MAPPING_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(CELL_ATOM_MAPPING_RO));
+final CellSemType CELL_SEMTYPE_VAL = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_VAL));
+final CellSemType CELL_SEMTYPE_INNER = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_INNER));
+final CellSemType CELL_SEMTYPE_MAPPING = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_MAPPING));
+final CellSemType CELL_SEMTYPE_VAL_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_VAL_RO));
+final CellSemType CELL_SEMTYPE_INNER_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_INNER_RO));
+final CellSemType CELL_SEMTYPE_MAPPING_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_MAPPING_RO));
 
 public function cellAtomicType(SemType t) returns CellAtomicType? {
     if t is BasicTypeBitSet {
@@ -1559,13 +1551,13 @@ public function containsConst(SemType t, SingleValue v) returns boolean {
 }
 
 public function replaceUndefWithNil(SemType t) returns SemType {
-    return union(diff(t, UNDEF), NIL);
-}
-
-public function removeUndef(SemType t) returns SemType {
     if !containsUndef(t) {
         return t;
     }
+    return union(diffWithUndef(t), NIL);
+}
+
+public function diffWithUndef(SemType t) returns SemType {
     return diff(t, UNDEF);
 }
 

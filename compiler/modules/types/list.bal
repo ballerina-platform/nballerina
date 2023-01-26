@@ -183,7 +183,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             return true;
         }
         // Ensure that we can use isNever on rest in listInhabited
-        if !isNeverInner(rest) && isEmpty(cx, rest) {
+        if cellInner(rest) != NEVER && isEmpty(cx, rest) {
             rest = cellContaining(cx.env, NEVER);
         }
     }
@@ -205,7 +205,7 @@ function intersectListAtoms(Env env, ListAtomicType[] atoms) returns [SemType, L
         }
         var [members, rest] = tmpAtom;
         foreach SemType member in members.initial {
-            if isNeverInner(member) {
+            if cellInner(member) == NEVER {
                 return ();
             }
         }
@@ -246,7 +246,7 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
     }
     else {
         final ListAtomicType nt = cx.listAtomType(neg.atom);
-        if nRequired > 0 && isNeverInner(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
+        if nRequired > 0 && cellInner(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) == NEVER {
             // Skip this negative if it is always shorter than the minimum required by the positive
             return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
         }
@@ -394,10 +394,10 @@ function listLengthsDisjoint(FixedLengthArray members1, CellSemType rest1, Fixed
     int len1 = members1.fixedLength;
     int len2 = members2.fixedLength;
     if len1 < len2 {
-        return isNeverInner(rest1);
+        return cellInner(rest1) == NEVER;
     }
     if len2 < len1 {
-        return isNeverInner(rest2);
+        return cellInner(rest2) == NEVER;
     }
     return false;
 }

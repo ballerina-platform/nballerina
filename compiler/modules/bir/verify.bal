@@ -484,10 +484,10 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? 
         return vc.semanticErr("mapping get applied to non-mapping", insn.pos);
     }
     t:SemType memberType = t:mappingMemberTypeInner(vc.typeContext(), insn.operands[0].semType, keyOperand.semType);
-    if insn.name == INSN_MAPPING_GET && t:containsUndef(memberType) {
+    if insn.name == INSN_MAPPING_GET {
         memberType = t:replaceUndefWithNil(memberType);
     } else {
-        memberType = t:removeUndef(memberType);
+        memberType = t:diffWithUndef(memberType);
     }
     if !vc.isSameType(memberType, insn.result.semType) {
         return vc.invalidErr("instruction result type is not same as member type", insn.pos);

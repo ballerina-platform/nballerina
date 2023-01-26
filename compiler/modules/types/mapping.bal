@@ -12,7 +12,7 @@ public type MappingAtomicType readonly & record {|
 |};
 
 public function mappingAtomicTypeMemberAtInnerVal(MappingAtomicType mat, string k) returns SemType {
-    return removeUndef(mappingAtomicTypeMemberAtInner(mat, k));
+    return diffWithUndef(mappingAtomicTypeMemberAtInner(mat, k));
 }
 
 public function mappingAtomicTypeMemberAtInner(MappingAtomicType mat, string k) returns SemType {
@@ -157,12 +157,12 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
             // so we can move on to the next one
 
             // Deal the easy case of two closed records fast.
-            if isUndefInner(pos.rest) && isUndefInner(neg.rest) {
+            if  cellInner(pos.rest) == UNDEF &&  cellInner(neg.rest) == UNDEF {
                 return mappingInhabited(cx, pos, negList.next);
             }
             pairing = new (pos, neg);
             foreach var {type1: posType, type2: negType} in pairing {
-                if isUndefInner(posType) || isUndefInner(negType) {
+                if  cellInner(posType) == UNDEF ||  cellInner(negType) == UNDEF {
                     return mappingInhabited(cx, pos, negList.next);
                 }
             }
@@ -241,7 +241,7 @@ function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2)
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
         CellSemType t = intersectMemberSemTypes(env, type1, type2);
-        if isNeverInner(type1) {
+        if cellInner(type1) == NEVER {
             return ();
         }
         types.push(t);
