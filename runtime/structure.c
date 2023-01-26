@@ -36,18 +36,9 @@ static bool tidListContains(const Tid *start, const Tid *end, Tid tid) {
     return false;
 }
 
-typedef struct GenericFillerDesc {
-    TaggedPtr (*create)(struct GenericFillerDesc *fillerDesc, bool *hasIdentityPtr);
-    TaggedPtr genericValue;
-} *GenericFillerDescPtr;
-
 TaggedPtr _bal_generic_filler_create(GenericFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     *hasIdentityPtr = false;
     return fillerDesc->genericValue;
 }
 
 const struct GenericFillerDesc _bal_nil_filler_desc = { &_bal_generic_filler_create, NIL };
-const struct GenericFillerDesc _bal_false_filler_desc = { &_bal_generic_filler_create, TAGGED_FALSE };
-const struct GenericFillerDesc _bal_true_filler_desc = { &_bal_generic_filler_create, TAGGED_TRUE };
-const struct GenericFillerDesc _bal_int_zero_filler_desc = { &_bal_generic_filler_create, TAGGED_INT_ZERO };
-const struct GenericFillerDesc _bal_string_empty_filler_desc = { &_bal_generic_filler_create, TAGGED_STRING_EMPTY };

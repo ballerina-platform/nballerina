@@ -371,7 +371,7 @@ function floatFillerDesc(InitModuleContext cx, float value) returns llvm:ConstPo
 type FillerKind "float"|"int"|"decimal"|"string"|"mapping"|"list";
 
 function fillerDesc(InitModuleContext cx, llvm:ConstValue value,
-                              FillerKind kind) returns llvm:ConstPointerValue {
+                    FillerKind kind) returns llvm:ConstPointerValue {
     cx.fillerDescCount += 1;
     llvm:StructType fillerTy = fillerDescTy(cx, kind);
     string name = fillerDescSymbol(cx.fillerDescCount);

@@ -130,10 +130,17 @@ typedef struct {
 } StructureDesc, *StructureDescPtr;
 
 // This is the abstract version of filler descriptor. Each type must 
-// implement there own version (or reuse a common version such as ConstFillerDesc)
+// implement there own version (or reuse a common version such as GenericFillerDesc)
 typedef struct FillerDesc {
     TaggedPtr (*create)(struct FillerDesc *fillerDesc, bool *hasIdentityPtr);
 } *FillerDescPtr;
+
+typedef struct GenericFillerDesc {
+    TaggedPtr (*create)(struct GenericFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    TaggedPtr genericValue;
+} *GenericFillerDescPtr;
+
+extern TaggedPtr _bal_generic_filler_create(GenericFillerDescPtr fillerDesc, bool *hasIdentityPtr);
 
 // All mapping and list values start with this
 typedef GC struct {
@@ -899,7 +906,7 @@ static inline TaggedPtr intToTagged(int64_t n) {
     }
 }
 
-static inline TaggedPtr filler_create(FillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+static inline TaggedPtr fillerCreate(FillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     return fillerDesc->create(fillerDesc, hasIdentityPtr);
 }
 
@@ -909,7 +916,7 @@ static inline TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability *filla
         return NULL;
     }
     bool hasIdentityPtr;
-    TaggedPtr fillerValue = filler_create(fdp, &hasIdentityPtr);
+    TaggedPtr fillerValue = fillerCreate(fdp, &hasIdentityPtr);
     if (fillability != NULL) {
         *fillability = hasIdentityPtr ? FILL_EACH : FILL_COPY;
     }

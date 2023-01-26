@@ -562,7 +562,7 @@ TaggedPtr _bal_fixed_length_list_filler_create(FixedLengthListFillerDescPtr fill
     for (int64_t i = 0; i < fixedLen; i++) {
         FillerDescPtr filler = i < fillerCount ? fillers[i] : fillers[fillerCount - 1];
         bool ignored;
-        ap->members[i] = filler_create(filler, &ignored);
+        ap->members[i] = fillerCreate(filler, &ignored);
     }
     ap->length = fixedLen;
     return list;
