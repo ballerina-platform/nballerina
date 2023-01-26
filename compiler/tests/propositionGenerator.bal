@@ -417,8 +417,8 @@ function generateRecordFields(PropositionGenContext cx, PropositionPath path) re
     foreach int i in 0 ..< memberCount {
         int len = cx.random.nextRange(cx.bounds.maxStringConstLen);
         string label = cx.random.randomStringValue(len);
-        subFields.push({ name:label, index:subtypes[i] });
-        superFields.push({ name:label, index:supertypes[i] });
+        subFields.push({ name: label, index: subtypes[i] });
+        superFields.push({ name: label, index: supertypes[i] });
     }
     return [subFields, superFields];
 }

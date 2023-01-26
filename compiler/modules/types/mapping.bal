@@ -74,7 +74,7 @@ public class MappingDefinition {
 }
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
-    CellField[] cellFields = from Field f in fields select [f.name, cellContaining(env, f.ty, f.ro ? CELL_MUT_NONE : mut)];
+    CellField[] cellFields = from var { name, ty, ro } in fields select [name, cellContaining(env, ty, ro ? CELL_MUT_NONE : mut)];
     CellSemType restCell = cellContaining(env, rest, mut);
     return md.define(env, cellFields, restCell);
 }
