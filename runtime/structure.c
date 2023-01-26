@@ -49,22 +49,18 @@ TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability *fillability) {
     return fillerValue;
 }
 
-TaggedPtr filler_create(FillerDescPtr fillerDesc, bool *hasIdentityPtr) {
-    return fillerDesc->create(fillerDesc, hasIdentityPtr);
-}
+typedef struct GenericFillerDesc {
+    TaggedPtr (*create)(struct GenericFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    TaggedPtr genericValue;
+} *GenericFillerDescPtr;
 
-typedef struct ConstFillerDesc {
-    TaggedPtr (*create)(struct ConstFillerDesc *fillerDesc, bool *hasIdentityPtr);
-    TaggedPtr constValue;
-} *ConstFillerDescPtr;
-
-static TaggedPtr constFillerCreate(ConstFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+TaggedPtr _bal_generic_filler_create(GenericFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     *hasIdentityPtr = false;
-    return fillerDesc->constValue;
+    return fillerDesc->genericValue;
 }
 
-const struct ConstFillerDesc _bal_nil_filler_desc = { &constFillerCreate, NIL };
-const struct ConstFillerDesc _bal_false_filler_desc = { &constFillerCreate, (TaggedPtr)TAGGED_FALSE };
-const struct ConstFillerDesc _bal_true_filler_desc = { &constFillerCreate, (TaggedPtr)TAGGED_TRUE };
-const struct ConstFillerDesc _bal_int_zero_filler_desc = { &constFillerCreate, (TaggedPtr)TAGGED_INT_ZERO };
-const struct ConstFillerDesc _bal_string_empty_filler_desc = { &constFillerCreate, (TaggedPtr)TAGGED_EMPTY_STRING };
+const struct GenericFillerDesc _bal_nil_filler_desc = { &_bal_generic_filler_create, NIL };
+const struct GenericFillerDesc _bal_false_filler_desc = { &_bal_generic_filler_create, TAGGED_FALSE };
+const struct GenericFillerDesc _bal_true_filler_desc = { &_bal_generic_filler_create, TAGGED_TRUE };
+const struct GenericFillerDesc _bal_int_zero_filler_desc = { &_bal_generic_filler_create, TAGGED_INT_ZERO };
+const struct GenericFillerDesc _bal_string_empty_filler_desc = { &_bal_generic_filler_create, TAGGED_STRING_EMPTY };

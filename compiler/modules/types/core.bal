@@ -207,18 +207,18 @@ type FillerMemo record {|
     Filler? filler;
 |};
 
-public type Filler WrappedSingleValue|MappingAtomicType|ListFiller;
+public type Filler WrappedSingleValue|MappingFiller|ListFiller;
 
 public type ListFiller readonly & record {|
     ListAtomicType atomic;
+    SemType semType;
     Filler[] memberFillers;
 |};
 
-public function listFillerSemType(Env env, ListFiller filler) returns SemType {
-    ListDefinition defn = new();
-    ListAtomicType atomicTy = filler.atomic;
-    return defn.define(env, atomicTy.members.initial, atomicTy.members.fixedLength, atomicTy.rest);
-}
+public type MappingFiller readonly & record {|
+    MappingAtomicType atomic;
+    SemType semType;
+|};
 
 // Used in testing types.regex to create context without a Module
 public function contextFromEnv(Env env) returns Context {
@@ -963,7 +963,7 @@ function computeFiller(Context cx, SemType t) returns Filler? {
     }
     MappingAtomicType? mat = mappingAtomicType(cx, t);
     if mat != () && mat.names.length() == 0 {
-        return mat;
+        return { atomic: mat, semType: t };
     }
     ListAtomicType? lat = listAtomicType(cx, t);
     if lat != () {
@@ -975,7 +975,7 @@ function computeFiller(Context cx, SemType t) returns Filler? {
             }
             memberFillers.push(f);
         }
-        return { atomic: lat, memberFillers: memberFillers.cloneReadOnly() };
+        return { atomic: lat, semType: t,  memberFillers: memberFillers.cloneReadOnly() };
     }
     return ();
 }
