@@ -281,7 +281,7 @@ function fillerToFillerDesc(InitModuleContext cx, t:Filler fillerValue) returns 
             return val ? defaultFillerDesc(cx, "true") : defaultFillerDesc(cx, "false");
         }
         else if val is float {
-            return val == 0.0 ? defaultFillerDesc(cx, "float_zero") : floatFillerDesc(cx, val);
+            return val === 0.0 ? defaultFillerDesc(cx, "float_zero") : floatFillerDesc(cx, val);
         }
         else if val is decimal {
             return val == 0d ? defaultFillerDesc(cx, "decimal_zero") : decimalFillerDesc(cx, val);
@@ -349,28 +349,28 @@ function mappingFillerDesc(InitModuleContext cx, t:MappingFiller filler) returns
                                 mappingTy, STRUCTURE_MAPPING, "external");
     }
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defns.get(mappingTy).ptr, llStructureDescPtrType);
-    return constValueFillerDesc(cx, structDescPtr, "mapping");
+    return fillerDesc(cx, structDescPtr, "mapping");
 }
 
 function stringFillerDesc(InitModuleContext cx, string value) returns llvm:ConstPointerValue {
-    return constValueFillerDesc(cx, getInitString(cx, value), "string");
+    return fillerDesc(cx, getInitString(cx, value), "string");
 }
 
 function decimalFillerDesc(InitModuleContext cx, decimal value) returns llvm:ConstPointerValue {
-    return constValueFillerDesc(cx, getInitDecimal(cx, value), "decimal");
+    return fillerDesc(cx, getInitDecimal(cx, value), "decimal");
 }
 
 function intFillerDesc(InitModuleContext cx, int value) returns llvm:ConstPointerValue {
-    return constValueFillerDesc(cx, constInt(cx, value), "int");
+    return fillerDesc(cx, constInt(cx, value), "int");
 }
 
 function floatFillerDesc(InitModuleContext cx, float value) returns llvm:ConstPointerValue {
-    return constValueFillerDesc(cx, constFloat(cx, value), "float");
+    return fillerDesc(cx, constFloat(cx, value), "float");
 }
 
 type FillerKind "float"|"int"|"decimal"|"string"|"mapping"|"list";
 
-function constValueFillerDesc(InitModuleContext cx, llvm:ConstValue value,
+function fillerDesc(InitModuleContext cx, llvm:ConstValue value,
                               FillerKind kind) returns llvm:ConstPointerValue {
     cx.fillerDescCount += 1;
     llvm:StructType fillerTy = fillerDescTy(cx, kind);

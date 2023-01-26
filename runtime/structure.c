@@ -36,19 +36,6 @@ static bool tidListContains(const Tid *start, const Tid *end, Tid tid) {
     return false;
 }
 
-TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability *fillability) {
-    if (fdp == NULL) {
-        *fillability = FILL_NONE;
-        return NULL;
-    }
-    bool hasIdentityPtr;
-    TaggedPtr fillerValue = filler_create(fdp, &hasIdentityPtr);
-    if (fillability != NULL) {
-        *fillability = hasIdentityPtr ? FILL_EACH : FILL_COPY;
-    }
-    return fillerValue;
-}
-
 typedef struct GenericFillerDesc {
     TaggedPtr (*create)(struct GenericFillerDesc *fillerDesc, bool *hasIdentityPtr);
     TaggedPtr genericValue;

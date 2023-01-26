@@ -458,8 +458,6 @@ typedef enum {
     FILL_COPY
 } Fillability;
 
-TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability *fillability);
-
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
 extern READNONE TaggedPtr _bal_tagged_clear_exact(TaggedPtr p);
@@ -904,3 +902,17 @@ static inline TaggedPtr intToTagged(int64_t n) {
 static inline TaggedPtr filler_create(FillerDescPtr fillerDesc, bool *hasIdentityPtr) {
     return fillerDesc->create(fillerDesc, hasIdentityPtr);
 }
+
+static inline TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability *fillability) {
+    if (fdp == NULL) {
+        *fillability = FILL_NONE;
+        return NULL;
+    }
+    bool hasIdentityPtr;
+    TaggedPtr fillerValue = filler_create(fdp, &hasIdentityPtr);
+    if (fillability != NULL) {
+        *fillability = hasIdentityPtr ? FILL_EACH : FILL_COPY;
+    }
+    return fillerValue;
+}
+
