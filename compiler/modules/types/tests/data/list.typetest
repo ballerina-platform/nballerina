@@ -1,0 +1,44 @@
+(let ((int-pair-1 (list (int int)))
+      (int-pair-2 (array int 2)))
+     (assert= int-pair-1 int-pair-2))
+
+(let ((int-pair (list (int int)))
+      (int-array (array int)))
+     (assert< int-pair int-array))
+
+(let ((int-pair (list (int int)))
+      (int-three-tuple (list (int int int))))
+     (assert<> int-pair int-three-tuple))
+
+(let ((byte-array (array (int-range 0 255)))
+      (int-array (array int)))
+     (assert< byte-array int-array))
+
+(let ((boolean-array (array boolean))
+      (int-array (array int))
+      (int-or-boolean-array (array (| int boolean))))
+     (assert< (| int-array boolean-array) int-or-boolean-array))
+
+; forward reference
+(let ((t1 (array (| t1 t3 int)))
+      (t2 (list (int int int)))
+      (t3 (array int)))
+     (assert< t2 t1))
+
+; backward reference
+(let ((t3 (array int))
+      (t2 (list (int int int)))
+      (t1 (array (| t1 t3 int))))
+     (assert< t2 t1))
+
+; self recursion
+(let ((t1 (array (| t1 int)))
+      (t2 (list (int int int))))
+     (assert< t2 t1))
+
+; mutual recursion
+(let ((a1 (array a2))
+      (a2 (array (| a1 int)))
+      (b1 (array b2))
+      (b2 (array (| b1 int))))
+      (assert= a1 b1))
