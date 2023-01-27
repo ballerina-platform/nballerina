@@ -372,8 +372,8 @@ type FillerKind "float"|"int"|"decimal"|"string"|"mapping"|"list";
 
 function fillerDesc(InitModuleContext cx, llvm:ConstValue value,
                     FillerKind kind) returns llvm:ConstPointerValue {
-    cx.fillerDescCount += 1;
     llvm:StructType fillerTy = fillerDescTy(cx, kind);
+    cx.fillerDescCount += 1;
     string name = fillerDescSymbol(cx.fillerDescCount);
     llvm:FunctionDecl decl = fillerCreateFunc(cx, kind);
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, value]);
@@ -382,15 +382,15 @@ function fillerDesc(InitModuleContext cx, llvm:ConstValue value,
 }
 
 function fillerDescTy(InitModuleContext cx, FillerKind kind) returns llvm:StructType {
-    llvm:Type initType;
+    llvm:Type valType;
     match kind {
-        "float"   => { initType = LLVM_FLOAT; }
-        "int"     => { initType = LLVM_INT; }
-        "decimal" => { initType = LLVM_DECIMAL_CONST; }
-        "string"  => { initType = LLVM_TAGGED_PTR; }
-        _         => { initType = llStructureDescPtrType; }
+        "float"   => { valType = LLVM_FLOAT; }
+        "int"     => { valType = LLVM_INT; }
+        "decimal" => { valType = LLVM_DECIMAL_CONST; }
+        "string"  => { valType = LLVM_TAGGED_PTR; }
+        _         => { valType = llStructureDescPtrType; }
     }
-    return llvm:structType([llvm:pointerType(cx.llFillerCreateFuncTy()), initType]);
+    return llvm:structType([llvm:pointerType(cx.llFillerCreateFuncTy()), valType]);
 }
 
 function fillerCreateFunc(InitModuleContext cx, FillerKind kind) returns llvm:FunctionDecl {
@@ -411,8 +411,9 @@ function defaultFillerDesc(InitModuleContext cx, string name) returns llvm:Const
     if memo != () {
         return memo;
     }
-    // We are special casing decimal since we don't have a const filler desc defined for decimals
-    llvm:ConstPointerValue fillerDesc = symbol == "decimal_zero_filler_desc" ? decimalFillerDesc(cx, 0d) : cx.llMod.addGlobal(cx.llFillerDescTy(), "_bal_" + symbol);
+    // We are special casing decimal since we don't have a GenericFillerDesc defined for decimals
+    llvm:ConstPointerValue fillerDesc = symbol == "decimal_zero_filler_desc" ? decimalFillerDesc(cx, 0d) :
+                                                                               cx.llMod.addGlobal(cx.llFillerDescTy(), "_bal_" + symbol);
     llvm:ConstPointerValue fillerPtr = cx.llContext().constBitCast(fillerDesc, fillerDescPtrType);
     cx.defaultFillerDesc[symbol] = fillerPtr;
     return fillerPtr;

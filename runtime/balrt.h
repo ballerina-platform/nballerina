@@ -129,7 +129,7 @@ typedef struct {
     Tid tid;
 } StructureDesc, *StructureDescPtr;
 
-// This is the abstract version of filler descriptor. Each type must 
+// This is the abstract version of filler descriptor. Each type must
 // implement there own version (or reuse a common version such as GenericFillerDesc)
 typedef struct FillerDesc {
     TaggedPtr (*create)(struct FillerDesc *fillerDesc, bool *hasIdentityPtr);
@@ -139,8 +139,6 @@ typedef struct GenericFillerDesc {
     TaggedPtr (*create)(struct GenericFillerDesc *fillerDesc, bool *hasIdentityPtr);
     TaggedPtr genericValue;
 } *GenericFillerDescPtr;
-
-extern TaggedPtr _bal_generic_filler_create(GenericFillerDescPtr fillerDesc, bool *hasIdentityPtr);
 
 // All mapping and list values start with this
 typedef GC struct {
@@ -464,6 +462,8 @@ typedef enum {
     FILL_EACH,
     FILL_COPY
 } Fillability;
+
+extern TaggedPtr _bal_generic_filler_create(GenericFillerDescPtr fillerDesc, bool *hasIdentityPtr);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);

@@ -877,26 +877,26 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
     return { result, block: nextBlock };
 }
 
-function fillListConstructOperands(ExprContext cx, bir:BasicBlock bb, bir:Operand[] operands, 
+function fillListConstructOperands(ExprContext cx, bir:BasicBlock bb, bir:Operand[] operands,
                                    t:ListAtomicType atomicType, t:SemType semType, s:ListConstructorExpr expr) returns ResolveTypeError? {
     int fixedLength = atomicType.members.fixedLength;
     if operands.length() >= fixedLength {
         return;
     }
-    t:Filler? filler = t:filler(cx.mod.tc, semType); 
+    t:Filler? filler = t:filler(cx.mod.tc, semType);
     // we currently don't support optional fields for mapping types
     if filler !is t:ListFiller {
         return cx.semanticErr("no filler value", s:range(expr));
     }
     t:Filler[] memberFillers = filler.memberFillers;
-    t:Filler rest = memberFillers[memberFillers.length() - 1]; 
+    t:Filler rest = memberFillers[memberFillers.length() - 1];
     foreach int i in operands.length() ..< fixedLength {
         t:Filler operandFiller = i < memberFillers.length() ? memberFillers[i] : rest;
-        operands.push(fillerToOperand(cx, bb, operandFiller, expr));
+        operands.push(codeGenFillerOperand(cx, bb, operandFiller, expr));
     }
 }
 
-function fillerToOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler, s:ListConstructorExpr expr) returns bir:Operand {
+function codeGenFillerOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler, s:ListConstructorExpr expr) returns bir:Operand {
     if filler is t:WrappedSingleValue {
         return singletonOperand(cx, filler.value);
     }
@@ -906,12 +906,12 @@ function fillerToOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler, s:L
         t:Filler[] memberFillers = filler.memberFillers;
         t:ListAtomicType atomic = filler.atomic;
         t:Filler rest = memberFillers[memberFillers.length() - 1]; 
-        insn = { 
-                    operands: from var i in 0 ..< atomic.members.fixedLength select i < memberFillers.length() ? 
-                           fillerToOperand(cx, bb, memberFillers[i], expr) : fillerToOperand(cx, bb, rest, expr),
+        insn = {
+                    operands: from var i in 0 ..< atomic.members.fixedLength select i < memberFillers.length() ?
+                                codeGenFillerOperand(cx, bb, memberFillers[i], expr) : codeGenFillerOperand(cx, bb, rest, expr),
                     result,
                     pos: expr.endPos
-               }; 
+               };
     }
     else {
         // We don't have optional mapping fields
