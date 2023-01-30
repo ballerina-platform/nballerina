@@ -3,7 +3,7 @@
 // Based on listMemberType
 public function listProjInner(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
-        return (t & LIST) != 0 ? TOP : NEVER;
+        return (t & LIST) != 0 ? VAL : NEVER;
     }
     else {
         IntSubtype|boolean keyData = intSubtype(k);
@@ -32,7 +32,7 @@ function listProjPathInner(Context cx, IntSubtype|true k, Conjunction? pos, Conj
     CellSemType rest;
     if pos == () {
         members = { initial: [], fixedLength: 0 };
-        rest = cellContaining(cx.env, TOP);
+        rest = cellContaining(cx.env, VAL);
     }
     else {
         // combine all the positive tuples using intersection
@@ -63,7 +63,7 @@ function listProjPathInner(Context cx, IntSubtype|true k, Conjunction? pos, Conj
             return NEVER;
         }
         // Ensure that we can use isNever on rest in listInhabited
-        if !isNeverInner(rest) && isEmpty(cx, rest) {
+        if cellInner(rest) != NEVER && isEmpty(cx, rest) {
             rest = cellContaining(cx.env, NEVER);
         }
     }
@@ -90,7 +90,7 @@ function listProjExcludeInner(Context cx, int[] indices, int[] keyIndices, CellS
     }
     else {
         final ListAtomicType nt = cx.listAtomType(neg.atom);
-        if nRequired > 0 && isNeverInner(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) {
+        if nRequired > 0 && cellInner(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) == NEVER {
             return listProjExcludeInner(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
         }
         int negLen = nt.members.fixedLength;

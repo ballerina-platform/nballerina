@@ -7,7 +7,7 @@ type LangLibModuleName "boolean"|"int"|"float"|"decimal"|"string"|"error"|"array
 final readonly & LangLibFunction[] langLibFunctions = [
     ["string", "length", [t:STRING], t:INT],
     ["array", "length", [t:LIST], t:INT],
-    ["array", "push", [t:LIST, t:TOP], t:NIL],
+    ["array", "push", [t:LIST, t:VAL], t:NIL],
     ["map", "length", [t:MAPPING], t:INT],
     ["int", "toHexString", [t:INT], t:STRING],
     ["error", "message", [t:ERROR], t:STRING]
@@ -23,7 +23,7 @@ function getLangLibFunction(string mod, string func) returns bir:FunctionSignatu
 }
 
 final readonly & map<bir:FunctionSignature> ioLibFunctions = {
-    println: { paramTypes: [t:LIST], returnType: t:NIL, restParamType: t:TOP }
+    println: { paramTypes: [t:LIST], returnType: t:NIL, restParamType: t:VAL }
 };
 
 type ModuleExportSemtypes readonly & map<t:SemType>;

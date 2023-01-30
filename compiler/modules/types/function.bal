@@ -70,7 +70,7 @@ function functionUnionParams(Context cx, Conjunction? pos) returns SemType {
 
 function functionIntersectRet(Context cx, Conjunction? pos) returns SemType {
     if pos == () {
-        return TOP;
+        return VAL;
     }
     return intersect(cx.functionAtomType(pos.atom)[1], functionIntersectRet(cx, pos.next));
 }

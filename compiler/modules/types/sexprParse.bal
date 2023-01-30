@@ -62,7 +62,7 @@ final AtomTable namedTypes = {
     "future"  : FUTURE,
 
     "any"     : ANY,
-    "readonly": READONLY,
+    "readonly": VAL_READONLY,
 
     "char"    : STRING_CHAR,
     "byte"    : BYTE
@@ -134,7 +134,7 @@ function fromSexprInternal(SexprParseContext pc, ts:Type tySexpr) returns SemTyp
             return result;
         }
         ["&", ...var types] => {
-            SemType result = TOP;
+            SemType result = VAL;
             foreach var ty in  types {
                 result = intersect(result, fromSexprInternal(pc, <ts:Type>ty));
             }

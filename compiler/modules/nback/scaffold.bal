@@ -501,7 +501,7 @@ final TaggedRepr REPR_MAPPING = { subtype: t:MAPPING, alwaysImmediate: false };
 final TaggedRepr REPR_ERROR = { subtype: t:ERROR, alwaysImmediate: false };
 final TaggedRepr REPR_DECIMAL = { subtype: t:DECIMAL, alwaysImmediate: false };
 
-final TaggedRepr REPR_TOP = { subtype: t:TOP, alwaysImmediate: false };
+final TaggedRepr REPR_TOP = { subtype: t:VAL, alwaysImmediate: false };
 final TaggedRepr REPR_ANY = { subtype: t:ANY, alwaysImmediate: false };
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, llvm: LLVM_VOID };
 
@@ -518,7 +518,7 @@ final readonly & record {|
     { domain: t:MAPPING, repr: REPR_MAPPING },
     { domain: t:ERROR, repr: REPR_ERROR },
     { domain: t:ANY, repr: REPR_ANY },
-    { domain: t:TOP, repr: REPR_TOP }
+    { domain: t:VAL, repr: REPR_TOP }
 ];
 
 function semTypeRetRepr(t:SemType ty) returns RetRepr {
@@ -546,7 +546,7 @@ function semTypeRepr(t:SemType ty) returns Repr {
     }
     int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:DECIMAL|t:STRING|t:LIST|t:MAPPING|t:ERROR;
     int maximized = w | supported;
-    if maximized == t:TOP || maximized == (t:NON_BEHAVIOURAL|t:ERROR) || (w & supported) == w {
+    if maximized == t:VAL || maximized == (t:NON_BEHAVIOURAL|t:ERROR) || (w & supported) == w {
         TaggedRepr repr = { subtype: w, alwaysImmediate: isSemTypeAlwaysImmediate(ty, w) };
         return repr;
     }
