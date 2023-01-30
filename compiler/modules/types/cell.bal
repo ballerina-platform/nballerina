@@ -152,9 +152,9 @@ function cellSubtypeDataEnsureProper(SubtypeData subtypeData) returns ProperSubt
     }
     Atom atom;
     if subtypeData {
-        atom = ATOM_CELL_VAL;
+        atom = PREDEFINED_ATOMS[ATOM_CELL_VAL_INDEX];
     } else {
-        atom = ATOM_CELL_NEVER;
+        atom = PREDEFINED_ATOMS[ATOM_CELL_NEVER_INDEX];
     }
     return bddAtom(atom);
 }
