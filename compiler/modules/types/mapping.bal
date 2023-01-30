@@ -24,6 +24,7 @@ public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) retur
     return i is int ? mat.types[i] : mat.rest;
 }
 
+// This is mapping index 0 to be used by VAL_READONLY
 final MappingAtomicType MAPPING_ATOMIC_RO = { names: [], types: [], rest: CELL_SEMTYPE_INNER_RO };
 
 public class MappingDefinition {
