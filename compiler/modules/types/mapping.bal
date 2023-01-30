@@ -12,7 +12,7 @@ public type MappingAtomicType readonly & record {|
 |};
 
 public function mappingAtomicTypeMemberAtInnerVal(MappingAtomicType mat, string k) returns SemType {
-    return diffWithUndef(mappingAtomicTypeMemberAtInner(mat, k));
+    return diff(mappingAtomicTypeMemberAtInner(mat, k), UNDEF);
 }
 
 public function mappingAtomicTypeMemberAtInner(MappingAtomicType mat, string k) returns SemType {
