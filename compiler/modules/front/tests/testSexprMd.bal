@@ -24,7 +24,7 @@ function testSexprMd(string src, string expected, string? expectedAtoms) returns
     test:assertTrue(t:isSubtype(tc, ty, roundtripTy));
 }
 
-function mdTableLines() returns map<[string, string, string?]>|io:Error? {
+function mdTableLines() returns map<[string, string, string?]>|io:Error {
     string[] lines = check io:fileReadLines(README_PATH);
     map<[string, string, string?]> result = {};
     int lineNo = 0;
