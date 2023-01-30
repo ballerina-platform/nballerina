@@ -40,12 +40,12 @@ public isolated class Env {
     private int recAtomCount = 2;
 
     public isolated function init() {
-        // We are reserving the first two indexes of atomTable to represent cell top and bottom typeAtoms. 
+        // We are reserving the first two indexes of atomTable to represent cell VAL and cell NEVER typeAtoms. 
         // This is to avoid passing down env argument when doing cell type operations.
         // Please refer to the cellSubtypeDataEnsureProper() in cell.bal
         _ = self.cellAtom(CELL_ATOMIC_VAL);
         _ = self.cellAtom(CELL_ATOMIC_NEVER);
-        // We are reserving the next two indexes of atomTable to represent typeAtoms related to mapping top list type.
+        // We are reserving the next two indexes of atomTable to represent typeAtoms related to (map<any|error>)[].
         // This is to avoid passing down env argument when doing tableSubtypeComplement operation.
         _ = self.cellAtom(CELL_ATOMIC_MAPPING);
         _ = self.listAtom(LIST_ATOMIC_MAPPING);
@@ -56,7 +56,7 @@ public isolated class Env {
         _ = self.cellAtom(CELL_ATOMIC_MAPPING_RO);
         _ = self.listAtom(LIST_ATOMIC_MAPPING_RO);
         _ = self.cellAtom(CELL_ATOMIC_INNER_RO);
-        // We are reserving the next index of atomTable to represent typeAtom required for mapping top type.
+        // We are reserving the next index of atomTable to represent typeAtom required for map<any|error>.
         _ = self.cellAtom(CELL_ATOMIC_INNER);
     }
 
@@ -1099,7 +1099,7 @@ public function listAllMemberTypesInner(Context cx, SemType t) returns ListMembe
 }
 
 public function listAtomicType(Context cx, SemType t) returns ListAtomicType? {
-    ListAtomicType listAtomicTop = LIST_ATOMIC_TOP;
+    ListAtomicType listAtomicTop = LIST_ATOMIC_VAL;
     if t is BasicTypeBitSet {
         return t == LIST ? listAtomicTop : ();
     }
@@ -1203,7 +1203,7 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
 }
 
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
-    MappingAtomicType mappingAtomicTop = MAPPING_ATOMIC_TOP;
+    MappingAtomicType mappingAtomicTop = MAPPING_ATOMIC_INNER;
     if t is BasicTypeBitSet {
         return t == MAPPING ? mappingAtomicTop : ();
     }
@@ -1316,8 +1316,8 @@ final CellAtomicType CELL_ATOMIC_VAL_RO = { ty: VAL_READONLY, mut: CELL_MUT_NONE
 final CellAtomicType CELL_ATOMIC_INNER_RO = { ty: INNER_READONLY, mut: CELL_MUT_NONE };
 final CellAtomicType CELL_ATOMIC_MAPPING_RO = { ty: MAPPING_RO, mut: CELL_MUT_NONE };
 
-final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: CELL_SEMTYPE_INNER };
-final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_VAL };
+final MappingAtomicType MAPPING_ATOMIC_INNER = { names: [], types: [], rest: CELL_SEMTYPE_INNER };
+final ListAtomicType LIST_ATOMIC_VAL = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_VAL };
 final ListAtomicType LIST_ATOMIC_MAPPING = { members: {initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_MAPPING };
 
 final Atom ATOM_CELL_VAL = { index: 0, atomicType: CELL_ATOMIC_VAL };

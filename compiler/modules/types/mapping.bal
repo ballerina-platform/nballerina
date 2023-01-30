@@ -111,7 +111,7 @@ function mappingBddIsEmpty(Context cx, Bdd b) returns boolean {
 function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
     TempMappingSubtype combined;
     if posList == () {
-        combined = MAPPING_ATOMIC_TOP;
+        combined = MAPPING_ATOMIC_INNER;
     }
     else {
         // combine all the positive atoms using intersection
