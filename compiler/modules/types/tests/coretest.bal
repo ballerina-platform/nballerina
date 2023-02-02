@@ -3,8 +3,8 @@ import ballerina/test;
 @test:Config{}
 function testSubtypeSimple() {
     test:assertTrue(isSubtypeSimple(NIL, ANY));
-    test:assertTrue(isSubtypeSimple(INT, TOP));
-    test:assertTrue(isSubtypeSimple(ANY, TOP));
+    test:assertTrue(isSubtypeSimple(INT, VAL));
+    test:assertTrue(isSubtypeSimple(ANY, VAL));
     test:assertFalse(isSubtypeSimple(INT, BOOLEAN));
     test:assertFalse(isSubtypeSimple(ERROR, ANY));
 }
@@ -37,7 +37,7 @@ function disjoint(Context cx, SemType t1, SemType t2) {
 
 @test:Config{}
 function test2() {
-    test:assertTrue(isSubtype(typeContext(new), INT, TOP));
+    test:assertTrue(isSubtype(typeContext(new), INT, VAL));
 }
 
 @test:Config{}
@@ -58,10 +58,10 @@ function equiv(Env env, SemType s, SemType t) {
 function test4() {
     Env env = new;
     SemType isT = tupleTypeWrapped(env, INT, STRING);
-    SemType itT = tupleTypeWrapped(env, INT, TOP);
-    SemType tsT = tupleTypeWrapped(env, TOP, STRING);
+    SemType itT = tupleTypeWrapped(env, INT, VAL);
+    SemType tsT = tupleTypeWrapped(env, VAL, STRING);
     SemType iiT = tupleTypeWrapped(env, INT, INT);
-    SemType ttT = tupleTypeWrapped(env, TOP, TOP);
+    SemType ttT = tupleTypeWrapped(env, VAL, VAL);
     var cx = typeContext(env);
     test:assertTrue(isSubtype(cx, isT, itT));
     test:assertTrue(isSubtype(cx, isT, tsT));
@@ -116,7 +116,7 @@ function recTest3() {
 function tupleTest1() {
     Env env = new;
     SemType s = tupleTypeWrapped(env, INT, STRING, NIL);
-    SemType t = tupleTypeWrapped(env, TOP, TOP, TOP);
+    SemType t = tupleTypeWrapped(env, VAL, VAL, VAL);
     test:assertTrue(isSubtype(typeContext(env), s, t));
     test:assertFalse(isSubtype(typeContext(env), t, s));
 }
@@ -125,7 +125,7 @@ function tupleTest1() {
 function tupleTest2() {
     Env env = new;
     SemType s = tupleTypeWrapped(env, INT, STRING, NIL);
-    SemType t = tupleTypeWrapped(env, TOP, TOP);
+    SemType t = tupleTypeWrapped(env, VAL, VAL);
     test:assertFalse(isSubtype(typeContext(env), s, t));
     test:assertFalse(isSubtype(typeContext(env), t, s));
 }
@@ -217,7 +217,7 @@ function listTopTest() {
     SemType t1 = basicType(BT_LIST);
     Env env = new;
     ListDefinition ld = new;
-    SemType t2 = defineListTypeWrapped(ld, env, rest = TOP);
+    SemType t2 = defineListTypeWrapped(ld, env, rest = VAL);
     SemType d1 = diff(t1, t2);
     SemType d2 = diff(t2, t1);
     Context cx = typeContext(env);
@@ -232,7 +232,7 @@ function mappingTopTest() {
     SemType t1 = basicType(BT_MAPPING);
     Env env = new;
     MappingDefinition md = new;
-    SemType t2 = defineMappingTypeWrapped(md, env, [], rest = TOP);
+    SemType t2 = defineMappingTypeWrapped(md, env, [], rest = VAL);
     SemType d1 = diff(t1, t2);
     SemType d2 = diff(t2, t1);
     Context cx = typeContext(env);
@@ -246,9 +246,9 @@ function mappingTopTest() {
 function roListTest() {
     Env env = new;
     Context cx = typeContext(env);
-    SemType t1 = intersect(basicType(BT_LIST), READONLY);
+    SemType t1 = intersect(basicType(BT_LIST), VAL_READONLY);
     ListDefinition ld = new;
-    SemType t2 = defineListTypeWrapped(ld, env, rest = TOP);
+    SemType t2 = defineListTypeWrapped(ld, env, rest = VAL);
     SemType t = diff(t1, t2);
     boolean b = isEmpty(cx, t);
     test:assertTrue(b);
@@ -341,7 +341,7 @@ function testIntSubtypeConstraints() {
 function testMappingTopBasicTypeBitSet() {
     Env env = new;
     MappingDefinition md = new;
-    SemType t = defineMappingTypeWrapped(md, env, [], TOP);
+    SemType t = defineMappingTypeWrapped(md, env, [], VAL);
     test:assertTrue(t is BasicTypeBitSet);
     test:assertTrue(t == MAPPING);
 }
@@ -350,7 +350,7 @@ function testMappingTopBasicTypeBitSet() {
 function testListTopBasicTypeBitSet() {
     Env env = new;
     ListDefinition ld = new;
-    SemType t = defineListTypeWrapped(ld, env, rest = TOP);
+    SemType t = defineListTypeWrapped(ld, env, rest = VAL);
     test:assertTrue(t is BasicTypeBitSet);
     test:assertTrue(t == LIST);
 }
@@ -359,7 +359,7 @@ function testListTopBasicTypeBitSet() {
 function testTableTopBasicTypeBitSet() {
     Env env = new;
     MappingDefinition md = new;
-    SemType mappingTop = defineMappingTypeWrapped(md, env, [], TOP);
+    SemType mappingTop = defineMappingTypeWrapped(md, env, [], VAL);
     SemType t = tableContaining(env, mappingTop);
     test:assertTrue(t is BasicTypeBitSet);
     test:assertTrue(t == TABLE);

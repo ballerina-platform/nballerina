@@ -214,7 +214,7 @@ function validEntryPoint(ModuleDefns mod) returns err:Diagnostic? {
         if defn.params.length() > 0 {
             return err:unimplemented(`parameters for ${"main"} not yet implemented`, s:defnLocation(defn));
         }
-        if !t:isNever(t:intersect((<bir:FunctionSignature>defn.signature).returnType, t:ERROR)) {
+        if t:intersect((<bir:FunctionSignature>defn.signature).returnType, t:ERROR) != t:NEVER {
             return err:unimplemented(`returning an error from ${"main"} function is not implemented`, s:defnLocation(defn));
         }
     }

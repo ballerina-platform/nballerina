@@ -25,7 +25,7 @@ function cellSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 function cellFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
     CellAtomicType combined;
     if posList == () {
-        combined = { ty: TOP, mut: CELL_MUT_UNLIMITED };
+        combined = { ty: VAL, mut: CELL_MUT_UNLIMITED };
     }
     else {
         combined = cellAtomType(posList.atom);
@@ -63,7 +63,7 @@ function cellMutNoneInhabited(Context cx, SemType pos, Conjunction? negList) ret
     SemType negListUnionResult = cellNegListUnion(negList);
     // We expect `isNever` condition to be `true` when there are no negative atoms.
     // Otherwise, we do `isEmpty` to conclude on the inhabitance.
-    return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
+    return negListUnionResult == NEVER || !isEmpty(cx, diff(pos, negListUnionResult));
 }
 
 function cellNegListUnion(Conjunction? negList) returns SemType {
@@ -96,7 +96,7 @@ function cellMutUnlimitedInhabited(Context cx, SemType pos, Conjunction? negList
         if neg == () {
             break;
         }
-        if cellAtomType(neg.atom).mut == CELL_MUT_LIMITED && isSameType(cx, TOP, cellAtomType(neg.atom).ty) {
+        if cellAtomType(neg.atom).mut == CELL_MUT_LIMITED && isSameType(cx, VAL, cellAtomType(neg.atom).ty) {
             return false;
         }
         neg = neg.next;
@@ -104,7 +104,7 @@ function cellMutUnlimitedInhabited(Context cx, SemType pos, Conjunction? negList
     SemType negListUnionResult = cellNegListUnlimitedUnion(negList);
     // We expect `isNever` condition to be `true` when there are no negative atoms with unlimited mutability.
     // Otherwise, we do `isEmpty` to conclude on the inhabitance.
-    return isNever(negListUnionResult) || !isEmpty(cx, diff(pos, negListUnionResult));
+    return negListUnionResult == NEVER || !isEmpty(cx, diff(pos, negListUnionResult));
 }
 
 function cellNegListUnlimitedUnion(Conjunction? negList) returns SemType {
@@ -152,9 +152,9 @@ function cellSubtypeDataEnsureProper(SubtypeData subtypeData) returns ProperSubt
     }
     Atom atom;
     if subtypeData {
-        atom = CELL_ATOM_TOP;
+        atom = ATOM_CELL_VAL;
     } else {
-        atom = CELL_ATOM_BOTTOM;
+        atom = ATOM_CELL_NEVER;
     }
     return bddAtom(atom);
 }

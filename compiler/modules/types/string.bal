@@ -65,10 +65,6 @@ function stringSubtypeContains(SubtypeData d, string s) returns boolean {
     return nonChar.values.indexOf(s) != () ? nonChar.allowed : !nonChar.allowed;
 }
 
-function stringSubtypeContainedIn(StringSubtype subtype, string[] values) returns boolean {
-    return stringSubtypeListCoverage(subtype, values).isSubtype;
-}
-
 // Describes the relationship between a StringSubtype and a list of strings
 // How the StringSubtype covers the list and vice versa.
 type StringSubtypeListCoverage record {|

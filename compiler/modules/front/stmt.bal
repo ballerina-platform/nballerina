@@ -940,7 +940,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
     }
     else {
         var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, block1, initialBindings, lValue, reg.semType);
-        t:SemType memberType = t:mappingMemberTypeInner(cx.mod.tc, reg.semType, index.semType);
+        t:SemType memberType = t:mappingMemberTypeInnerVal(cx.mod.tc, reg.semType, index.semType);
         { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, initialBindings, memberType, expr);
         bir:MappingSetInsn insn =  { operands: [ reg, index, operand], pos: lValue.opPos };
         nextBlock.insns.push(insn);
@@ -951,7 +951,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
 function codeGenLExprMappingKey(StmtContext cx, bir:BasicBlock block, BindingChain? initialBindings, s:MemberAccessLExpr|s:FieldAccessLExpr mappingLValue, t:SemType mappingType) returns CodeGenError|StringExprEffect {
     if mappingLValue is s:FieldAccessLExpr {
         string fieldName = mappingLValue.fieldName;
-        if !t:mappingMemberRequired(cx.mod.tc, mappingType, t:stringConst(fieldName)) {
+        if t:containsUndef(t:mappingMemberTypeInner(cx.mod.tc, mappingType, t:stringConst(fieldName))) {
             return cx.semanticErr(`${fieldName} must be a required key`, pos=mappingLValue.opPos);
         }
         return { result: singletonStringOperand(cx.mod.tc, fieldName), block };
@@ -1079,14 +1079,14 @@ function codeGenCheckingStmt(StmtContext cx, bir:BasicBlock bb, BindingChain? in
     t:SemType errorType = t:intersect(semType, t:ERROR);
     bir:BasicBlock block;
     t:SemType resultType;
-    if t:isNever(errorType) {
+    if errorType == t:NEVER {
         block = nextBlock;
         resultType = semType;
     }
     else {
         bir:Register operand = <bir:Register>o;
         resultType = t:diff(semType, t:ERROR);
-        if t:isNever(resultType) {
+        if resultType == t:NEVER {
             codeGenCheckingTerminator(nextBlock, checkingKeyword, operand, pos);
             return { block: () };
         }

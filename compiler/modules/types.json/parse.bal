@@ -52,7 +52,7 @@ function parseType(t:Context tc, Binding? b, json j, Path path) returns t:SemTyp
         Json => { return t:createJson(tc); }
         Any => { return t:ANY; }
         Never => { return t:NEVER; }
-        ReadOnly => { return t:READONLY; }
+        ReadOnly => { return t:VAL_READONLY; }
         true => { return t:booleanConst(true); }
         false => { return t:booleanConst(false); }
         // Should be able to use match patterns here
@@ -90,7 +90,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
         }
         "&" => {
             t:SemType[] v = check parseTypes(tc, b, jlist, parent, 1);
-            return reduce(v, t:intersect, t:TOP);
+            return reduce(v, t:intersect, t:VAL);
         }
         "tuple" => {
             t:SemType? s = lookupDef(env, b, jlist);
@@ -110,7 +110,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
             t:SemType[] members = check parseTypes(tc, consDefBinding(jlist, def, b), jlist, parent, 1);
             t:SemType rest;
             if members.length() == 0 {
-                rest = t:TOP;
+                rest = t:VAL;
             }
             else {
                 rest = members.pop();

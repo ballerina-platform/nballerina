@@ -15,6 +15,10 @@ public type MappingAtomicType readonly & record {|
     CellSemType rest;
 |};
 
+public function mappingAtomicTypeMemberAtInnerVal(MappingAtomicType mat, string k) returns SemType {
+    return diff(mappingAtomicTypeMemberAtInner(mat, k), UNDEF);
+}
+
 public function mappingAtomicTypeMemberAtInner(MappingAtomicType mat, string k) returns SemType {
     return cellInner(mappingAtomicTypeMemberAt(mat, k));
 }
@@ -24,7 +28,7 @@ public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) retur
     return i is int ? mat.types[i] : mat.rest;
 }
 
-final MappingAtomicType MAPPING_ATOMIC_RO = { names: [], types: [], rest: CELL_SEMTYPE_RO };
+final MappingAtomicType MAPPING_ATOMIC_RO = { names: [], types: [], rest: CELL_SEMTYPE_INNER_RO };
 
 public class MappingDefinition {
     *Definition;
@@ -56,7 +60,7 @@ public class MappingDefinition {
             atom = rec;
             env.setRecMappingAtomType(rec, atomicType);
         }
-        else if fields.length() == 0 && rest == CELL_SEMTYPE_TOP {
+        else if fields.length() == 0 && rest == CELL_SEMTYPE_INNER {
             return MAPPING;
         }
         else {
@@ -75,7 +79,7 @@ public class MappingDefinition {
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
     CellField[] cellFields = from var { name, ty, ro } in fields select [name, cellContaining(env, ty, ro ? CELL_MUT_NONE : mut)];
-    CellSemType restCell = cellContaining(env, rest, mut);
+    CellSemType restCell = cellContaining(env, union(rest, UNDEF), rest == NEVER ? CELL_MUT_NONE : mut);
     return md.define(env, cellFields, restCell);
 }
 
@@ -111,7 +115,7 @@ function mappingBddIsEmpty(Context cx, Bdd b) returns boolean {
 function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
     TempMappingSubtype combined;
     if posList == () {
-        combined = MAPPING_ATOMIC_TOP;
+        combined = MAPPING_ATOMIC_INNER;
     }
     else {
         // combine all the positive atoms using intersection
@@ -157,12 +161,12 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
             // so we can move on to the next one
 
             // Deal the easy case of two closed records fast.
-            if isNeverInner(pos.rest) && isNeverInner(neg.rest) {
+            if  cellInner(pos.rest) == UNDEF &&  cellInner(neg.rest) == UNDEF {
                 return mappingInhabited(cx, pos, negList.next);
             }
             pairing = new (pos, neg);
             foreach var {type1: posType, type2: negType} in pairing {
-                if isNeverInner(posType) || isNeverInner(negType) {
+                if  cellInner(posType) == UNDEF ||  cellInner(negType) == UNDEF {
                     return mappingInhabited(cx, pos, negList.next);
                 }
             }
@@ -241,7 +245,7 @@ function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2)
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
         CellSemType t = intersectMemberSemTypes(env, type1, type2);
-        if isNeverInner(type1) {
+        if cellInner(type1) == NEVER {
             return ();
         }
         types.push(t);
@@ -378,11 +382,16 @@ function bddMappingMemberTypeInner(Context cx, Bdd b, StringSubtype|true key, Se
 }
 
 function mappingAtomicMemberTypeInner(MappingAtomicType atomic, StringSubtype|true key) returns SemType {
-    SemType memberType = NEVER;
+    SemType? memberType = ();
     foreach SemType ty in mappingAtomicApplicableMemberTypesInner(atomic, key) {
-        memberType = union(memberType, ty);
+        if memberType == () {
+            memberType = ty;
+        }
+        else {
+            memberType = union(memberType, ty);
+        }
     }
-    return memberType;
+    return memberType ?: UNDEF;
 }
 
 function mappingAtomicApplicableMemberTypesInner(MappingAtomicType atomic, StringSubtype|true key) returns SemType[] {
@@ -403,18 +412,6 @@ function mappingAtomicApplicableMemberTypesInner(MappingAtomicType atomic, Strin
         }
     }
     return memberTypes;
-}
-
-function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean requiredOnPath) returns boolean {
-    if b is boolean {
-        return b ? requiredOnPath : true;
-    }
-    else {
-        return bddMappingMemberRequired(cx, b.left, k,
-                                        requiredOnPath || stringSubtypeContainedIn(k, cx.mappingAtomType(b.atom).names))
-               && bddMappingMemberRequired(cx, b.middle, k, requiredOnPath)
-               && bddMappingMemberRequired(cx, b.right, k, requiredOnPath);
-    }
 }
 
 final BasicTypeOps mappingOps = {

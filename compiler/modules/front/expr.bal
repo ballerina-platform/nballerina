@@ -544,17 +544,18 @@ type MappingAccessType "."|"["|"fill";
 
 // if accessType is ".", k must be a string
 function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, Position pos) returns CodeGenError|RegExprEffect {
+    t:SemType memberType = t:mappingMemberTypeInner(cx.mod.tc, mapping.semType, k.semType);
     boolean maybeMissing = true;
-    if t:mappingMemberRequired(cx.mod.tc, mapping.semType, k.semType) {
+    if !t:containsUndef(memberType) {
         maybeMissing = false;
     }
     else if accessType == "." {
         string fieldName = (<bir:StringConstOperand>k).value;
         return cx.semanticErr(`field access to ${fieldName}} is invalid because field may not be present`, pos=pos);
     }
-    t:SemType memberType = t:mappingMemberTypeInner(cx.mod.tc, mapping.semType, k.semType);
     bir:INSN_MAPPING_FILLING_GET|bir:INSN_MAPPING_GET name = bir:INSN_MAPPING_GET;
     if maybeMissing {
+        memberType = t:diff(memberType, t:UNDEF);
         if accessType == "fill" {
             name = bir:INSN_MAPPING_FILLING_GET;
         }
@@ -864,7 +865,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
     foreach var [i, member] in expr.members.enumerate() {
         bir:Operand operand;
         t:SemType requiredType =  t:listAtomicTypeMemberAtInner(atomicType, i);
-        if t:isNever(requiredType) {
+        if requiredType == t:NEVER {
             return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
         }
         { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
@@ -912,7 +913,7 @@ function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boo
     if pos !is () {
         int minLength = pos.members.fixedLength;
         // This doesn't account for filling. See spec issue #1064
-        if t:isNeverInner(pos.rest) ? len != minLength : len < minLength {
+        if t:cellInner(pos.rest) == t:NEVER ? len != minLength : len < minLength {
             return false;
         }
     }
@@ -937,7 +938,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
         }
         fieldPos[name] = f.startPos;
         if mat.names.indexOf(name) == () {
-            if t:isNeverInner(mat.rest) {
+            if t:cellInner(mat.rest) == t:UNDEF {
                 return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
             }
             else if f.isIdentifier && mat.names.length() > 0 {
@@ -945,7 +946,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
             }
         }
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInner(mat, name), f.value, "incorrect type for list member");
+        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInnerVal(mat, name), f.value, "incorrect type for list member");
         operands.push(operand);
         fieldNames.push(name);
     }
@@ -989,7 +990,7 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
     t:MappingAtomicType? pos = alt.pos;
     if pos !is () {
         // SUBSET won't be right with record defaults
-        if t:isNeverInner(pos.rest) {
+        if t:cellInner(pos.rest) == t:UNDEF {
             if pos.names != fieldNames {
                 return false;
             }
@@ -1281,13 +1282,13 @@ function codeGenCheckingExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
     var { result: o, block: nextBlock, binding } = check codeGenExpr(cx, bb, expected, expr);
     t:SemType semType = operandSemType(cx.mod.tc, o);
     t:SemType errorType =  t:intersect(semType, t:ERROR);
-    if t:isNever(errorType) {
+    if errorType == t:NEVER {
         return { result: o, block: nextBlock };
     }
     else {
         bir:Register operand = <bir:Register>o;
         t:SemType resultType = t:diff(semType, t:ERROR);
-        if t:isNever(resultType) {
+        if resultType == t:NEVER {
             // This has to be an error, otherwise type of expression would be `never``
             return cx.semanticErr(`operand of ${checkingKeyword} expression is always an error`, pos);
         }
@@ -1558,7 +1559,7 @@ function instantiateType(t:SemType ty, t:SemType memberType, t:SemType container
         counter.n += 1;
         return containerType;
     }
-    else if ty == t:TOP {
+    else if ty == t:VAL {
         counter.n += 1;
         return memberType;
     }

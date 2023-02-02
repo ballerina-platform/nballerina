@@ -372,7 +372,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
                                              m,
                                              check buildConstString(builder, scaffold, fieldName),
                                              check buildWideRepr(builder, scaffold, operand, REPR_ANY,
-                                                                 t:mappingMemberTypeInner(tc, mappingType, t:stringConst(fieldName)))
+                                                                 t:mappingMemberTypeInnerVal(tc, mappingType, t:stringConst(fieldName)))
                                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
@@ -476,7 +476,7 @@ function isListMemberTypeExact(t:Context tc, t:SemType listType, bir:IntOperand 
 
 function isSameTypeWithin(t:Context tc, t:SemType semType, t:SemType within, t:SemType targetType) returns boolean {
     t:SemType ty = t:intersect(semType, within);
-    return t:isNever(ty) || t:isSameType(tc, ty, targetType);
+    return ty == t:NEVER || t:isSameType(tc, ty, targetType);
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
@@ -501,7 +501,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         rf = mappingIndexedSetFunction;
         k = constInt(scaffold, fieldIndex);
     }
-    t:SemType memberType = t:mappingMemberTypeInner(scaffold.typeContext(), mappingType, keyOperand.semType);
+    t:SemType memberType = t:mappingMemberTypeInnerVal(scaffold.typeContext(), mappingType, keyOperand.semType);
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
@@ -554,7 +554,7 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
     string? k = t:singleStringShape(keyOperand.semType);
     if k is string {
         t:MappingAtomicType? mat = t:mappingAtomicType(tc, mappingType);
-        if mat != () && t:isNeverInner(mat.rest) {
+        if mat != () && t:cellInner(mat.rest) == t:UNDEF {
             return mat.names.indexOf(k);
         }
     }
