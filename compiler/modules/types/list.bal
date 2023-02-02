@@ -56,6 +56,7 @@ public function listAtomicTypeAllMemberTypesInner(ListAtomicType atomicType) ret
     return [ranges, types];
 }
 
+// This is list index 0 to be used by VAL_READONLY
 final ListAtomicType LIST_ATOMIC_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_VAL_RO };
 final ListAtomicType LIST_ATOMIC_MAPPING_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_MAPPING_RO };
 
