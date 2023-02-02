@@ -1,7 +1,7 @@
 // Implementation specific to basic type error.
 
 public function errorDetail(SemType detail) returns SemType {
-    SubtypeData sd = bddIntersect(<Bdd>subtypeData(detail, BT_MAPPING), MAPPING_SUBTYPE_RO);
+    SubtypeData sd = bddIntersect(<Bdd>subtypeData(detail, BT_MAPPING), BDD_SUBTYPE_RO);
     if sd is boolean {
         if sd {
             return ERROR;
@@ -11,7 +11,7 @@ public function errorDetail(SemType detail) returns SemType {
             return NEVER;
         }
     }
-    if sd == MAPPING_SUBTYPE_RO {
+    if sd == BDD_SUBTYPE_RO {
         return ERROR;
     }
     return basicSubtype(BT_ERROR, sd);
@@ -24,7 +24,7 @@ public function errorDistinct(int distinctId) returns SemType {
 }
 
 function errorSubtypeComplement(ProperSubtypeData t) returns SubtypeData {
-    return bddSubtypeDiff(MAPPING_SUBTYPE_RO, t);
+    return bddSubtypeDiff(BDD_SUBTYPE_RO, t);
 }
 
 function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -32,7 +32,7 @@ function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     // The goal of this is to ensure that mappingFormulaIsEmpty call in errorBddIsEmpty beneath
     // does not get an empty posList, because it will interpret that
     // as `map<any|error>` rather than `readonly & map<readonly>`.
-    b = bddPosMaybeEmpty(b) ? bddIntersect(b, MAPPING_SUBTYPE_RO) : b;
+    b = bddPosMaybeEmpty(b) ? bddIntersect(b, BDD_SUBTYPE_RO) : b;
     return memoSubtypeIsEmpty(cx, cx.mappingMemo, errorBddIsEmpty, b);
 }
 

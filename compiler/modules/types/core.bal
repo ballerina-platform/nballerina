@@ -32,6 +32,7 @@ type AtomicType ListAtomicType|MappingAtomicType|CellAtomicType;
 // All the SemTypes used in any type operation (e.g. isSubtype) must have been created using the Env.
 public isolated class Env {
     private final table<TypeAtom> key(atomicType) atomTable = table [];
+    // Set up index 0 to be used by VAL_READONLY
     private final ListAtomicType?[] recListAtoms = [ LIST_ATOMIC_RO ];
     private final MappingAtomicType?[] recMappingAtoms = [ MAPPING_ATOMIC_RO ];
     private final FunctionAtomicType?[] recFunctionAtoms = [];
@@ -49,10 +50,9 @@ public isolated class Env {
         // This is to avoid passing down env argument when doing tableSubtypeComplement operation.
         _ = self.cellAtom(CELL_ATOMIC_MAPPING);
         _ = self.listAtom(LIST_ATOMIC_MAPPING);
-        // We are reserving the next five indexes of atomTable to represent typeAtoms related to readonly type.
+        // We are reserving the next four indexes of atomTable to represent typeAtoms related to readonly type.
         // This is to avoid requiring context when referring to readonly type.
         _ = self.cellAtom(CELL_ATOMIC_VAL_RO);
-        _ = self.mappingAtom(MAPPING_ATOMIC_RO);
         _ = self.cellAtom(CELL_ATOMIC_MAPPING_RO);
         _ = self.listAtom(LIST_ATOMIC_MAPPING_RO);
         _ = self.cellAtom(CELL_ATOMIC_INNER_RO);
@@ -444,19 +444,16 @@ public final SemType XML_TEXT = xmlSequence(xmlSingleton(XML_PRIMITIVE_TEXT));
 public final SemType XML_PI = xmlSingleton(XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_PI_RW);
 public final SemType XML_RO = createXmlSemType(XML_SUBTYPE_RO);
 
-const BDD_REC_ATOM_READONLY = 0;
-
 public final ComplexSemType VAL_READONLY = createComplexSemType(
     basicTypeUnion(VT_INHERENTLY_IMMUTABLE),
 [
-    [BT_LIST, bddAtom(BDD_REC_ATOM_READONLY)],
-    [BT_MAPPING, bddAtom(BDD_REC_ATOM_READONLY)],
+    [BT_LIST, BDD_SUBTYPE_RO],
+    [BT_MAPPING, BDD_SUBTYPE_RO],
     [BT_TABLE, LIST_SUBTYPE_MAPPING_RO],
     [BT_XML, XML_SUBTYPE_RO]
 ]);
 
 final SemType INNER_READONLY = union(VAL_READONLY, UNDEF);
-final ComplexSemType MAPPING_RO = createComplexSemType(0, [[BT_MAPPING, bddAtom(BDD_REC_ATOM_READONLY)]]);
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
@@ -1325,16 +1322,17 @@ final TypeAtom ATOM_CELL_NEVER = { index: 1, atomicType: CELL_ATOMIC_NEVER };
 final TypeAtom ATOM_CELL_MAPPING = { index: 2, atomicType: CELL_ATOMIC_MAPPING };
 final TypeAtom ATOM_LIST_MAPPING = { index: 3, atomicType: LIST_ATOMIC_MAPPING };
 final TypeAtom ATOM_CELL_VAL_RO = { index: 4, atomicType: CELL_ATOMIC_VAL_RO };
-final TypeAtom ATOM_MAPPING_RO = { index: 5, atomicType: MAPPING_ATOMIC_RO };
-final TypeAtom ATOM_CELL_MAPPING_RO = { index: 6, atomicType: CELL_ATOMIC_MAPPING_RO };
-final TypeAtom ATOM_LIST_MAPPING_RO = { index: 7, atomicType: LIST_ATOMIC_MAPPING_RO };
-final TypeAtom ATOM_CELL_INNER_RO = { index: 8, atomicType: CELL_ATOMIC_INNER_RO };
-final TypeAtom ATOM_CELL_INNER = { index: 9, atomicType: CELL_ATOMIC_INNER };
+final TypeAtom ATOM_CELL_MAPPING_RO = { index: 5, atomicType: CELL_ATOMIC_MAPPING_RO };
+final TypeAtom ATOM_LIST_MAPPING_RO = { index: 6, atomicType: LIST_ATOMIC_MAPPING_RO };
+final TypeAtom ATOM_CELL_INNER_RO = { index: 7, atomicType: CELL_ATOMIC_INNER_RO };
+final TypeAtom ATOM_CELL_INNER = { index: 8, atomicType: CELL_ATOMIC_INNER };
 
+const BDD_REC_ATOM_READONLY = 0;
+final BddNode BDD_SUBTYPE_RO = bddAtom(BDD_REC_ATOM_READONLY); // represents both readonly & map<readonly> and readonly & readonly[]
 final BddNode LIST_SUBTYPE_MAPPING = bddAtom(ATOM_LIST_MAPPING); // represents (map<any|error>)[]
-final BddNode MAPPING_SUBTYPE_RO = bddAtom(ATOM_MAPPING_RO); // represents readonly & map<readonly>
 final BddNode LIST_SUBTYPE_MAPPING_RO = bddAtom(ATOM_LIST_MAPPING_RO); // represents readonly & (map<readonly>)[]
 
+final ComplexSemType MAPPING_RO = basicSubtype(BT_MAPPING, BDD_SUBTYPE_RO);
 final CellSemType CELL_SEMTYPE_VAL = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_VAL));
 final CellSemType CELL_SEMTYPE_INNER = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_INNER));
 final CellSemType CELL_SEMTYPE_MAPPING = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_MAPPING));
