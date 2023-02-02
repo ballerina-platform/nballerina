@@ -1,7 +1,7 @@
 // Untested full implementation of list projection.
 
 // Based on listMemberType
-public function listProjInner(Context cx, SemType t, SemType k) returns SemType {
+public function listProjInnerVal(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
         return (t & LIST) != 0 ? VAL : NEVER;
     }
@@ -10,29 +10,29 @@ public function listProjInner(Context cx, SemType t, SemType k) returns SemType 
         if keyData == false {
             return NEVER;
         }
-        return listProjBddInner(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, BT_LIST), (), ());
+        return listProjBddInnerVal(cx, <IntSubtype|true>keyData, <Bdd>getComplexSubtypeData(t, BT_LIST), (), ());
     }
 }
 
 // Based on bddEvery
-function listProjBddInner(Context cx, IntSubtype|true k, Bdd b, Conjunction? pos, Conjunction? neg) returns SemType {
+function listProjBddInnerVal(Context cx, IntSubtype|true k, Bdd b, Conjunction? pos, Conjunction? neg) returns SemType {
     if b is boolean {
-        return b ? listProjPathInner(cx, k, pos, neg) : NEVER;
+        return b ? listProjPathInnerVal(cx, k, pos, neg) : NEVER;
     }
     else {
-        return union(listProjBddInner(cx, k, b.left, and(b.atom, pos), neg),
-                     union(listProjBddInner(cx, k, b.middle, pos, neg),
-                           listProjBddInner(cx, k, b.right, pos, and(b.atom, neg)))); 
+        return union(listProjBddInnerVal(cx, k, b.left, and(b.atom, pos), neg),
+                     union(listProjBddInnerVal(cx, k, b.middle, pos, neg),
+                           listProjBddInnerVal(cx, k, b.right, pos, and(b.atom, neg)))); 
     }
 }
 
 // Based on listFormulaIsEmpty
-function listProjPathInner(Context cx, IntSubtype|true k, Conjunction? pos, Conjunction? neg) returns SemType {
+function listProjPathInnerVal(Context cx, IntSubtype|true k, Conjunction? pos, Conjunction? neg) returns SemType {
     FixedLengthArray members;
     CellSemType rest;
     if pos == () {
         members = { initial: [], fixedLength: 0 };
-        rest = cellContaining(cx.env, VAL);
+        rest = cellContaining(cx.env, union(VAL, UNDEF));
     }
     else {
         // combine all the positive tuples using intersection
@@ -63,7 +63,7 @@ function listProjPathInner(Context cx, IntSubtype|true k, Conjunction? pos, Conj
             return NEVER;
         }
         // Ensure that we can use isNever on rest in listInhabited
-        if cellInner(rest) != NEVER && isEmpty(cx, rest) {
+        if cellInnerVal(rest) != NEVER && isEmpty(cx, rest) {
             rest = cellContaining(cx.env, NEVER);
         }
     }
@@ -72,48 +72,48 @@ function listProjPathInner(Context cx, IntSubtype|true k, Conjunction? pos, Conj
     int[] keyIndices;
     [indices, keyIndices] = listProjSamples(indices, k);
     var [memberTypes, nRequired] = listSampleTypes(cx, members, rest, indices);
-    return listProjExcludeInner(cx, indices, keyIndices, memberTypes, nRequired, neg);
+    return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, neg);
 }
 
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
 // `keyIndices` are the indices in `memberTypes` of those samples that belong to the key type.
-function listProjExcludeInner(Context cx, int[] indices, int[] keyIndices, CellSemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
+function listProjExcludeInnerVal(Context cx, int[] indices, int[] keyIndices, CellSemType[] memberTypes, int nRequired, Conjunction? neg) returns SemType {
     SemType p = NEVER;
     if neg == () {
         int len = memberTypes.length();
         foreach int k in keyIndices {
             if k < len {
-                p = union(p, cellInner(memberTypes[k]));
+                p = union(p, cellInnerVal(memberTypes[k]));
             }
         }
     }
     else {
         final ListAtomicType nt = cx.listAtomType(neg.atom);
-        if nRequired > 0 && cellInner(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) == NEVER {
-            return listProjExcludeInner(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
+        if nRequired > 0 && listMemberAtInnerVal(nt.members, nt.rest, indices[nRequired - 1]) == NEVER {
+            return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
         }
         int negLen = nt.members.fixedLength;
         if negLen > 0 {
             int len = memberTypes.length();
             if len < indices.length() && indices[len] < negLen {
-                return listProjExcludeInner(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
+                return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, neg.next);
             }
             foreach int i in nRequired ..< memberTypes.length() {
                 if indices[i] >= negLen {
                     break;
                 }
                 CellSemType[] t = memberTypes.slice(0, i);
-                p = union(p, listProjExcludeInner(cx, indices, keyIndices, t, nRequired, neg.next));
+                p = union(p, listProjExcludeInnerVal(cx, indices, keyIndices, t, nRequired, neg.next));
             }
         } 
         foreach int i in 0 ..< memberTypes.length() {
-            SemType d = diff(cellInner(memberTypes[i]), listMemberAtInner(nt.members, nt.rest, indices[i]));
+            SemType d = diff(cellInnerVal(memberTypes[i]), listMemberAtInnerVal(nt.members, nt.rest, indices[i]));
             if !isEmpty(cx, d) {
                 CellSemType[] t = memberTypes.clone();
                 t[i] = cellContaining(cx.env, d);
                 // We need to make index i be required
-                p = union(p, listProjExcludeInner(cx, indices, keyIndices, t, int:max(nRequired, i + 1), neg.next));
+                p = union(p, listProjExcludeInnerVal(cx, indices, keyIndices, t, int:max(nRequired, i + 1), neg.next));
             }
         }   
     }

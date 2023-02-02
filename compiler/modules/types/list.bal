@@ -19,6 +19,10 @@ public type FixedLengthArray record {|
 // The SemTypes in this list are not `never`.
 public type ListMemberTypes [Range[], SemType[]];
 
+public function listAtomicTypeMemberAtInnerVal(ListAtomicType atomic, int i) returns SemType {
+    return listAtomicTypeMemberAtInner(atomic, i);
+}
+
 public function listAtomicTypeMemberAtInner(ListAtomicType atomic, int i) returns SemType {
     return cellInner(listAtomicTypeMemberAt(atomic, i));
 }
@@ -33,7 +37,7 @@ public function listAtomicTypeMemberAt(ListAtomicType atomic, int i) returns Cel
     }
 }
 
-public function listAtomicTypeAllMemberTypesInner(ListAtomicType atomicType) returns ListMemberTypes {
+public function listAtomicTypeAllMemberTypesInnerVal(ListAtomicType atomicType) returns ListMemberTypes {
     Range[] ranges = [];
     SemType[] types = [];
     SemType[] initial = from var i in atomicType.members.initial select cellInner(i);
@@ -48,7 +52,7 @@ public function listAtomicTypeAllMemberTypesInner(ListAtomicType atomicType) ret
             ranges[initialLength - 1] = { min: initialLength - 1, max: fixedLength - 1 };
         }
     }
-    SemType rest = cellInner(atomicType.rest);
+    SemType rest = cellInnerVal(atomicType.rest);
     if rest != NEVER {
         types.push(rest);
         ranges.push({ min: fixedLength, max: int:MAX_VALUE });
@@ -56,8 +60,8 @@ public function listAtomicTypeAllMemberTypesInner(ListAtomicType atomicType) ret
     return [ranges, types];
 }
 
-final ListAtomicType LIST_ATOMIC_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_VAL_RO };
-final ListAtomicType LIST_ATOMIC_MAPPING_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_MAPPING_RO };
+final ListAtomicType LIST_ATOMIC_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_INNER_RO };
+final ListAtomicType LIST_ATOMIC_MAPPING_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_INNER_MAPPING_RO };
 
 public class ListDefinition {
     *Definition;
@@ -86,7 +90,7 @@ public class ListDefinition {
             atom = rec;
             env.setRecListAtomType(rec, atomicType);
         }
-        else if fixedLength == 0 && rest == CELL_SEMTYPE_VAL {
+        else if fixedLength == 0 && rest == CELL_SEMTYPE_INNER {
             return LIST;
         }
         else {
@@ -122,7 +126,7 @@ function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
 
 public function defineListTypeWrapped(ListDefinition ld, Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
     CellSemType[] initialCells = from var i in initial select cellContaining(env, i, mut);
-    CellSemType restCell = cellContaining(env, rest, mut);
+    CellSemType restCell = cellContaining(env, union(rest, UNDEF), rest == NEVER ? CELL_MUT_NONE : mut);
     return ld.define(env, initialCells, fixedLength, restCell);
 }
 
@@ -150,7 +154,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     FixedLengthArray members;
     CellSemType rest;
     if pos == () {
-        ListAtomicType listAtomicTop = LIST_ATOMIC_VAL;
+        ListAtomicType listAtomicTop = LIST_ATOMIC_INNER;
         members = listAtomicTop.members;
         rest = listAtomicTop.rest;
     }
@@ -183,8 +187,8 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             return true;
         }
         // Ensure that we can use isNever on rest in listInhabited
-        if cellInner(rest) != NEVER && isEmpty(cx, rest) {
-            rest = cellContaining(cx.env, NEVER);
+        if cellInnerVal(rest) != NEVER && isEmpty(cx, rest) {
+            rest = cellContaining(cx.env, UNDEF, CELL_MUT_NONE);
         }
     }
     int[] indices = listSamples(cx, members, rest, neg);
@@ -246,7 +250,7 @@ function listInhabited(Context cx, int[] indices, SemType[] memberTypes, int nRe
     }
     else {
         final ListAtomicType nt = cx.listAtomType(neg.atom);
-        if nRequired > 0 && cellInner(listMemberAt(nt.members, nt.rest, indices[nRequired - 1])) == NEVER {
+        if nRequired > 0 && listMemberAtInnerVal(nt.members, nt.rest, indices[nRequired - 1]) == NEVER {
             // Skip this negative if it is always shorter than the minimum required by the positive
             return listInhabited(cx, indices, memberTypes, nRequired, neg.next);
         }
@@ -377,7 +381,7 @@ function listSampleTypes(Context cx, FixedLengthArray members, CellSemType rest,
     int nRequired = 0;
     foreach int i in 0 ..< indices.length() {
         int index = indices[i];
-        CellSemType t = listMemberAt(members, rest, index);
+        CellSemType t = cellValCell(cx.env, listMemberAt(members, rest, index));
         if isEmpty(cx, t) {
             break;
         }
@@ -394,12 +398,16 @@ function listLengthsDisjoint(FixedLengthArray members1, CellSemType rest1, Fixed
     int len1 = members1.fixedLength;
     int len2 = members2.fixedLength;
     if len1 < len2 {
-        return cellInner(rest1) == NEVER;
+        return cellInnerVal(rest1) == NEVER;
     }
     if len2 < len1 {
-        return cellInner(rest2) == NEVER;
+        return cellInnerVal(rest2) == NEVER;
     }
     return false;
+}
+
+public function listMemberAtInnerVal(FixedLengthArray fixedArray, CellSemType rest, int index) returns SemType {
+    return cellInnerVal(listMemberAt(fixedArray, rest, index));
 }
 
 public function listMemberAtInner(FixedLengthArray fixedArray, CellSemType rest, int index) returns SemType {
@@ -432,16 +440,16 @@ function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray 
     return { initial: shallowCopyCellTypes(array.initial), fixedLength: array.fixedLength };
 }
 
-function bddListMemberTypeInner(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {
+function bddListMemberTypeInnerVal(Context cx, Bdd b, IntSubtype|true key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
     else {
-        return union(bddListMemberTypeInner(cx, b.left, key,
-                                       intersect(listAtomicMemberTypeInner(cx.listAtomType(b.atom), key),
+        return union(bddListMemberTypeInnerVal(cx, b.left, key,
+                                       intersect(listAtomicMemberTypeInnerVal(cx.listAtomType(b.atom), key),
                                                  accum)),
-                     union(bddListMemberTypeInner(cx, b.middle, key, accum),
-                           bddListMemberTypeInner(cx, b.right, key, accum)));
+                     union(bddListMemberTypeInnerVal(cx, b.middle, key, accum),
+                           bddListMemberTypeInnerVal(cx, b.right, key, accum)));
     }
 }
 
@@ -450,11 +458,15 @@ function bddListAllRanges(Context cx, Bdd b, Range[] accum) returns Range[] {
         return b ? accum : [];
     }
     else {
-        var [atomRanges, _] = listAtomicTypeAllMemberTypesInner(cx.listAtomType(b.atom));
+        var [atomRanges, _] = listAtomicTypeAllMemberTypesInnerVal(cx.listAtomType(b.atom));
         return distinctRanges(bddListAllRanges(cx, b.left, distinctRanges(atomRanges, accum)),
                               distinctRanges(bddListAllRanges(cx, b.middle, accum), 
                                              bddListAllRanges(cx, b.right, accum)));
     }
+}
+
+function listAtomicMemberTypeInnerVal(ListAtomicType atomic, IntSubtype|true key) returns SemType {
+    return diff(listAtomicMemberTypeInner(atomic, key), UNDEF);
 }
 
 function listAtomicMemberTypeInner(ListAtomicType atomic, IntSubtype|true key) returns SemType {
@@ -490,8 +502,8 @@ function listAtomicMemberTypeAtInner(FixedLengthArray fixedArray, CellSemType re
     return m;
 }
 
-function listAtomicApplicableMemberTypesInner(ListAtomicType atomic, IntSubtype|true indexType) returns SemType[] {
-    var [ranges, memberTypes] = listAtomicTypeAllMemberTypesInner(atomic);
+function listAtomicApplicableMemberTypesInnerVal(ListAtomicType atomic, IntSubtype|true indexType) returns SemType[] {
+    var [ranges, memberTypes] = listAtomicTypeAllMemberTypesInnerVal(atomic);
     if indexType == true {
         return memberTypes;
     }

@@ -928,7 +928,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
         }
         else {
             var { result: index, block: nextBlock } = check cx.codeGenExprForInt(block1, initialBindings, lValue.index);
-            t:SemType memberType = t:listMemberTypeInner(cx.mod.tc, reg.semType, index.semType);
+            t:SemType memberType = t:listMemberTypeInnerVal(cx.mod.tc, reg.semType, index.semType);
             if t:isEmpty(cx.mod.tc, memberType) {
                 return cx.semanticErr("index out of range", s:range(lValue.index));
             }
@@ -1008,7 +1008,7 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
                                            s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                            Position pos) returns CodeGenError|StmtEffect {
     var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, initialBindings, lValue.index);
-    t:SemType memberType = t:listMemberTypeInner(cx.mod.tc, list.semType, index.semType);
+    t:SemType memberType = t:listMemberTypeInnerVal(cx.mod.tc, list.semType, index.semType);
     if t:isEmpty(cx.mod.tc, memberType) {
         return cx.semanticErr("index out of range", s:range(lValue.index));
     }

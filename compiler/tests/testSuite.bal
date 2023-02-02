@@ -252,8 +252,8 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
 }
 
 function testListProj(t:Context tc, t:SemType t, t:SemType index) returns t:SemType {
-    t:SemType s1 = t:listProjInner(tc, t, index);
-    t:SemType s2 = t:listMemberTypeInner(tc, t, index);
+    t:SemType s1 = t:listProjInnerVal(tc, t, index);
+    t:SemType s2 = t:listMemberTypeInnerVal(tc, t, index);
     if !t:isSubtype(tc, s1, s2) {
         test:assertFail("listProj result is not a subtype of listMemberType");
     }
@@ -277,7 +277,7 @@ function testListAllMemberTypesProjection(t:Context tc, t:SemType t) {
     foreach int i in 0 ..< ranges.length() {
         t:Range r = ranges[i];
         t:SemType it = types[i];
-        t:SemType projected = t:listMemberTypeInner(tc, t, t:intConst(r.min));
+        t:SemType projected = t:listMemberTypeInnerVal(tc, t, t:intConst(r.min));
         if !t:isSubtype(tc, it, projected) || !t:isSubtype(tc, projected, it) {
             test:assertFail(string `All projection for member index ${r.min} is not equal to individual projection`);
         }

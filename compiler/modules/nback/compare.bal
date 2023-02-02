@@ -231,7 +231,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
 function getArrayCompareFunction(t:Context tc, t:SemType[2] semTypes) returns RuntimeFunction {
     t:BasicTypeBitSet memberType = 0;
     foreach int i in 0 ..< 2 {
-        memberType |= t:widenToBasicTypes(t:listMemberTypeInner(tc, semTypes[i], t:INT));
+        memberType |= t:widenToBasicTypes(t:listMemberTypeInnerVal(tc, semTypes[i], t:INT));
     }
     if memberType != t:NIL {
         memberType &= ~t:NIL;

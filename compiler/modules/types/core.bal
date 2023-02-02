@@ -45,19 +45,18 @@ public isolated class Env {
         // Please refer to the cellSubtypeDataEnsureProper() in cell.bal
         _ = self.cellAtom(CELL_ATOMIC_VAL);
         _ = self.cellAtom(CELL_ATOMIC_NEVER);
-        // We are reserving the next two indexes of atomTable to represent typeAtoms related to (map<any|error>)[].
+        // We are reserving the next index of atomTable to represent typeAtoms related to (map<any|error>)[].
         // This is to avoid passing down env argument when doing tableSubtypeComplement operation.
-        _ = self.cellAtom(CELL_ATOMIC_MAPPING);
         _ = self.listAtom(LIST_ATOMIC_MAPPING);
-        // We are reserving the next five indexes of atomTable to represent typeAtoms related to readonly type.
+        // We are reserving the next four indexes of atomTable to represent typeAtoms related to readonly type.
         // This is to avoid requiring context when referring to readonly type.
-        _ = self.cellAtom(CELL_ATOMIC_VAL_RO);
         _ = self.mappingAtom(MAPPING_ATOMIC_RO);
-        _ = self.cellAtom(CELL_ATOMIC_MAPPING_RO);
+        _ = self.cellAtom(CELL_ATOMIC_INNER_MAPPING_RO);
         _ = self.listAtom(LIST_ATOMIC_MAPPING_RO);
         _ = self.cellAtom(CELL_ATOMIC_INNER_RO);
         // We are reserving the next index of atomTable to represent typeAtom required for map<any|error>.
         _ = self.cellAtom(CELL_ATOMIC_INNER);
+        _ = self.cellAtom(CELL_ATOMIC_INNER_MAPPING);
     }
 
     // Tests whether the Env is ready for use.
@@ -1068,7 +1067,7 @@ public function intSubtypeConstraints(SemType t) returns IntSubtypeConstraints? 
 
 public function listAtomicSimpleArrayMemberTypeInner(ListAtomicType? atomic) returns BasicTypeBitSet? {
     if atomic != () && atomic.members.fixedLength == 0 {
-        SemType memberType = cellInner(atomic.rest);
+        SemType memberType = cellInnerVal(atomic.rest);
         if memberType is BasicTypeBitSet {
             return memberType;
         }
@@ -1088,7 +1087,7 @@ public function listAllMemberTypesInner(Context cx, SemType t) returns ListMembe
         SemType[] types = [];
         Range[] allRanges = bddListAllRanges(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), []);
         foreach Range r in allRanges {
-            SemType m = listMemberTypeInner(cx, t, intConst(r.min));
+            SemType m = listMemberTypeInnerVal(cx, t, intConst(r.min));
             if m != NEVER {
                 ranges.push(r);
                 types.push(m);
@@ -1099,7 +1098,7 @@ public function listAllMemberTypesInner(Context cx, SemType t) returns ListMembe
 }
 
 public function listAtomicType(Context cx, SemType t) returns ListAtomicType? {
-    ListAtomicType listAtomicTop = LIST_ATOMIC_VAL;
+    ListAtomicType listAtomicTop = LIST_ATOMIC_INNER;
     if t is BasicTypeBitSet {
         return t == LIST ? listAtomicTop : ();
     }
@@ -1133,7 +1132,7 @@ public function mappingMemberTypeInnerVal(Context cx, SemType t, SemType k) retu
 // This is what Castagna calls projection.
 // We will extend this to allow `key` to be a SemType, which will turn into an IntSubtype.
 // If `t` is not a list, NEVER is returned
-public function listMemberTypeInner(Context cx, SemType t, SemType k) returns SemType {
+public function listMemberTypeInnerVal(Context cx, SemType t, SemType k) returns SemType {
     if t is BasicTypeBitSet {
         return (t & LIST) != 0 ? VAL : NEVER;
     }
@@ -1142,11 +1141,11 @@ public function listMemberTypeInner(Context cx, SemType t, SemType k) returns Se
         if keyData == false {
             return NEVER;
         }
-        return bddListMemberTypeInner(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), <IntSubtype|true>keyData, VAL);
+        return bddListMemberTypeInnerVal(cx, <Bdd>getComplexSubtypeData(t, BT_LIST), <IntSubtype|true>keyData, VAL);
     }
 }
 
-public function listAtomicTypeApplicableMemberTypesInner(Context cx, ListAtomicType atomic, SemType indexType) returns readonly & SemType[] {
+public function listAtomicTypeApplicableMemberTypesInnerVal(Context cx, ListAtomicType atomic, SemType indexType) returns readonly & SemType[] {
     IntSubtype|boolean indexIntType;
     if indexType is BasicTypeBitSet {
         indexIntType = (indexType & INT) != 0;
@@ -1158,7 +1157,7 @@ public function listAtomicTypeApplicableMemberTypesInner(Context cx, ListAtomicT
         return [];
     }
     else {
-        return listAtomicApplicableMemberTypesInner(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
+        return listAtomicApplicableMemberTypesInnerVal(atomic, <IntSubtype|true>indexIntType).cloneReadOnly();
     }
 }
 
@@ -1308,28 +1307,31 @@ public function cellInner(CellSemType t) returns SemType {
     return (<CellAtomicType>cellAtomicType(t)).ty;
 }
 
+function cellValCell(Env env, CellSemType t) returns CellSemType {
+    CellAtomicType cat = <CellAtomicType>cellAtomicType(t);
+    return cellContaining(env, diff(cat.ty, UNDEF), cat.mut);
+}
+
 final CellAtomicType CELL_ATOMIC_VAL = { ty: VAL, mut: CELL_MUT_LIMITED }; // TODO: Revisit with match patterns
 final CellAtomicType CELL_ATOMIC_INNER = { ty: INNER, mut: CELL_MUT_LIMITED };
 final CellAtomicType CELL_ATOMIC_NEVER = { ty: NEVER, mut: CELL_MUT_LIMITED };
-final CellAtomicType CELL_ATOMIC_MAPPING = { ty: MAPPING, mut: CELL_MUT_LIMITED };
-final CellAtomicType CELL_ATOMIC_VAL_RO = { ty: VAL_READONLY, mut: CELL_MUT_NONE };
+final CellAtomicType CELL_ATOMIC_INNER_MAPPING = { ty: union(MAPPING, UNDEF), mut: CELL_MUT_LIMITED };
 final CellAtomicType CELL_ATOMIC_INNER_RO = { ty: INNER_READONLY, mut: CELL_MUT_NONE };
-final CellAtomicType CELL_ATOMIC_MAPPING_RO = { ty: MAPPING_RO, mut: CELL_MUT_NONE };
+final CellAtomicType CELL_ATOMIC_INNER_MAPPING_RO = { ty: union(MAPPING_RO, UNDEF), mut: CELL_MUT_NONE };
 
 final MappingAtomicType MAPPING_ATOMIC_INNER = { names: [], types: [], rest: CELL_SEMTYPE_INNER };
-final ListAtomicType LIST_ATOMIC_VAL = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_VAL };
-final ListAtomicType LIST_ATOMIC_MAPPING = { members: {initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_MAPPING };
+final ListAtomicType LIST_ATOMIC_INNER = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_INNER };
+final ListAtomicType LIST_ATOMIC_MAPPING = { members: {initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_INNER_MAPPING };
 
 final TypeAtom ATOM_CELL_VAL = { index: 0, atomicType: CELL_ATOMIC_VAL };
 final TypeAtom ATOM_CELL_NEVER = { index: 1, atomicType: CELL_ATOMIC_NEVER };
-final TypeAtom ATOM_CELL_MAPPING = { index: 2, atomicType: CELL_ATOMIC_MAPPING };
-final TypeAtom ATOM_LIST_MAPPING = { index: 3, atomicType: LIST_ATOMIC_MAPPING };
-final TypeAtom ATOM_CELL_VAL_RO = { index: 4, atomicType: CELL_ATOMIC_VAL_RO };
-final TypeAtom ATOM_MAPPING_RO = { index: 5, atomicType: MAPPING_ATOMIC_RO };
-final TypeAtom ATOM_CELL_MAPPING_RO = { index: 6, atomicType: CELL_ATOMIC_MAPPING_RO };
-final TypeAtom ATOM_LIST_MAPPING_RO = { index: 7, atomicType: LIST_ATOMIC_MAPPING_RO };
-final TypeAtom ATOM_CELL_INNER_RO = { index: 8, atomicType: CELL_ATOMIC_INNER_RO };
-final TypeAtom ATOM_CELL_INNER = { index: 9, atomicType: CELL_ATOMIC_INNER };
+final TypeAtom ATOM_LIST_MAPPING = { index: 2, atomicType: LIST_ATOMIC_MAPPING };
+final TypeAtom ATOM_MAPPING_RO = { index: 3, atomicType: MAPPING_ATOMIC_RO };
+final TypeAtom ATOM_CELL_INNER_MAPPING_RO = { index: 4, atomicType: CELL_ATOMIC_INNER_MAPPING_RO };
+final TypeAtom ATOM_LIST_MAPPING_RO = { index: 5, atomicType: LIST_ATOMIC_MAPPING_RO };
+final TypeAtom ATOM_CELL_INNER_RO = { index: 6, atomicType: CELL_ATOMIC_INNER_RO };
+final TypeAtom ATOM_CELL_INNER = { index: 7, atomicType: CELL_ATOMIC_INNER };
+final TypeAtom ATOM_CELL_INNER_MAPPING = { index: 8, atomicType: CELL_ATOMIC_INNER_MAPPING };
 
 final BddNode LIST_SUBTYPE_MAPPING = bddAtom(ATOM_LIST_MAPPING); // represents (map<any|error>)[]
 final BddNode MAPPING_SUBTYPE_RO = bddAtom(ATOM_MAPPING_RO); // represents readonly & map<readonly>
@@ -1337,10 +1339,9 @@ final BddNode LIST_SUBTYPE_MAPPING_RO = bddAtom(ATOM_LIST_MAPPING_RO); // repres
 
 final CellSemType CELL_SEMTYPE_VAL = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_VAL));
 final CellSemType CELL_SEMTYPE_INNER = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_INNER));
-final CellSemType CELL_SEMTYPE_MAPPING = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_MAPPING));
-final CellSemType CELL_SEMTYPE_VAL_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_VAL_RO));
+final CellSemType CELL_SEMTYPE_INNER_MAPPING = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_INNER_MAPPING));
 final CellSemType CELL_SEMTYPE_INNER_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_INNER_RO));
-final CellSemType CELL_SEMTYPE_MAPPING_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_MAPPING_RO));
+final CellSemType CELL_SEMTYPE_INNER_MAPPING_RO = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_INNER_MAPPING_RO));
 
 public function cellAtomicType(SemType t) returns CellAtomicType? {
     if t is BasicTypeBitSet {

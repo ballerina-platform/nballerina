@@ -431,7 +431,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns E
     }
     Operand[] operands = insn.operands;
     foreach int i in 0 ..< operands.length() {
-        check validOperandType(vc, operands[i], t:listAtomicTypeMemberAtInner(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
+        check validOperandType(vc, operands[i], t:listAtomicTypeMemberAtInnerVal(lat, i), "type of list constructor member is not allowed by the list type", insn.pos);
     }
     if !t:listAtomicFillableFrom(vc.typeContext(), lat, operands.length()) {
         return vc.semanticErr("not enough members in list constructor", insn.pos);
@@ -461,7 +461,7 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns Error? {
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.semanticErr("list get applied to non-list", insn.pos);
     }
-    t:SemType memberType = t:listMemberTypeInner(vc.typeContext(), insn.operands[0].semType, indexOperand.semType);
+    t:SemType memberType = t:listMemberTypeInnerVal(vc.typeContext(), insn.operands[0].semType, indexOperand.semType);
     if !vc.isSameType(memberType, insn.result.semType) {
         return vc.invalidErr("ListGet result type is not same as member type", pos=insn.pos);
     }
@@ -473,7 +473,7 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns Error? {
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.semanticErr("list set applied to non-list", insn.pos);
     }
-    t:SemType memberType = t:listMemberTypeInner(vc.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
+    t:SemType memberType = t:listMemberTypeInnerVal(vc.typeContext(), insn.operands[0].semType, insn.operands[1].semType);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type", insn.pos);
 }
 

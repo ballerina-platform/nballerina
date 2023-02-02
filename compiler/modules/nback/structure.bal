@@ -197,7 +197,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 
         array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberHeapLlvm, 0)));
         foreach int i in 0 ..< length {
-            llvm:Value val = check buildWideRepr(builder, scaffold, insn.operands[i], repr.memberRepr, t:listAtomicTypeMemberAtInner(atomic, i));
+            llvm:Value val = check buildWideRepr(builder, scaffold, insn.operands[i], repr.memberRepr, t:listAtomicTypeMemberAtInnerVal(atomic, i));
             builder.store(listReprConvertToHeapType(builder, repr, val),
                           builder.getElementPtr(array, [constInt(scaffold, 0), constInt(scaffold, i)], "inbounds"));
         }
@@ -293,7 +293,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     llvm:BasicBlock? bbJoin = ();
     t:SemType listType = listOperand.semType;
     t:Context tc = scaffold.typeContext();
-    t:SemType memberType = t:listMemberTypeInner(tc, listType, indexOperand.semType);
+    t:SemType memberType = t:listMemberTypeInnerVal(tc, listType, indexOperand.semType);
     llvm:Value index = buildInt(builder, scaffold, indexOperand);
     ListAccess la = listAccess(semTypeRepr(newMemberOperand.semType));
     llvm:Value val = check buildWideRepr(builder, scaffold, newMemberOperand, la.repr, memberType);
@@ -465,7 +465,7 @@ function isListMemberTypeExact(t:Context tc, t:SemType listType, bir:IntOperand 
     // don't need to check when the condition is false, because there can be only one applicable member type
     else if t:singleIntShape(indexOperand.semType) == () && lat.members.fixedLength != 0 {
         t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
-        foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypesInner(tc, lat, indexOperand.semType) {
+        foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypesInnerVal(tc, lat, indexOperand.semType) {
             if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
             }
@@ -542,7 +542,7 @@ function isListSetAlwaysInexact(t:Context tc, t:SemType listType, t:SemType inde
         // If indexing with a constant value, then we have the precise type
         return false;
     }
-    foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypesInner(tc, lat, indexType) {
+    foreach t:SemType ty in t:listAtomicTypeApplicableMemberTypesInnerVal(tc, lat, indexType) {
         if !t:isSubtype(tc, newMemberType, ty) {
             return true;
         }
