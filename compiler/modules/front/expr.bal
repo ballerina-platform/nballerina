@@ -870,7 +870,7 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
         { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
         operands.push(operand);
     }
-    check fillListConstructOperands(cx, nextBlock, operands, atomicType, resultType, expr);
+    check fillListConstructOperands(cx, nextBlock, operands, atomicType, expr);
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
@@ -878,20 +878,16 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
 }
 
 function fillListConstructOperands(ExprContext cx, bir:BasicBlock bb, bir:Operand[] operands,
-                                   t:ListAtomicType atomicType, t:SemType semType, s:ListConstructorExpr expr) returns ResolveTypeError? {
+                                   t:ListAtomicType atomicType, s:ListConstructorExpr expr) returns ResolveTypeError? {
     int fixedLength = atomicType.members.fixedLength;
     if operands.length() >= fixedLength {
         return;
     }
-    t:Filler? filler = t:filler(cx.mod.tc, semType);
-    // we currently don't support optional fields for mapping types
-    if filler !is t:ListFiller {
-        return cx.semanticErr("no filler value", s:range(expr));
-    }
-    t:Filler[] memberFillers = filler.memberFillers;
-    t:Filler rest = memberFillers[memberFillers.length() - 1];
     foreach int i in operands.length() ..< fixedLength {
-        t:Filler operandFiller = i < memberFillers.length() ? memberFillers[i] : rest;
+        t:Filler? operandFiller = t:filler(cx.mod.tc, t:listAtomicTypeMemberAtInner(atomicType, i));
+        if operandFiller == () {
+            return cx.semanticErr("no filler value", s:range(expr));
+        }
         operands.push(codeGenFillerOperand(cx, bb, operandFiller, expr));
     }
 }
@@ -914,7 +910,7 @@ function codeGenFillerOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler
                };
     }
     else {
-        // We don't have optional mapping fields
+        // We don't have named mapping fields with default values
         insn = <bir:MappingConstructInsn> { fieldNames: [], operands: [], result, pos: expr.endPos };
     }
     bb.insns.push(insn);

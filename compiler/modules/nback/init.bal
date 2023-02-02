@@ -265,10 +265,12 @@ function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:
     if fillerValue == () {
         return cx.llContext().constNull(fillerDescPtrType);
     }
-    llvm:ConstPointerValue defn  = fillerToFillerDesc(cx, fillerValue);
+    llvm:ConstPointerValue defn = fillerToFillerDesc(cx, fillerValue);
     // This is to deal with recursive case
-    cx.fillerDescDefns.put({ semType: memberType, defn });
-    return cx.fillerDescDefns.get(memberType).defn;
+    if !cx.fillerDescDefns.hasKey(memberType) {
+        cx.fillerDescDefns.add({ semType: memberType, defn });
+    }
+    return defn;
 }
 
 function fillerToFillerDesc(InitModuleContext cx, t:Filler fillerValue) returns llvm:ConstPointerValue {
@@ -309,7 +311,6 @@ function listFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:
                                 listTy, STRUCTURE_LIST, "external");
     }
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defns.get(listTy).ptr, llStructureDescPtrType);
-    // fixed length lists will add multiple fillesDescDefns recursively
     cx.fillerDescCount += 1;
     string name = fillerDescSymbol(cx.fillerDescCount);
     return filler.atomic.members.fixedLength == 0 ? finishListFillerDesc(cx, structDescPtr, name) :
