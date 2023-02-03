@@ -306,11 +306,10 @@ function fillerToFillerDesc(InitModuleContext cx, t:Filler fillerValue) returns 
 function listFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:ConstPointerValue {
     t:SemType listTy = filler.semType;
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_LIST];
-    if !defns.hasKey(listTy) {
-        _ = addInherentTypeDefn(cx, memberListDescSymbol(defns.length()),
-                                listTy, STRUCTURE_LIST, "external");
-    }
-    llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defns.get(listTy).ptr, llStructureDescPtrType);
+    llvm:ConstPointerValue defn = defns.hasKey(listTy) ? defns.get(listTy).ptr : addInherentTypeDefn(cx, memberListDescSymbol(defns.length()),
+                                                                                                     listTy, STRUCTURE_LIST, "external");
+ 
+    llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llStructureDescPtrType);
     cx.fillerDescCount += 1;
     string name = fillerDescSymbol(cx.fillerDescCount);
     return filler.atomic.members.fixedLength == 0 ? finishListFillerDesc(cx, structDescPtr, name) :
@@ -345,11 +344,9 @@ function fixedLengthListFillerDescTy(InitModuleContext cx, int fixedLength) retu
 function mappingFillerDesc(InitModuleContext cx, t:MappingFiller filler) returns llvm:ConstPointerValue {
     t:SemType mappingTy = filler.semType;
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_MAPPING];
-    if !defns.hasKey(mappingTy) {
-        _ = addInherentTypeDefn(cx, memberMappingDescSymbol(defns.length()),
-                                mappingTy, STRUCTURE_MAPPING, "external");
-    }
-    llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defns.get(mappingTy).ptr, llStructureDescPtrType);
+    llvm:ConstPointerValue defn = defns.hasKey(mappingTy) ? defns.get(mappingTy).ptr : addInherentTypeDefn(cx, memberMappingDescSymbol(defns.length()),
+                                                                                                           mappingTy, STRUCTURE_MAPPING, "external");
+    llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llStructureDescPtrType);
     return fillerDesc(cx, structDescPtr, "mapping");
 }
 
@@ -395,13 +392,7 @@ function fillerDescTy(InitModuleContext cx, FillerKind kind) returns llvm:Struct
 }
 
 function fillerCreateFunc(InitModuleContext cx, FillerKind kind) returns llvm:FunctionDecl {
-    string funcName;
-    if kind == "string" {
-        funcName = "_bal_generic_filler_create";
-    }
-    else {
-        funcName = "_bal_" + kind + "_filler_create";
-    }
+    string funcName = kind == "string" ? "_bal_generic_filler_create" : string `_bal_${kind}_filler_create`;
     return getInitRuntimeFunction(cx, funcName, cx.llFillerCreateFuncTy());
 }
 

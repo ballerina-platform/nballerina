@@ -883,28 +883,21 @@ function fillListConstructOperands(ExprContext cx, bir:BasicBlock bb, bir:Operan
     if operands.length() >= fixedLength {
         return;
     }
-    foreach int i in operands.length() ..< fixedLength {
-        t:Filler? operandFiller = t:filler(cx.mod.tc, t:listAtomicTypeMemberAtInner(atomicType, i));
-        if operandFiller == () {
-            return cx.semanticErr("no filler value", s:range(expr));
-        }
-        operands.push(codeGenFillerOperand(cx, bb, operandFiller, expr));
-    }
+    operands.push(...from int i in operands.length() ..< fixedLength select 
+                     check codeGenFillerOperand(cx, bb, check listMemberFiller(cx, atomicType, i, expr), expr));
 }
 
-function codeGenFillerOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler, s:ListConstructorExpr expr) returns bir:Operand {
+function codeGenFillerOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler, s:ListConstructorExpr expr) returns bir:Operand|ResolveTypeError {
     if filler is t:WrappedSingleValue {
         return singletonOperand(cx, filler.value);
     }
     bir:ListConstructInsn|bir:MappingConstructInsn insn;
     bir:TmpRegister result = cx.createTmpRegister(filler.semType);
     if filler is t:ListFiller {
-        t:Filler[] memberFillers = filler.memberFillers;
-        t:ListAtomicType atomic = filler.atomic;
-        t:Filler rest = memberFillers[memberFillers.length() - 1]; 
+        t:ListAtomicType fillerAtomicTy = filler.atomic;
         insn = {
-                    operands: from var i in 0 ..< atomic.members.fixedLength select i < memberFillers.length() ?
-                                codeGenFillerOperand(cx, bb, memberFillers[i], expr) : codeGenFillerOperand(cx, bb, rest, expr),
+                    operands: from var i in 0 ..< fillerAtomicTy.members.fixedLength select 
+                              check codeGenFillerOperand(cx, bb, check listMemberFiller(cx, fillerAtomicTy, i, expr), expr),
                     result,
                     pos: expr.endPos
                };
@@ -915,6 +908,14 @@ function codeGenFillerOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler
     }
     bb.insns.push(insn);
     return result;
+}
+
+function listMemberFiller(ExprContext cx, t:ListAtomicType atomicType, int index, s:ListConstructorExpr expr) returns t:Filler|ResolveTypeError {
+    t:Filler? memberFiller = t:filler(cx.mod.tc, t:listAtomicTypeMemberAtInner(atomicType, index));
+    if memberFiller == () {
+        return cx.semanticErr("no filler value", s:range(expr));
+    }
+    return memberFiller;
 }
 
 function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListConstructorExpr expr) returns [t:SemType, t:ListAtomicType]|ResolveTypeError {
