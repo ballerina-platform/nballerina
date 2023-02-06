@@ -6,82 +6,82 @@ version = "0.1.0"
 observabilityIncluded = false
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-platform-1.5.7.jar"
+path = "target/platform-libs/javacpp-platform-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-platform-13.0.1-1.5.7.jar"
+path = "target/platform-libs/llvm-platform-15.0.6-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-linux-x86_64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-linux-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-linux-arm64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-linux-arm64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-windows-x86_64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-windows-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-macosx-arm64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-macosx-arm64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-android-arm.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-android-arm.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-android-x86_64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-android-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-ios-arm64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-ios-arm64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-linux-armhf.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-linux-armhf.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-macosx-x86_64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-macosx-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-android-arm64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-android-arm64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-android-x86.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-android-x86.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-windows-x86.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-windows-x86.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-linux-ppc64le.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-linux-ppc64le.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-ios-x86_64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-ios-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-linux-x86.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-linux-x86.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7-linux-arm64.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT-linux-arm64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7-windows-x86.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT-windows-x86.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7-macosx-x86_64.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT-macosx-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7-linux-x86.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT-linux-x86.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7-linux-x86_64.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT-linux-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7-windows-x86_64.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT-windows-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7-linux-armhf.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT-linux-armhf.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7-linux-ppc64le.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT-linux-ppc64le.jar"

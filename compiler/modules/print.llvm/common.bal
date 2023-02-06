@@ -1,3 +1,4 @@
+import wso2/nballerina.comm.err;
 // This contains the common definitions for both print.llvm and jni.llvm
 
 // "i64" corresponds to LLVMInt64Type
@@ -67,7 +68,7 @@ public function functionType(RetType returnType, Type[] paramTypes) returns Func
 // Corresponds to LLVMLinkage enum
 public type Linkage "internal"|"external";
 
-public type FunctionEnumAttribute "nofree"|"nosync"|"readnone"|"noreturn"|"cold"|"nounwind"|"readnone"|"readonly"|"speculatable"|"willreturn";
+public type FunctionEnumAttribute "nocallback"|"nofree"|"nosync"|"readnone"|"noreturn"|"cold"|"nounwind"|"readnone"|"readonly"|"speculatable"|"willreturn";
 public type ParamEnumAttribute "signext"|"zeroext";
 public type ReturnEnumAttribute "signext"|"zeroext"|"noalias";
 public type EnumAttribute FunctionEnumAttribute | (readonly & [int, ParamEnumAttribute]) | (readonly & ["return", ReturnEnumAttribute]);
@@ -187,3 +188,25 @@ public type PointerTypeMetdataProperties record {|
     int addressSpace = 0;
     string? name = ();
 |};
+
+function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
+    boolean isNamed = ty.name != ();
+    Type[] elementTypes = ty.elementTypes;
+    if isNamed {
+        elementTypes = context.getNamedStructBody(ty);
+    }
+    return elementTypes[index];
+}
+
+function sameNumberType(Value v1, Value v2) returns IntType|FloatType {
+    Type ty1 = v1.ty;
+    Type ty2 = v2.ty;
+    if ty1 != ty2 {
+        panic err:illegalArgument("expected same types");
+    }
+    else if ty1 is IntType || ty1 is FloatType {
+        return ty1;
+    }
+    panic err:illegalArgument("expected a number type");
+}
+

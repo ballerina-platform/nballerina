@@ -1,10 +1,10 @@
-%structTy = type { i64, %structTy*, %structTy, %structTy (%structTy, i64)* }
+%structTy = type { i64, ptr, %structTy, ptr }
 
 @g = external global %structTy
 @g1 = external addrspace(1) global %structTy
 
 define %structTy @foo() {
-  ret %structTy* @g
+  ret ptr @g
 }
 
 define void @bar(%structTy %0) {

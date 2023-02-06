@@ -6,19 +6,19 @@ version = "0.1.0"
 observabilityIncluded = false
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-platform-1.5.7.jar"
+path = "target/platform-libs/javacpp-platform-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/javacpp-1.5.7-linux-x86_64.jar"
+path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-linux-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-platform-13.0.1-1.5.7.jar"
+path = "target/platform-libs/llvm-platform-15.0.6-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-13.0.1-1.5.7-linux-x86_64.jar"
+path = "target/platform-libs/llvm-15.0.6-1.5.9-SNAPSHOT-linux-x86_64.jar"
