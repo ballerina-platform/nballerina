@@ -870,20 +870,16 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
         { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
         operands.push(operand);
     }
-    check fillListConstructOperands(cx, nextBlock, operands, atomicType, expr);
+    check fillListOperands(cx, nextBlock, operands, atomicType, expr);
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
 }
 
-function fillListConstructOperands(ExprContext cx, bir:BasicBlock bb, bir:Operand[] operands,
-                                   t:ListAtomicType atomicType, s:ListConstructorExpr expr) returns ResolveTypeError? {
-    int fixedLength = atomicType.members.fixedLength;
-    if operands.length() >= fixedLength {
-        return;
-    }
-    operands.push(...from int i in operands.length() ..< fixedLength select 
+function fillListOperands(ExprContext cx, bir:BasicBlock bb, bir:Operand[] operands,
+                          t:ListAtomicType atomicType, s:ListConstructorExpr expr) returns ResolveTypeError? {
+    operands.push(...from int i in operands.length() ..< atomicType.members.fixedLength select
                      check codeGenFillerOperand(cx, bb, check listMemberFiller(cx, atomicType, i, expr), expr));
 }
 
@@ -894,13 +890,9 @@ function codeGenFillerOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler
     bir:ListConstructInsn|bir:MappingConstructInsn insn;
     bir:TmpRegister result = cx.createTmpRegister(filler.semType);
     if filler is t:ListFiller {
-        t:ListAtomicType fillerAtomicTy = filler.atomic;
-        insn = {
-                    operands: from var i in 0 ..< fillerAtomicTy.members.fixedLength select 
-                              check codeGenFillerOperand(cx, bb, check listMemberFiller(cx, fillerAtomicTy, i, expr), expr),
-                    result,
-                    pos: expr.endPos
-               };
+        bir:Operand[] operands = [];
+        check fillListOperands(cx, bb, operands, filler.atomic, expr);
+        insn = { operands: operands.cloneReadOnly(), result, pos: expr.endPos };
     }
     else {
         // We don't have named mapping fields with default values

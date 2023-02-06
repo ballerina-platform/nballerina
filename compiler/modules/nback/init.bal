@@ -83,7 +83,7 @@ class InitModuleContext {
     map<llvm:FunctionDecl> typeTestFuncs = {};
     map<llvm:FunctionDecl> runtimeFuncs = {};
     map<llvm:ConstPointerValue> stringDefns = {};
-    map<llvm:ConstPointerValue> defaultFillerDesc = {};
+    map<llvm:ConstPointerValue> predefinedFillerDesc = {};
     int decimalCount = 0;
     // subtype definitions cannot be completed before inherent types are complete,
     // because precomputed subtypes need to know all inherent types
@@ -102,18 +102,18 @@ class InitModuleContext {
     
     function llContext() returns llvm:Context => self.llvmContext;
 
-    function llFillerDescTy() returns llvm:StructType {
+    function getLlFillerDescTy() returns llvm:StructType {
         if self.fillerDescTy == () {
             llvm:StructType ty = self.llContext().structCreateNamed("FillerDesc");
             self.fillerDescTy = ty;
-            self.llContext().structSetBody(ty, [llvm:pointerType(self.llFillerCreateFuncTy())]);
+            self.llContext().structSetBody(ty, [llvm:pointerType(self.getLlFillerCreateFuncTy())]);
         }
         return <llvm:StructType> self.fillerDescTy;
     }
 
-    function llFillerCreateFuncTy() returns llvm:FunctionType {
+    function getLlFillerCreateFuncTy() returns llvm:FunctionType {
         return llvm:functionType(LLVM_TAGGED_PTR,
-                                 [llvm:pointerType(self.llFillerDescTy()), llvm:pointerType(LLVM_BOOLEAN)]);
+                                 [llvm:pointerType(self.getLlFillerDescTy()), llvm:pointerType(LLVM_BOOLEAN)]);
     }
 
 };
@@ -265,7 +265,7 @@ function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:
     if fillerValue == () {
         return cx.llContext().constNull(fillerDescPtrType);
     }
-    llvm:ConstPointerValue defn = fillerToFillerDesc(cx, fillerValue);
+    llvm:ConstPointerValue defn = getFillerDescValue(cx, fillerValue);
     // This is to deal with recursive case
     if !cx.fillerDescDefns.hasKey(memberType) {
         cx.fillerDescDefns.add({ semType: memberType, defn });
@@ -273,113 +273,107 @@ function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:
     return defn;
 }
 
-function fillerToFillerDesc(InitModuleContext cx, t:Filler fillerValue) returns llvm:ConstPointerValue {
+function getFillerDescValue(InitModuleContext cx, t:Filler fillerValue) returns llvm:ConstPointerValue {
     if fillerValue is t:WrappedSingleValue {
         t:SingleValue val = fillerValue.value;
         if val is int {
-            return val == 0 ? defaultFillerDesc(cx, "int_zero") : intFillerDesc(cx, val);
+            return val == 0 ? getPredefinedFillerDesc(cx, "int_zero") : addIntFillerDesc(cx, val);
         }
         else if val is boolean {
-            return val ? defaultFillerDesc(cx, "true") : defaultFillerDesc(cx, "false");
+            return val ? getPredefinedFillerDesc(cx, "boolean_true") : getPredefinedFillerDesc(cx, "boolean_false");
         }
         else if val is float {
-            return val === 0.0 ? defaultFillerDesc(cx, "float_zero") : floatFillerDesc(cx, val);
+            return val === 0.0 ? getPredefinedFillerDesc(cx, "float_zero") : addFloatFillerDesc(cx, val);
         }
         else if val is decimal {
-            return val == 0d ? defaultFillerDesc(cx, "decimal_zero") : decimalFillerDesc(cx, val);
+            return val == 0d ? getPredefinedFillerDesc(cx, "decimal_zero") : addDecimalFillerDesc(cx, val);
         }
         else if val is string {
-            return val == "" ? defaultFillerDesc(cx, "string_empty") : stringFillerDesc(cx, val);
+            return val == "" ? getPredefinedFillerDesc(cx, "string_empty") : addStringFillerDesc(cx, val);
         }
         else {
-            return defaultFillerDesc(cx, "nil");
+            return getPredefinedFillerDesc(cx, "nil");
         }
     }
     else if fillerValue is t:ListFiller {
-        return listFillerDesc(cx, fillerValue);
+        return addListFillerDesc(cx, fillerValue);
     }
     else {
-        return mappingFillerDesc(cx, fillerValue);
+        return addMappingFillerDesc(cx, fillerValue);
     }
 }
 
-function listFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:ConstPointerValue {
+function addListFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:ConstPointerValue {
     t:SemType listTy = filler.semType;
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_LIST];
     llvm:ConstPointerValue defn = defns.hasKey(listTy) ? defns.get(listTy).ptr : addInherentTypeDefn(cx, memberListDescSymbol(defns.length()),
                                                                                                      listTy, STRUCTURE_LIST, "external");
- 
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llStructureDescPtrType);
+    return filler.atomic.members.fixedLength == 0 ? addFillerDesc(cx, structDescPtr, "list") :
+                                                    finishFixedLengthListFillerDesc(cx, structDescPtr, filler);
+}
+
+// We are special casing lists wit fixed length > 0 since their filler descriptors consists of other (for members) filler descriptors
+function finishFixedLengthListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, t:ListFiller filler) returns llvm:ConstPointerValue {
+    llvm:StructType fillerTy = createFixedLengthListFillerDescTy(cx, filler.memberFillers.length());
     cx.fillerDescCount += 1;
     string name = fillerDescSymbol(cx.fillerDescCount);
-    return filler.atomic.members.fixedLength == 0 ? finishListFillerDesc(cx, structDescPtr, name) :
-                                                    finishFixedLengthListFillerDesc(cx, structDescPtr, name, filler);
-}
+    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_fixed_length_list_filler_create", cx.getLlFillerCreateFuncTy());
 
-function finishListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name) returns llvm:ConstPointerValue {
-    llvm:FunctionDecl decl = fillerCreateFunc(cx, "list");
-    llvm:ConstValue initializer = cx.llContext().constStruct([decl, structDescPtr]);
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fillerDescTy(cx, "list"), name, initializer=initializer);
-    return cx.llContext().constBitCast(ptr, fillerDescPtrType);
-}
-
-function finishFixedLengthListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, string name, t:ListFiller filler) returns llvm:ConstPointerValue {
-    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_fixed_length_list_filler_create", cx.llFillerCreateFuncTy());
-    llvm:ConstPointerValue[] memberFillers = from t:Filler each in filler.memberFillers select fillerToFillerDesc(cx, each);
+    llvm:ConstPointerValue[] memberFillers = from t:Filler each in filler.memberFillers select getFillerDescValue(cx, each);
     llvm:ConstValue fillers = cx.llContext().constArray(fillerDescPtrType, memberFillers);
     llvm:ConstValue fillerCount = constInt(cx, memberFillers.length());
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, structDescPtr, fillerCount, fillers]);
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fixedLengthListFillerDescTy(cx, memberFillers.length()),
-                                                    name, initializer=initializer);
+
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fillerTy, name, initializer=initializer);
     return cx.llContext().constBitCast(ptr, fillerDescPtrType);
 }
 
-function fixedLengthListFillerDescTy(InitModuleContext cx, int fixedLength) returns llvm:Type {
-    return llvm:structType([llvm:pointerType(cx.llFillerCreateFuncTy()),
+function createFixedLengthListFillerDescTy(InitModuleContext cx, int fixedLength) returns llvm:StructType {
+    return llvm:structType([llvm:pointerType(cx.getLlFillerCreateFuncTy()),
                             llStructureDescPtrType,
                             "i64",
                             llvm:arrayType(fillerDescPtrType, fixedLength)]);
 }
 
-function mappingFillerDesc(InitModuleContext cx, t:MappingFiller filler) returns llvm:ConstPointerValue {
+function addMappingFillerDesc(InitModuleContext cx, t:MappingFiller filler) returns llvm:ConstPointerValue {
     t:SemType mappingTy = filler.semType;
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_MAPPING];
     llvm:ConstPointerValue defn = defns.hasKey(mappingTy) ? defns.get(mappingTy).ptr : addInherentTypeDefn(cx, memberMappingDescSymbol(defns.length()),
                                                                                                            mappingTy, STRUCTURE_MAPPING, "external");
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llStructureDescPtrType);
-    return fillerDesc(cx, structDescPtr, "mapping");
+    return addFillerDesc(cx, structDescPtr, "mapping");
 }
 
-function stringFillerDesc(InitModuleContext cx, string value) returns llvm:ConstPointerValue {
-    return fillerDesc(cx, getInitString(cx, value), "string");
+function addStringFillerDesc(InitModuleContext cx, string value) returns llvm:ConstPointerValue {
+    return addFillerDesc(cx, getInitString(cx, value), "string");
 }
 
-function decimalFillerDesc(InitModuleContext cx, decimal value) returns llvm:ConstPointerValue {
-    return fillerDesc(cx, getInitDecimal(cx, value), "decimal");
+function addDecimalFillerDesc(InitModuleContext cx, decimal value) returns llvm:ConstPointerValue {
+    return addFillerDesc(cx, getInitDecimal(cx, value), "decimal");
 }
 
-function intFillerDesc(InitModuleContext cx, int value) returns llvm:ConstPointerValue {
-    return fillerDesc(cx, constInt(cx, value), "int");
+function addIntFillerDesc(InitModuleContext cx, int value) returns llvm:ConstPointerValue {
+    return addFillerDesc(cx, constInt(cx, value), "int");
 }
 
-function floatFillerDesc(InitModuleContext cx, float value) returns llvm:ConstPointerValue {
-    return fillerDesc(cx, constFloat(cx, value), "float");
+function addFloatFillerDesc(InitModuleContext cx, float value) returns llvm:ConstPointerValue {
+    return addFillerDesc(cx, constFloat(cx, value), "float");
 }
 
 type FillerKind "float"|"int"|"decimal"|"string"|"mapping"|"list";
 
-function fillerDesc(InitModuleContext cx, llvm:ConstValue value,
-                    FillerKind kind) returns llvm:ConstPointerValue {
-    llvm:StructType fillerTy = fillerDescTy(cx, kind);
+function addFillerDesc(InitModuleContext cx, llvm:ConstValue value, FillerKind kind) returns llvm:ConstPointerValue {
+    llvm:StructType fillerTy = createFillerDescTy(cx, kind);
     cx.fillerDescCount += 1;
     string name = fillerDescSymbol(cx.fillerDescCount);
-    llvm:FunctionDecl decl = fillerCreateFunc(cx, kind);
+    llvm:FunctionDecl decl = getFillerCreateFunc(cx, kind);
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, value]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(fillerTy, name, initializer=initializer);
     return cx.llContext().constBitCast(ptr, fillerDescPtrType);
 }
 
-function fillerDescTy(InitModuleContext cx, FillerKind kind) returns llvm:StructType {
+function createFillerDescTy(InitModuleContext cx, FillerKind kind) returns llvm:StructType {
     llvm:Type valType;
     match kind {
         "float"   => { valType = LLVM_FLOAT; }
@@ -388,26 +382,27 @@ function fillerDescTy(InitModuleContext cx, FillerKind kind) returns llvm:Struct
         "string"  => { valType = LLVM_TAGGED_PTR; }
         _         => { valType = llStructureDescPtrType; }
     }
-    return llvm:structType([llvm:pointerType(cx.llFillerCreateFuncTy()), valType]);
+    return llvm:structType([llvm:pointerType(cx.getLlFillerCreateFuncTy()), valType]);
 }
 
-function fillerCreateFunc(InitModuleContext cx, FillerKind kind) returns llvm:FunctionDecl {
+function getFillerCreateFunc(InitModuleContext cx, FillerKind kind) returns llvm:FunctionDecl {
     string funcName = kind == "string" ? "_bal_generic_filler_create" : string `_bal_${kind}_filler_create`;
-    return getInitRuntimeFunction(cx, funcName, cx.llFillerCreateFuncTy());
+    return getInitRuntimeFunction(cx, funcName, cx.getLlFillerCreateFuncTy());
 }
 
+type PredefinedFillerDescName "int_zero"|"boolean_true"|"boolean_false"|"float_zero"|"decimal_zero"|"string_empty"|"nil";
 
-function defaultFillerDesc(InitModuleContext cx, string name) returns llvm:ConstPointerValue {
+function getPredefinedFillerDesc(InitModuleContext cx, PredefinedFillerDescName name) returns llvm:ConstPointerValue {
     string symbol = name + "_filler_desc";
-    llvm:ConstPointerValue? memo = cx.defaultFillerDesc[symbol];
+    llvm:ConstPointerValue? memo = cx.predefinedFillerDesc[symbol];
     if memo != () {
         return memo;
     }
     // We are special casing decimal since we don't have a GenericFillerDesc defined for decimals
-    llvm:ConstPointerValue fillerDesc = symbol == "decimal_zero_filler_desc" ? decimalFillerDesc(cx, 0d) :
-                                                                               cx.llMod.addGlobal(cx.llFillerDescTy(), "_bal_" + symbol);
+    llvm:ConstPointerValue fillerDesc = symbol == "decimal_zero_filler_desc" ? addDecimalFillerDesc(cx, 0d) :
+                                                                               cx.llMod.addGlobal(cx.getLlFillerDescTy(), "_bal_" + symbol);
     llvm:ConstPointerValue fillerPtr = cx.llContext().constBitCast(fillerDesc, fillerDescPtrType);
-    cx.defaultFillerDesc[symbol] = fillerPtr;
+    cx.predefinedFillerDesc[symbol] = fillerPtr;
     return fillerPtr;
 }
 
