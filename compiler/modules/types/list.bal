@@ -64,10 +64,10 @@ public class ListDefinition {
     *Definition;
     private RecAtom? rec = ();
 
-    private ComplexSemType? semType = ();
+    private SemType? semType = ();
 
-    public function getSemType(Env env) returns ComplexSemType {
-        ComplexSemType? s = self.semType;
+    public function getSemType(Env env) returns SemType {
+        SemType? s = self.semType;
         if s == () {
             RecAtom rec = env.recListAtom();
             self.rec = rec;
@@ -88,6 +88,7 @@ public class ListDefinition {
             env.setRecListAtomType(rec, atomicType);
         }
         else if fixedLength == 0 && rest == CELL_SEMTYPE_VAL {
+            self.semType = LIST;
             return LIST;
         }
         else {
