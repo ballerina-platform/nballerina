@@ -67,6 +67,11 @@ typedef int64_t CompareResult;
 #define IMMEDIATE_INT_MAX  (((int64_t)1 << (TAG_SHIFT - 1)) - 1)
 #define IMMEDIATE_INT_TRUNCATE(n) (n & (((int64_t)1 << TAG_SHIFT) - 1))
 
+#define TAGGED_FALSE ((TaggedPtr)(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT))
+#define TAGGED_TRUE ((TaggedPtr)((((uint64_t)TAG_BOOLEAN) << TAG_SHIFT) | 1))
+#define TAGGED_INT_ZERO ((TaggedPtr)(IMMEDIATE_FLAG | (((uint64_t)TAG_INT) << TAG_SHIFT)))
+#define TAGGED_STRING_EMPTY ((TaggedPtr)(IMMEDIATE_FLAG | (((uint64_t)TAG_STRING) << TAG_SHIFT) | (((uint64_t)1 << (7*8)) -  1)))
+
 extern char *_bal_stack_guard;
 
 typedef GC char NODEREF *TaggedPtr;
@@ -124,6 +129,17 @@ typedef struct {
     Tid tid;
 } StructureDesc, *StructureDescPtr;
 
+// This is the abstract version of filler descriptor. Each type must
+// implement there own version (or reuse a common version such as GenericFillerDesc)
+typedef struct FillerDesc {
+    TaggedPtr (*create)(struct FillerDesc *fillerDesc, bool *hasIdentityPtr);
+} *FillerDescPtr;
+
+typedef struct GenericFillerDesc {
+    TaggedPtr (*create)(struct GenericFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    TaggedPtr genericValue;
+} *GenericFillerDescPtr;
+
 // All mapping and list values start with this
 typedef GC struct {
     StructureDescPtr desc;
@@ -150,7 +166,7 @@ typedef struct {
     PanicCode (*inexactSetFloat)(TaggedPtr lp, int64_t index, double val);
     // the type of members with index >= minLength
     MemberType restType;
-    StructureDescPtr fillerDesc;
+    FillerDescPtr fillerDesc;
     // The types of the members at the start of the list.
     // For member with index i in 0 ..< nMemberTypes, the type is memberTypes[i]
     // For member with index i in nMemberTypes ..< minLength, the type is memberTypes[nMemberTypes - 1]
@@ -189,7 +205,7 @@ typedef struct {
     Tid tid;
     uint32_t nFields;
     MemberType restType;
-    StructureDescPtr fillerDesc;
+    FillerDescPtr fillerDesc;
     MemberType fieldTypes[];
 } MappingDesc, *MappingDescPtr;
 
@@ -447,7 +463,7 @@ typedef enum {
     FILL_COPY
 } Fillability;
 
-extern Fillability _bal_structure_create_filler(MemberType memberType, StructureDescPtr fillerDesc, TaggedPtr *valuePtr);
+extern TaggedPtr _bal_generic_filler_create(GenericFillerDescPtr fillerDesc, bool *hasIdentityPtr);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
@@ -889,3 +905,21 @@ static inline TaggedPtr intToTagged(int64_t n) {
         return ptrAddShiftedTag(p, ((uint64_t)TAG_INT) << TAG_SHIFT);
     }
 }
+
+static inline TaggedPtr fillerCreate(FillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    return fillerDesc->create(fillerDesc, hasIdentityPtr);
+}
+
+static inline TaggedPtr structCreateFiller(FillerDescPtr fdp, Fillability *fillability) {
+    if (fdp == NULL) {
+        *fillability = FILL_NONE;
+        return NULL;
+    }
+    bool hasIdentityPtr;
+    TaggedPtr fillerValue = fillerCreate(fdp, &hasIdentityPtr);
+    if (fillability != NULL) {
+        *fillability = hasIdentityPtr ? FILL_EACH : FILL_COPY;
+    }
+    return fillerValue;
+}
+

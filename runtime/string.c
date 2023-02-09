@@ -318,3 +318,4 @@ static bool stringListContains(const TaggedPtr *start, const TaggedPtr *end, Tag
     // start == end, so there is no such member
     return false;
 }
+const struct GenericFillerDesc _bal_string_empty_filler_desc = { &_bal_generic_filler_create, TAGGED_STRING_EMPTY };

@@ -55,3 +55,15 @@ static bool intRangeListContains(const IntRange *r, const IntRange *end, int64_t
     }
     return false;
 }
+
+typedef struct IntFillerDesc {
+    TaggedPtr (*create)(struct IntFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    int64_t val;
+} *IntFillerDescPtr;
+
+TaggedPtr _bal_int_filler_create(IntFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    *hasIdentityPtr = false;
+    return intToTagged(fillerDesc->val);
+}
+
+const struct GenericFillerDesc _bal_int_zero_filler_desc = { &_bal_generic_filler_create, TAGGED_INT_ZERO };

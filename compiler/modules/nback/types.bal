@@ -17,6 +17,12 @@ const LLVM_PANIC_CODE = "i64";
 final llvm:StructType llStructureDescType = llvm:structType([LLVM_TID]);
 final llvm:PointerType llStructureDescPtrType = llvm:pointerType(llStructureDescType);
 
+// This is an approximation, to share type between init.bal and types.bal
+final llvm:PointerType fillerDescPtrType = llvm:pointerType(llvm:structType(
+                                                [llvm:pointerType(llvm:functionType(LLVM_TAGGED_PTR,
+                                                                                    [llvm:pointerType("i8"), llvm:pointerType(LLVM_BOOLEAN)]))]
+                                            ));
+
 // This is an approximation, but close enough since we are only accessing the pointer in C.
 final llvm:StructType llComplexType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
 
@@ -110,7 +116,7 @@ function createLlListDescType(int nMemberTypes = 0) returns llvm:StructType {
     }
     // JBUG cast
     types.push(<llvm:Type>LLVM_MEMBER_TYPE);
-    types.push(llStructureDescPtrType);
+    types.push(fillerDescPtrType);
     types.push(llvm:arrayType(LLVM_MEMBER_TYPE, nMemberTypes));
     return llvm:structType(types);
 }

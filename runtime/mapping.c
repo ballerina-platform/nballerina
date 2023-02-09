@@ -136,10 +136,6 @@ static void growTable(MappingPtr mp) {
 
 // This part does not know about the table
 
-static inline Fillability mappingCreateFiller(MappingDescPtr mdp, TaggedPtr *valuePtr) {
-    return _bal_structure_create_filler(mdp->restType, mdp->fillerDesc, valuePtr);
-}
-
 static void mappingGrow(MappingPtr m) {
     growTable(m);
     GC MapField *fields = m->fArray.members;
@@ -237,8 +233,8 @@ TaggedPtrPanicCode _bal_mapping_filling_get(TaggedPtr mapping, TaggedPtr key) {
         result.panicCode = 0;
         return result;
     }
-    TaggedPtr value;
-    Fillability fill = mappingCreateFiller(mp->desc, &value);
+    Fillability fill;
+    TaggedPtr value = structCreateFiller(mp->desc->fillerDesc, &fill);
     if (fill == FILL_NONE) {
         result.panicCode = PANIC_NO_FILLER;
         return result;
@@ -319,4 +315,14 @@ bool _bal_mapping_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp) {
         }
     }
     return true;
+}
+
+typedef struct MappingFillerDesc {
+    TaggedPtr (*create)(struct MappingFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    MappingDescPtr mappingDesc;
+} *MappingFillerDescPtr;
+
+TaggedPtr _bal_mapping_filler_create(MappingFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    *hasIdentityPtr = true;
+    return _bal_mapping_construct(fillerDesc->mappingDesc, 0);
 }

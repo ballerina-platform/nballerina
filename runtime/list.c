@@ -4,10 +4,6 @@
 
 #define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
 
-static inline Fillability arrayCreateFiller(ListDescPtr ldp, TaggedPtr *valuePtr) {
-    return _bal_structure_create_filler(ldp->restType, ldp->fillerDesc, valuePtr);
-}
-
 static inline bool listDescAllowsTaggedAt(ListDescPtr ldp, int64_t index, TaggedPtr val) {
     MemberType mt;
     // If we get a negative index here, we treat it as having the rest type.
@@ -119,7 +115,7 @@ PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val
     Fillability fill;
     if (index > ap->length) {
         // we have a gap to fill
-        fill = arrayCreateFiller(ldp, &filler);
+        filler = structCreateFiller(ldp->fillerDesc, &fill);
         if (fill == FILL_NONE) {
             // Note that we panic before trying to grow the array
             return PANIC_NO_FILLER;
@@ -141,7 +137,7 @@ PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val
         ap->members[ap->length] = filler;
         for (int64_t i = ap->length + 1; i < index; i++) {
             if (fill == FILL_EACH) {
-                (void)arrayCreateFiller(ldp, &filler);
+                filler = structCreateFiller(ldp->fillerDesc, NULL);
             }
             ap->members[i] = filler;
         }
@@ -165,8 +161,8 @@ TaggedPtrPanicCode _bal_list_filling_get(TaggedPtr p, int64_t index) {
         return result;
     }
     ListDescPtr ldp = lp->desc;
-    TaggedPtr filler;
-    Fillability fill = arrayCreateFiller(ldp, &filler);
+    Fillability fill;
+    TaggedPtr filler = structCreateFiller(ldp->fillerDesc, &fill);
     if (fill == FILL_NONE) {
         result.panicCode = PANIC_NO_FILLER;
         return result;
@@ -185,7 +181,7 @@ TaggedPtrPanicCode _bal_list_filling_get(TaggedPtr p, int64_t index) {
         // Probably will only call this when FILL_EACH would be true,
         // but let's handle all cases.
         if (likely(fill == FILL_EACH)) {
-            (void)arrayCreateFiller(ldp, &filler);
+            filler = structCreateFiller(ldp->fillerDesc, NULL);
         }
         ap->members[i] = filler;
     }
@@ -532,4 +528,41 @@ CompareResult READONLY _bal_array_decimal_compare(TaggedPtr tp1, TaggedPtr tp2) 
 
 CompareResult READONLY _bal_array_list_compare(TaggedPtr tp1, TaggedPtr tp2) {
     return optListDoCompare(tp1, tp2, &_bal_opt_list_compare);
+}
+
+typedef struct ListFillerDesc {
+    TaggedPtr (*create)(struct ListFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    ListDescPtr listDesc;
+} *ListFillerDescPtr;
+
+typedef struct FixedLengthListFillerDesc {
+    TaggedPtr (*create)(struct FixedLengthListFillerDesc *fillerDesc, bool *hasIdentityPtr);
+    ListDescPtr listDesc;
+    int64_t fillerCount;
+    FillerDescPtr fillers[];
+} *FixedLengthListFillerDescPtr;
+
+TaggedPtr _bal_list_filler_create(ListFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    *hasIdentityPtr = true;
+    ListDescPtr ldp = fillerDesc->listDesc;
+    return ptrAddFlags(_bal_list_construct_8(ldp, ldp->minLength),
+                      ((uint64_t)TAG_LIST << TAG_SHIFT)|EXACT_FLAG);
+}
+
+TaggedPtr _bal_fixed_length_list_filler_create(FixedLengthListFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    *hasIdentityPtr = true;
+    ListDescPtr ldp = fillerDesc->listDesc;
+    int64_t fixedLen = ldp->minLength;
+    TaggedPtr list = ptrAddFlags(_bal_list_construct_8(ldp, fixedLen),
+                                 ((uint64_t)TAG_LIST << TAG_SHIFT)|EXACT_FLAG);
+    ListPtr lp = taggedToPtr(list);
+    GC TaggedPtrArray *ap = &(lp->tpArray);
+    int64_t fillerCount = fillerDesc->fillerCount;
+    FillerDescPtr *fillers = fillerDesc->fillers;
+    for (int64_t i = 0; i < fixedLen; i++) {
+        FillerDescPtr filler = i < fillerCount ? fillers[i] : fillers[fillerCount - 1];
+        ap->members[i] = structCreateFiller(filler, NULL);
+    }
+    ap->length = fixedLen;
+    return list;
 }
