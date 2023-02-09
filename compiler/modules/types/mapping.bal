@@ -62,6 +62,7 @@ public class MappingDefinition {
             env.setRecMappingAtomType(rec, atomicType);
         }
         else if fields.length() == 0 && rest == CELL_SEMTYPE_INNER {
+            self.semType = MAPPING;
             return MAPPING;
         }
         else {
