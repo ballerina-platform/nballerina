@@ -3,26 +3,6 @@ import wso2/nballerina.comm.err;
 type SpecialMethodName "map";
 
 function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Token? t = tok.current();
-    Position startPos = tok.currentStartPos();
-    if t == "[" {
-        check tok.advance();
-        var [members, _] = check parseExprList(tok, "]");
-        Position endPos = tok.previousEndPos();
-        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members };
-        return expr;
-    }
-    else if t == "{" {
-        check tok.advance();
-        Field[] fields = check parseFields(tok);
-        Position endPos = tok.previousEndPos();
-        MappingConstructorExpr expr = { startPos, endPos, opPos: startPos, fields };
-        return expr;
-    }
-    return parseInnerExpr(tok);
-}
-
-function parseInnerExpr(Tokenizer tok) returns Expr|err:Syntax {
     return parseLogicalOrExpr(tok);
 }
 
@@ -339,7 +319,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
             LiteralExpr expr = { startPos, endPos, value: () };
             return expr;
         }
-        Expr innerExpr = check parseInnerExpr(tok);
+        Expr innerExpr = check parseExpr(tok);
         endPos = check tok.expectEnd(")");
         return { startPos, endPos, innerExpr };
     }
@@ -361,6 +341,20 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         endPos = check tok.expectEnd(")");
         return { startPos, endPos, message, kwPos };
     }
+    else if t == "[" {
+        check tok.advance();
+        var [members, _] = check parseExprList(tok, "]");
+        endPos = tok.previousEndPos();
+        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members };
+        return expr;
+    }
+    else if t == "{" {
+        check tok.advance();
+        Field[] fields = check parseFields(tok);
+        endPos = tok.previousEndPos();
+        MappingConstructorExpr expr = { startPos, endPos, opPos: startPos, fields };
+        return expr;
+    }
     else {
         return parseError(tok);
     }
@@ -371,7 +365,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
     Position opPos = tok.currentStartPos();
     if t == "[" {
         check tok.advance();
-        Expr index = check parseInnerExpr(tok);
+        Expr index = check parseExpr(tok);
         Position accessEndPos = check tok.expectEnd("]");
         MemberAccessExpr accessExpr = { startPos, endPos: accessEndPos, opPos, container: expr, index };
         return finishPrimaryExpr(tok, accessExpr, startPos);

@@ -167,7 +167,7 @@ function finishIdentifierStmt(Tokenizer tok, string name1, Position startPos, Po
         }
         else if cur == "[" {
             check tok.advance();
-            Expr index = check parseInnerExpr(tok);
+            Expr index = check parseExpr(tok);
             endPos = check tok.expectEnd("]");
             lExpr =  { startPos, endPos, container: lExpr, index, opPos };
         }
@@ -355,7 +355,7 @@ function parseForeachStmt(Tokenizer tok, Position startPos) returns ForeachStmt|
 }
 
 function parseMatchStmt(Tokenizer tok, Position startPos) returns MatchStmt|err:Syntax {
-    Expr expr = check parseInnerExpr(tok);
+    Expr expr = check parseExpr(tok);
     check tok.expect("{");
     MatchClause[] clauses = [];
     clauses.push(check parseMatchClause(tok));

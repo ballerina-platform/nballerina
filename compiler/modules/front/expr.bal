@@ -215,6 +215,7 @@ function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:F
 }
 
 function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, t:SemType requiredType, s:Expr expr, string msg) returns CodeGenError|ExprEffect {
+    // FIXME: may be we should not pass the required type
     ExprEffect effect = check codeGenExpr(cx, bb, requiredType, expr);
     if !operandHasType(cx.mod.tc, effect.result, requiredType) {
         return cx.semanticErr(msg, s:range(expr));
@@ -858,18 +859,34 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
 }
 
 function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:ListConstructorExpr expr) returns CodeGenError|ExprEffect {
-    // SUBSET always have contextually expected type for mapping constructor
-    var [resultType, atomicType] = check selectListInherentType(cx, <t:SemType>expected, expr);
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
-    foreach var [i, member] in expr.members.enumerate() {
-        bir:Operand operand;
-        t:SemType requiredType =  t:listAtomicTypeMemberAtInnerVal(atomicType, i);
-        if requiredType == t:NEVER {
-            return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
+    t:SemType resultType;
+    t:ListAtomicType atomicType;
+    if expected != () {
+        [resultType, atomicType] = check selectListInherentType(cx, expected, expr);
+        foreach var [i, member] in expr.members.enumerate() {
+            bir:Operand operand;
+            t:SemType requiredType =  t:listAtomicTypeMemberAtInnerVal(atomicType, i);
+            if requiredType == t:NEVER {
+                return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
+            }
+            { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
+            operands.push(operand);
         }
-        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
-        operands.push(operand);
+    }
+    else {
+        t:CellSemType[] memberSemTypes = [];
+        t:Env env = cx.mod.tc.env;
+        foreach s:Expr member in expr.members {
+            bir:Operand operand;
+            { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, (), member);
+            operands.push(operand);
+            memberSemTypes.push(t:cellContaining(env, operand.semType));
+        }
+        t:ListDefinition defn = new();
+        resultType = defn.define(env, memberSemTypes, memberSemTypes.length());
+        atomicType = <t:ListAtomicType>t:listAtomicType(cx.mod.tc, resultType);
     }
     check fillListOperands(cx, nextBlock, operands, atomicType, expr);
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
@@ -958,7 +975,6 @@ function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boo
 }
 
 function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
-    // SUBSET always have contextually expected type for mapping constructor
     var [resultType, mat] = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
