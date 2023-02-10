@@ -975,30 +975,53 @@ function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boo
 }
 
 function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
-    var [resultType, mat] = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
     string[] fieldNames = [];
     map<Position> fieldPos = {};
-    foreach s:Field f in expr.fields {
-        string name = f.name;
-        Position? prevPos = fieldPos[name];
-        if prevPos != () {
-            return cx.semanticErr(`duplicate field ${name}`, pos=f.startPos);
-        }
-        fieldPos[name] = f.startPos;
-        if mat.names.indexOf(name) == () {
-            if t:cellInner(mat.rest) == t:UNDEF {
-                return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
+    t:SemType resultType;
+    t:MappingAtomicType mat;
+    if expected != () {
+        [resultType, mat] = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
+        foreach s:Field f in expr.fields {
+            string name = f.name;
+            Position? prevPos = fieldPos[name];
+            if prevPos != () {
+                return cx.semanticErr(`duplicate field ${name}`, pos=f.startPos);
             }
-            else if f.isIdentifier && mat.names.length() > 0 {
-                return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
+            fieldPos[name] = f.startPos;
+            if mat.names.indexOf(name) == () {
+                if t:cellInner(mat.rest) == t:UNDEF {
+                    return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
+                }
+                else if f.isIdentifier && mat.names.length() > 0 {
+                    return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
+                }
             }
+            bir:Operand operand;
+            { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInnerVal(mat, name), f.value, "incorrect type for mapping member");
+            operands.push(operand);
+            fieldNames.push(name);
         }
-        bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInnerVal(mat, name), f.value, "incorrect type for list member");
-        operands.push(operand);
-        fieldNames.push(name);
+    }
+    else {
+        t:CellField[] fields = [];
+        t:Env env = cx.mod.tc.env;
+        foreach s:Field f in expr.fields {
+                string name = f.name;
+                Position? prevPos = fieldPos[name];
+                if prevPos != () {
+                    return cx.semanticErr(`duplicate field ${name}`, pos=f.startPos);
+                }
+                fieldPos[name] = f.startPos;
+                bir:Operand operand;
+                { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, (), f.value);
+                operands.push(operand);
+                fieldNames.push(name);
+                fields.push([name, t:cellContaining(env, operand.semType)]);
+        }
+        t:MappingDefinition defn = new();
+        resultType = defn.define(env, fields, t:cellContaining(env, t:NEVER));
     }
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, pos: expr.opPos };
