@@ -215,7 +215,6 @@ function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:F
 }
 
 function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, t:SemType requiredType, s:Expr expr, string msg) returns CodeGenError|ExprEffect {
-    // FIXME: may be we should not pass the required type
     ExprEffect effect = check codeGenExpr(cx, bb, requiredType, expr);
     if !operandHasType(cx.mod.tc, effect.result, requiredType) {
         return cx.semanticErr(msg, s:range(expr));
@@ -1017,8 +1016,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
                 fieldNames.push(name);
                 fields.push({name, ty: operand.semType});
         }
-        // TODO: remove mutablity
-        resultType = t:defineMappingTypeWrapped(new(), cx.mod.tc.env, fields, t:NEVER, t:CELL_MUT_NONE);
+        resultType = t:defineMappingTypeWrapped(new(), cx.mod.tc.env, fields, t:NEVER);
     }
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, pos: expr.opPos };
