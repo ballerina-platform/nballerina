@@ -876,16 +876,14 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
         }
     }
     else {
-        t:CellSemType[] memberSemTypes = [];
-        t:Env env = cx.mod.tc.env;
+        t:SemType[] memberSemTypes = [];
         foreach s:Expr member in expr.members {
             bir:Operand operand;
             { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, (), member);
             operands.push(operand);
-            memberSemTypes.push(t:cellContaining(env, operand.semType));
+            memberSemTypes.push(operand.semType);
         }
-        t:ListDefinition defn = new();
-        resultType = defn.define(env, memberSemTypes, memberSemTypes.length());
+        resultType = t:defineListTypeWrapped(new(), cx.mod.tc.env, memberSemTypes, memberSemTypes.length());
         atomicType = <t:ListAtomicType>t:listAtomicType(cx.mod.tc, resultType);
     }
     check fillListOperands(cx, nextBlock, operands, atomicType, expr);
@@ -980,8 +978,8 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
     string[] fieldNames = [];
     map<Position> fieldPos = {};
     t:SemType resultType;
-    t:MappingAtomicType mat;
     if expected != () {
+        t:MappingAtomicType mat;
         [resultType, mat] = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
         foreach s:Field f in expr.fields {
             string name = f.name;
@@ -1005,8 +1003,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
         }
     }
     else {
-        t:CellField[] fields = [];
-        t:Env env = cx.mod.tc.env;
+        t:Field[] fields = [];
         foreach s:Field f in expr.fields {
                 string name = f.name;
                 Position? prevPos = fieldPos[name];
@@ -1018,10 +1015,10 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
                 { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, (), f.value);
                 operands.push(operand);
                 fieldNames.push(name);
-                fields.push([name, t:cellContaining(env, operand.semType)]);
+                fields.push({name, ty: operand.semType});
         }
-        t:MappingDefinition defn = new();
-        resultType = defn.define(env, fields, t:cellContaining(env, t:NEVER));
+        // TODO: remove mutablity
+        resultType = t:defineMappingTypeWrapped(new(), cx.mod.tc.env, fields, t:NEVER, t:CELL_MUT_NONE);
     }
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, pos: expr.opPos };
@@ -1103,8 +1100,8 @@ function codeGenErrorConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? e
 }
 
 function codeGenRelationalExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:BinaryRelationalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
-    var { result: l, block: block1 } = check codeGenExpr(cx, bb, expected, left);
-    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, expected, right);
+    var { result: l, block: block1 } = check codeGenExpr(cx, bb, (), left);
+    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, (), right);
     t:Context tc = cx.mod.tc;
 
     t:SemType lType = operandSemType(tc, l);
