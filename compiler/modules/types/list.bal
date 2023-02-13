@@ -20,7 +20,7 @@ public type FixedLengthArray record {|
 public type ListMemberTypes [Range[], SemType[]];
 
 public function listAtomicTypeMemberAtInnerVal(ListAtomicType atomic, int i) returns SemType {
-    return listAtomicTypeMemberAtInner(atomic, i);
+    return cellInnerVal(listAtomicTypeMemberAt(atomic, i));
 }
 
 public function listAtomicTypeMemberAtInner(ListAtomicType atomic, int i) returns SemType {
@@ -382,7 +382,7 @@ function listSampleTypes(Context cx, FixedLengthArray members, CellSemType rest,
     int nRequired = 0;
     foreach int i in 0 ..< indices.length() {
         int index = indices[i];
-        CellSemType t = cellValCell(cx.env, listMemberAt(members, rest, index));
+        CellSemType t = cellContainingInnerVal(cx.env, listMemberAt(members, rest, index));
         if isEmpty(cx, t) {
             break;
         }

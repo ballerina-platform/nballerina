@@ -41,23 +41,25 @@ public isolated class Env {
     private int recAtomCount = 2;
 
     public isolated function init() {
-        // We are reserving the first two indexes of atomTable to represent cell VAL and cell NEVER typeAtoms. 
+        // Reserving the first two indexes of atomTable to represent cell VAL and cell NEVER typeAtoms. 
         // This is to avoid passing down env argument when doing cell type operations.
         // Please refer to the cellSubtypeDataEnsureProper() in cell.bal
         _ = self.cellAtom(CELL_ATOMIC_VAL);
         _ = self.cellAtom(CELL_ATOMIC_NEVER);
-        // We are reserving the next index of atomTable to represent typeAtoms related to (map<any|error>)[].
+        // Reserving the next index of atomTable to represent the typeAtom required to construct
+        // equivalent subtypes of map<any|error> and (any|error)[].
+        _ = self.cellAtom(CELL_ATOMIC_INNER);
+        // Reserving the next two indexes of atomTable to represent typeAtoms related to (map<any|error>)[].
         // This is to avoid passing down env argument when doing tableSubtypeComplement operation.
+        _ = self.cellAtom(CELL_ATOMIC_INNER_MAPPING);
         _ = self.listAtom(LIST_ATOMIC_MAPPING);
-        // We are reserving the next four indexes of atomTable to represent typeAtoms related to readonly type.
+        // Reserving the next three indexes of atomTable to represent typeAtoms related to readonly type.
         // This is to avoid requiring context when referring to readonly type.
-        _ = self.mappingAtom(MAPPING_ATOMIC_RO);
+        // CELL_ATOMIC_INNER_MAPPING_RO & LIST_ATOMIC_MAPPING_RO are typeAtoms reuquired to construct readonly & (map<readonly>)[]
+        // which is then used for readonly table type when constructing VAL_READONLY.
         _ = self.cellAtom(CELL_ATOMIC_INNER_MAPPING_RO);
         _ = self.listAtom(LIST_ATOMIC_MAPPING_RO);
         _ = self.cellAtom(CELL_ATOMIC_INNER_RO);
-        // We are reserving the next index of atomTable to represent typeAtom required for map<any|error>.
-        _ = self.cellAtom(CELL_ATOMIC_INNER);
-        _ = self.cellAtom(CELL_ATOMIC_INNER_MAPPING);
     }
 
     // Tests whether the Env is ready for use.
@@ -1102,16 +1104,16 @@ public function listAllMemberTypesInner(Context cx, SemType t) returns ListMembe
 }
 
 public function listAtomicType(Context cx, SemType t) returns ListAtomicType? {
-    ListAtomicType listAtomicTop = LIST_ATOMIC_INNER;
+    ListAtomicType listAtomicInner = LIST_ATOMIC_INNER;
     if t is BasicTypeBitSet {
-        return t == LIST ? listAtomicTop : ();
+        return t == LIST ? listAtomicInner : ();
     }
     else {
         Env env = cx.env;
         if !isSubtypeSimple(t, LIST) {
             return ();
         }
-        return bddListAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_LIST), listAtomicTop);    
+        return bddListAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_LIST), listAtomicInner);    
     }
 }
 
@@ -1206,16 +1208,16 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
 }
 
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
-    MappingAtomicType mappingAtomicTop = MAPPING_ATOMIC_INNER;
+    MappingAtomicType mappingAtomicInner = MAPPING_ATOMIC_INNER;
     if t is BasicTypeBitSet {
-        return t == MAPPING ? mappingAtomicTop : ();
+        return t == MAPPING ? mappingAtomicInner : ();
     }
     else {
         Env env = cx.env;
         if !isSubtypeSimple(t, MAPPING) {
             return ();
         }
-        return bddMappingAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_MAPPING), mappingAtomicTop);
+        return bddMappingAtomicType(env, <Bdd>getComplexSubtypeData(t, BT_MAPPING), mappingAtomicInner);
     }
 }
 
@@ -1311,7 +1313,7 @@ public function cellInner(CellSemType t) returns SemType {
     return (<CellAtomicType>cellAtomicType(t)).ty;
 }
 
-function cellValCell(Env env, CellSemType t) returns CellSemType {
+function cellContainingInnerVal(Env env, CellSemType t) returns CellSemType {
     CellAtomicType cat = <CellAtomicType>cellAtomicType(t);
     return cellContaining(env, diff(cat.ty, UNDEF), cat.mut);
 }
@@ -1320,8 +1322,8 @@ final CellAtomicType CELL_ATOMIC_VAL = { ty: VAL, mut: CELL_MUT_LIMITED }; // TO
 final CellAtomicType CELL_ATOMIC_INNER = { ty: INNER, mut: CELL_MUT_LIMITED };
 final CellAtomicType CELL_ATOMIC_NEVER = { ty: NEVER, mut: CELL_MUT_LIMITED };
 final CellAtomicType CELL_ATOMIC_INNER_MAPPING = { ty: union(MAPPING, UNDEF), mut: CELL_MUT_LIMITED };
-final CellAtomicType CELL_ATOMIC_INNER_RO = { ty: INNER_READONLY, mut: CELL_MUT_NONE };
 final CellAtomicType CELL_ATOMIC_INNER_MAPPING_RO = { ty: union(MAPPING_RO, UNDEF), mut: CELL_MUT_NONE };
+final CellAtomicType CELL_ATOMIC_INNER_RO = { ty: INNER_READONLY, mut: CELL_MUT_NONE };
 
 final MappingAtomicType MAPPING_ATOMIC_INNER = { names: [], types: [], rest: CELL_SEMTYPE_INNER };
 final ListAtomicType LIST_ATOMIC_INNER = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_INNER };
@@ -1329,13 +1331,12 @@ final ListAtomicType LIST_ATOMIC_MAPPING = { members: {initial: [], fixedLength:
 
 final TypeAtom ATOM_CELL_VAL = { index: 0, atomicType: CELL_ATOMIC_VAL };
 final TypeAtom ATOM_CELL_NEVER = { index: 1, atomicType: CELL_ATOMIC_NEVER };
-final TypeAtom ATOM_LIST_MAPPING = { index: 2, atomicType: LIST_ATOMIC_MAPPING };
-final TypeAtom ATOM_MAPPING_RO = { index: 3, atomicType: MAPPING_ATOMIC_RO };
-final TypeAtom ATOM_CELL_INNER_MAPPING_RO = { index: 4, atomicType: CELL_ATOMIC_INNER_MAPPING_RO };
-final TypeAtom ATOM_LIST_MAPPING_RO = { index: 5, atomicType: LIST_ATOMIC_MAPPING_RO };
-final TypeAtom ATOM_CELL_INNER_RO = { index: 6, atomicType: CELL_ATOMIC_INNER_RO };
-final TypeAtom ATOM_CELL_INNER = { index: 7, atomicType: CELL_ATOMIC_INNER };
-final TypeAtom ATOM_CELL_INNER_MAPPING = { index: 8, atomicType: CELL_ATOMIC_INNER_MAPPING };
+final TypeAtom ATOM_CELL_INNER = { index: 2, atomicType: CELL_ATOMIC_INNER };
+final TypeAtom ATOM_CELL_INNER_MAPPING = { index: 3, atomicType: CELL_ATOMIC_INNER_MAPPING };
+final TypeAtom ATOM_LIST_MAPPING = { index: 4, atomicType: LIST_ATOMIC_MAPPING };
+final TypeAtom ATOM_CELL_INNER_MAPPING_RO = { index: 5, atomicType: CELL_ATOMIC_INNER_MAPPING_RO };
+final TypeAtom ATOM_LIST_MAPPING_RO = { index: 6, atomicType: LIST_ATOMIC_MAPPING_RO };
+final TypeAtom ATOM_CELL_INNER_RO = { index: 7, atomicType: CELL_ATOMIC_INNER_RO };
 
 const BDD_REC_ATOM_READONLY = 0;
 final BddNode BDD_SUBTYPE_RO = bddAtom(BDD_REC_ATOM_READONLY); // represents both readonly & map<readonly> and readonly & readonly[]
