@@ -1100,8 +1100,8 @@ function codeGenErrorConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? e
 }
 
 function codeGenRelationalExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:BinaryRelationalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
-    var { result: l, block: block1 } = check codeGenExpr(cx, bb, (), left);
-    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, (), right);
+    var { result: l, block: block1 } = check codeGenExpr(cx, bb, expected, left);
+    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, expected, right);
     t:Context tc = cx.mod.tc;
 
     t:SemType lType = operandSemType(tc, l);
