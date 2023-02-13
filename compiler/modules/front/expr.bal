@@ -265,7 +265,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
             return codeGenEqualityExpr(cx, nextBlock, op, pos, l, r);
         }
         var { opPos: pos, relationalOp: op, left, right } => {
-            return codeGenRelationalExpr(cx, bb, expected, op, pos, left, right);
+            return codeGenRelationalExpr(cx, bb, op, pos, left, right);
         }
         var { td: _, operand: _ } => {
             // JBUG #31782 cast needed
@@ -1097,9 +1097,9 @@ function codeGenErrorConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? e
     return { result, block };
 }
 
-function codeGenRelationalExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:BinaryRelationalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
-    var { result: l, block: block1 } = check codeGenExpr(cx, bb, expected, left);
-    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, expected, right);
+function codeGenRelationalExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryRelationalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
+    var { result: l, block: block1 } = check codeGenExpr(cx, bb, (), left);
+    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, (), right);
     t:Context tc = cx.mod.tc;
 
     t:SemType lType = operandSemType(tc, l);
