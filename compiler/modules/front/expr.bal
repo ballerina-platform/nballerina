@@ -871,10 +871,44 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
         { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
         operands.push(operand);
     }
+    check fillListOperands(cx, nextBlock, operands, atomicType, expr);
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
+}
+
+function fillListOperands(ExprContext cx, bir:BasicBlock bb, bir:Operand[] operands,
+                          t:ListAtomicType atomicType, s:ListConstructorExpr expr) returns ResolveTypeError? {
+    operands.push(...from int i in operands.length() ..< atomicType.members.fixedLength select
+                     check codeGenFillerOperand(cx, bb, check listMemberFiller(cx, atomicType, i, expr), expr));
+}
+
+function codeGenFillerOperand(ExprContext cx, bir:BasicBlock bb, t:Filler filler, s:ListConstructorExpr expr) returns bir:Operand|ResolveTypeError {
+    if filler is t:WrappedSingleValue {
+        return singletonOperand(cx, filler.value);
+    }
+    bir:ListConstructInsn|bir:MappingConstructInsn insn;
+    bir:TmpRegister result = cx.createTmpRegister(filler.semType);
+    if filler is t:ListFiller {
+        bir:Operand[] operands = [];
+        check fillListOperands(cx, bb, operands, filler.atomic, expr);
+        insn = { operands: operands.cloneReadOnly(), result, pos: expr.endPos };
+    }
+    else {
+        // We don't have named mapping fields with default values
+        insn = <bir:MappingConstructInsn> { fieldNames: [], operands: [], result, pos: expr.endPos };
+    }
+    bb.insns.push(insn);
+    return result;
+}
+
+function listMemberFiller(ExprContext cx, t:ListAtomicType atomicType, int index, s:ListConstructorExpr expr) returns t:Filler|ResolveTypeError {
+    t:Filler? memberFiller = t:filler(cx.mod.tc, t:listAtomicTypeMemberAtInner(atomicType, index));
+    if memberFiller == () {
+        return cx.semanticErr("no filler value", s:range(expr));
+    }
+    return memberFiller;
 }
 
 function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListConstructorExpr expr) returns [t:SemType, t:ListAtomicType]|ResolveTypeError {

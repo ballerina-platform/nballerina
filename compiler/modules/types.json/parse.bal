@@ -287,8 +287,8 @@ function parseField(t:Context tc, Binding? b, json j, Path path) returns t:Field
             return parseError("first member of field must be a string", path, 0);
         }
         else {
-            t:SemType t = check parseType(tc, b, j[1], pathAppend(path, 1));
-            return [name, t];
+            t:SemType ty = check parseType(tc, b, j[1], pathAppend(path, 1));
+            return { name, ty };
         }
     }
 }

@@ -60,6 +60,7 @@ public function listAtomicTypeAllMemberTypesInnerVal(ListAtomicType atomicType) 
     return [ranges, types];
 }
 
+// This is list index 0 to be used by VAL_READONLY
 final ListAtomicType LIST_ATOMIC_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_INNER_RO };
 final ListAtomicType LIST_ATOMIC_MAPPING_RO = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_INNER_MAPPING_RO };
 
@@ -67,10 +68,10 @@ public class ListDefinition {
     *Definition;
     private RecAtom? rec = ();
 
-    private ComplexSemType? semType = ();
+    private SemType? semType = ();
 
-    public function getSemType(Env env) returns ComplexSemType {
-        ComplexSemType? s = self.semType;
+    public function getSemType(Env env) returns SemType {
+        SemType? s = self.semType;
         if s == () {
             RecAtom rec = env.recListAtom();
             self.rec = rec;

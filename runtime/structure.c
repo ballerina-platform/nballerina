@@ -4,61 +4,6 @@ const double F0 = +0.0;
 
 static bool tidListContains(const Tid *start, const Tid *end, Tid tid);
 
-static inline TaggedPtr listConstruct(ListDescPtr desc, int64_t capacity) {
-    return ptrAddFlags(_bal_list_construct_8(desc, capacity),
-                       ((uint64_t)TAG_LIST << TAG_SHIFT)|EXACT_FLAG);
-}
-
-Fillability _bal_structure_create_filler(MemberType memberType, StructureDescPtr fillerDesc, TaggedPtr *valuePtr) {
-    ComplexTypePtr ctp;
-    uint32_t bitSet;
-    if ((memberType & 1) == 0) {
-        ctp = (ComplexTypePtr)memberType;
-        bitSet = ctp->all | ctp->some;
-        if (fillerDesc != 0) {
-            switch (bitSet) {
-                case (1 << TAG_LIST):
-                    *valuePtr = listConstruct((ListDescPtr)fillerDesc, 0);
-                    return FILL_EACH;
-                case (1 << TAG_MAPPING):
-                    *valuePtr = _bal_mapping_construct((MappingDescPtr)fillerDesc, 0);
-                    return FILL_EACH;
-            }
-        }         
-    }
-    else {
-        ctp = 0;
-        bitSet = (uint32_t)(memberType >> 1);
-    }
-    switch (bitSet) {
-        case (1 << TAG_BOOLEAN):
-            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
-            break;
-        case (1 << TAG_INT):
-            *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
-            break;
-        case (1 << TAG_FLOAT):
-            {
-                GC double *fp = (GC double *)&F0;
-                *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
-                break;
-            }
-        case (1 << TAG_STRING):
-            _bal_string_alloc(0, 0, valuePtr);
-            break;
-        default:
-            if (bitSet & (1 << TAG_NIL)) {
-                *valuePtr = 0;
-                return FILL_COPY;
-            }
-            return FILL_NONE;
-    }
-    if (ctp == 0 || complexTypeContainsTagged(ctp, *valuePtr)) {
-        return FILL_COPY;
-    }
-    return FILL_NONE;
-}
-
 bool _bal_precomputed_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     StructurePtr sp = taggedToPtr(p);
     PrecomputedSubtypePtr pstp = (PrecomputedSubtypePtr)stp;
@@ -90,3 +35,10 @@ static bool tidListContains(const Tid *start, const Tid *end, Tid tid) {
     // start == end, so there is no such member
     return false;
 }
+
+TaggedPtr _bal_generic_filler_create(GenericFillerDescPtr fillerDesc, bool *hasIdentityPtr) {
+    *hasIdentityPtr = false;
+    return fillerDesc->genericValue;
+}
+
+const struct GenericFillerDesc _bal_nil_filler_desc = { &_bal_generic_filler_create, NIL };

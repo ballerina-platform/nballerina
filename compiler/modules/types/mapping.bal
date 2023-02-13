@@ -1,6 +1,10 @@
 // Implementation specific to basic type list.
 
-public type Field [string, SemType, boolean];
+public type Field record {|
+    string name;
+    SemType ty;
+    boolean ro = false;
+|};
 
 public type CellField [string, CellSemType];
 
@@ -24,6 +28,7 @@ public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) retur
     return i is int ? mat.types[i] : mat.rest;
 }
 
+// This is mapping index 0 to be used by VAL_READONLY
 final MappingAtomicType MAPPING_ATOMIC_RO = { names: [], types: [], rest: CELL_SEMTYPE_INNER_RO };
 
 public class MappingDefinition {
@@ -57,6 +62,7 @@ public class MappingDefinition {
             env.setRecMappingAtomType(rec, atomicType);
         }
         else if fields.length() == 0 && rest == CELL_SEMTYPE_INNER {
+            self.semType = MAPPING;
             return MAPPING;
         }
         else {
@@ -74,7 +80,7 @@ public class MappingDefinition {
 }
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
-    CellField[] cellFields = from Field f in fields select [f[0], cellContaining(env, f[1], f[2] ? CELL_MUT_NONE : mut)];
+    CellField[] cellFields = from var { name, ty, ro } in fields select [name, cellContaining(env, ty, ro ? CELL_MUT_NONE : mut)];
     CellSemType restCell = cellContaining(env, union(rest, UNDEF), rest == NEVER ? CELL_MUT_NONE : mut);
     return md.define(env, cellFields, restCell);
 }

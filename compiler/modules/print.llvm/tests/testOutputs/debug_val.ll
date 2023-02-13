@@ -1,18 +1,18 @@
-declare void @llvm.dbg.declare(metadata, metadata, metadata) nofree nosync nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) nofree nosync nounwind readnone speculatable willreturn
+declare void @llvm.dbg.declare(metadata, metadata, metadata) nocallback nofree nosync nounwind readnone speculatable willreturn
+declare void @llvm.dbg.value(metadata, metadata, metadata) nocallback nofree nosync nounwind readnone speculatable willreturn
 define i64 @main() !dbg !6 {
   %1 = alloca i64, !dbg !18
   %2 = alloca i64, !dbg !18
-  %3 = alloca i8 addrspace(1)*, !dbg !18
-  call void @llvm.dbg.declare(metadata i64* %2, metadata !11, metadata !16), !dbg !18
-  call void @llvm.dbg.declare(metadata i8 addrspace(1)** %3, metadata !15, metadata !16), !dbg !18
-  store i64 10, i64* %1, !dbg !18
-  store i64 15, i64* %2, !dbg !18
+  %3 = alloca ptr addrspace(1), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %2, metadata !11, metadata !16), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %3, metadata !15, metadata !16), !dbg !18
+  store i64 10, ptr %1, !dbg !18
+  store i64 15, ptr %2, !dbg !18
   call void @llvm.dbg.value(metadata i64 10, metadata !9, metadata !16), !dbg !18
-  %4 = load i64, i64* %1, !dbg !19
+  %4 = load i64, ptr %1, !dbg !19
   %5 = add i64 %4, 1, !dbg !19
   call void @llvm.dbg.value(metadata i64 %5, metadata !9, metadata !16), !dbg !19
-  store i64 20, i64* %2, !dbg !19
+  store i64 20, ptr %2, !dbg !19
   ret i64 %5, !dbg !20
 }
 !llvm.dbg.cu = !{!1}

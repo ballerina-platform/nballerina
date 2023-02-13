@@ -327,14 +327,13 @@ public class Module {
         if name is IntegerArithmeticIntrinsicName {
             return self.addIntrinsic(name,
                                      { returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"] },
-                                     ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
+                                     ["nocallback", "nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
 
         }
         else {
-            GeneralIntrinsicName _ = name;
             return self.addIntrinsic(name,
                                      { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] },
-                                     ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
+                                     ["nocallback", "nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
         }
     }
 
@@ -342,7 +341,7 @@ public class Module {
         boolean fnExisting = self.globals[name] != ();
         if !fnExisting {
             _ = self.addIntrinsic(name, { returnType: "void", paramTypes: ["metadata", "metadata", "metadata"]},
-                                  ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
+                                  ["nocallback","nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
         }
     }
 
@@ -1535,24 +1534,13 @@ function sameIntegralType(Value v1, Value v2) returns IntegralType {
     panic err:illegalArgument("expected an integral type");
 }
 
-function sameNumberType(Value v1, Value v2) returns IntType|FloatType {
-    Type ty1 = v1.ty;
-    Type ty2 = v2.ty;
-    if ty1 != ty2 {
-        panic err:illegalArgument("expected same types");
-    }
-    else if ty1 is IntType || ty1 is FloatType {
-        return ty1;
-    }
-    panic err:illegalArgument("expected a number type");
-}
-
 function typeToString(RetType ty, Context context, boolean forceInline=false) returns string {
     if ty is PointerType {
+        includeNamedType(ty, context);
         if ty.addressSpace == 0 {
-            return typeToString(ty.pointsTo, context) + "*";
+            return forceInline ? typeToString(ty.pointsTo, context) : "ptr";
         } else {
-            return createLine([typeToString(ty.pointsTo, context), "addrspace", "(", ty.addressSpace.toString(), ")", "*"]);
+            return createLine([forceInline ? typeToString(ty.pointsTo, context) : "ptr", "addrspace", "(", ty.addressSpace.toString(), ")"]);
         }
     }
     else if ty is StructType {
@@ -1607,6 +1595,31 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
     }
     else {
         return ty;
+    }
+}
+
+// use to mark a named struct type as used (so we include that type in output) when it is referenced via a pointer
+function includeNamedType(RetType ty, Context context) {
+    if ty is PointerType {
+        includeNamedType(ty.pointsTo, context);
+    }
+    else if ty is StructType {
+        Type[] elementTypes = ty.name == () ? ty.elementTypes : context.getNamedStructBody(ty);
+        if ty.name != () {
+            return;
+        }
+        foreach Type element in elementTypes {
+            includeNamedType(element, context);
+        }
+    }
+    else if ty is ArrayType {
+        includeNamedType(ty.elementType, context);
+    }
+    else if ty is FunctionType {
+        foreach Type paramType in ty.paramTypes {
+            includeNamedType(paramType, context);
+        }
+        includeNamedType(ty.returnType, context);
     }
 }
 
@@ -1778,15 +1791,6 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
         }
     }
     return pointerType(resultType, resultAddressSpace);
-}
-
-function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
-    boolean isNamed = ty.name != ();
-    Type[] elementTypes = ty.elementTypes;
-    if isNamed {
-        elementTypes = context.getNamedStructBody(ty);
-    }
-    return elementTypes[index];
 }
 
 function bitCastArgs((string|Unnamed)[] words, Value val, PointerType destTy, Context context) {

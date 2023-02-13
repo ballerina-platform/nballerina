@@ -9,11 +9,11 @@ plugins{
 }
 
 repositories {
-        mavenCentral()
+        maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 }
 
 dependencies {
-        implementation 'org.bytedeco:llvm-platform:13.0.1-1.5.7'
+        implementation 'org.bytedeco:llvm-platform:15.0.6-1.5.9-SNAPSHOT'
 }
 
 String balConfig = 'Ballerina.toml'

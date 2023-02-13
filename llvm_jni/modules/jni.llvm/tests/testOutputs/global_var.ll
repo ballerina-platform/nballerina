@@ -7,5 +7,5 @@
 @g7 = global { i64, i64 } { i64 1, i64 2 }
 
 define i64 @testFn() {
-  ret i64 add (i64 ptrtoint (i64* @g1 to i64), i64 ptrtoint (i64 addrspace(2)* @g2 to i64))
+  ret i64 add (i64 ptrtoint (ptr @g1 to i64), i64 ptrtoint (ptr addrspace(2) @g2 to i64))
 }

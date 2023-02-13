@@ -21,15 +21,20 @@ public distinct class Function {
     final handle LLVMValueRef;
     final FunctionType fnType;
     final Context context;
-    function init(handle llvmFunction, FunctionType fnType, Context context) {
+    final PointerType ty;
+    final handle LLVMTypeRef;
+    function init(handle llvmFunction, FunctionType fnType, Context context, handle llvmType) {
         self.LLVMValueRef = llvmFunction;
         jLLVMSetFunctionCallConv(llvmFunction, 0);
         self.fnType = fnType;
         self.context = context;
+        self.ty = pointerType(fnType);
+        self.LLVMTypeRef = llvmType;
     }
 
     public function getParam(int index) returns Value {
-        return new (jLLVMGetParam(self.LLVMValueRef, index));
+        Type paramTy = self.fnType.paramTypes[index];
+        return new (jLLVMGetParam(self.LLVMValueRef, index), paramTy);
     }
 
     public function appendBasicBlock(string? label = ()) returns BasicBlock {
