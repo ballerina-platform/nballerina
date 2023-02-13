@@ -306,10 +306,12 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         // List construct
         // JBUG #33309 should be able to use just `var { members }`
         var listConstructorExpr if listConstructorExpr is s:ListConstructorExpr => {
+            check cx.notInConst(expr);
             return codeGenListConstructor(cx, bb, expected, listConstructorExpr);  
         }
         // Mapping construct
         var mappingConstructorExpr if mappingConstructorExpr is s:MappingConstructorExpr  => {
+            check cx.notInConst(expr);
             return codeGenMappingConstructor(cx, bb, expected, mappingConstructorExpr);  
         }
         // Error construct
