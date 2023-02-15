@@ -7,7 +7,7 @@ public function main() {
     foo2({a: 2, b: 3 }); // @output working
 }
 
-// function call arguments get thier expected type from the function type
+// function call arguments get their expected type from the function type
 function foo(any b) {
     if b is record {| int a; int b; |} {
         io:println("unexpected");

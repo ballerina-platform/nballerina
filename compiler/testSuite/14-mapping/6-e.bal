@@ -1,4 +1,1 @@
-import ballerina/io;
-public function main() {
-    io:println({a: 1, b: 2}.d); // @error
-}
+const a = {x: 1, y: 2}; // @error

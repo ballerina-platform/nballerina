@@ -882,7 +882,8 @@ function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? ex
             bir:Operand operand;
             { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, (), member);
             operands.push(operand);
-            memberSemTypes.push(operand.semType);
+            t:SemType broadType = t:singleShape(operand.semType) == () ? operand.semType : t:widenToBasicTypes(operand.semType);
+            memberSemTypes.push(broadType);
         }
         resultType = t:defineListTypeWrapped(new(), cx.mod.tc.env, memberSemTypes, memberSemTypes.length());
         atomicType = <t:ListAtomicType>t:listAtomicType(cx.mod.tc, resultType);
@@ -1016,7 +1017,8 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
                 { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, (), f.value);
                 operands.push(operand);
                 fieldNames.push(name);
-                fields.push({name, ty: operand.semType});
+                t:SemType broadType = t:singleShape(operand.semType) == () ? operand.semType : t:widenToBasicTypes(operand.semType);
+                fields.push({name, ty: broadType});
         }
         resultType = t:defineMappingTypeWrapped(new(), cx.mod.tc.env, fields, t:NEVER);
     }
