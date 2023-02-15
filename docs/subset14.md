@@ -234,7 +234,7 @@ simple-const-expr =
    | "-" floating-point-literal
    | const-reference-expr
 
-expression = logical-or-expr 
+expression = logical-or-expr
 
 const-expr = logical-or-expr # must also satisfy restrictions of const-expr as in Ballerina language spec
 
@@ -315,7 +315,7 @@ primary-expr =
   | function-call-expr
   | method-call-expr
   | variable-reference-expr
-  | list-constructor-expr 
+  | list-constructor-expr
   | mapping-constructor-expr
   | "(" expression ")"
 
@@ -404,7 +404,7 @@ Two kinds of `import` are supported.
 
 * Tuple types
 * Rest param in function definition
-* Remove restrictions on where a `list-constructor-expr` or `mapping-constructor-expr` can occur.
+* Allow `list-constructor-expr` and `mapping-constructor-expr` without a contextually expected type
 
 ## Implemented spec changes since 2022R1
 
