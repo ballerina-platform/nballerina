@@ -187,10 +187,6 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
         if fixedArrayAnyEmpty(cx, members) {
             return true;
         }
-        // Ensure that we can use isNever on rest in listInhabited
-        if cellInnerVal(rest) != NEVER && isEmpty(cx, rest) {
-            rest = cellContaining(cx.env, UNDEF, CELL_MUT_NONE);
-        }
     }
     int[] indices = listSamples(cx, members, rest, neg);
     var [memberTypes, nRequired] = listSampleTypes(cx, members, rest, indices);
