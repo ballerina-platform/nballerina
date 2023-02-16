@@ -6,10 +6,10 @@ type BroadType record {|
 |};
 
 public function main() {
-    if {a: 1, b: 2.0 } is BroadType {
+    if { a: 1, b: 2.0 } is BroadType {
         io:println("correct"); // @output correct
     }
-    if {x: {a: 2, b: 3.0 }}.x is BroadType {
+    if { x: { a: 2, b: 3.0 } }.x is BroadType {
         io:println("correct"); // @output correct
     }
 }

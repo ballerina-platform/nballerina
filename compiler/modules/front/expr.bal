@@ -1018,7 +1018,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
                 operands.push(operand);
                 fieldNames.push(name);
                 t:SemType broadType = t:singleShape(operand.semType) == () ? operand.semType : t:widenToBasicTypes(operand.semType);
-                fields.push({name, ty: broadType});
+                fields.push({ name, ty: broadType });
         }
         resultType = t:defineMappingTypeWrapped(new(), cx.mod.tc.env, fields, t:NEVER);
     }

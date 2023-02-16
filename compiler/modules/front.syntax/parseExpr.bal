@@ -345,15 +345,13 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         var [members, _] = check parseExprList(tok, "]");
         endPos = tok.previousEndPos();
-        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members };
-        return expr;
+        return { startPos, endPos, opPos: startPos, members };
     }
     else if t == "{" {
         check tok.advance();
         Field[] fields = check parseFields(tok);
         endPos = tok.previousEndPos();
-        MappingConstructorExpr expr = { startPos, endPos, opPos: startPos, fields };
-        return expr;
+        return { startPos, endPos, opPos: startPos, fields };
     }
     else {
         return parseError(tok);

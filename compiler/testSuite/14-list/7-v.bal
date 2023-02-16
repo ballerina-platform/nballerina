@@ -1,10 +1,10 @@
 import ballerina/io;
 
 public function main() {
-    foo([2, 2]); // @output working
-    foo([2, 3]); // @output working
-    foo1([2, 3]); // @output working
-    foo2([2, 3]);
+    foo([2, 2]); // @output a is any
+    foo([2, 3]); // @output a is any
+    foo1([2, 3]); // @output a is int[]
+    foo2([2, 3]); // @output a is [2,3]
 }
 
 // function call arguments get their expected type from the function type
@@ -15,8 +15,11 @@ function foo(any a) {
     if a is [int, int] {
         io:println("unexpected");
     }
+    if a is int[] {
+        io:println("unexpected");
+    }
     else {
-        io:println("working");
+        io:println("a is any");
     }
 }
 
@@ -28,15 +31,12 @@ function foo1(int[] a) {
         io:println("unexpected");
     }
     else {
-        io:println("working");
+        io:println("a is int[]");
     }
 }
 
 function foo2([2,3] a) {
     if a is [2, 3] {
-        io:println("working"); // @output working
-    }
-    if a is [int, int] {
-        io:println("working"); // @output working
+        io:println("a is [2,3]");
     }
 }

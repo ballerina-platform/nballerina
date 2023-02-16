@@ -236,7 +236,7 @@ simple-const-expr =
 
 expression = logical-or-expr
 
-const-expr = logical-or-expr # must also satisfy restrictions of const-expr as in Ballerina language spec
+const-expr = logical-or-expr # must also satisfy restrictions of const-expr as in Ballerina language spec and should be neither list-constructor-expr nor mapping-constructor-expr
 
 const-reference-expr = identifier | qualified-identifier # must refer to something defined with a const-decl
 

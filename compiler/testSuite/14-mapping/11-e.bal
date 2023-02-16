@@ -1,3 +1,3 @@
 function panicWithMapping() {
-    panic { message: "ee"};  // @error
+    panic { message: "ee" };  // @error
 }
