@@ -398,6 +398,7 @@ Two kinds of `import` are supported.
 
 ## Notes
 
+* `list-constructor-expr` and `mapping-constructor-expr` are not allowed as `const-expr`.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
 
 ## Additions from subset 13
