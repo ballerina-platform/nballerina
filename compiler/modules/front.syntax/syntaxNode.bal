@@ -263,7 +263,7 @@ function syntaxNodeFromBreakContinueStmt(BreakContinueStmt stmt) returns NonTerm
 
 function syntaxNodeFromCallStmt(CallStmt stmt) returns NonTerminalSyntaxNode {
     return finishWithSemiColon(stmt,
-                               syntaxNodeFromExpr(stmt.expr));
+                               syntaxNodeFromExpr(stmt.callExpr));
 }
 
 function syntaxNodeFromExpr(Expr expr) returns SubSyntaxNode {
@@ -316,7 +316,7 @@ function syntaxNodeFromExpr(Expr expr) returns SubSyntaxNode {
 
 function syntaxNodeFromGroupingExpr(GroupingExpr expr) returns NonTerminalSyntaxNode {
     return nonTerminalSyntaxNode(expr, { token: "(", pos: expr.startPos },
-                                       syntaxNodeFromExpr(expr.innerExpr),
+                                       syntaxNodeFromExpr(expr.expr),
                                        { token: ")" });
 }
 

@@ -224,8 +224,8 @@ function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, t:SemType require
 
 function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
-        var { innerExpr } => {
-            return codeGenExpr(cx, bb, expected, innerExpr);
+        var { expr: groupedExpr } => {
+            return codeGenExpr(cx, bb, expected, groupedExpr);
         }
         var { opPos: pos, arithmeticOp: op, left, right } => {
             var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, expected, left, right, bb, pos);
@@ -363,8 +363,8 @@ function codeGenExprForCond(ExprContext cx, bir:BasicBlock bb, s:Expr expr, Prev
     bir:BasicBlock block;
 
     match expr {
-        var { innerExpr } => {
-            return codeGenExprForCond(cx, bb, innerExpr, prevs);
+        var { expr: groupedExpr } => {
+            return codeGenExprForCond(cx, bb, groupedExpr, prevs);
         }
         var { td, left, negated, kwPos: pos } => {
             t:SemType semType = check cx.resolveTypeDesc(td);

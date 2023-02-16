@@ -319,9 +319,9 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
             LiteralExpr expr = { startPos, endPos, value: () };
             return expr;
         }
-        Expr innerExpr = check parseExpr(tok);
+        Expr expr = check parseExpr(tok);
         endPos = check tok.expectEnd(")");
-        return { startPos, endPos, innerExpr };
+        return { startPos, endPos, expr };
     }
     else if t is "true"|"false" {
         check tok.advance();

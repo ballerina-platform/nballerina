@@ -108,7 +108,7 @@ function innerSyntaxNode(SubSyntaxNode node) returns SubSyntaxNode {
 function innerAstNode(AstNode node) returns AstNode {
     AstNode innerNode = node;
     while innerNode is GroupingExpr || (innerNode is UnaryTypeDesc && innerNode.op == "(") {
-        innerNode = innerNode is GroupingExpr ? innerNode.innerExpr : innerNode.td;
+        innerNode = innerNode is GroupingExpr ? innerNode.expr : innerNode.td;
     }
     return innerNode;
 }
