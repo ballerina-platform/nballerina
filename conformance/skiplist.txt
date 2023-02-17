@@ -12,8 +12,27 @@ HexFloatingPointLiteral
 infer-anonymous-function-expr
 inferred-array-length
 infinity
+int:abs
+int:fromHexString
+int:fromString
+int:max
 int:MAX_VALUE
+int:min
 int:MIN_VALUE
+int:SIGNED16_MAX_VALUE
+int:SIGNED16_MIN_VALUE
+int:SIGNED32_MAX_VALUE
+int:SIGNED32_MIN_VALUE
+int:SIGNED8_MAX_VALUE
+int:SIGNED8_MIN_VALUE
+int:sum
+int:toHexString
+int:UNSIGNED16_MAX_VALUE
+int:UNSIGNED16_MIN_VALUE
+int:UNSIGNED32_MAX_VALUE
+int:UNSIGNED32_MIN_VALUE
+int:UNSIGNED8_MAX_VALUE
+int:UNSIGNED8_MIN_VALUE
 is-expr list-constructor-expr
 json
 let-expr
