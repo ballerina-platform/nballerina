@@ -195,7 +195,7 @@ function parseCharSeparatedList(string s, string:Char sep) returns string[] {
 
 // these are the test ids for tests we currently can't automatically fix by this script, tests are numbered starting with 1
 map<int[]> skipTest = {
-    "list_constructor.balt": [6, 13, 15, 37, 49, 50], // #1003, JBUG, JBUG, BUG, #576, #576
+    "list_constructor.balt": [6, 13, 15], // #1003, JBUG, JBUG
     "negation_is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
     "is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
     // decimal presentation JBUG #1046
@@ -204,13 +204,13 @@ map<int[]> skipTest = {
     "fixed_length_array_member_access_expr.balt": [14], // member access on a list constructor expr #1003
     // not allowed under current grammar
     "mapping_constructor_expr.balt": [8, 13, 11, 12], // unicode in the field name 8, 13; variable-name-field 11, 12
+    // unary plus
+    "shift_expression.balt": [2],
     // unused variable
     "signed8.balt": [2],
     "signed32.balt": [2],
     "right_shift.balt": [47],
-    "unsigned_right_shift.balt": [47, 146],
-    // unary plus
-    "shift_expression.balt": [2]
+    "unsigned_right_shift.balt": [47, 146]
 };
 
 function outputTest(BaltTestCase[] tests, string dir, string filename, string[][] skipLabels) returns int|io:Error {
