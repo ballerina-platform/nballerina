@@ -19,7 +19,7 @@ type Job record {|
     ProcessedImport|JOB_IN_PROGRESS? result;
 |};
 
-public type Emitter object {
+type Emitter object {
    // Build and write the output to a file.
    function emitModule(bir:Module birMod) returns CompileError?;
    // Called after all calls to emitModule.
@@ -56,6 +56,24 @@ class LlvmEmitter {
         if outputBasename != () {
             check outputModule(initMod, outputFilename(outputBasename, ["_init"], ".ll"), self.outputOptions);
         }
+    }
+}
+
+class BirEmitter {
+    *Emitter;
+    private final string outputBasename;
+
+    function init(string outputBasename) {
+        self.outputBasename = outputBasename;
+    }
+
+    function emitModule(bir:Module birMod) returns CompileError? {
+        string bir = check tback:toBirText(birMod);
+        bir:ModuleId id = birMod.getId();
+        check io:fileWriteString(outputFilename(self.outputBasename, id.names.slice(1), ".bir"), bir);
+    }
+
+    function finalize(t:Env env, map<bir:FunctionSignature> potentialEntryFuncs) returns CompileError? {
     }
 }
 

@@ -3,13 +3,11 @@ public type Indenter function(int[]) returns boolean;
 
 public function prettyPrint(Data[] topLevel, Indenter? indentAt = ()) returns string {
     string[] buf = [];
-    foreach var l in topLevel {
-        append(buf, indentAt, l, 0, []);
-    }
+    append(buf, indentAt, topLevel, -1, [], topLevel = true);
     return "".'join(...buf);
 }
 
-function append(string[] buf, Indenter? indentAt, Data sexpr, int level, int[] index, boolean space = false) {
+function append(string[] buf, Indenter? indentAt, Data sexpr, int level, int[] index, boolean space = false, boolean topLevel = false) {
     if sexpr is Data[] {
         if indentAt != () && indentAt(index) {
             buf.push("\n");
@@ -20,7 +18,7 @@ function append(string[] buf, Indenter? indentAt, Data sexpr, int level, int[] i
         else if space {
             buf.push(" ");
         }
-        buf.push("(");
+        pushIf(!topLevel, buf, "(");
         boolean afterFirst = false;
         index.push(0);
         int indexLast = index.length() - 1;
@@ -30,19 +28,23 @@ function append(string[] buf, Indenter? indentAt, Data sexpr, int level, int[] i
             afterFirst = true;
         }
         _ = index.pop();
-        buf.push(")");
-        return;
+        pushIf(!topLevel, buf, ")");
     }
-    if space {
-        buf.push(" ");
-    }
-    if sexpr is String {
+    else if sexpr is String {
+        pushIf(space, buf, " ");
         buf.push("\"");
         appendQuoted(buf, sexpr.s);
         buf.push("\"");
     }
     else {
+        pushIf(space, buf, " ");
         buf.push(sexpr.toString());
+    }
+}
+
+function pushIf(boolean cond, string[] buf, string s) {
+    if cond {
+        buf.push(s);
     }
 }
 
