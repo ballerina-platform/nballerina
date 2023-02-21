@@ -33,7 +33,7 @@ function append(string[] buf, Indenter? indentAt, Data sexpr, int level, int[] i
     else if sexpr is String {
         pushIf(space, buf, " ");
         buf.push("\"");
-        appendQuoted(buf, sexpr.s);
+        appendEscaped(buf, sexpr.s);
         buf.push("\"");
     }
     else {
@@ -48,13 +48,20 @@ function pushIf(boolean cond, string[] buf, string s) {
     }
 }
 
-function appendQuoted(string[] buf, string str) {
-    int begin = 0;
-    int? loc = str.indexOf("\"");
-    while loc != () {
-        buf.push(str.substring(begin, loc), "\\");
-        begin = loc;
-        loc = str.indexOf("\"", begin + 1);
+function appendEscaped(string[] buf, string str) {
+    int[] chars = str.toCodePointInts();
+    foreach var c in chars {
+        if c == BACKSLASH {
+            buf.push(string`\\`);
+        }
+        else if c == LINE_FEED {
+            buf.push(string`\n`);
+        }
+        else if c == QUOTE {
+            buf.push(string`\"`);
+        }
+        else {
+            buf.push(checkpanic string:fromCodePointInt(c));
+        }
     }
-    buf.push(str.substring(begin, str.length()));
 }

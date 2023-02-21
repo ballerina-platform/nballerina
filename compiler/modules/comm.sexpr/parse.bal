@@ -42,14 +42,13 @@ class Tokenizer {
         }
         if c == QUOTE {
             int[] quoted = [];
+            boolean escaped = false;
             while true {
                 int q = self.nextChar();
-                if q == BACKSLASH {
-                    q = self.nextChar();
+                if q == QUOTE && !escaped {
+                    return { s: check unescape(quoted) };
                 }
-                else if q == QUOTE {
-                    return { s: check string:fromCodePointInts(quoted) };
-                }
+                escaped = q == BACKSLASH && !escaped;
                 quoted.push(q);
             }
         }
@@ -116,4 +115,22 @@ function parseList(Tokenizer t) returns Data|error {
             }
         }
     }
+}
+
+function unescape(int[] escaped) returns string|error {
+    int[] unescaped = [];
+    int i = 0;
+    while i < escaped.length() {
+        int c = escaped[i];
+        if c == BACKSLASH {
+            i += 1;
+            c = escaped[i];
+            if c == 0x6E { // 0x6E = 'n'
+                c = LINE_FEED;
+            }
+        }
+        unescaped.push(c);
+        i += 1;
+    }
+    return check string:fromCodePointInts(unescaped);
 }

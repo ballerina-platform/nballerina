@@ -1,48 +1,46 @@
 import ballerina/test;
 
-@test:Config{
-    dataProvider: sexprParseTestAllCases
+enum TestKind {
+    CANON,
+    LOSSY
 }
-function testSexprParse(string subject, Data[] expected) returns error? {
+
+final map<[TestKind, string, Data[]]> testCases = { // JBUG: doesn't run if type is readonly
+    "empty"              : [CANON, "", []],
+    "singleton"          : [CANON, "()", [[]]],
+    "strings"            : [CANON, string`("hello" "world")`, [[{ s: "hello" },{ s: "world" }]]],
+    "string backslash"   : [CANON, string`("\\")`, [[{ s: "\\" }]]],
+    "string semicolon"   : [CANON, string`(";;not a comment;;")`, [[{ s: ";;not a comment;;" }]]],
+    "string newline"     : [CANON, string`("\n")`, [[{ s: "\n" }]]],
+    "string quote"       : [CANON, string`("\"")`, [[{ s: "\"" }]]],
+    "string quotes"      : [CANON, string`("\"\"")`, [[{ s: "\"\"" }]]],
+    "string quotes word" : [CANON, string`("some \"quoted\" string")`, [[{ s: "some \"quoted\" string" }]]],
+    "empty space"        : [LOSSY, " ", []],
+    "singleton newline"  : [LOSSY, "\n ( \n )", [[]]],
+    "multiline string"   : [LOSSY, "(\"\n\")", [[{ s: "\n" }]]],
+    "comment"            : [LOSSY, ";; comment\n(true)", [[true]]],
+    "space"              : [LOSSY, " (42)", [[42]]],
+    "trailing garbage"   : [LOSSY, "() trailing garbage", [[]]],
+    "string extra escape": [LOSSY, string`("\apple")`, [[{ s: "apple" }]]]
+};
+
+function sexprParseTestCases() returns map<[TestKind, string, Data[]]> => testCases;
+
+@test:Config{
+    dataProvider: sexprParseTestCases
+}
+function testSexprParse(TestKind kind, string subject, Data[] expected) returns error? {
     test:assertEquals(check parse(subject), expected);
 }
 
 @test:Config{
-    dataProvider: sexprParseTestCanonCases
+    dataProvider: sexprParseTestCases
 }
-function testSexprPrint(string expected, Data[] subject) returns error? {
-    test:assertEquals(prettyPrint(subject), expected);
-}
-
-final [string, Data[]][] & readonly canon = [
-    ["", []],
-    ["()", [[]]],
-    [string`("hello" "world")`, [[{ s: "hello" },{ s: "world" }]]],
-    [string`("\"\"")`, [[{ s: "\"\"" }]]],
-    [string`("some \"quoted\" string")`, [[{ s: "some \"quoted\" string" }]]]
-];
-
-final [string, Data[]][] & readonly lossy = [
-    [" ", []],
-    ["\n ( \n )", [[]]],
-    [string`("\hello")`, [[{ s: "hello" }]]]
-];
-
-function sexprParseTestCanonCases() returns map<[string, Data[]]> {
-    map<[string, Data[]]> tests = {};
-    addTests(canon, tests);
-    return tests;
-}
-
-function sexprParseTestAllCases() returns map<[string, Data[]]> {
-    map<[string, Data[]]> tests = {};
-    addTests(canon, tests);
-    addTests(lossy, tests);
-    return tests;
-}
-
-function addTests([string, Data[]][] & readonly src, map<[string, Data[]]> dest) {
-    foreach var [k, v] in src {
-        dest[k] = [k, v];
+function testSexprPrint(TestKind kind, string expected, Data[] subject) returns error? {
+    if kind == CANON {
+        test:assertEquals(prettyPrint(subject), expected);
+    }
+    else {
+        test:assertNotEquals(prettyPrint(subject), expected);
     }
 }
