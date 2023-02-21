@@ -332,20 +332,20 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
 function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     string name = insn.name;
     if insn is IntBinaryInsn {
-        // XXX need to check result also
-        // different rules for bitwise
-        check validOperandInt(vc, name, insn.operands[0], insn.pos);
-        check validOperandInt(vc, name, insn.operands[1], insn.pos);
+        check verifyIntBinary(vc, insn);
     }
     if insn is FloatArithmeticBinaryInsn {
-        check validOperandFloat(vc, name, insn.operands[0], insn.pos);
-        check validOperandFloat(vc, name, insn.operands[1], insn.pos);
+        check verifyFloatArithmeticBinary(vc, insn);
     }
     if insn is FloatNegateInsn {
+        // TODO: common pattern with boolean not
+        // Function that takes operand, result and predicate?
         check validOperandFloat(vc, name, insn.operand, insn.pos);
+        check validOperandFloat(vc, name, insn.result, insn.pos);
     }
     else if insn is BooleanNotInsn {
         check validOperandBoolean(vc, name, insn.operand, insn.pos);
+        check validOperandBoolean(vc, name, insn.result, insn.pos);
     }
     else if insn is CompareInsn {
         check verifyCompare(vc, insn);
@@ -406,8 +406,48 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
 }
 
+function verifyIntBinary(VerifyContext vc, IntBinaryInsn insn) returns Error? {
+    check validOperandInt(vc, insn.name, insn.operands[0], insn.pos);
+    check validOperandInt(vc, insn.name, insn.operands[1], insn.pos);
+    if insn is IntArithmeticBinaryInsn {
+        return validOperandInt(vc, insn.name, insn.result, insn.pos);
+    }
+    t:SemType resultTy = insn.result.semType;
+    t:SemType lhsWidenedType = t:widenUnsigned(insn.operands[0].semType);
+    t:SemType rhsWidenedType = t:widenUnsigned(insn.operands[1].semType);
+    match insn.op {
+        "&" => {
+            if !vc.isSameType(resultTy, t:intersect(lhsWidenedType, rhsWidenedType)) {
+                return vc.invalidErr(`result type is not the intersection of the operand types`, insn.pos);
+            }
+        }
+        "|" | "^" => {
+            if !vc.isSameType(resultTy, t:union(lhsWidenedType, rhsWidenedType)) {
+                return vc.invalidErr(`result type is not the union of the operand types`, insn.pos);
+            }
+        }
+        ">>" | ">>>" => {
+            t:SemType expectedTy = vc.isSubtype(lhsWidenedType, t:intWidthUnsigned(32)) ? lhsWidenedType : t:INT;
+            if !vc.isSameType(resultTy, expectedTy) {
+                return vc.invalidErr(`result type of right shift is invalid`, insn.pos);
+            }
+        }
+        _ => {
+            if !vc.isSameType(resultTy, t:INT) {
+                return vc.invalidErr(`result type of left shift is invalid`, insn.pos);
+            }
+        }
+    }
+}
+
+function verifyFloatArithmeticBinary(VerifyContext vc, FloatArithmeticBinaryInsn insn) returns Error? {
+    check validOperandFloat(vc, insn.name, insn.operands[0], insn.pos);
+    check validOperandFloat(vc, insn.name, insn.operands[1], insn.pos);
+    // TODO: is there a special case for result?
+    return validOperandFloat(vc, insn.name, insn.result, insn.pos);
+}
+
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
-    // XXX verify insn.semType
     FunctionRef func = <FunctionRef>insn.func;
     FunctionSignature sig = func.signature;
     int nSuppliedArgs = insn.args.length();
@@ -423,6 +463,9 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     }
     foreach int i in 0 ..< nSuppliedArgs {
         check validOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
+    }
+    if !vc.isSameType(insn.result.semType, sig.returnType) {
+        return vc.invalidErr(`result type of call is not the same as the return type of the function`, insn.pos);
     }
 }
 
@@ -551,6 +594,10 @@ function verifyConvertToFloat(VerifyContext vc, ConvertToFloatInsn insn) returns
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Internal? {
     if !t:comparable(vc.typeContext(), operandToSemType(insn.operands[0]), operandToSemType(insn.operands[1])) {
         return vc.invalidErr(`operands of ${insn.op} do not belong to an ordered type`, insn.pos);
+    }
+    // TODO: we need have a function that does this similar to valid operand boolean
+    if !vc.isSameType(insn.result.semType, t:BOOLEAN) {
+        return vc.invalidErr(`result of ${insn.op} is not boolean`, insn.pos);
     }
 }
 
