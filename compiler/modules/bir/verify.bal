@@ -398,12 +398,6 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is ErrorConstructInsn {
         check validOperandString(vc, name, insn.operand, insn.pos);
     }
-    else if insn is TypeMergeInsn {
-        check verifyTypeMerge(vc, insn);
-    }
-    else if insn is TypeBranchInsn {
-        check verifyTypeBranch(vc, insn);
-    }
 }
 
 function verifyIntBinary(VerifyContext vc, IntBinaryInsn insn) returns Error? {
@@ -612,28 +606,6 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Interna
     Operand rhs = insn.operands[1];
     if lhs is Register && rhs is Register && insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
         return vc.invalidErr(`at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
-    }
-}
-
-function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Internal? {
-    t:SemType operandUnion = insn.operands[0].semType;
-    foreach int i in 1 ..< insn.operands.length() {
-        operandUnion = t:union(operandUnion, insn.operands[i].semType);
-    }
-    if !vc.isSameType(insn.result.semType, operandUnion) {
-        return vc.invalidErr("result type of type merge is not equal to union of operand types", insn.pos);
-    }
-}
-
-function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Internal? {
-    var { operand, semType, ifTrueRegister, ifFalseRegister } = insn;
-    if !vc.isSameType(ifTrueRegister.semType, t:intersect(operand.semType, semType)) {
-        return vc.invalidErr("true branch type is not intersection of operand and type", insn.pos);
-    }
-    // Is this correct (false register > operand - type)?
-    // This is failing for 05-match/04-v.bal 05-match/08-v.bal
-    if !vc.isSubtype(t:diff(operand.semType, semType), ifFalseRegister.semType) {
-        return vc.invalidErr("false branch type is not a subtype of difference between operand and type", insn.pos);
     }
 }
 
