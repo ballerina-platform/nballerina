@@ -398,6 +398,48 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is ErrorConstructInsn {
         check validOperandString(vc, name, insn.operand, insn.pos);
     }
+    else if insn is TypeMergeInsn {
+        check verifyTypeMerge(vc, insn);
+    }
+    else if insn is TypeBranchInsn {
+        check verifyTypeBranch(vc, insn);
+    }
+}
+
+function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Internal? {
+    Register unnarrowedOp = unnarrow(insn.result);
+    SemType union = t:NEVER;
+    foreach Register r in insn.operands {
+        if unnarrowedOp.number != unnarrow(r).number {
+            return vc.invalidErr("underlying Register of NarrowRegister is incorrect", insn.pos);
+        }
+        union = t:union(union, r.semType);
+    }
+    if !t:isSubtype(vc.typeContext(), union, insn.result.semType) {
+        return vc.invalidErr("result type of TypeMerge is not a subtype of operand types", insn.pos);
+    }
+}
+
+function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Internal? {
+    Register unnarrowedOp = unnarrow(insn.operand);
+    if unnarrowedOp.number != unnarrow(insn.ifFalseRegister).number || unnarrowedOp.number != unnarrow(insn.ifTrueRegister).number {
+        return vc.invalidErr("underlying Register of NarrowRegister is incorrect", insn.pos);
+    }
+    if !t:isSubtype(vc.typeContext(), t:intersect(insn.operand.semType, insn.semType), insn.ifTrueRegister.semType) {
+        return vc.invalidErr("true register is not a subtype of the tested type", insn.pos);
+    }
+    if !t:isSubtype(vc.typeContext(), t:diff(insn.operand.semType, insn.semType), insn.ifFalseRegister.semType) {
+        return vc.invalidErr("false register is not a subtype of the tested type complement", insn.pos);
+    }
+}
+
+function unnarrow(Register reg) returns Register {
+    if reg is NarrowRegister {
+        return unnarrow(reg.underlying);
+    }
+    else {
+        return reg;
+    }
 }
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
