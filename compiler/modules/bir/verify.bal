@@ -338,14 +338,12 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
         check verifyFloatArithmeticBinary(vc, insn);
     }
     if insn is FloatNegateInsn {
-        // TODO: common pattern with boolean not
-        // Function that takes operand, result and predicate?
         check validOperandFloat(vc, name, insn.operand, insn.pos);
-        check validOperandFloat(vc, name, insn.result, insn.pos);
+        check validResultFloat(vc, name, insn.result, insn.pos);
     }
     else if insn is BooleanNotInsn {
         check validOperandBoolean(vc, name, insn.operand, insn.pos);
-        check validOperandBoolean(vc, name, insn.result, insn.pos);
+        check validResultBoolean(vc, name, insn.result, insn.pos);
     }
     else if insn is CompareInsn {
         check verifyCompare(vc, insn);
@@ -404,7 +402,7 @@ function verifyIntBinary(VerifyContext vc, IntBinaryInsn insn) returns Error? {
     check validOperandInt(vc, insn.name, insn.operands[0], insn.pos);
     check validOperandInt(vc, insn.name, insn.operands[1], insn.pos);
     if insn is IntArithmeticBinaryInsn {
-        return validOperandInt(vc, insn.name, insn.result, insn.pos);
+        return validResultInt(vc, insn.name, insn.result, insn.pos);
     }
     t:SemType resultTy = insn.result.semType;
     t:SemType lhsWidenedType = t:widenUnsigned(insn.operands[0].semType);
@@ -437,8 +435,7 @@ function verifyIntBinary(VerifyContext vc, IntBinaryInsn insn) returns Error? {
 function verifyFloatArithmeticBinary(VerifyContext vc, FloatArithmeticBinaryInsn insn) returns Error? {
     check validOperandFloat(vc, insn.name, insn.operands[0], insn.pos);
     check validOperandFloat(vc, insn.name, insn.operands[1], insn.pos);
-    // TODO: is there a special case for result?
-    return validOperandFloat(vc, insn.name, insn.result, insn.pos);
+    return validResultFloat(vc, insn.name, insn.result, insn.pos);
 }
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
@@ -589,10 +586,7 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Internal?
     if !t:comparable(vc.typeContext(), operandToSemType(insn.operands[0]), operandToSemType(insn.operands[1])) {
         return vc.invalidErr(`operands of ${insn.op} do not belong to an ordered type`, insn.pos);
     }
-    // TODO: we need have a function that does this similar to valid operand boolean
-    if !vc.isSameType(insn.result.semType, t:BOOLEAN) {
-        return vc.invalidErr(`result of ${insn.op} is not boolean`, insn.pos);
-    }
+    return validResultBoolean(vc, insn.name, insn.result, insn.pos);
 }
 
 function operandToSemType(Operand operand) returns t:SemType {
@@ -609,6 +603,8 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Interna
     }
 }
 
+type TypeErrorOrigin "operands"|"result";
+
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
     if !vc.operandHasType(operand, semType) {
         return vc.semanticErr(msg, pos);
@@ -623,38 +619,62 @@ function validOperandType(VerifyContext vc, Operand operand, t:SemType semType, 
 
 function validOperandString(VerifyContext vc, string insnName, StringOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
-        return validRegisterSemType(vc, insnName, operand, t:STRING, "string", pos);
+        return validRegisterSemType(vc, "operands", insnName, operand, t:STRING, "string", pos);
     }
 }
 
 function validOperandInt(VerifyContext vc, string insnName, IntOperand operand, Position pos) returns err:Internal? {
+    return validRegisterInt(vc, "operands", insnName, operand, pos);
+}
+
+function validResultInt(VerifyContext vc, string insnName, IntOperand operand, Position pos) returns err:Internal? {
+    return validRegisterInt(vc, "result", insnName, operand, pos);
+}
+
+function validRegisterInt(VerifyContext vc, TypeErrorOrigin origin, string insnName, IntOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
-        return validRegisterSemType(vc, insnName, operand, t:INT, "int", pos);
+        return validRegisterSemType(vc, origin, insnName, operand, t:INT, "int", pos);
     }
 }
 
 function validOperandFloat(VerifyContext vc, string insnName, FloatOperand operand, Position pos) returns err:Internal? {
+    return validRegisterFloat(vc, "operands", insnName, operand, pos);
+}
+
+function validResultFloat(VerifyContext vc, string insnName, FloatOperand operand, Position pos) returns err:Internal? {
+    return validRegisterFloat(vc, "result", insnName, operand, pos);
+}
+
+function validRegisterFloat(VerifyContext vc, TypeErrorOrigin origin, string insnName, FloatOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
-        return validRegisterSemType(vc, insnName, operand, t:FLOAT, "float", pos);
+        return validRegisterSemType(vc, origin, insnName, operand, t:FLOAT, "float", pos);
     }
 }
 
 function validOperandBoolean(VerifyContext vc, string insnName, BooleanOperand operand, Position pos) returns err:Internal? {
+    return validRegisterBoolean(vc, "operands", insnName, operand, pos);
+}
+
+function validResultBoolean(VerifyContext vc, string insnName, BooleanOperand operand, Position pos) returns err:Internal? {
+    return validRegisterBoolean(vc, "result", insnName, operand, pos);
+}
+
+function validRegisterBoolean(VerifyContext vc, TypeErrorOrigin origin, string insnName, BooleanOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
-        return validRegisterSemType(vc,insnName, operand, t:BOOLEAN, "boolean", pos);
+        return validRegisterSemType(vc, origin, insnName, operand, t:BOOLEAN, "boolean", pos);
     }
 }
 
 function validOperandError(VerifyContext vc, string insnName, Register operand, Position pos) returns err:Internal? {
-    return validRegisterSemType(vc, insnName, operand, t:ERROR, "error", pos);
+    return validRegisterSemType(vc, "operands", insnName, operand, t:ERROR, "error", pos);
 }
 
-function validRegisterSemType(VerifyContext vc, string insnName, Register operand, t:SemType semType, string typeName, Position pos) returns err:Internal? {
+function validRegisterSemType(VerifyContext vc, TypeErrorOrigin origin, string insnName, Register operand, t:SemType semType, string typeName, Position pos) returns err:Internal? {
     if !vc.isSubtype(operand.semType, semType) {
-        return invalidTypeErr(vc, insnName, typeName, pos);
+        return invalidTypeErr(vc, origin, insnName, typeName, pos);
     }
 }
 
-function invalidTypeErr(VerifyContext vc, string insnName, string typeName, Position pos) returns err:Internal {
-    return vc.invalidErr(`operands of ${insnName} must be subtype of ${typeName}`, pos);
+function invalidTypeErr(VerifyContext vc, TypeErrorOrigin origin, string insnName, string typeName, Position pos) returns err:Internal {
+    return vc.invalidErr(`${origin} of ${insnName} must be subtype of ${typeName}`, pos);
 }
