@@ -414,7 +414,7 @@ function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Inter
         return vc.invalidErr("type merge must have same number of operands as predecessors", insn.pos);
     }
     Register unnarrowedOp = unnarrow(insn.result);
-    t:SemType union = insn.operands[0].semType;
+    t:SemType union = t:NEVER;
     foreach Register r in insn.operands {
         if unnarrowedOp.number != unnarrow(r).number {
             return vc.invalidErr("underlying Register of NarrowRegister is incorrect", insn.pos);
