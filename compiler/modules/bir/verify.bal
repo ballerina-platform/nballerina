@@ -417,7 +417,7 @@ function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Inter
     t:SemType union = t:NEVER;
     foreach Register r in insn.operands {
         if unnarrowedOp.number != unnarrow(r).number {
-            return vc.invalidErr("underlying Register of NarrowRegister is incorrect", insn.pos);
+            return vc.invalidErr("underlying register of narrow register is incorrect", insn.pos);
         }
         union = t:union(union, r.semType);
     }
@@ -429,7 +429,7 @@ function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Inter
 function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Internal? {
     Register unnarrowedOp = unnarrow(insn.operand);
     if unnarrowedOp.number != unnarrow(insn.ifFalseRegister).number || unnarrowedOp.number != unnarrow(insn.ifTrueRegister).number {
-        return vc.invalidErr("underlying Register of NarrowRegister is incorrect", insn.pos);
+        return vc.invalidErr("underlying register of NarrowRegister is incorrect", insn.pos);
     }
     if !vc.isSubtype(t:intersect(insn.operand.semType, insn.semType), insn.ifTrueRegister.semType) {
         return vc.invalidErr("true register is not a subtype of the tested type", insn.pos);
