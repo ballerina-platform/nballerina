@@ -407,6 +407,12 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
 }
 
 function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Internal? {
+    if insn.operands.length() == 0 {
+        return vc.invalidErr("type merge must have at least one operand", insn.pos);
+    }
+    if insn.operands.length() != insn.predecessors.length() {
+        return vc.invalidErr("type merge must have same number of operands as predecessors", insn.pos);
+    }
     Register unnarrowedOp = unnarrow(insn.result);
     t:SemType union = insn.operands[0].semType;
     foreach Register r in insn.operands {
