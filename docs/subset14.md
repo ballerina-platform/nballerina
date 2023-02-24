@@ -236,7 +236,7 @@ simple-const-expr =
 
 expression = logical-or-expr
 
-const-expr = logical-or-expr # must also satisfy restrictions of const-expr as in Ballerina language spec and should be neither list-constructor-expr nor mapping-constructor-expr
+const-expr = logical-or-expr # must also satisfy restrictions of const-expr as in Ballerina language spec
 
 const-reference-expr = identifier | qualified-identifier # must refer to something defined with a const-decl
 
@@ -398,7 +398,7 @@ Two kinds of `import` are supported.
 
 ## Notes
 
-* `list-constructor-expr` and `mapping-constructor-expr` are not allowed as `const-expr`.
+* `list-constructor-expr` and `mapping-constructor-expr` are not allowed within a `const-expr`.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
 
 ## Additions from subset 13
