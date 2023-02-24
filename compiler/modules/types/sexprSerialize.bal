@@ -263,7 +263,7 @@ function bddToSexprAccum(SerializationContext sc, Bdd bdd, BddTopSexpr top) retu
 function atomToSexprAccum(SerializationContext sc, Atom atom, BddTopSexpr top) returns ts:Table|ts:TableSubtype|ts:AtomRef {
     if top == "table" {
         ListAtomicType lat = sc.tc.listAtomType(atom);
-        Bdd rest = mappingSubtype(cellInner(lat.rest));
+        Bdd rest = mappingSubtype(cellInnerVal(lat.rest));
         if rest == true {
             return "table";
         }
@@ -310,7 +310,7 @@ function fromFuncAtom(SerializationContext sc, Atom atom) returns ts:Atom {
 function fromListAtom(SerializationContext sc, Atom atom) returns ts:Atom {
     ListAtomicType lat = sc.tc.listAtomType(atom);
     ts:Type[] members = from var member in lat.members.initial select sexprFormSemTypeInternal(sc, cellInner(member));
-    SemType restSemType = cellInner(lat.rest);
+    SemType restSemType = cellInnerVal(lat.rest);
     ts:Type? rest = restSemType != NEVER ? sexprFormSemTypeInternal(sc, restSemType) : ();
     boolean? compressed = lat.members.fixedLength == 0 ? () : lat.members.initial.length() != lat.members.fixedLength;
     match [compressed, rest] {

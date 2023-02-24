@@ -228,7 +228,7 @@ function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) re
     foreach FunctionRef fr in functionRefs {
         initStructValues.push(fr);
     }
-    t:SemType restType = t:cellInner(atomic.rest);
+    t:SemType restType = t:cellInnerVal(atomic.rest);
     initStructValues.push(getMemberType(cx, restType));
     initStructValues.push(getFillerDesc(cx, restType));
     llvm:ConstValue[] llMembers = from var ty in atomic.members.initial let var tyInner = t:cellInner(ty) select getMemberType(cx, tyInner);
@@ -612,7 +612,7 @@ function createStringSubtypeStruct(InitModuleContext cx, t:ComplexSemType semTyp
 function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
     t:ListAtomicType? lat = t:listAtomicType(cx.tc, semType);
     if lat != () {
-        t:SemType rest = t:cellInner(lat.rest);
+        t:SemType rest = t:cellInnerVal(lat.rest);
         if rest is t:BasicTypeBitSet && lat.members.fixedLength == 0 {
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_ARRAY);
         }
