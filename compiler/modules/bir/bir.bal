@@ -264,6 +264,15 @@ public function getRegister(FunctionCode code, int number) returns Register {
     return code.registers[number];
 }
 
+public function unnarrow(Register reg) returns Register {
+    if reg is NarrowRegister {
+        return unnarrow(reg.underlying);
+    }
+    else {
+        return reg;
+    }
+}
+
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
 public type BitwiseBinaryOp "|" | "^" | "&" | BitwiseShiftOp;
 public type BitwiseShiftOp "<<" | ">>" | ">>>";

@@ -398,6 +398,45 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is ErrorConstructInsn {
         check validOperandString(vc, name, insn.operand, insn.pos);
     }
+    else if insn is TypeMergeInsn {
+        check verifyTypeMerge(vc, insn);
+    }
+    else if insn is TypeBranchInsn {
+        check verifyTypeBranch(vc, insn);
+    }
+}
+
+function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Internal? {
+    if insn.operands.length() == 0 {
+        return vc.invalidErr("type merge must have at least one operand", insn.pos);
+    }
+    if insn.operands.length() != insn.predecessors.length() {
+        return vc.invalidErr("type merge must have same number of operands as predecessors", insn.pos);
+    }
+    Register unnarrowedOp = unnarrow(insn.result);
+    t:SemType union = t:NEVER;
+    foreach Register r in insn.operands {
+        if unnarrowedOp.number != unnarrow(r).number {
+            return vc.invalidErr("underlying register of narrow register is incorrect", insn.pos);
+        }
+        union = t:union(union, r.semType);
+    }
+    if !vc.isSubtype(union, insn.result.semType) {
+        return vc.invalidErr("result type of TypeMerge is not a subtype of operand types", insn.pos);
+    }
+}
+
+function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Internal? {
+    Register unnarrowedOp = unnarrow(insn.operand);
+    if unnarrowedOp.number != unnarrow(insn.ifFalseRegister).number || unnarrowedOp.number != unnarrow(insn.ifTrueRegister).number {
+        return vc.invalidErr("underlying register of NarrowRegister is incorrect", insn.pos);
+    }
+    if !vc.isSubtype(t:intersect(insn.operand.semType, insn.semType), insn.ifTrueRegister.semType) {
+        return vc.invalidErr("true register is not a subtype of the tested type", insn.pos);
+    }
+    if !vc.isSubtype(t:diff(insn.operand.semType, insn.semType), insn.ifFalseRegister.semType) {
+        return vc.invalidErr("false register is not a subtype of the tested type complement", insn.pos);
+    }
 }
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {

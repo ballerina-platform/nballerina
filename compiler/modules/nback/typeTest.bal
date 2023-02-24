@@ -135,18 +135,9 @@ function buildNarrowReg(llvm:Builder builder, Scaffold scaffold, bir:NarrowRegis
     builder.store(narrowed, scaffold.address(register));
 }
 
-function unnarrow(bir:Register reg) returns bir:Register {
-    if reg is bir:NarrowRegister {
-        return unnarrow(reg.underlying);
-    }
-    else {
-        return reg;
-    }
-}
-
 function buildTypeMerge(llvm:Builder builder, Scaffold scaffold, bir:TypeMergeInsn insn) returns BuildError? {
     // Improvement: unnarrowed should be the lowest command ancestor of all operands
-    bir:Register unnarrowed = unnarrow(insn.operands[0]);
+    bir:Register unnarrowed = bir:unnarrow(insn.operands[0]);
     var [sourceRepr, value] = check buildReprValue(builder, scaffold, unnarrowed);
     t:SemType semType = insn.result.semType;
     if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsBasicBitSet(scaffold.typeContext(), unnarrowed.semType, semType) == () {
