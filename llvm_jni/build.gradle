@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-        implementation 'org.bytedeco:llvm-platform:15.0.6-1.5.9-SNAPSHOT'
+        implementation 'org.bytedeco:llvm-platform:15.0.7-1.5.9-SNAPSHOT'
 }
 
 String balConfig = 'Ballerina.toml'
