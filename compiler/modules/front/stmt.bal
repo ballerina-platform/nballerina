@@ -1056,7 +1056,7 @@ function codeGenCallStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain
     bir:Operand result;
     bir:BasicBlock nextBlock;
     ExprContext ec = cx.exprContext(initialBindings);
-    s:CallExpr expr = stmt.expr;
+    s:CallExpr expr = stmt.callExpr;
     if expr is s:FunctionCallExpr {
         { result, block: nextBlock } = check codeGenFunctionCallExpr(ec, startBlock, expr);
     }

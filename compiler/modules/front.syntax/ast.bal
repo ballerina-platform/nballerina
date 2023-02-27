@@ -83,7 +83,7 @@ public type StmtBlock record {|
 
 public type CallStmt record {|
     *PositionFields;
-    CallExpr expr;
+    CallExpr callExpr;
 |};
 
 public type AssignStmt record {|
@@ -175,10 +175,8 @@ public type VarDeclStmt record {|
 |};
 
 public type GroupingExpr record {|
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
-    Expr innerExpr;
+    *PositionFields;
+    Expr expr;
 |};
 
 public type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";

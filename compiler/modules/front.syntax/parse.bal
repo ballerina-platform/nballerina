@@ -176,7 +176,7 @@ function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis, Po
     Position namePos = tok.currentStartPos();
     string name = check tok.expectIdentifier();
     check tok.expect("=");
-    Expr expr = check parseInnerExpr(tok);
+    Expr expr = check parseExpr(tok);
     Position endPos = check tok.expectEnd(";");
     return { startPos, endPos, td, name, expr, namePos, vis, part };
 }

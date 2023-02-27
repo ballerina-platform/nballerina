@@ -215,9 +215,9 @@ continue-stmt = "continue" ";"
 
 foreach-stmt = "foreach" "int" identifier "in" additive-expr "..<" additive-expr stmt-block
 
-panic-stmt = "panic" inner-expr ";"
+panic-stmt = "panic" expression ";"
 
-match-stmt = "match" inner-expr "{" match-clause+ "}"
+match-stmt = "match" expression "{" match-clause+ "}"
 
 match-clause = match-pattern-list "=>" stmt-block
 match-pattern-list =
@@ -234,13 +234,13 @@ simple-const-expr =
    | "-" floating-point-literal
    | const-reference-expr
 
-expression = inner-expr | list-constructor-expr | mapping-constructor-expr
+expression = logical-or-expr
 
-const-expr = inner-expr # must also satisfy restrictions of const-expr as in Ballerina language spec
+const-expr = logical-or-expr # must also satisfy restrictions of const-expr as in Ballerina language spec
 
 const-reference-expr = identifier | qualified-identifier # must refer to something defined with a const-decl
 
-inner-expr = logical-or-expr
+expression = logical-or-expr
 
 logical-or-expr =
   logical-and-expr
@@ -315,13 +315,15 @@ primary-expr =
   | function-call-expr
   | method-call-expr
   | variable-reference-expr
-  | "(" inner-expr ")"
+  | list-constructor-expr
+  | mapping-constructor-expr
+  | "(" expression ")"
 
 literal = nil-literal | boolean-literal | int-literal | floating-point-literal | string-literal
 nil-literal = "(" ")" | "null"
 boolean-literal = "true" | "false"
 
-error-constructor-expr = "error" "(" inner-expr ")"
+error-constructor-expr = "error" "(" expression ")"
 
 list-constructor-expr = "[" [expr-list] "]"
 
@@ -396,13 +398,14 @@ Two kinds of `import` are supported.
 
 ## Notes
 
-* The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
+* `list-constructor-expr` and `mapping-constructor-expr` are not allowed within a `const-expr`.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
 
 ## Additions from subset 13
 
 * Tuple types
 * Rest param in function definition
+* Allow `list-constructor-expr` and `mapping-constructor-expr` without a contextually expected type
 
 ## Implemented spec changes since 2022R1
 

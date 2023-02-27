@@ -224,8 +224,8 @@ function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, t:SemType require
 
 function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
-        var { innerExpr } => {
-            return codeGenExpr(cx, bb, expected, innerExpr);
+        var { expr: groupedExpr } => {
+            return codeGenExpr(cx, bb, expected, groupedExpr);
         }
         var { opPos: pos, arithmeticOp: op, left, right } => {
             var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, expected, left, right, bb, pos);
@@ -265,7 +265,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
             return codeGenEqualityExpr(cx, nextBlock, op, pos, l, r);
         }
         var { opPos: pos, relationalOp: op, left, right } => {
-            return codeGenRelationalExpr(cx, bb, expected, op, pos, left, right);
+            return codeGenRelationalExpr(cx, bb, op, pos, left, right);
         }
         var { td: _, operand: _ } => {
             // JBUG #31782 cast needed
@@ -306,10 +306,12 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         // List construct
         // JBUG #33309 should be able to use just `var { members }`
         var listConstructorExpr if listConstructorExpr is s:ListConstructorExpr => {
+            check cx.notInConst(expr);
             return codeGenListConstructor(cx, bb, expected, listConstructorExpr);  
         }
         // Mapping construct
         var mappingConstructorExpr if mappingConstructorExpr is s:MappingConstructorExpr  => {
+            check cx.notInConst(expr);
             return codeGenMappingConstructor(cx, bb, expected, mappingConstructorExpr);  
         }
         // Error construct
@@ -361,8 +363,8 @@ function codeGenExprForCond(ExprContext cx, bir:BasicBlock bb, s:Expr expr, Prev
     bir:BasicBlock block;
 
     match expr {
-        var { innerExpr } => {
-            return codeGenExprForCond(cx, bb, innerExpr, prevs);
+        var { expr: groupedExpr } => {
+            return codeGenExprForCond(cx, bb, groupedExpr, prevs);
         }
         var { td, left, negated, kwPos: pos } => {
             t:SemType semType = check cx.resolveTypeDesc(td);
@@ -858,18 +860,33 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
 }
 
 function codeGenListConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:ListConstructorExpr expr) returns CodeGenError|ExprEffect {
-    // SUBSET always have contextually expected type for mapping constructor
-    var [resultType, atomicType] = check selectListInherentType(cx, <t:SemType>expected, expr);
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
-    foreach var [i, member] in expr.members.enumerate() {
-        bir:Operand operand;
-        t:SemType requiredType =  t:listAtomicTypeMemberAtInnerVal(atomicType, i);
-        if requiredType == t:NEVER {
-            return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
+    t:SemType resultType;
+    t:ListAtomicType atomicType;
+    if expected != () {
+        [resultType, atomicType] = check selectListInherentType(cx, expected, expr);
+        foreach var [i, member] in expr.members.enumerate() {
+            bir:Operand operand;
+            t:SemType requiredType =  t:listAtomicTypeMemberAtInnerVal(atomicType, i);
+            if requiredType == t:NEVER {
+                return cx.semanticErr("this member is more than what is allowed by type", s:range(member));
+            }
+            { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
+            operands.push(operand);
         }
-        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, requiredType, member, "incorrect type for list member");
-        operands.push(operand);
+    }
+    else {
+        t:SemType[] memberSemTypes = [];
+        foreach s:Expr member in expr.members {
+            bir:Operand operand;
+            { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, (), member);
+            operands.push(operand);
+            t:SemType broadType = t:singleShape(operand.semType) == () ? operand.semType : t:widenToBasicTypes(operand.semType);
+            memberSemTypes.push(broadType);
+        }
+        resultType = t:defineListTypeWrapped(new(), cx.mod.tc.env, memberSemTypes, memberSemTypes.length());
+        atomicType = <t:ListAtomicType>t:listAtomicType(cx.mod.tc, resultType);
     }
     check fillListOperands(cx, nextBlock, operands, atomicType, expr);
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
@@ -958,31 +975,52 @@ function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boo
 }
 
 function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
-    // SUBSET always have contextually expected type for mapping constructor
-    var [resultType, mat] = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
     string[] fieldNames = [];
     map<Position> fieldPos = {};
-    foreach s:Field f in expr.fields {
-        string name = f.name;
-        Position? prevPos = fieldPos[name];
-        if prevPos != () {
-            return cx.semanticErr(`duplicate field ${name}`, pos=f.startPos);
-        }
-        fieldPos[name] = f.startPos;
-        if mat.names.indexOf(name) == () {
-            if t:cellInner(mat.rest) == t:UNDEF {
-                return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
+    t:SemType resultType;
+    if expected != () {
+        t:MappingAtomicType mat;
+        [resultType, mat] = check selectMappingInherentType(cx, <t:SemType>expected, expr); 
+        foreach s:Field f in expr.fields {
+            string name = f.name;
+            Position? prevPos = fieldPos[name];
+            if prevPos != () {
+                return cx.semanticErr(`duplicate field ${name}`, pos=f.startPos);
             }
-            else if f.isIdentifier && mat.names.length() > 0 {
-                return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
+            fieldPos[name] = f.startPos;
+            if mat.names.indexOf(name) == () {
+                if t:cellInner(mat.rest) == t:UNDEF {
+                    return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
+                }
+                else if f.isIdentifier && mat.names.length() > 0 {
+                    return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
+                }
             }
+            bir:Operand operand;
+            { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInnerVal(mat, name), f.value, "incorrect type for mapping member");
+            operands.push(operand);
+            fieldNames.push(name);
         }
-        bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExprForType(cx, nextBlock, t:mappingAtomicTypeMemberAtInnerVal(mat, name), f.value, "incorrect type for list member");
-        operands.push(operand);
-        fieldNames.push(name);
+    }
+    else {
+        t:Field[] fields = [];
+        foreach s:Field f in expr.fields {
+                string name = f.name;
+                Position? prevPos = fieldPos[name];
+                if prevPos != () {
+                    return cx.semanticErr(`duplicate field ${name}`, pos=f.startPos);
+                }
+                fieldPos[name] = f.startPos;
+                bir:Operand operand;
+                { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, (), f.value);
+                operands.push(operand);
+                fieldNames.push(name);
+                t:SemType broadType = t:singleShape(operand.semType) == () ? operand.semType : t:widenToBasicTypes(operand.semType);
+                fields.push({ name, ty: broadType });
+        }
+        resultType = t:defineMappingTypeWrapped(new(), cx.mod.tc.env, fields, t:NEVER);
     }
     bir:TmpRegister result = cx.createTmpRegister(resultType, expr.opPos);
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, pos: expr.opPos };
@@ -1063,9 +1101,9 @@ function codeGenErrorConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? e
     return { result, block };
 }
 
-function codeGenRelationalExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:BinaryRelationalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
-    var { result: l, block: block1 } = check codeGenExpr(cx, bb, expected, left);
-    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, expected, right);
+function codeGenRelationalExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryRelationalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
+    var { result: l, block: block1 } = check codeGenExpr(cx, bb, (), left);
+    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, (), right);
     t:Context tc = cx.mod.tc;
 
     t:SemType lType = operandSemType(tc, l);
