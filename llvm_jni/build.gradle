@@ -22,7 +22,7 @@ dependencies {
 }
 
 ext {
-        'linux-x86_64,linux-arm64,macosx-x86_64,macosx-arm64,windows-x86_64'
+        javacppPlatform = 'linux-x86_64,linux-arm64,macosx-x86_64,macosx-arm64,windows-x86_64'
 }
 
 String balConfig = 'Ballerina.toml'
