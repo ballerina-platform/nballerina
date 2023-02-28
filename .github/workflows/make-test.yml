@@ -101,6 +101,13 @@ jobs:
           sudo dpkg -i $HOME/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb
           echo "/usr/lib/ballerina/bin" >> $GITHUB_PATH
           echo "/usr/lib/ballerina/dependencies/jdk-11.0.15+10-jre/bin/java" >> $GITHUB_PATH
+      - name: Cache Gradle
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('llvm_jni/build.gradle', 'llvm_jni/settings.gradle', 'llvm_jni/gradle/wrapper/gradle-wrapper.properties') }}
       - name: Test JNI
         run: |
           cd llvm_jni
