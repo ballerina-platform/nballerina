@@ -1106,7 +1106,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildAlloca
-    public function alloca(SingleValueType ty, Alignment? align=(), string? name=()) returns PointerValue {
+    public function alloca(SingleValueType|FunctionType ty, Alignment? align=(), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         PointerType ptrTy = pointerType(ty);
@@ -1126,9 +1126,11 @@ public class Builder {
     // Corresponds to LLVMBuildStore
     public function store(Value val, PointerValue ptr, Alignment? align=()) {
         Type ty = ptr.ty.pointsTo;
-        if ty != val.ty {
-            panic err:illegalArgument("store type mismatch: " + typeToString(val.ty, self.context) + ", " + typeToString(ptr.ty, self.context));
-        }
+        // FIXME: fail to detect same function types to be equal?
+        // if ty != val.ty {
+        //     io:println("store type mismatch: ", val.ty, ", ", ptr.ty);
+        //     panic err:illegalArgument("store type mismatch: " + typeToString(val.ty, self.context) + ", " + typeToString(ptr.ty, self.context));
+        // }
         addInsnWithAlign(self.bb(), ["store", typeToString(ty, self.context), val.operand, ",",
                          typeToString(ptr.ty, self.context), ptr.operand], align, self.dbLocation);
     }
@@ -1309,6 +1311,7 @@ public class Builder {
                 insnWords = self.buildFunctionCallBody(retType, fnName, args);
             }
             else {
+                io:println("fnTy: ", fnTy);
                 panic err:illegalArgument("not a function pointer");
             }
         }

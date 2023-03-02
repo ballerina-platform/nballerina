@@ -159,8 +159,9 @@ public const FINAL_REGISTER_KIND = "final";
 public const NARROW_REGISTER_KIND = "narrow";
 public const TMP_REGISTER_KIND = "tmp";
 public const ASSIGN_TMP_REGISTER_KIND = "=tmp";
+public const FUNCTION_REGISTER_KIND = "func";
 
-public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
+public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND|FUNCTION_REGISTER_KIND;
 public type RegisterKind DeclRegisterKind|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
 
 public type RegisterBase record {|
@@ -173,7 +174,7 @@ public type RegisterBase record {|
     string? name;
 |};
 
-public type DeclRegister ParamRegister|VarRegister|FinalRegister;
+public type DeclRegister ParamRegister|VarRegister|FinalRegister; // |FunctionRegister;
 public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
 
 public type RegisterScope readonly & record {|
@@ -223,6 +224,25 @@ public type FinalRegister readonly & record {|
     *DeclRegisterBase;
     FINAL_REGISTER_KIND kind = FINAL_REGISTER_KIND;
 |};
+
+public function functionRefFromRegister(t:Context tc, DeclRegister register) returns FunctionRef {
+    // FIXME: break up args
+    var [_, returnType] = t:getFunctionAtom(tc, <t:ComplexSemType>register.semType);
+    FunctionSignature signature = { paramTypes: [], returnType };
+    InternalSymbol symbol = { isPublic: false, identifier: register.name }; 
+    return { symbol, signature, erasedSignature: signature };
+}
+// public type FunctionRegister readonly & record {|
+//     *DeclRegisterBase;
+//     FUNCTION_REGISTER_KIND kind = FUNCTION_REGISTER_KIND;
+//     FunctionRef fnRef;
+// |};
+
+// public function createFunctionRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope, FunctionRef fnRef) returns FunctionRegister {
+//     FunctionRegister r = { number: code.registers.length(), semType, pos, name, scope, fnRef };
+//     code.registers.push(r);
+//     return r;
+// }
 
 public function createVarRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope) returns VarRegister {
     VarRegister r = { number: code.registers.length(), semType, pos, name, scope };
@@ -346,7 +366,7 @@ public type Insn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
-public type Operand ConstOperand|Register;
+public type Operand ConstOperand|FunctionValOperand|Register;
 
 public type ConstOperand  readonly & record {|
     t:SemType semType;
@@ -385,12 +405,19 @@ public type StringConstOperand readonly & record {|
     string value;
 |};
 
+public type FunctionValOperand readonly & record {|
+    t:SemType semType;
+    FunctionRef value;
+|};
+
 public type IntOperand IntConstOperand|Register;
 public type FloatOperand FloatConstOperand|Register;
 public type DecimalOperand DecimalConstOperand|Register;
 public type BooleanOperand BooleanConstOperand|Register;
 public type StringOperand StringConstOperand|Register;
-public type FunctionOperand FunctionRef|Register;
+// TODO: do we need a seperate register here?
+// can we safely remove FunctionValOPerand here?
+public type FunctionOperand FunctionRef|FunctionValOperand|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
     return t:isSubtype(tc, operand.semType, semType);

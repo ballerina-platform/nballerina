@@ -441,7 +441,8 @@ function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Int
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     // XXX verify insn.semType
-    FunctionRef func = <FunctionRef>insn.func;
+    FunctionOperand operand = insn.func;
+    FunctionRef func =  operand is DeclRegister ? functionRefFromRegister(vc.typeContext(), operand) : <FunctionRef>insn.func;
     FunctionSignature sig = func.signature;
     int nSuppliedArgs = insn.args.length();
     int nExpectedArgs = sig.paramTypes.length();

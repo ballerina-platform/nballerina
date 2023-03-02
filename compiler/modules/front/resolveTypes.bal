@@ -312,9 +312,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
         return resolveTypeDesc(mod, modDefn, depth + 1, td.td);
     }
-    if !mod.allowAllTypes {
-        return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, s:range(td)));
-    }
     if td is s:FunctionTypeDesc {
         t:FunctionDefinition? defn = td.defn;
         if defn == () {
@@ -332,6 +329,9 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         else {
             return defn.getSemType(env);
         }
+    }
+    if !mod.allowAllTypes {
+        return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, s:range(td)));
     }
     if td is s:ErrorTypeDesc {
         return t:errorDetail(check resolveTypeDesc(mod, modDefn, depth, td.detail));

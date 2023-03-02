@@ -137,6 +137,10 @@ class ExprContext {
         return resolveSubsetTypeDesc(self.mod, self.defn, td);
     }
 
+    // function createFunctionRegister(bir:SemType t, Position pos, string name, bir:FunctionRef ref) returns bir:FunctionRegister {
+    //     return bir:createFunctionRegister(self.code, t, pos, name, (<StmtContext>self.sc).getCurrentScope(), ref);
+    // }
+
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TmpRegister {
         return bir:createTmpRegister(self.code, t, pos);
     }
@@ -1175,7 +1179,11 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             binding = ();
         }
         else if v is bir:FunctionRef {
-            return cx.unimplementedErr("values of function type are not implemented", ref.startPos);
+            // TODO: create a bir:Operand
+            // FIXME: binding
+            result = functionValOperand(cx.mod.tc, v);
+            // bir:FunctionRegister reg = cx.createFunctionRegister(functionRefTy(cx.mod.tc, v), ref.startPos, v.symbol.identifier, v);
+            binding = ();
         }
         else {
             result = constifyRegister(v.reg);
@@ -1382,10 +1390,15 @@ function codeGenCheckingTerminator(bir:BasicBlock bb, s:CheckingKeyword checking
 function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr) returns CodeGenError|ExprEffect {
     string? prefix = expr.prefix;
     bir:FunctionRef func;
+    bir:Register? funcRegister = ();
     if prefix == () {
         var ref = cx.lookupLocalVarRef(expr.funcName, expr.qNamePos);
         if ref is bir:FunctionRef {
             func = ref;
+        }
+        else if ref is DeclBinding {
+            func = bir:functionRefFromRegister(cx.mod.tc, ref.reg);
+            funcRegister = ref.reg;
         }
         else {
             return cx.semanticErr("only a value of function type can be called", expr.qNamePos);
@@ -1423,7 +1436,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
+    return codeGenCall(cx, curBlock, func, args, funcRegister, expr.qNamePos);
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
@@ -1436,14 +1449,14 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    return codeGenCall(cx, curBlock, func, args, expr.namePos);
+    return codeGenCall(cx, curBlock, func, args, (), expr.namePos);
 }
 
-function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, bir:Operand[] args, Position pos) returns ExprEffect {
+function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, bir:Operand[] args, bir:Register? functionVal, Position pos) returns ExprEffect {
     t:SemType returnType = func.signature.returnType;
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
     bir:CallInsn call = {
-        func,
+        func: functionVal == () ? func : functionVal,
         result: reg,
         args: args.cloneReadOnly(),
         pos
@@ -1689,7 +1702,8 @@ function arithmeticOperand(bir:Operand operand) returns ArithmeticOperand? {
         return ();
     }
     else {
-        return arithmeticConstOperand(operand);
+        // TODO: properly return an error here
+        return arithmeticConstOperand(<bir:ConstOperand>operand);
     }
 }
 
@@ -1747,12 +1761,13 @@ function validIntOperand(ExprContext cx, bir:Operand operand, s:Expr expr) retur
     return cx.semanticErr("expected an int operand", s:range(expr));
 }
 
+// FIXME: type signature
 function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
-    return operand is bir:Register ? () : { value: operand.value };
+    return operand is bir:Register ? () : { value: (<bir:ConstOperand>operand).value };
 }
 
 function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
-    return operand is bir:Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
+    return operand is bir:Register|bir:FunctionValOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
@@ -1769,6 +1784,17 @@ function singletonStringOperand(t:Context tc, string value) returns bir:StringCo
 
 function singletonBooleanOperand(t:Context tc, boolean value) returns bir:BooleanConstOperand {
     return { value, semType: t:singleton(tc, value) };
+}
+
+function functionRefTy(t:Context tc, bir:FunctionRef value) returns t:SemType {
+    t:Env env = tc.env;
+    t:FunctionDefinition defn = new(env);
+    // TODO: handle rest
+    return defn.define(env, t:tupleTypeWrappedRo(env, ...value.signature.paramTypes), value.signature.returnType);
+}
+
+function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionValOperand {
+    return { value, semType: functionRefTy(tc, value) };
 }
 
 function constifyRegister(bir:Register reg) returns bir:Operand {

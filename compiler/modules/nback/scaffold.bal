@@ -75,7 +75,14 @@ type TaggedRepr readonly & record {|
     t:BasicTypeBitSet subtype;
 |};
 
-type Repr BooleanRepr|IntRepr|FloatRepr|TaggedRepr;
+type Repr BooleanRepr|IntRepr|FloatRepr|TaggedRepr|FunctionRepr;
+
+// FIXME: for the moment we only care about llvm type
+type FunctionRepr readonly & record {|
+    BASE_REPR_INT base = BASE_REPR_INT;
+    llvm:PointerType llvm;
+    boolean alwaysImmediate = true;
+|};
 
 type VoidRepr readonly & record {|
     BASE_REPR_VOID base;
@@ -531,6 +538,12 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr {
 // Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr {
     t:BasicTypeBitSet w = t:widenToBasicTypes(ty);    
+    // FIXME:
+    if t:isSubtypeSimple(w, t:FUNCTION) {
+        // FIXMe: create the proper function pointer type here
+        FunctionRepr repr = {llvm: llvm:pointerType("i8")};
+        return repr;
+    }
     if w == t:INT {
         t:IntSubtypeConstraints? constraints = t:intSubtypeConstraints(ty);
         IntRepr repr = { constraints, alwaysInImmediateRange: isIntConstrainedToImmediate(constraints) };
