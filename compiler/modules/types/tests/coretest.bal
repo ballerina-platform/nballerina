@@ -228,6 +228,18 @@ function listTopTest() {
 }
 
 @test:Config{}
+function emptyListTest() {
+    Env env = new;
+    ListDefinition sLd = new;
+    ListDefinition tLd = new;
+    SemType s = defineListTypeWrapped(sLd, env, [STRING], 0);
+    SemType t = defineListTypeWrapped(tLd, env, [], 0);
+    test:assertTrue(isSubtype(typeContext(env), s, t));
+    test:assertTrue(isSubtype(typeContext(env), t, s));
+    test:assertEquals(s, t);
+}
+
+@test:Config{}
 function mappingTopTest() {
     SemType t1 = basicType(BT_MAPPING);
     Env env = new;
