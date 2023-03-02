@@ -1,6 +1,4 @@
 import wso2/nballerina.comm.err;
-import wso2/nballerina.bir;
-import wso2/nballerina.front;
 import wso2/nballerina.nback;
 import ballerina/io;
 import ballerina/file;
@@ -35,11 +33,9 @@ function compileBaltFile(string filename, string basename, string outDir, nback:
             continue;
         }
         string outBasename = check chooseBaltCaseOutputFilename(filename, t, i);
-        string initFilename = check file:joinPath(outDir, outBasename) + "._init" + OUTPUT_EXTENSION;
-        string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
         string[] lines = t.content;
-        CompileContext cx = new(basename, check file:joinPath(outDir, outBasename), nbackOptions, options);
-        CompileError? err = compileAndOutputModule(cx, DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename, initFilename);
+        LlvmEmitter emitter = new(check file:joinPath(outDir, outBasename), nbackOptions, options);
+        CompileError? err = compileBalFile({ lines }, basename, emitter);
         if t.header.Test\-Case is "panic" && err != () {
             continue;
         }
@@ -56,12 +52,6 @@ function compileBaltFile(string filename, string basename, string outDir, nback:
         string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
         check io:fileWriteLines(expectFilename, expect(t.content));
     }
-}
-
-function compileAndOutputModule(CompileContext cx, bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename, string? initFilename) returns CompileError? {
-    front:ResolvedModule mod = check processModule(cx, modId, sources, <string>cx.outputFilename());
-    check mod.validMain();
-    check generateInitModule(cx, mod);
 }
 
 function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Diagnostic {

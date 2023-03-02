@@ -1,7 +1,7 @@
-public type Data ()|Symbol|boolean|int|float|decimal|String|Data[];
+public type Data Symbol|boolean|int|float|decimal|String|Data[];
 
 public type Symbol string;
-public type String record {|
+public type String readonly & record {|
     string s;
 |};
 

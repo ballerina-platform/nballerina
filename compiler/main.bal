@@ -17,6 +17,7 @@ public type Options record {
     string? expectOutDir = ();
     string? gc = ();
     string? htmlError = ();
+    boolean bir = false;
     *OutputOptions;
 };
 
@@ -59,7 +60,15 @@ public function main(string[] filenames, *Options opts) returns error? {
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            string outputBasename = check chooseOutputBasename(basename, opts.outDir);
+            Emitter emitter;
+            if opts.bir {
+                emitter = new BirEmitter(outputBasename);
+            }
+            else {
+                emitter = new LlvmEmitter(outputBasename, nbackOptions, opts);
+            }
+            CompileError? err = compileBalFile({ filename }, basename, emitter);
             if err is err:Internal {
                 panic error(d:toString(err.detail()), err);
             }

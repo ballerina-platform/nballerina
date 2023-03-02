@@ -91,6 +91,12 @@ java -jar ballerina.jar --showTypes example.bal
 
 where `example.bal` is a Ballerina module containing only type definitions and const definitions.  It will print out the subtype relationships between all the defined types.
 
+To output the Ballerina intermediate representation (BIR) for a module, use
+
+```
+java -jar ballerina.jar --bir example.bal
+```
+
 ## Testing
 
 The compiler is tested using the test cases in the [compiler/testSuite](compiler/testSuite/) directory. The `bal build` command performs a first level of testing on these: it checks that the test cases that should get compile errors do, and that the test cases that should not get compile errors do not. This should work on any platform on which the Ballerina distribution works.
