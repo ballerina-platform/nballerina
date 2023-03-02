@@ -538,11 +538,10 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr {
 // Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr {
     t:BasicTypeBitSet w = t:widenToBasicTypes(ty);    
-    // FIXME:
     if t:isSubtypeSimple(w, t:FUNCTION) {
-        // FIXMe: create the proper function pointer type here
-        FunctionRepr repr = {llvm: llvm:pointerType("i8")};
-        return repr;
+        // we any way need a way to represent functions in a general type for step 2
+        // NOTE: this require sepecial casing llvm:store
+        return { llvm: llvm:pointerType(llvm:functionType("void", [])) };
     }
     if w == t:INT {
         t:IntSubtypeConstraints? constraints = t:intSubtypeConstraints(ty);

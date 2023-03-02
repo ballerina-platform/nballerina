@@ -1179,10 +1179,8 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             binding = ();
         }
         else if v is bir:FunctionRef {
-            // TODO: create a bir:Operand
-            // FIXME: binding
             result = functionValOperand(cx.mod.tc, v);
-            // bir:FunctionRegister reg = cx.createFunctionRegister(functionRefTy(cx.mod.tc, v), ref.startPos, v.symbol.identifier, v);
+            // FIXME: binding
             binding = ();
         }
         else {
@@ -1761,7 +1759,6 @@ function validIntOperand(ExprContext cx, bir:Operand operand, s:Expr expr) retur
     return cx.semanticErr("expected an int operand", s:range(expr));
 }
 
-// FIXME: type signature
 function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
     return operand is bir:Register ? () : { value: (<bir:ConstOperand>operand).value };
 }
@@ -1789,8 +1786,9 @@ function singletonBooleanOperand(t:Context tc, boolean value) returns bir:Boolea
 function functionRefTy(t:Context tc, bir:FunctionRef value) returns t:SemType {
     t:Env env = tc.env;
     t:FunctionDefinition defn = new(env);
-    // TODO: handle rest
-    return defn.define(env, t:tupleTypeWrappedRo(env, ...value.signature.paramTypes), value.signature.returnType);
+    var { paramTypes, restParamType, returnType } = value.signature;
+    t:SemType rest = restParamType is () ? t:NEVER : restParamType;
+    return defn.define(env, t:defineListTypeWrapped(new(), env, paramTypes, rest=rest, mut=t:CELL_MUT_NONE), returnType);
 }
 
 function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionValOperand {

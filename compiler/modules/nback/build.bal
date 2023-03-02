@@ -340,10 +340,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
         return buildLoad(builder, scaffold, operand);
     }
     else if operand is bir:FunctionValOperand {
-        // string mangledName = mangleInternalSymbol(modId, symbol);
-        // TODO: may be we need to handle mangling
         bir:Symbol funcSymbol = operand.value.symbol;
-        // llvm:FunctionType funcTy = buildFunctionSignature(operand.value.signature);
         bir:FunctionSignature signature = operand.value.signature;
         llvm:Function func;
         if funcSymbol is bir:InternalSymbol {
@@ -352,13 +349,8 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
         else {
             func = check buildFunctionDecl(scaffold, funcSymbol, signature);
         }  
-        // llvm:PointerValue funcPtr = builder.alloca(llvm:pointerType(funcTy),(), "xx");
-        // builder.store(func, funcPtr);
-        // funcPtr = builder.addrSpaceCast(funcPtr, LLVM_TAGGED_PTR);
-        // FIXME:
-        FunctionRepr repr = {llvm: llvm:pointerType("i8")};
+        FunctionRepr repr = {llvm: llvm:pointerType(buildFunctionSignature(operand.value.signature))};
         return [repr, func];
-        // return err:unimplemented("function value not implemented", scaffold.location(0));
     }
     else {
         t:SingleValue value = operand.value;

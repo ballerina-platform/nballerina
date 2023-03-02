@@ -2,6 +2,7 @@
 
 // Function subtype is [args, ret]
 // Represents args as tuple type
+// TODO: keep the number of args (other information to create functionRef from atom)
 public type FunctionAtomicType readonly & SemType[2];
 
 public class FunctionDefinition {
@@ -87,11 +88,15 @@ function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) ret
     }
 }
 
-// ref = {"name":"f","reg":{"kind":"var","scope":{"scope":null,"startPos":17179869184,"endPos":34359738369},"pos":21474836486,"name":"f","number":0,"semType":{"all":0,"some":512,"subtypeDataList":[{"atom":0,"left":true,"middle":false,"right":false}]}},"isFinal":false,"used":true}
-
-// FIXME: name
 // FIXME: base function type must be supported as well
-public function getFunctionAtom(Context cx, ComplexSemType semType) returns FunctionAtomicType {
+public function functionAtomicType(Context cx, SemType semType) returns FunctionAtomicType? {
+    if !isSubtype(cx, semType, FUNCTION) {
+        return ();
+    }
+    if semType is BasicTypeBitSet {
+        // FIXME:
+        return ();
+    }
     // FIXME: do type checks to make sure we have got a function
     BddNode bdd = <BddNode>semType.subtypeDataList[0];
     return cx.functionAtomType(bdd.atom);

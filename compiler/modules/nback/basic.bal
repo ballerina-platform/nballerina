@@ -224,8 +224,6 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
         llvm:FunctionType funcType = buildFunctionSignature(signature);
         llvm:PointerValue fnPtr = <llvm:PointerValue>builder.load(scaffold.address(operand));
         func = builder.bitCast(fnPtr, llvm:pointerType(funcType));
-        // llvm:PointerValue tmp = <llvm:PointerValue>builder.load(scaffold.address(operand));
-        // func = <llvm:PointerValue>builder.load(tmp);
     }
     else if funcSymbol is bir:InternalSymbol {
         func = scaffold.getFunctionDefn(funcSymbol.identifier);

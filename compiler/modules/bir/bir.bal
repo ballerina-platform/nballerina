@@ -226,23 +226,18 @@ public type FinalRegister readonly & record {|
 |};
 
 public function functionRefFromRegister(t:Context tc, DeclRegister register) returns FunctionRef {
-    // FIXME: break up args
-    var [_, returnType] = t:getFunctionAtom(tc, <t:ComplexSemType>register.semType);
-    FunctionSignature signature = { paramTypes: [], returnType };
+    FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
     InternalSymbol symbol = { isPublic: false, identifier: register.name }; 
     return { symbol, signature, erasedSignature: signature };
 }
-// public type FunctionRegister readonly & record {|
-//     *DeclRegisterBase;
-//     FUNCTION_REGISTER_KIND kind = FUNCTION_REGISTER_KIND;
-//     FunctionRef fnRef;
-// |};
 
-// public function createFunctionRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope, FunctionRef fnRef) returns FunctionRegister {
-//     FunctionRegister r = { number: code.registers.length(), semType, pos, name, scope, fnRef };
-//     code.registers.push(r);
-//     return r;
-// }
+public function functionSignature(t:Context tc, t:ComplexSemType semType) returns FunctionSignature {
+    var [argList, returnType] = <t:FunctionAtomicType>t:functionAtomicType(tc, semType);
+    t:ListAtomicType listAtom = <t:ListAtomicType>t:listAtomicType(tc, argList);
+    var { members: fixedLengthArray, rest } = listAtom;
+    t:SemType[] & readonly paramTypes = from int i in 0 ..< fixedLengthArray.fixedLength select t:listAtomicTypeMemberAtInnerVal(listAtom, i);
+    return { paramTypes, returnType, restParamType: t:cellInnerVal(rest) == t:NEVER ? () : rest  };
+}
 
 public function createVarRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope) returns VarRegister {
     VarRegister r = { number: code.registers.length(), semType, pos, name, scope };
