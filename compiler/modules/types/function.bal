@@ -2,7 +2,6 @@
 
 // Function subtype is [args, ret]
 // Represents args as tuple type
-// TODO: keep the number of args (other information to create functionRef from atom)
 public type FunctionAtomicType readonly & SemType[2];
 
 public class FunctionDefinition {

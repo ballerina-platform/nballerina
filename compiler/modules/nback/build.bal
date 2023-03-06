@@ -19,6 +19,7 @@ const int TAG_FLOAT    = t:BT_FLOAT << TAG_SHIFT;
 const int TAG_DECIMAL  = t:BT_DECIMAL << TAG_SHIFT;
 const int TAG_STRING   = t:BT_STRING << TAG_SHIFT;
 const int TAG_ERROR    = t:BT_ERROR << TAG_SHIFT;
+const int TAG_FUNCTION = t:BT_FUNCTION << TAG_SHIFT;
 
 const int TAG_LIST     = t:BT_LIST << TAG_SHIFT;
 
@@ -340,18 +341,8 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
         return buildLoad(builder, scaffold, operand);
     }
     else if operand is bir:FunctionValOperand {
-        bir:Symbol funcSymbol = operand.value.symbol;
-        bir:FunctionSignature signature = operand.value.signature;
-        llvm:Function func;
-        if funcSymbol is bir:InternalSymbol {
-            func = scaffold.getFunctionDefn(funcSymbol.identifier);
-        }
-        else {
-            func = check buildFunctionDecl(scaffold, funcSymbol, signature);
-        }
-        llvm:Value fnValue = builder.addrSpaceCast(func, LLVM_TAGGED_PTR);
-        TaggedRepr repr = { subtype: t:FUNCTION, alwaysImmediate: true };
-        return [repr, fnValue];
+        TaggedRepr repr = { subtype: t:FUNCTION, alwaysImmediate: false };
+        return [repr, check buildFunctionValue(scaffold, operand)];
     }
     else {
         t:SingleValue value = operand.value;
@@ -381,6 +372,18 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
             return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, value)];
         }
     }
+}
+
+function buildFunctionValue(Scaffold scaffold, bir:FunctionValOperand val) returns llvm:Value|BuildError {
+    var { symbol, signature } = val.value;
+    llvm:Function func;
+    if symbol is bir:InternalSymbol {
+        func = scaffold.getFunctionDefn(symbol.identifier);
+    }
+    else {
+        func = check buildFunctionDecl(scaffold, symbol, signature);
+    }
+    return scaffold.getFunctionValue(func, signature);
 }
 
 function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:ConstPointerValue|BuildError {   

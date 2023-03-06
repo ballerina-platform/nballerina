@@ -137,10 +137,6 @@ class ExprContext {
         return resolveSubsetTypeDesc(self.mod, self.defn, td);
     }
 
-    // function createFunctionRegister(bir:SemType t, Position pos, string name, bir:FunctionRef ref) returns bir:FunctionRegister {
-    //     return bir:createFunctionRegister(self.code, t, pos, name, (<StmtContext>self.sc).getCurrentScope(), ref);
-    // }
-
     function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:TmpRegister {
         return bir:createTmpRegister(self.code, t, pos);
     }
@@ -1180,7 +1176,6 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
         }
         else if v is bir:FunctionRef {
             result = functionValOperand(cx.mod.tc, v);
-            // FIXME: binding
             binding = ();
         }
         else {
@@ -1394,7 +1389,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         if ref is bir:FunctionRef {
             func = ref;
         }
-        else if ref is DeclBinding {
+        else if ref is Binding {
             func = bir:functionRefFromRegister(cx.mod.tc, ref.reg);
             funcRegister = ref.reg;
         }
@@ -1450,6 +1445,7 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
     return codeGenCall(cx, curBlock, func, args, (), expr.namePos);
 }
 
+// TODO: it is better to send return type and "func" instead of functionRef
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, bir:Operand[] args, bir:Register? functionVal, Position pos) returns ExprEffect {
     t:SemType returnType = func.signature.returnType;
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);

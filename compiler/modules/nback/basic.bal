@@ -209,7 +209,7 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
     bir:FunctionOperand operand = insn.func;
-    bir:FunctionRef funcRef =  operand is bir:DeclRegister ? bir:functionRefFromRegister(scaffold.typeContext(), operand) : <bir:FunctionRef>insn.func;
+    bir:FunctionRef funcRef =  operand is bir:Register ? bir:functionRefFromRegister(scaffold.typeContext(), operand) : <bir:FunctionRef>insn.func;
     llvm:Value[] args = [];
     bir:FunctionSignature signature = funcRef.erasedSignature;
     t:SemType[] paramTypes = signature.paramTypes;
@@ -220,9 +220,15 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     bir:Symbol funcSymbol = funcRef.symbol;
     llvm:Function|llvm:PointerValue func;
     if operand is bir:Register {
-        llvm:PointerValue fnTaggedPtr = <llvm:PointerValue>builder.load(scaffold.address(operand));
-        llvm:PointerType fnPtrTy = llvm:pointerType(buildFunctionSignature(signature));
-        func = builder.addrSpaceCast(fnTaggedPtr, fnPtrTy);
+        llvm:Value cleanedPtrVal = builder.iBitwise("and",
+                                                    builder.ptrToInt(<llvm:PointerValue>builder.load(scaffold.address(operand)), LLVM_INT),
+                                                    constInt(scaffold, POINTER_MASK));
+        llvm:PointerValue ptr = builder.bitCast(builder.getElementPtr(scaffold.llContext().constNull(LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE),
+                                                                      [cleanedPtrVal]),
+                                                llvm:pointerType(llvm:structType([functionDescPtrType,
+                                                                                  llvm:pointerType(buildFunctionSignature(signature))])));
+        llvm:PointerValue funcPtr = builder.getElementPtr(ptr, [constIndex(scaffold, 0), constIndex(scaffold, 1)]);
+        func = <llvm:PointerValue>builder.load(funcPtr);
     }
     else if funcSymbol is bir:InternalSymbol {
         func = scaffold.getFunctionDefn(funcSymbol.identifier);

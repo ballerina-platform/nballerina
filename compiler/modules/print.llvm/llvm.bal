@@ -1126,7 +1126,7 @@ public class Builder {
     // Corresponds to LLVMBuildStore
     public function store(Value val, PointerValue ptr, Alignment? align=()) {
         Type ty = ptr.ty.pointsTo;
-        if !(isFunctionPointerType(ty) && isFunctionPointerType(val.ty)) && ty != val.ty {
+        if ty != val.ty {
             panic err:illegalArgument("store type mismatch: " + typeToString(val.ty, self.context) + ", " + typeToString(ptr.ty, self.context));
         }
         addInsnWithAlign(self.bb(), ["store", typeToString(ty, self.context), val.operand, ",",
@@ -1217,7 +1217,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildPtrToInt
-    public function ptrToInt(PointerValue ptr, IntType destTy, string? name=()) returns Value {
+    public function ptrToInt(PointerValue|Function ptr, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         addInsnWithDbLocation(bb, [reg, "=", "ptrtoint", typeToString(ptr.ty, self.context), ptr.operand, "to",
@@ -1884,11 +1884,4 @@ function toUnsignedHexString(int i) returns string {
         // since no need to pad when low is zero.
         return (i >>> 4).toHexString() + (i & 0xF).toHexString();
     }
-}
-
-function isFunctionPointerType(Type ty) returns boolean {
-    if ty is PointerType {
-        return ty.pointsTo is FunctionType;
-    }
-    return false;
 }

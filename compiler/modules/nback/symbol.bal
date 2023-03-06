@@ -92,3 +92,11 @@ function subtypeTypeDefnSymbol(int n) returns string {
 function fillerDescSymbol(int n) returns string {
     return ".fillerDesc" + n.toString();
 }
+
+function functionDefnSymbol(int n) returns string {
+    return ".func" + n.toString();
+}
+
+function functionDescSymbol(int n) returns string {
+    return ".funcDesc" + n.toString();
+}

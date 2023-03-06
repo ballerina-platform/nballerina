@@ -159,9 +159,8 @@ public const FINAL_REGISTER_KIND = "final";
 public const NARROW_REGISTER_KIND = "narrow";
 public const TMP_REGISTER_KIND = "tmp";
 public const ASSIGN_TMP_REGISTER_KIND = "=tmp";
-public const FUNCTION_REGISTER_KIND = "func";
 
-public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND|FUNCTION_REGISTER_KIND;
+public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
 public type RegisterKind DeclRegisterKind|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
 
 public type RegisterBase record {|
@@ -174,7 +173,7 @@ public type RegisterBase record {|
     string? name;
 |};
 
-public type DeclRegister ParamRegister|VarRegister|FinalRegister; // |FunctionRegister;
+public type DeclRegister ParamRegister|VarRegister|FinalRegister;
 public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
 
 public type RegisterScope readonly & record {|
@@ -225,9 +224,12 @@ public type FinalRegister readonly & record {|
     FINAL_REGISTER_KIND kind = FINAL_REGISTER_KIND;
 |};
 
-public function functionRefFromRegister(t:Context tc, DeclRegister register) returns FunctionRef {
+public function functionRefFromRegister(t:Context tc, Register register) returns FunctionRef {
+    // TODO: when we support type variance we will need to support t:FUNCTION here as well
     FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
-    InternalSymbol symbol = { isPublic: false, identifier: register.name }; 
+    // FIXME: name
+    string? name = register.name;
+    InternalSymbol symbol = { isPublic: false, identifier: name ?: "!!" };
     return { symbol, signature, erasedSignature: signature };
 }
 
@@ -412,6 +414,7 @@ public type BooleanOperand BooleanConstOperand|Register;
 public type StringOperand StringConstOperand|Register;
 // TODO: do we need a seperate register here?
 // can we safely remove FunctionValOPerand here?
+// check if we always recreate the function register
 public type FunctionOperand FunctionRef|FunctionValOperand|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {

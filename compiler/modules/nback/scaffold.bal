@@ -100,6 +100,7 @@ type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT
 
 type StringDefn llvm:ConstPointerValue;
 type DecimalDefn llvm:ConstPointerValue;
+type FunctionValueDefn llvm:ConstPointerValue;
 
 type Module record {|
     llvm:Context llContext;
@@ -148,6 +149,8 @@ class Scaffold {
     private DIScaffold? diScaffold;
     final t:SemType returnType;
     private final BlockNarrowRegBuilder[] narrowRegBuilders = [];
+    // FIXME:
+    private int functionDefnIndex = 0;
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
         self.mod = mod;
@@ -248,6 +251,56 @@ class Scaffold {
         StringDefn newDefn = addStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
         self.mod.stringDefns[str] = newDefn;
         return newDefn;
+    }
+
+    function getFunctionValue(llvm:Function func, bir:FunctionSignature signature) returns FunctionValueDefn {
+        llvm:Context context = self.llContext();
+        // TODO: add the function desc ptr
+        self.functionDefnIndex += 1;
+        llvm:ConstValue llFunc = context.constStruct([self.functionDescPtr(signature), func]);
+        llvm:StructType ty = llvm:structType([functionDescPtrType, llvm:pointerType(buildFunctionSignature(signature))]);
+        llvm:ConstPointerValue ptr = self.getModule().addGlobal(ty,
+                                                                functionDefnSymbol(self.functionDefnIndex),
+                                                                initializer = llFunc,
+                                                                align = 8,
+                                                                isConstant=true,
+                                                                unnamedAddr=true,
+                                                                linkage= "internal");
+        return context.constGetElementPtr(context.constAddrSpaceCast(context.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_TAGGED_PTR),
+                                         [context.constInt(LLVM_INT, TAG_FUNCTION)]);
+    }
+
+    // FIXME: this should be in init
+    function functionDescPtr(bir:FunctionSignature signature) returns llvm:PointerValue {
+        llvm:Context context = self.llContext();
+        llvm:ConstValue[] paramTypes = [];
+        foreach var paramType in signature.paramTypes {
+            if paramType is t:BasicTypeBitSet {
+                paramTypes.push(self.memberType(paramType));
+            }
+            else {
+                // FIXME:
+                continue;
+            }
+        }
+        llvm:ConstValue nArgs = context.constInt("i32", paramTypes.length());
+        llvm:ConstValue ret = self.memberType(<t:BasicTypeBitSet>signature.returnType);
+        llvm:ConstValue args = context.constArray(LLVM_MEMBER_TYPE, paramTypes);
+        llvm:ConstValue fd = context.constStruct([nArgs, ret, args]);
+        llvm:StructType ty = llvm:structType(["i32", LLVM_MEMBER_TYPE, llvm:arrayType(LLVM_MEMBER_TYPE, paramTypes.length())]);
+        llvm:ConstPointerValue ptr = self.getModule().addGlobal(ty,
+                                                                functionDescSymbol(self.functionDefnIndex),
+                                                                initializer = fd,
+                                                                align = 8,
+                                                                isConstant=true,
+                                                                unnamedAddr=true,
+                                                                linkage= "internal");
+        return context.constBitCast(ptr, functionDescPtrType);
+    }
+
+    function memberType(t:BasicTypeBitSet bits) returns llvm:ConstValue {
+        llvm:Context context = self.llContext();
+        return context.constInt(LLVM_MEMBER_TYPE, (bits << 1)| 1);
     }
 
     function getDecimal(decimal val) returns DecimalDefn {
