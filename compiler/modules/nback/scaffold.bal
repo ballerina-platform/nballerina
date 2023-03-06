@@ -75,14 +75,7 @@ type TaggedRepr readonly & record {|
     t:BasicTypeBitSet subtype;
 |};
 
-type Repr BooleanRepr|IntRepr|FloatRepr|TaggedRepr|FunctionRepr;
-
-// FIXME: for the moment we only care about llvm type
-type FunctionRepr readonly & record {|
-    BASE_REPR_INT base = BASE_REPR_INT;
-    llvm:PointerType llvm;
-    boolean alwaysImmediate = true;
-|};
+type Repr BooleanRepr|IntRepr|FloatRepr|TaggedRepr;
 
 type VoidRepr readonly & record {|
     BASE_REPR_VOID base;
@@ -538,11 +531,6 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr {
 // Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr {
     t:BasicTypeBitSet w = t:widenToBasicTypes(ty);    
-    if t:isSubtypeSimple(w, t:FUNCTION) {
-        // we any way need a way to represent functions in a general type for step 2
-        // NOTE: this require sepecial casing llvm:store
-        return { llvm: llvm:pointerType(llvm:functionType("void", [])) };
-    }
     if w == t:INT {
         t:IntSubtypeConstraints? constraints = t:intSubtypeConstraints(ty);
         IntRepr repr = { constraints, alwaysInImmediateRange: isIntConstrainedToImmediate(constraints) };
@@ -556,9 +544,9 @@ function semTypeRepr(t:SemType ty) returns Repr {
     if w == t:NEVER {
         panic err:impossible("allocate register with never type");
     }
-    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:DECIMAL|t:STRING|t:LIST|t:MAPPING|t:ERROR;
+    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:DECIMAL|t:STRING|t:LIST|t:MAPPING|t:ERROR|t:FUNCTION;
     int maximized = w | supported;
-    if maximized == t:VAL || maximized == (t:NON_BEHAVIOURAL|t:ERROR) || (w & supported) == w {
+    if maximized == t:VAL || maximized == (t:NON_BEHAVIOURAL|t:ERROR|t:FUNCTION) || (w & supported) == w {
         TaggedRepr repr = { subtype: w, alwaysImmediate: isSemTypeAlwaysImmediate(ty, w) };
         return repr;
     }

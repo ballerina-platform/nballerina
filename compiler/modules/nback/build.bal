@@ -348,9 +348,10 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
         }
         else {
             func = check buildFunctionDecl(scaffold, funcSymbol, signature);
-        }  
-        FunctionRepr repr = {llvm: llvm:pointerType(buildFunctionSignature(operand.value.signature))};
-        return [repr, func];
+        }
+        llvm:Value fnValue = builder.addrSpaceCast(func, LLVM_TAGGED_PTR);
+        TaggedRepr repr = { subtype: t:FUNCTION, alwaysImmediate: true };
+        return [repr, fnValue];
     }
     else {
         t:SingleValue value = operand.value;

@@ -1106,7 +1106,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildAlloca
-    public function alloca(SingleValueType|FunctionType ty, Alignment? align=(), string? name=()) returns PointerValue {
+    public function alloca(SingleValueType ty, Alignment? align=(), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         PointerType ptrTy = pointerType(ty);
@@ -1309,6 +1309,8 @@ public class Builder {
                 insnWords = self.buildFunctionCallBody(retType, fnName, args);
             }
             else {
+                io:println("fn:", fn);
+                io:println("fnTy:", fnTy);
                 panic err:illegalArgument("not a function pointer");
             }
         }
@@ -1402,7 +1404,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildAddrSpaceCast
-    public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
+    public function addrSpaceCast(PointerValue|Function val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         (string|Unnamed)[] words = [];
