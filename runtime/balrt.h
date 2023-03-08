@@ -235,6 +235,7 @@ typedef GC struct Mapping {
 typedef struct {
     uint32_t nArgs;
     MemberType returnType;
+    MemberType restType;
     MemberType argTypes[];
 } FunctionDesc, *FunctionDescPtr;
 
@@ -252,6 +253,7 @@ typedef struct {
     UniformSubtype uniform;
     uint32_t nArgs;
     uint32_t returnType;
+    uint32_t restType;
     uint32_t argTypes[];
 } *FunctionSubtypePtr;
 

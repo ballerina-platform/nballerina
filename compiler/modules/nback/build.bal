@@ -376,6 +376,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
 
 function buildFunctionValue(Scaffold scaffold, bir:FunctionValOperand val) returns llvm:Value|BuildError {
     var { symbol, signature } = val.value;
+    string identifier = symbol.identifier;
     llvm:Function func;
     if symbol is bir:InternalSymbol {
         func = scaffold.getFunctionDefn(symbol.identifier);
@@ -383,7 +384,7 @@ function buildFunctionValue(Scaffold scaffold, bir:FunctionValOperand val) retur
     else {
         func = check buildFunctionDecl(scaffold, symbol, signature);
     }
-    return scaffold.getFunctionValue(func, signature);
+    return scaffold.getFunctionValue(func, signature, identifier);
 }
 
 function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:ConstPointerValue|BuildError {   

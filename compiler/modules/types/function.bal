@@ -87,18 +87,19 @@ function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) ret
     }
 }
 
-// FIXME: base function type must be supported as well
 public function functionAtomicType(Context cx, SemType semType) returns FunctionAtomicType? {
     if !isSubtype(cx, semType, FUNCTION) {
         return ();
     }
     if semType is BasicTypeBitSet {
-        // FIXME:
+        // TODO: when supporting function type variance we will need to support t:FUNCTION
         return ();
     }
-    // FIXME: do type checks to make sure we have got a function
     BddNode bdd = <BddNode>semType.subtypeDataList[0];
-    return cx.functionAtomType(bdd.atom);
+    if bdd.left == true && bdd.middle == false && bdd.right == false {
+        return cx.functionAtomType(bdd.atom);
+    }
+    return ();
 }
 
 

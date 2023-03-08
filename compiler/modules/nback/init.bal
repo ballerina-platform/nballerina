@@ -541,9 +541,7 @@ function createBooleanSubtypeStruct(InitModuleContext cx, t:ComplexSemType semTy
 }
 
 function createFunctionSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
-    // FIXME:
     bir:FunctionSignature signature = bir:functionSignature(cx.tc, semType);
-    // TODO: support rest paramType
     llvm:ConstValue[] paramTypes = [];
     llvm:Context context = cx.llContext();
     foreach var paramType in signature.paramTypes {
@@ -557,10 +555,12 @@ function createFunctionSubtypeStruct(InitModuleContext cx, t:ComplexSemType semT
     }
     llvm:ConstValue nArgs = context.constInt("i32", paramTypes.length());
     llvm:ConstValue ret = context.constInt(LLVM_BITSET, <t:BasicTypeBitSet>signature.returnType);
+    t:BasicTypeBitSet restType = signature.restParamType is t:BasicTypeBitSet ? <t:BasicTypeBitSet>signature.restParamType : t:NEVER;
+    llvm:ConstValue rest = context.constInt(LLVM_BITSET, restType);
     llvm:ConstValue args = context.constArray(LLVM_BITSET, paramTypes);
     return {
-        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", LLVM_BITSET, llvm:arrayType(LLVM_BITSET, paramTypes.length())],
-        values: [getSubtypeContainsFunc(cx, TYPE_KIND_FUNCTION), nArgs, ret, args]
+        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", LLVM_BITSET, LLVM_BITSET, llvm:arrayType(LLVM_BITSET, paramTypes.length())],
+        values: [getSubtypeContainsFunc(cx, TYPE_KIND_FUNCTION), nArgs, ret, rest, args]
     };
 }
 

@@ -27,8 +27,7 @@ final llvm:PointerType fillerDescPtrType = llvm:pointerType(llvm:structType(
 final llvm:StructType llComplexType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
 
 
-// FIXME: not sure this is the correct place for this
-// Last element type is a approximation
+// Array type is an approximation
 final llvm:StructType functionDescType = llvm:structType(["i32", LLVM_MEMBER_TYPE, llvm:arrayType(LLVM_MEMBER_TYPE, 0)]);
 final llvm:PointerType functionDescPtrType = llvm:pointerType(functionDescType);
 

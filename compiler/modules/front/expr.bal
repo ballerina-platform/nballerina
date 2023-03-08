@@ -1429,7 +1429,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    return codeGenCall(cx, curBlock, func, args, funcRegister, expr.qNamePos);
+    return codeGenCall(cx, curBlock, funcRegister ?: func, func.signature.returnType, args, expr.qNamePos);
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
@@ -1442,15 +1442,13 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    return codeGenCall(cx, curBlock, func, args, (), expr.namePos);
+    return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.namePos);
 }
 
-// TODO: it is better to send return type and "func" instead of functionRef
-function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, bir:Operand[] args, bir:Register? functionVal, Position pos) returns ExprEffect {
-    t:SemType returnType = func.signature.returnType;
+function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef|bir:Register func, t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
     bir:CallInsn call = {
-        func: functionVal == () ? func : functionVal,
+        func,
         result: reg,
         args: args.cloneReadOnly(),
         pos
@@ -1696,7 +1694,6 @@ function arithmeticOperand(bir:Operand operand) returns ArithmeticOperand? {
         return ();
     }
     else {
-        // TODO: properly return an error here
         return arithmeticConstOperand(<bir:ConstOperand>operand);
     }
 }

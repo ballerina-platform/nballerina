@@ -227,13 +227,23 @@ public type FinalRegister readonly & record {|
 public function functionRefFromRegister(t:Context tc, Register register) returns FunctionRef {
     // TODO: when we support type variance we will need to support t:FUNCTION here as well
     FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
-    // FIXME: name
-    string? name = register.name;
-    InternalSymbol symbol = { isPublic: false, identifier: name ?: "!!" };
+    InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
     return { symbol, signature, erasedSignature: signature };
 }
 
+function registerName(Register register) returns string {
+    if register is DeclRegister {
+        return register.name;
+    }
+    else if register is NarrowRegister {
+        return registerName(register.underlying);
+    }
+    return <string>register.name;
+}
+
 public function functionSignature(t:Context tc, t:ComplexSemType semType) returns FunctionSignature {
+    // This is not exactly correct since semType could be diff/union of function types
+    // We need something to select a function inherent type similar to how `selectListInherentType` works
     var [argList, returnType] = <t:FunctionAtomicType>t:functionAtomicType(tc, semType);
     t:ListAtomicType listAtom = <t:ListAtomicType>t:listAtomicType(tc, argList);
     var { members: fixedLengthArray, rest } = listAtom;

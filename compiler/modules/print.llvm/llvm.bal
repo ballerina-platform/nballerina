@@ -1217,7 +1217,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildPtrToInt
-    public function ptrToInt(PointerValue|Function ptr, IntType destTy, string? name=()) returns Value {
+    public function ptrToInt(PointerValue ptr, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         addInsnWithDbLocation(bb, [reg, "=", "ptrtoint", typeToString(ptr.ty, self.context), ptr.operand, "to",
@@ -1309,8 +1309,6 @@ public class Builder {
                 insnWords = self.buildFunctionCallBody(retType, fnName, args);
             }
             else {
-                io:println("fn:", fn);
-                io:println("fnTy:", fnTy);
                 panic err:illegalArgument("not a function pointer");
             }
         }
@@ -1404,7 +1402,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildAddrSpaceCast
-    public function addrSpaceCast(PointerValue|Function val, PointerType destTy, string? name=()) returns PointerValue {
+    public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         (string|Unnamed)[] words = [];
