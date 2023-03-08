@@ -80,10 +80,8 @@ function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
     // io:println(insn.name + " " + file.lineColumn(insn.pos).toString());
     if insn is bir:CallInsn {
-        var func = insn.func;
-        if func is bir:Register {
-            panic error("lambda function calling unimplemented");
-        }
+        bir:FunctionOperand operand = insn.func;
+        bir:FunctionRef func =  operand is bir:Register ? bir:functionRefFromRegister(sc.tc, operand) : <bir:FunctionRef>insn.func;
         FunctionRef ref = fromFunctionRefAccum(sc, func);
         (Operand & readonly)[] args = from var arg in insn.args select fromOperand(sc, arg);
         if func.erasedSignature != func.signature {
@@ -152,6 +150,10 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
 function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & readonly {
     if op is bir:Register {
         return fromRegister(sc, op);
+    }
+    // FIXME:
+    if op is bir:FunctionValOperand {
+        return "function val";
     }
     t:SingleValue value = op.value;
     if value is string {

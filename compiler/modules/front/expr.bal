@@ -1776,16 +1776,16 @@ function singletonBooleanOperand(t:Context tc, boolean value) returns bir:Boolea
     return { value, semType: t:singleton(tc, value) };
 }
 
+function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionValOperand {
+    return { value, semType: functionRefTy(tc, value) };
+}
+
 function functionRefTy(t:Context tc, bir:FunctionRef value) returns t:SemType {
     t:Env env = tc.env;
     t:FunctionDefinition defn = new(env);
     var { paramTypes, restParamType, returnType } = value.signature;
     t:SemType rest = restParamType is () ? t:NEVER : restParamType;
     return defn.define(env, t:defineListTypeWrapped(new(), env, paramTypes, rest=rest, mut=t:CELL_MUT_NONE), returnType);
-}
-
-function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionValOperand {
-    return { value, semType: functionRefTy(tc, value) };
 }
 
 function constifyRegister(bir:Register reg) returns bir:Operand {
