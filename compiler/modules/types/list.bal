@@ -92,6 +92,7 @@ public class ListDefinition {
             env.setRecListAtomType(rec, atomicType);
         }
         else if fixedLength == 0 && rest == CELL_SEMTYPE_INNER {
+            self.semType = LIST;
             return LIST;
         }
         else {
