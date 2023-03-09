@@ -232,30 +232,9 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
-typedef struct {
-    uint32_t nArgs;
-    MemberType returnType;
-    MemberType restType;
-    MemberType argTypes[];
-} FunctionDesc, *FunctionDescPtr;
-
-typedef void *Direct;
-typedef GC struct Function {
-    FunctionDescPtr desc;
-    Direct direct;
-} *FunctionPtr;
-
 typedef struct UniformSubtype {
     bool (*contains)(struct UniformSubtype *, TaggedPtr);
 } UniformSubtype, *UniformSubtypePtr;
-
-typedef struct {
-    UniformSubtype uniform;
-    uint32_t nArgs;
-    uint32_t returnType;
-    uint32_t restType;
-    uint32_t argTypes[];
-} *FunctionSubtypePtr;
 
 typedef struct {
     TaggedPtr fieldName;

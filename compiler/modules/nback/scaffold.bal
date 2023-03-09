@@ -100,7 +100,7 @@ type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT
 
 type StringDefn llvm:ConstPointerValue;
 type DecimalDefn llvm:ConstPointerValue;
-type FunctionValueDefn llvm:ConstPointerValue;
+type FunctionValueDefn llvm:Value;
 
 type Module record {|
     llvm:Context llContext;
@@ -604,52 +604,15 @@ function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean
     return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
 }
 
-function addFunctionValueDefn(llvm:Context context, llvm:Module mod, llvm:Function func, bir:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
-    llvm:ConstValue llFunc = context.constStruct([functionDescPtr(context, mod, signature, defnIndex), func]);
-    llvm:StructType ty = llvm:structType([functionDescPtrType, llvm:pointerType(buildFunctionSignature(signature))]);
+function addFunctionValueDefn(llvm:Context context, llvm:Module mod, llvm:Function func, bir:FunctionSignature signature, int defnIndex) returns FunctionValueDefn {
+    llvm:StructType ty = llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]);
+    llvm:ConstValue initValue = context.constStruct([func]);
     llvm:ConstPointerValue ptr = mod.addGlobal(ty,
                                                functionDefnSymbol(defnIndex),
-                                               initializer = llFunc,
+                                               initializer = initValue,
                                                align = 8,
                                                isConstant=true,
                                                unnamedAddr=true,
                                                linkage= "internal");
-    return context.constGetElementPtr(context.constAddrSpaceCast(context.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_TAGGED_PTR),
-                                     [context.constInt(LLVM_INT, TAG_FUNCTION)]);
-}
-
-// FIXME: this should be in init
-function functionDescPtr(llvm:Context context, llvm:Module mod, bir:FunctionSignature signature, int defnIndex) returns llvm:PointerValue {
-    llvm:ConstValue[] paramTypes = [];
-    foreach var paramType in signature.paramTypes {
-        // FIXME:
-        if paramType !is t:BasicTypeBitSet {
-            continue;
-        }
-        paramTypes.push(memberTypePlaceHolder(context, paramType));
-    }
-    llvm:ConstValue nArgs = context.constInt("i32", paramTypes.length());
-    llvm:ConstValue ret = memberTypePlaceHolder(context, signature.returnType);
-    t:SemType restTy = signature.restParamType ?: t:NEVER;
-    llvm:ConstValue rest = memberTypePlaceHolder(context, restTy);
-    llvm:ConstValue args = context.constArray(LLVM_MEMBER_TYPE, paramTypes);
-    llvm:ConstValue fd = context.constStruct([nArgs, ret, rest, args]);
-    llvm:StructType ty = llvm:structType(["i32", LLVM_MEMBER_TYPE, LLVM_MEMBER_TYPE, llvm:arrayType(LLVM_MEMBER_TYPE, paramTypes.length())]);
-    llvm:ConstPointerValue ptr = mod.addGlobal(ty,
-                                               functionDescSymbol(defnIndex),
-                                               initializer = fd,
-                                               align = 8,
-                                               isConstant=true,
-                                               unnamedAddr=true,
-                                               linkage= "internal");
-    return context.constBitCast(ptr, functionDescPtrType);
-}
-
-function memberTypePlaceHolder(llvm:Context cx, t:SemType memberType) returns llvm:ConstValue {
-    if memberType is t:BasicTypeBitSet {
-        return cx.constInt(LLVM_MEMBER_TYPE, (memberType << 1)|1);
-    }
-    else {
-        panic error("not implemented");
-    }
+    return context.constAddrSpaceCast(ptr, LLVM_TAGGED_PTR);
 }

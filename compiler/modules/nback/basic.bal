@@ -220,15 +220,12 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     bir:Symbol funcSymbol = funcRef.symbol;
     llvm:Function|llvm:PointerValue func;
     if operand is bir:Register {
-        llvm:Value cleanedPtrVal = builder.iBitwise("and",
-                                                    builder.ptrToInt(<llvm:PointerValue>builder.load(scaffold.address(operand)), LLVM_INT),
-                                                    constInt(scaffold, POINTER_MASK));
-        llvm:PointerValue ptr = builder.bitCast(builder.getElementPtr(scaffold.llContext().constNull(LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE),
-                                                                      [cleanedPtrVal]),
-                                                llvm:pointerType(llvm:structType([functionDescPtrType,
-                                                                                  llvm:pointerType(buildFunctionSignature(signature))])));
-        llvm:PointerValue funcPtr = builder.getElementPtr(ptr, [constIndex(scaffold, 0), constIndex(scaffold, 1)]);
-        func = <llvm:PointerValue>builder.load(funcPtr);
+        llvm:PointerValue fnTaggedPtr = <llvm:PointerValue>builder.load(scaffold.address(operand));
+        fnTaggedPtr = builder.addrSpaceCast(fnTaggedPtr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE);
+        llvm:PointerType fnPtrTy = llvm:pointerType(llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]));
+        llvm:PointerValue fnPtr = builder.bitCast(fnTaggedPtr, fnPtrTy);
+        llvm:PointerValue tmp = builder.getElementPtr(fnPtr, [constIndex(scaffold, 0), constIndex(scaffold, 0)], "inbounds");
+        func = <llvm:PointerValue>builder.load(tmp);
     }
     else if funcSymbol is bir:InternalSymbol {
         func = scaffold.getFunctionDefn(funcSymbol.identifier);

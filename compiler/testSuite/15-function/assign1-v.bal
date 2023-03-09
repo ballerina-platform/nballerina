@@ -14,6 +14,9 @@ public function main() {
     io:println(FB(foo, bar, 1, 2)); // @output true
     io:println(FB(notFoo, bar, 1, 2)); // @output false
     io:println(FB(notFoo, bar, 2, 1)); // @output true
+
+    B b2 = bar;
+    io:println(b2(2, 1)); // @output true
 }
 
 function foo() returns boolean {

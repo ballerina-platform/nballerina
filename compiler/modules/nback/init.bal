@@ -59,7 +59,6 @@ const TYPE_KIND_INT = "int";
 const TYPE_KIND_FLOAT = "float";
 const TYPE_KIND_DECIMAL = "decimal";
 const TYPE_KIND_STRING = "string";
-const TYPE_KIND_FUNCTION = "function";
 
 const STRUCTURE_LIST = 0;
 const STRUCTURE_MAPPING = 1;
@@ -68,7 +67,7 @@ type StructureBasicType STRUCTURE_LIST|STRUCTURE_MAPPING;
 
 type TypeKindArrayOrMap TYPE_KIND_ARRAY|TYPE_KIND_MAP;
 type TypeKindSimple TYPE_KIND_TRUE|TYPE_KIND_FALSE|TYPE_KIND_INT|TYPE_KIND_FLOAT|TYPE_KIND_DECIMAL;
-type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED|TYPE_KIND_STRING|TYPE_KIND_FUNCTION|TypeKindSimple;
+type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED|TYPE_KIND_STRING|TypeKindSimple;
 
 type FunctionRef llvm:FunctionDecl|llvm:ConstPointerValue;
 
@@ -525,9 +524,6 @@ function createSubtypeStruct(InitModuleContext cx, t:BasicTypeCode typeCode, t:C
         t:BT_MAPPING => {
             return createMappingSubtypeStruct(cx, semType); 
         }
-        t:BT_FUNCTION => {
-            return createFunctionSubtypeStruct(cx, semType);
-        }
     }
     panic err:impossible(`subtypes of uniform type ${typeCode} are not implemented`);    
 }
@@ -537,30 +533,6 @@ function createBooleanSubtypeStruct(InitModuleContext cx, t:ComplexSemType semTy
     return {
         types: [cx.llTypes.subtypeContainsFunctionPtr],
         values: [getSubtypeContainsFunc(cx, sub.value ? "true" : "false")]
-    };
-}
-
-function createFunctionSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
-    bir:FunctionSignature signature = bir:functionSignature(cx.tc, semType);
-    llvm:ConstValue[] paramTypes = [];
-    llvm:Context context = cx.llContext();
-    foreach var paramType in signature.paramTypes {
-        if paramType is t:BasicTypeBitSet {
-            paramTypes.push(context.constInt(LLVM_BITSET, paramType));
-        }
-        else {
-            // is it safe to ignore these similar to record type?
-            continue;
-        }
-    }
-    llvm:ConstValue nArgs = context.constInt("i32", paramTypes.length());
-    llvm:ConstValue ret = context.constInt(LLVM_BITSET, <t:BasicTypeBitSet>signature.returnType);
-    t:BasicTypeBitSet restType = signature.restParamType is t:BasicTypeBitSet ? <t:BasicTypeBitSet>signature.restParamType : t:NEVER;
-    llvm:ConstValue rest = context.constInt(LLVM_BITSET, restType);
-    llvm:ConstValue args = context.constArray(LLVM_BITSET, paramTypes);
-    return {
-        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", LLVM_BITSET, LLVM_BITSET, llvm:arrayType(LLVM_BITSET, paramTypes.length())],
-        values: [getSubtypeContainsFunc(cx, TYPE_KIND_FUNCTION), nArgs, ret, rest, args]
     };
 }
 

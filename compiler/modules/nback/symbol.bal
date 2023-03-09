@@ -96,7 +96,3 @@ function fillerDescSymbol(int n) returns string {
 function functionDefnSymbol(int n) returns string {
     return ".func" + n.toString();
 }
-
-function functionDescSymbol(int n) returns string {
-    return ".funcDesc" + n.toString();
-}

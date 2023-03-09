@@ -1309,6 +1309,7 @@ public class Builder {
                 insnWords = self.buildFunctionCallBody(retType, fnName, args);
             }
             else {
+                io:println("fnTy: ", fnTy);
                 panic err:illegalArgument("not a function pointer");
             }
         }
