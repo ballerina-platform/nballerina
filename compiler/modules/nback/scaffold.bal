@@ -614,5 +614,6 @@ function addFunctionValueDefn(llvm:Context context, llvm:Module mod, llvm:Functi
                                                isConstant=true,
                                                unnamedAddr=true,
                                                linkage= "internal");
-    return context.constAddrSpaceCast(ptr, LLVM_TAGGED_PTR);
+    return context.constGetElementPtr(context.constAddrSpaceCast(ptr, LLVM_TAGGED_PTR),
+                                      [context.constInt(LLVM_INT, TAG_FUNCTION)]);
 }
