@@ -1188,6 +1188,9 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
 
 function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
     t:SemType toType = check cx.resolveTypeDesc(tcExpr.td);
+    if t:isSubtype(cx.mod.tc, toType, t:FUNCTION) && !t:isSameType(cx.mod.tc, toType, t:FUNCTION) {
+        return cx.semanticErr("type cast for proper subtypes of function type not implemented", tcExpr.opPos);
+    }
     t:SemType operandExpectedType = expected == () ? toType : t:intersect(toType, expected);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, operandExpectedType, tcExpr.operand);
     t:SemType fromType = operandSemType(cx.mod.tc, operand);
@@ -1261,6 +1264,9 @@ function codeGenNumericConvert(ExprContext cx, bir:BasicBlock nextBlock, bir:Ope
 }
 
 function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemType semType, Binding opBinding, boolean negated, Position pos, PrevTypeMergers? prevs) returns CodeGenError|CondExprEffect {
+    if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) && !t:isSameType(cx.mod.tc, semType, t:FUNCTION) {
+        return cx.semanticErr("type test for proper subtypes of function type not implemented", pos);
+    }
     bir:Register reg = opBinding.reg;
     t:Context tc = cx.mod.tc;
     t:SemType curSemType = reg.semType;
@@ -1321,6 +1327,9 @@ function createMerger(ExprContext cx, bir:Label originLabel, TypeMerger? merger)
 
 function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeDesc td, s:Expr left, boolean negated, Position pos) returns CodeGenError|ExprEffect {
     t:SemType semType = check cx.resolveTypeDesc(td);
+    if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) && !t:isSameType(cx.mod.tc, semType, t:FUNCTION) {
+        return cx.semanticErr("type test for proper subtypes of function type not implemented", pos);
+    }
     var { result, block: nextBlock } = check codeGenExpr(cx, bb, expected, left);
     return finishCodeGenTypeTest(cx, semType, result, nextBlock, negated, pos);
 }

@@ -2,8 +2,8 @@ import ballerina/io;
 type F function(int) returns int;
 
 public function main() {
-    F f = foo; // @error
-    if f is F {
+    F f = foo;
+    if f is F { // @error
         io:println(f(1));
     }
 }
