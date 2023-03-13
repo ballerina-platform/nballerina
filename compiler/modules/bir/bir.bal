@@ -374,9 +374,12 @@ public type Insn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
-public type Operand ConstOperand|FunctionValOperand|Register;
+public type Operand ConstOperand|Register;
 
-public type ConstOperand  readonly & record {|
+// TODO: change the name of function val operand
+public type ConstOperand SingleValueConstOperand|FunctionConstValOperand;
+
+public type SingleValueConstOperand  readonly & record {|
     t:SemType semType;
     t:SingleValue value;
 |};
@@ -413,7 +416,7 @@ public type StringConstOperand readonly & record {|
     string value;
 |};
 
-public type FunctionValOperand readonly & record {|
+public type FunctionConstValOperand readonly & record {|
     t:SemType semType;
     FunctionRef value;
 |};
@@ -423,7 +426,7 @@ public type FloatOperand FloatConstOperand|Register;
 public type DecimalOperand DecimalConstOperand|Register;
 public type BooleanOperand BooleanConstOperand|Register;
 public type StringOperand StringConstOperand|Register;
-public type FunctionOperand FunctionRef|FunctionValOperand|Register;
+public type FunctionOperand FunctionRef|FunctionConstValOperand|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
     return t:isSubtype(tc, operand.semType, semType);

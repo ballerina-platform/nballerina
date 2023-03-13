@@ -513,7 +513,7 @@ type MatchTest EqualMatchTest|BasicTypeMatchTest;
 type EqualMatchTest record {|
     int clauseIndex;
     Position pos;
-    bir:ConstOperand operand;
+    bir:SingleValueConstOperand operand;
     readonly t:SingleValue value;
 |};
 
@@ -558,7 +558,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
                     return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
                 patternType = t:singleton(tc, value);
-                bir:ConstOperand operand = { value, semType: patternType };
+                bir:SingleValueConstOperand operand = { value, semType: patternType };
                 EqualMatchTest mt = { value, operand, clauseIndex: i, pos: clause.opPos };
                 equalMatchTests.add(mt);
                 matchTests.push(mt);

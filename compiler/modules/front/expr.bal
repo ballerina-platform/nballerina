@@ -325,12 +325,12 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         // Int literal
         var { digits, base, startPos: pos } => {
-            bir:ConstOperand result = singletonOperand(cx, check intLiteralValue(cx, expected, base, digits, pos));
+            bir:SingleValueConstOperand result = singletonOperand(cx, check intLiteralValue(cx, expected, base, digits, pos));
             return { result, block: bb };
         }
         // FP literal
         var { untypedLiteral, typeSuffix, startPos: pos } => {
-            bir:ConstOperand result = singletonOperand(cx, check fpLiteralValue(cx, expected, untypedLiteral, typeSuffix, pos));
+            bir:SingleValueConstOperand result = singletonOperand(cx, check fpLiteralValue(cx, expected, untypedLiteral, typeSuffix, pos));
             return { result, block: bb };
         }
     }
@@ -1703,7 +1703,7 @@ function arithmeticOperand(bir:Operand operand) returns ArithmeticOperand? {
         return ();
     }
     else {
-        return arithmeticConstOperand(<bir:ConstOperand>operand);
+        return arithmeticConstOperand(operand);
     }
 }
 
@@ -1761,15 +1761,23 @@ function validIntOperand(ExprContext cx, bir:Operand operand, s:Expr expr) retur
     return cx.semanticErr("expected an int operand", s:range(expr));
 }
 
-function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
-    return operand is bir:Register ? () : { value: (<bir:ConstOperand>operand).value };
+function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue|bir:FunctionRef? {
+    if operand is bir:Register {
+        return ();
+    }
+    else if operand is bir:FunctionConstValOperand {
+        return operand.value;
+    }
+    else {
+        return { value: operand.value };
+    }
 }
 
 function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
-    return operand is bir:Register|bir:FunctionValOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
+    return operand is bir:Register|bir:FunctionConstValOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
 }
 
-function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
+function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:SingleValueConstOperand {
     return { value, semType: t:singleton(cx.mod.tc, value) };
 }
 
@@ -1785,7 +1793,7 @@ function singletonBooleanOperand(t:Context tc, boolean value) returns bir:Boolea
     return { value, semType: t:singleton(tc, value) };
 }
 
-function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionValOperand {
+function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionConstValOperand {
     return { value, semType: functionRefTy(tc, value) };
 }
 
@@ -1832,7 +1840,7 @@ const VALUE_SINGLE_SHAPE = 2;
 type ValueFlags int;
 
 function operandValue(bir:Operand operand) returns [t:SingleValue, ValueFlags] {
-    if operand is bir:ConstOperand {
+    if operand is bir:SingleValueConstOperand {
         var value = operand.value;
         ValueFlags flags = VALUE_CONST;
         t:WrappedSingleValue? wrapped = t:singleShape(operand.semType);

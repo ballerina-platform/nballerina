@@ -152,7 +152,7 @@ function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & 
         return fromRegister(sc, op);
     }
     // FIXME:
-    if op is bir:FunctionValOperand {
+    if op is bir:FunctionConstValOperand {
         return "function val";
     }
     t:SingleValue value = op.value;
