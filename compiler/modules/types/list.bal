@@ -9,7 +9,7 @@ public type ListAtomicType readonly & record {|
 // The length of the list is `fixedLength`, the last member of the `initial` is repeated to achieve this semantic.
 // { initial: [int], fixedLength: 3, } is same as { initial: [int, int, int], fixedLength: 3 }
 // { initial: [string, int], fixedLength: 100 } means `int` is repeated 99 times to get a list of 100 members.
-// `fixedLength` must be `0` when `initial` is empty and the `fixedLength` must be at least `initial.length()`
+// `fixedLength` must be `0` if and only if `initial` is empty and the `fixedLength` must be at least `initial.length()`
 public type FixedLengthArray record {|
     CellSemType[] initial;
     int fixedLength;
@@ -110,6 +110,9 @@ public class ListDefinition {
 }
 
 function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
+    if array.fixedLength == 0 {
+        return { initial: [], fixedLength: 0 };
+    }
     CellSemType[] initial = array.initial;
     int i = initial.length() - 1;
     if i <= 0 {
