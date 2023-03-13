@@ -195,6 +195,8 @@ function parseCharSeparatedList(string s, string:Char sep) returns string[] {
 
 // these are the test ids for tests we currently can't automatically fix by this script, tests are numbered starting with 1
 map<int[]> skipTest = {
+    "logical_and_expr.balt": [44, 50, 53], // JBUG, not allowed under current grammer
+    "logical_or_expr.balt": [42, 51, 54], // JBUG, not allowed under current grammer
     "list_constructor.balt": [6, 13, 15], // #1003, JBUG, JBUG
     "negation_is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
     "is_expr.balt": [38, 39, 54, 84, 87, 88], // JBUG
