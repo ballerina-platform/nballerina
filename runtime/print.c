@@ -150,6 +150,9 @@ static void printTaggedInner(FILE *fp, TaggedPtr p, int style, struct PrintStack
                 fprintf(fp, "%s", decStr);
             }
             break;
+        case TAG_FUNCTION:
+            fputs("function", fp);
+            break;
         default:
             fprintf(stderr, "unknown tag %d\n", tag);
             abort();
