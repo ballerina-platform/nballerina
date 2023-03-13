@@ -244,6 +244,7 @@ function registerName(Register register) returns string {
 public function functionSignature(t:Context tc, t:ComplexSemType semType) returns FunctionSignature {
     // This is not exactly correct since semType could be diff/union of function types
     // We need something to select a function inherent type similar to how `selectListInherentType` works
+    // But until we support function variance we don't need to handle it (not possible to have a diff/union of function types)
     var [argList, returnType] = <t:FunctionAtomicType>t:functionAtomicType(tc, semType);
     t:ListAtomicType listAtom = <t:ListAtomicType>t:listAtomicType(tc, argList);
     var { members: fixedLengthArray, rest } = listAtom;
@@ -422,9 +423,6 @@ public type FloatOperand FloatConstOperand|Register;
 public type DecimalOperand DecimalConstOperand|Register;
 public type BooleanOperand BooleanConstOperand|Register;
 public type StringOperand StringConstOperand|Register;
-// TODO: do we need a seperate register here?
-// can we safely remove FunctionValOPerand here?
-// check if we always recreate the function register
 public type FunctionOperand FunctionRef|FunctionValOperand|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
