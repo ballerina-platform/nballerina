@@ -1165,7 +1165,14 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
     Binding? binding;
     string? prefix = ref.prefix;
     if prefix != () {
-        result = singletonOperand(cx, check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name));
+        var v = check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name);
+        if v is bir:FunctionSignature {
+            bir:FunctionRef funcRef = check genImportedFunctionRef(cx, prefix, ref.name, ref.qNamePos);
+            result = functionValOperand(cx.mod.tc, funcRef);
+        } 
+        else {
+            result = singletonOperand(cx, v);
+        }
         binding = ();
     }
     else {
