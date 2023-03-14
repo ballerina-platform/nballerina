@@ -69,6 +69,28 @@ public type FunctionRef readonly & record {|
     FunctionSignature signature;
 |};
 
+public function functionRefFromRegister(t:Context tc, Register register) returns FunctionRef {
+    // TODO: when we support type variance we will need to support t:FUNCTION here as well
+    FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
+    InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
+    return { symbol, signature, erasedSignature: signature };
+}
+
+public function registerName(Register register) returns string {
+    if register is DeclRegister {
+        return register.name;
+    }
+    else if register is NarrowRegister {
+        return registerName(register.underlying);
+    }
+    return <string>register.name;
+}
+
+public function functionSignature(t:Context tc, t:ComplexSemType semType) returns FunctionSignature {
+    var [returnType, paramTypes, restParamType] = t:deconstructFunctionType(tc, semType);
+    return { paramTypes: paramTypes.cloneReadOnly(), returnType, restParamType };
+}
+
 # A function's code is represented as a factored control flow graph.
 # (as described in Choi et al 1999 https://dl.acm.org/doi/abs/10.1145/381788.316171)
 # This is like a control flow graph, except that basic blocks
@@ -223,34 +245,6 @@ public type FinalRegister readonly & record {|
     *DeclRegisterBase;
     FINAL_REGISTER_KIND kind = FINAL_REGISTER_KIND;
 |};
-
-public function functionRefFromRegister(t:Context tc, Register register) returns FunctionRef {
-    // TODO: when we support type variance we will need to support t:FUNCTION here as well
-    FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
-    InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
-    return { symbol, signature, erasedSignature: signature };
-}
-
-function registerName(Register register) returns string {
-    if register is DeclRegister {
-        return register.name;
-    }
-    else if register is NarrowRegister {
-        return registerName(register.underlying);
-    }
-    return <string>register.name;
-}
-
-public function functionSignature(t:Context tc, t:ComplexSemType semType) returns FunctionSignature {
-    // This is not exactly correct since semType could be diff/union of function types
-    // We need something to select a function inherent type similar to how `selectListInherentType` works
-    // But until we support function variance we don't need to handle it (not possible to have a diff/union of function types)
-    var [argList, returnType] = <t:FunctionAtomicType>t:functionAtomicType(tc, semType);
-    t:ListAtomicType listAtom = <t:ListAtomicType>t:listAtomicType(tc, argList);
-    var { members: fixedLengthArray, rest } = listAtom;
-    t:SemType[] & readonly paramTypes = from int i in 0 ..< fixedLengthArray.fixedLength select t:listAtomicTypeMemberAtInnerVal(listAtom, i);
-    return { paramTypes, returnType, restParamType: t:cellInnerVal(rest) == t:NEVER ? () : rest  };
-}
 
 public function createVarRegister(FunctionCode code, SemType semType, Position pos, string name, RegisterScope scope) returns VarRegister {
     VarRegister r = { number: code.registers.length(), semType, pos, name, scope };

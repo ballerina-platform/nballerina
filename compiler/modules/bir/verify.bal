@@ -442,21 +442,19 @@ function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Int
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     // XXX verify insn.semType
     FunctionOperand operand = insn.func;
-    FunctionRef func =  operand is Register ? functionRefFromRegister(vc.typeContext(), operand) : <FunctionRef>insn.func;
-    FunctionSignature sig = func.signature;
+    SemType[] paramTypes = operand is FunctionRef ?  operand.signature.paramTypes : t:deconstructFunctionType(vc.typeContext(), operand.semType)[1];
     int nSuppliedArgs = insn.args.length();
-    int nExpectedArgs = sig.paramTypes.length();
+    int nExpectedArgs = paramTypes.length();
     if nSuppliedArgs != nExpectedArgs {
-        string name = vc.symbolToString(func.symbol);
         if nSuppliedArgs < nExpectedArgs {
-            return vc.invalidErr(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too few arguments for call to function`, vc.qNameRange(insn.pos));
         }
         else {
-            return vc.invalidErr(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too many arguments for call to function`, vc.qNameRange(insn.pos));
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check validOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
+        check validOperandType(vc, insn.args[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, vc.qNameRange(insn.pos));
     }
 }
 
