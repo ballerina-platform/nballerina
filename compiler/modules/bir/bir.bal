@@ -69,28 +69,6 @@ public type FunctionRef readonly & record {|
     FunctionSignature signature;
 |};
 
-public function functionRefFromRegister(t:Context tc, Register register) returns FunctionRef {
-    // TODO: when we support type variance we will need to support t:FUNCTION here as well
-    FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
-    InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
-    return { symbol, signature, erasedSignature: signature };
-}
-
-public function registerName(Register register) returns string {
-    if register is DeclRegister {
-        return register.name;
-    }
-    else if register is NarrowRegister {
-        return registerName(register.underlying);
-    }
-    return <string>register.name;
-}
-
-public function functionSignature(t:Context tc, t:ComplexSemType semType) returns FunctionSignature {
-    var [returnType, paramTypes, restParamType] = t:deconstructFunctionType(tc, semType);
-    return { paramTypes: paramTypes.cloneReadOnly(), returnType, restParamType };
-}
-
 # A function's code is represented as a factored control flow graph.
 # (as described in Choi et al 1999 https://dl.acm.org/doi/abs/10.1145/381788.316171)
 # This is like a control flow graph, except that basic blocks
@@ -328,6 +306,7 @@ public enum InsnName {
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
+    INSN_CALL_INDIRECT,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -364,7 +343,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -626,7 +605,17 @@ public type CallInsn readonly & record {|
     *ResultInsnBase;
     # Position in the source that resulted in the instruction
     INSN_CALL name = INSN_CALL;
-    FunctionOperand func;
+    FunctionRef func;
+    Operand[] args;
+|};
+
+// TODO: better comment here
+# Call a function using a function value
+public type CallIndirectInsn readonly & record {|
+    *ResultInsnBase;
+    INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
+    Register func;
+    FunctionRef funcRef;
     Operand[] args;
 |};
 

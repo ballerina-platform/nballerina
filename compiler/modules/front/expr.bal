@@ -1399,7 +1399,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
             func = ref;
         }
         else if ref is Binding {
-            func = bir:functionRefFromRegister(cx.mod.tc, ref.reg);
+            func = functionRefFromRegister(cx.mod.tc, ref.reg);
             funcRegister = ref.reg;
         }
         else {
@@ -1438,7 +1438,10 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    return codeGenCall(cx, curBlock, funcRegister ?: func, func.signature.returnType, args, expr.qNamePos);
+    if funcRegister != () {
+        return codeGenCallIndirect(cx, curBlock, funcRegister, func, func.signature.returnType, args, expr.qNamePos);
+    }
+    return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.qNamePos);
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
@@ -1454,10 +1457,45 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
     return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.namePos);
 }
 
-function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef|bir:Register func, t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {
+function functionRefFromRegister(t:Context tc, bir:Register register) returns bir:FunctionRef {
+    // TODO: when we support type variance we will need to support t:FUNCTION here as well
+    bir:FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
+    bir:InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
+    return { symbol, signature, erasedSignature: signature };
+}
+
+function registerName(bir:Register register) returns string {
+    if register is bir:DeclRegister {
+        return register.name;
+    }
+    else if register is bir:NarrowRegister {
+        return registerName(register.underlying);
+    }
+    return <string>register.name;
+}
+
+function functionSignature(t:Context tc, t:ComplexSemType semType) returns bir:FunctionSignature {
+    var [returnType, paramTypes, restParamType] = t:deconstructFunctionType(tc, semType);
+    return { paramTypes: paramTypes.cloneReadOnly(), returnType, restParamType };
+}
+
+function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
     bir:CallInsn call = {
         func,
+        result: reg,
+        args: args.cloneReadOnly(),
+        pos
+    };
+    curBlock.insns.push(call);
+    return { result: constifyRegister(reg), block: curBlock };    
+}
+
+function codeGenCallIndirect(ExprContext cx, bir:BasicBlock curBlock, bir:Register func, bir:FunctionRef funcRef, t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {
+    bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
+    bir:CallIndirectInsn call = {
+        func,
+        funcRef,
         result: reg,
         args: args.cloneReadOnly(),
         pos

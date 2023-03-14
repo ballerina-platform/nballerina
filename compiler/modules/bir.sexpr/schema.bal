@@ -34,9 +34,10 @@ public type MapEntry readonly & [sexpr:String, Operand];
 public type TypeMergePred readonly & [Label, Operand];
 
 public type Insn ResultInsn|OperandInsn|Unimpl|
-                 CallInsn|CallGenericInsn|TypeBranchInsn|BranchInsn|TypeCastInsn|TypeTestInsn|CondBranchInsn|MappingConstructInsn|ListConstructInsn|TypeMergeInsn|ListGetInsn;
+                 CallInsn|CallGenericInsn|CallIndirectInsn|TypeBranchInsn|BranchInsn|TypeCastInsn|TypeTestInsn|CondBranchInsn|MappingConstructInsn|ListConstructInsn|TypeMergeInsn|ListGetInsn;
 public type CallInsn readonly & ["call", FunctionRef, Result, Operand...];
 public type CallGenericInsn readonly & ["call-generic", FunctionRef, Signature, Result, Operand...];
+public type CallIndirectInsn readonly & ["call-indirect", Operand, Result, Operand...];
 public type TypeBranchInsn readonly & ["type-branch", Operand, ts:Type, Label, Label, RegisterName, RegisterName];
 public type TypeCastInsn readonly & ["type-cast", Result, ts:Type, Operand];
 public type TypeTestInsn readonly & ["type-test", Result, ts:Type, Operand, boolean];

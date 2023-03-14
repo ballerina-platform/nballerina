@@ -441,8 +441,14 @@ function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Int
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     // XXX verify insn.semType
-    FunctionOperand operand = insn.func;
-    SemType[] paramTypes = operand is FunctionRef ?  operand.signature.paramTypes : t:deconstructFunctionType(vc.typeContext(), operand.semType)[1];
+    return verifyFunctionCallArgs(vc, insn.func.signature.paramTypes, insn);
+}
+
+function verifyIndirectCall(VerifyContext vc, CallIndirectInsn insn) returns err:Internal? {
+    return verifyFunctionCallArgs(vc, t:deconstructFunctionType(vc.typeContext(), insn.func.semType)[1], insn);
+}
+
+function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallIndirectInsn|CallInsn insn) returns err:Internal? {
     int nSuppliedArgs = insn.args.length();
     int nExpectedArgs = paramTypes.length();
     if nSuppliedArgs != nExpectedArgs {

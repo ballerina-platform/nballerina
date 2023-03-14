@@ -80,8 +80,7 @@ function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
     // io:println(insn.name + " " + file.lineColumn(insn.pos).toString());
     if insn is bir:CallInsn {
-        bir:FunctionOperand operand = insn.func;
-        bir:FunctionRef func =  operand is bir:Register ? bir:functionRefFromRegister(sc.tc, operand) : <bir:FunctionRef>insn.func;
+        bir:FunctionRef func =  insn.func;
         FunctionRef ref = fromFunctionRefAccum(sc, func);
         (Operand & readonly)[] args = from var arg in insn.args select fromOperand(sc, arg);
         if func.erasedSignature != func.signature {
@@ -91,6 +90,11 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
             return ["call", ref, fromRegister(sc, insn.result), ...args];
         }
     }
+    else if insn is bir:CallIndirectInsn {
+        (Operand & readonly)[] args = from var arg in insn.args select fromOperand(sc, arg);
+        return ["call-indirect", fromOperand(sc, insn.func), fromRegister(sc, insn.result), ...args];
+    }
+    // TODO: handle call indirect
     else if insn is bir:BranchInsn {
         return [insn.backward ? "branch-back" : "branch", formLabel(sc, insn.dest)];
     }
