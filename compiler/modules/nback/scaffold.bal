@@ -100,7 +100,11 @@ type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT
 
 type StringDefn llvm:ConstPointerValue;
 type DecimalDefn llvm:ConstPointerValue;
-type FunctionValueDefn llvm:Value;
+
+type FunctionValueDefn record {|
+    readonly bir:Symbol symbol;
+    llvm:ConstPointerValue value;
+|};
 
 type Module record {|
     llvm:Context llContext;
@@ -112,7 +116,7 @@ type Module record {|
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
     map<DecimalDefn> decimalDefns = {};
-    map<FunctionValueDefn> functionValueDefns = {};
+    table<FunctionValueDefn> key(symbol) functionValueDefns = table [];
     t:Context typeContext;
     bir:Module bir;
     bir:ModuleId modId;
@@ -252,14 +256,15 @@ class Scaffold {
         return newDefn;
     }
 
-    function getFunctionValue(llvm:Function func, bir:FunctionSignature signature, string identifier) returns FunctionValueDefn {
-        FunctionValueDefn? curDefn = self.mod.functionValueDefns[identifier];
+    function getFunctionValue(llvm:Function func, bir:FunctionSignature signature, bir:Symbol symbol) returns llvm:ConstPointerValue {
+        FunctionValueDefn? curDefn = self.mod.functionValueDefns[symbol];
         if curDefn != () {
-            return curDefn;
+            return curDefn.value;
         }
-        FunctionValueDefn newDefn = addFunctionValueDefn(self.llContext(), self.getModule(), func, signature, self.mod.functionValueDefns.length());
-        self.mod.functionValueDefns[identifier] = newDefn;
-        return newDefn;
+        llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func, signature, self.mod.functionValueDefns.length());
+        FunctionValueDefn newDefn = {value, symbol };
+        self.mod.functionValueDefns.add(newDefn);
+        return value;
     }
 
     function getDecimal(decimal val) returns DecimalDefn {
@@ -604,7 +609,7 @@ function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean
     return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
 }
 
-function addFunctionValueDefn(llvm:Context context, llvm:Module mod, llvm:Function func, bir:FunctionSignature signature, int defnIndex) returns FunctionValueDefn {
+function addFunctionValueDefn(llvm:Context context, llvm:Module mod, llvm:Function func, bir:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
     llvm:StructType ty = llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]);
     llvm:ConstValue initValue = context.constStruct([func]);
     llvm:ConstPointerValue ptr = mod.addGlobal(ty,
