@@ -94,7 +94,6 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
         (Operand & readonly)[] args = from var arg in insn.args select fromOperand(sc, arg);
         return ["call-indirect", fromOperand(sc, insn.func), fromRegister(sc, insn.result), ...args];
     }
-    // TODO: handle call indirect
     else if insn is bir:BranchInsn {
         return [insn.backward ? "branch-back" : "branch", formLabel(sc, insn.dest)];
     }
@@ -155,9 +154,8 @@ function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & 
     if op is bir:Register {
         return fromRegister(sc, op);
     }
-    // FIXME:
     if op is bir:FunctionConstValOperand {
-        return "function val";
+        return ["function", fromFunctionRefAccum(sc, op.value)];
     }
     t:SingleValue value = op.value;
     if value is string {
