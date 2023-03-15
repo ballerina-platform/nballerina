@@ -1168,7 +1168,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
         var v = check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name);
         if v is bir:FunctionSignature {
             bir:FunctionRef funcRef = check genImportedFunctionRef(cx, prefix, ref.name, ref.qNamePos);
-            result = functionValOperand(cx.mod.tc, funcRef);
+            return createFunctionValue(cx, funcRef, bb, ref.qNamePos);
         } 
         else {
             result = singletonOperand(cx, v);
@@ -1182,8 +1182,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             binding = ();
         }
         else if v is bir:FunctionRef {
-            result = functionValOperand(cx.mod.tc, v);
-            binding = ();
+            return createFunctionValue(cx, v, bb, ref.qNamePos);
         }
         else {
             result = constifyRegister(v.reg);
@@ -1191,6 +1190,14 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
         }
     }  
     return { result, block: bb, binding };
+}
+
+function createFunctionValue(ExprContext cx, bir:FunctionRef funcRef, bir:BasicBlock bb, Position pos) returns CodeGenError|ExprEffect {
+    bir:FunctionConstValOperand operand = functionValOperand(cx.mod.tc, funcRef);
+    bir:TmpRegister result = cx.createTmpRegister(operand.semType, pos);
+    bir:FunctionConstValueCreateInsn insn = { result, operand, pos };
+    bb.insns.push(insn);
+    return { result, block: bb, binding: () };
 }
 
 function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {

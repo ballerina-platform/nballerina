@@ -75,6 +75,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:AssignInsn {
             check buildAssign(builder, scaffold, insn);
         }
+        else if insn is bir:FunctionConstValueCreateInsn {
+            check buildFunctionConstValueCreate(builder, scaffold, insn);
+        }
         else if insn is bir:TypeCastInsn {
             check buildTypeCast(builder, scaffold, insn);
         }
@@ -203,6 +206,10 @@ function buildPanic(llvm:Builder builder, Scaffold scaffold, bir:PanicInsn insn)
 function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue err) {
     buildVoidRuntimeFunctionCall(builder, scaffold, panicFunction, [err]);
     builder.unreachable();
+}
+
+function buildFunctionConstValueCreate(llvm:Builder builder, Scaffold scaffold, bir:FunctionConstValueCreateInsn insn) returns BuildError? {
+    builder.store(check buildFunctionConstValue(scaffold, insn.operand), scaffold.address(insn.result));
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {

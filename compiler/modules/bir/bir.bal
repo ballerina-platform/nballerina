@@ -307,6 +307,7 @@ public enum InsnName {
     INSN_ABNORMAL_RET,
     INSN_CALL,
     INSN_CALL_INDIRECT,
+    INSN_FUNCTION_CONST_VALUE_CREATE,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -343,13 +344,13 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn
+    // TODO: better name for this
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn|FunctionConstValueCreateInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
 
-// TODO: change the name of function val operand
 public type ConstOperand SingleValueConstOperand|FunctionConstValOperand;
 
 public type SingleValueConstOperand  readonly & record {|
@@ -617,6 +618,13 @@ public type CallIndirectInsn readonly & record {|
     Register func;
     FunctionRef funcRef;
     Operand[] args;
+|};
+
+# Create a function value
+public type FunctionConstValueCreateInsn readonly & record {|
+    *ResultInsnBase;
+    INSN_FUNCTION_CONST_VALUE_CREATE name = INSN_FUNCTION_CONST_VALUE_CREATE;
+    FunctionConstValOperand operand;
 |};
 
 # Assign a value to a register.
