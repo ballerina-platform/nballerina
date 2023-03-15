@@ -307,7 +307,7 @@ public enum InsnName {
     INSN_ABNORMAL_RET,
     INSN_CALL,
     INSN_CALL_INDIRECT,
-    INSN_FUNCTION_CONST_VALUE_CREATE,
+    INSN_FUNCTION_CREATE_CONST_VALUE,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -344,8 +344,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    // TODO: better name for this
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn|FunctionConstValueCreateInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn|FunctionCreateConstValueInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -610,8 +609,8 @@ public type CallInsn readonly & record {|
     Operand[] args;
 |};
 
-// TODO: better comment here
-# Call a function using a function value
+# Call a function using a function value.
+# This has all the restrictions of CallInsn.
 public type CallIndirectInsn readonly & record {|
     *ResultInsnBase;
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
@@ -620,10 +619,10 @@ public type CallIndirectInsn readonly & record {|
     Operand[] args;
 |};
 
-# Create a function value
-public type FunctionConstValueCreateInsn readonly & record {|
+# Create a constant function value that can later be called using CallIndirectInsn
+public type FunctionCreateConstValueInsn readonly & record {|
     *ResultInsnBase;
-    INSN_FUNCTION_CONST_VALUE_CREATE name = INSN_FUNCTION_CONST_VALUE_CREATE;
+    INSN_FUNCTION_CREATE_CONST_VALUE name = INSN_FUNCTION_CREATE_CONST_VALUE;
     FunctionConstValOperand operand;
 |};
 

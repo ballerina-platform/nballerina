@@ -360,8 +360,8 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
             return vc.semanticErr("function assignment with type variance not supported", insn.pos);
         }
     }
-    else if insn is FunctionConstValueCreateInsn {
-        check verifyFunctionConstValueCreate(vc, insn);
+    else if insn is FunctionCreateConstValueInsn {
+        check verifyFunctionCreateConstValue(vc, insn);
     }
     else if insn is CondBranchInsn {
         check validOperandBoolean(vc, name, insn.operand, insn.pos);
@@ -413,7 +413,7 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
 }
 
-function verifyFunctionConstValueCreate(VerifyContext vc, FunctionConstValueCreateInsn insn) returns err:Internal? {
+function verifyFunctionCreateConstValue(VerifyContext vc, FunctionCreateConstValueInsn insn) returns err:Internal? {
     if !vc.isSameType(insn.result.semType, insn.operand.semType) {
         return vc.invalidErr("function const value create result type is not same as operand type", insn.pos);
     }

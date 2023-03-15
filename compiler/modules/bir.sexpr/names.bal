@@ -16,8 +16,7 @@ final readonly & map<string> INSN_NAMES_BIR_SEXPR = {
     "INSN_STR_CONCAT"                     : "str-concat",
      // hand picked
     "INSN_ASSIGN"                         : "set",
-    // FIXME:
-    "INSN_FUNCTION_CONST_VALUE_CREATE"    : "set",
+    "INSN_FUNCTION_CREATE_CONST_VALUE"    : "set",
     "INSN_BOOLEAN_NOT"                    : "boolean!",
     "INSN_COMPARE<"                       : "less-than",
     "INSN_COMPARE<="                      : "less-than-or-equal",

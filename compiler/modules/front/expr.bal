@@ -1195,7 +1195,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
 function createFunctionValue(ExprContext cx, bir:FunctionRef funcRef, bir:BasicBlock bb, Position pos) returns CodeGenError|ExprEffect {
     bir:FunctionConstValOperand operand = functionValOperand(cx.mod.tc, funcRef);
     bir:TmpRegister result = cx.createTmpRegister(operand.semType, pos);
-    bir:FunctionConstValueCreateInsn insn = { result, operand, pos };
+    bir:FunctionCreateConstValueInsn insn = { result, operand, pos };
     bb.insns.push(insn);
     return { result, block: bb, binding: () };
 }
