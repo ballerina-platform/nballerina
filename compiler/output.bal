@@ -3,6 +3,9 @@ import ballerina/io;
 
 type LlvmModule llvm:Module;
 
+# The preferred output extension for the output filename.
+const OUTPUT_EXTENSION = ".ll";
+
 type OutputOptions record {
     string? target = ();
 };
