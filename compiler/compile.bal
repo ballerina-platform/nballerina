@@ -45,7 +45,7 @@ class LlvmEmitter {
         bir:ModuleId id = birMod.getId();
         string? outputBasename = self.outputBasename;
         if outputBasename != () {
-            check outputModule(llMod, outputFilename(outputBasename, id.names.slice(1), ".ll"), self.outputOptions);
+            check outputModule(llMod, outputFilename(outputBasename, id.names.slice(1), OUTPUT_EXTENSION), self.outputOptions);
         }
         self.programModules.push({ id, typeUsage });
     }
@@ -54,7 +54,7 @@ class LlvmEmitter {
         LlvmModule initMod = check nback:buildInitModule(env, self.programModules.reverse(), potentialEntryFuncs);
         string? outputBasename = self.outputBasename;
         if outputBasename != () {
-            check outputModule(initMod, outputFilename(outputBasename, ["_init"], ".ll"), self.outputOptions);
+            check outputModule(initMod, outputFilename(outputBasename, ["_init"], OUTPUT_EXTENSION), self.outputOptions);
         }
     }
 }

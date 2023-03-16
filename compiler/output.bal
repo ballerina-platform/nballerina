@@ -3,6 +3,10 @@ import ballerina/io;
 
 type LlvmModule llvm:Module;
 
+# The preferred output extension for the output filename.
+# Note that jni.llvm changes this value to ".o" for object files.
+const OUTPUT_EXTENSION = ".ll";
+
 type OutputOptions record {
     string? target = ();
 };
