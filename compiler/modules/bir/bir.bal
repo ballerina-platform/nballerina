@@ -307,7 +307,6 @@ public enum InsnName {
     INSN_ABNORMAL_RET,
     INSN_CALL,
     INSN_CALL_INDIRECT,
-    INSN_FUNCTION_CREATE_CONST_VALUE,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -344,13 +343,13 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn|FunctionCreateConstValueInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
 
-public type ConstOperand SingleValueConstOperand|FunctionConstValOperand;
+public type ConstOperand SingleValueConstOperand|FunctionConstOperand;
 
 public type SingleValueConstOperand  readonly & record {|
     t:SemType semType;
@@ -389,7 +388,7 @@ public type StringConstOperand readonly & record {|
     string value;
 |};
 
-public type FunctionConstValOperand readonly & record {|
+public type FunctionConstOperand readonly & record {|
     t:SemType semType;
     FunctionRef value;
 |};
@@ -399,7 +398,7 @@ public type FloatOperand FloatConstOperand|Register;
 public type DecimalOperand DecimalConstOperand|Register;
 public type BooleanOperand BooleanConstOperand|Register;
 public type StringOperand StringConstOperand|Register;
-public type FunctionOperand FunctionRef|FunctionConstValOperand|Register;
+public type FunctionOperand FunctionRef|FunctionConstOperand|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
     return t:isSubtype(tc, operand.semType, semType);
@@ -614,16 +613,8 @@ public type CallInsn readonly & record {|
 public type CallIndirectInsn readonly & record {|
     *ResultInsnBase;
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
-    Register func;
     FunctionRef funcRef;
-    Operand[] args;
-|};
-
-# Create a constant function value that can later be called using CallIndirectInsn
-public type FunctionCreateConstValueInsn readonly & record {|
-    *ResultInsnBase;
-    INSN_FUNCTION_CREATE_CONST_VALUE name = INSN_FUNCTION_CREATE_CONST_VALUE;
-    FunctionConstValOperand operand;
+    [Register, Operand...] operands;
 |};
 
 # Assign a value to a register.

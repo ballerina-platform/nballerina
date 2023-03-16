@@ -75,9 +75,6 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:AssignInsn {
             check buildAssign(builder, scaffold, insn);
         }
-        else if insn is bir:FunctionCreateConstValueInsn {
-            check buildFunctionCreateConstValue(builder, scaffold, insn);
-        }
         else if insn is bir:TypeCastInsn {
             check buildTypeCast(builder, scaffold, insn);
         }
@@ -208,10 +205,6 @@ function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerVal
     builder.unreachable();
 }
 
-function buildFunctionCreateConstValue(llvm:Builder builder, Scaffold scaffold, bir:FunctionCreateConstValueInsn insn) returns BuildError? {
-    builder.store(check buildFunctionConstValue(scaffold, insn.operand), scaffold.address(insn.result));
-}
-
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
     builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType),
                   scaffold.address(insn.result));
@@ -237,9 +230,9 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
 function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns BuildError? {
     bir:FunctionRef funcRef = insn.funcRef;
     bir:FunctionSignature signature = funcRef.erasedSignature;
-    llvm:Value[] args = check buildFunctionCallArgs(builder, scaffold, funcRef, insn.args);
+    llvm:Value[] args = check buildFunctionCallArgs(builder, scaffold, funcRef, from int i in 1 ..< insn.operands.length() select insn.operands[i]);
     llvm:PointerType fnStructPtrTy = llvm:pointerType(llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]));
-    llvm:PointerValue fnStructTaggedPtr = <llvm:PointerValue>builder.load(scaffold.address(insn.func));
+    llvm:PointerValue fnStructTaggedPtr = <llvm:PointerValue>builder.load(scaffold.address(insn.operands[0]));
     llvm:Value unTaggedVal = builder.iBitwise("and",
                                                builder.ptrToInt(fnStructTaggedPtr, LLVM_INT),
                                                constInt(scaffold, POINTER_MASK));

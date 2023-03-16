@@ -1168,7 +1168,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
         var v = check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name);
         if v is bir:FunctionSignature {
             bir:FunctionRef funcRef = check genImportedFunctionRef(cx, prefix, ref.name, ref.qNamePos);
-            return createFunctionValue(cx, funcRef, bb, ref.qNamePos);
+            result = functionValOperand(cx.mod.tc, funcRef);
         } 
         else {
             result = singletonOperand(cx, v);
@@ -1182,7 +1182,8 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             binding = ();
         }
         else if v is bir:FunctionRef {
-            return createFunctionValue(cx, v, bb, ref.qNamePos);
+            result = functionValOperand(cx.mod.tc, v);
+            binding = ();
         }
         else {
             result = constifyRegister(v.reg);
@@ -1190,14 +1191,6 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
         }
     }  
     return { result, block: bb, binding };
-}
-
-function createFunctionValue(ExprContext cx, bir:FunctionRef funcRef, bir:BasicBlock bb, Position pos) returns CodeGenError|ExprEffect {
-    bir:FunctionConstValOperand operand = functionValOperand(cx.mod.tc, funcRef);
-    bir:TmpRegister result = cx.createTmpRegister(operand.semType, pos);
-    bir:FunctionCreateConstValueInsn insn = { result, operand, pos };
-    bb.insns.push(insn);
-    return { result, block: bb, binding: () };
 }
 
 function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
@@ -1507,11 +1500,11 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
 
 function codeGenCallIndirect(ExprContext cx, bir:BasicBlock curBlock, bir:Register func, bir:FunctionRef funcRef, t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
+    [bir:Register, bir:Operand...] operands = [func, ...args];
     bir:CallIndirectInsn call = {
-        func,
         funcRef,
         result: reg,
-        args: args.cloneReadOnly(),
+        operands: operands.cloneReadOnly(),
         pos
     };
     curBlock.insns.push(call);
@@ -1817,7 +1810,7 @@ function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue|bir
     if operand is bir:Register {
         return ();
     }
-    else if operand is bir:FunctionConstValOperand {
+    else if operand is bir:FunctionConstOperand {
         return operand.value;
     }
     else {
@@ -1826,7 +1819,7 @@ function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue|bir
 }
 
 function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
-    return operand is bir:Register|bir:FunctionConstValOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
+    return operand is bir:Register|bir:FunctionConstOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:SingleValueConstOperand {
@@ -1845,7 +1838,7 @@ function singletonBooleanOperand(t:Context tc, boolean value) returns bir:Boolea
     return { value, semType: t:singleton(tc, value) };
 }
 
-function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionConstValOperand {
+function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionConstOperand {
     return { value, semType: functionRefTy(tc, value) };
 }
 

@@ -340,7 +340,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     if operand is bir:Register {
         return buildLoad(builder, scaffold, operand);
     }
-    else if operand is bir:FunctionConstValOperand {
+    else if operand is bir:FunctionConstOperand {
         TaggedRepr repr = { subtype: t:FUNCTION, alwaysImmediate: false };
         return [repr, check buildFunctionConstValue(scaffold, operand)];
     }
@@ -374,7 +374,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     }
 }
 
-function buildFunctionConstValue(Scaffold scaffold, bir:FunctionConstValOperand val) returns llvm:Value|BuildError {
+function buildFunctionConstValue(Scaffold scaffold, bir:FunctionConstOperand val) returns llvm:Value|BuildError {
     var { symbol, signature } = val.value;
     llvm:Function func;
     if symbol is bir:InternalSymbol {

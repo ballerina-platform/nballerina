@@ -360,9 +360,6 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
             return vc.semanticErr("function assignment with type variance not supported", insn.pos);
         }
     }
-    else if insn is FunctionCreateConstValueInsn {
-        check verifyFunctionCreateConstValue(vc, insn);
-    }
     else if insn is CondBranchInsn {
         check validOperandBoolean(vc, name, insn.operand, insn.pos);
     }
@@ -374,6 +371,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is CallInsn {
         check verifyCall(vc, insn);
+    }
+    else if insn is CallIndirectInsn {
+        check verifyCallIndirect(vc, insn);
     }
     else if insn is TypeCastInsn {
         check verifyTypeCast(vc, insn);
@@ -410,15 +410,6 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is TypeBranchInsn {
         check verifyTypeBranch(vc, insn);
-    }
-}
-
-function verifyFunctionCreateConstValue(VerifyContext vc, FunctionCreateConstValueInsn insn) returns err:Internal? {
-    if !vc.isSameType(insn.result.semType, insn.operand.semType) {
-        return vc.invalidErr("create function const value result type is not same as operand type", insn.pos);
-    }
-    if !vc.isSubtype(insn.operand.semType, t:FUNCTION) {
-        return vc.invalidErr("operand type is not a function type", insn.pos);
     }
 }
 
@@ -460,12 +451,21 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     return verifyFunctionCallArgs(vc, insn.func.signature.paramTypes, insn);
 }
 
-function verifyIndirectCall(VerifyContext vc, CallIndirectInsn insn) returns err:Internal? {
-    return verifyFunctionCallArgs(vc, t:deconstructFunctionType(vc.typeContext(), insn.func.semType)[1], insn);
+function verifyCallIndirect(VerifyContext vc, CallIndirectInsn insn) returns err:Internal? {
+    return verifyFunctionCallArgs(vc, t:deconstructFunctionType(vc.typeContext(), insn.operands[0].semType)[1], insn);
 }
 
 function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallIndirectInsn|CallInsn insn) returns err:Internal? {
-    int nSuppliedArgs = insn.args.length();
+    // JBUG: can't do
+    // Operand[] args = insn is CallInsn ? insn.args : from int i in 1 ..< insn.operands.length() select insn.operands[i];
+    Operand[] args;
+    if insn is CallInsn {
+        args = insn.args;
+    }
+    else {
+        args = from int i in 1 ..< insn.operands.length() select insn.operands[i];
+    }
+    int nSuppliedArgs = args.length();
     int nExpectedArgs = paramTypes.length();
     if nSuppliedArgs != nExpectedArgs {
         if nSuppliedArgs < nExpectedArgs {
@@ -476,7 +476,7 @@ function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallIndi
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check validOperandType(vc, insn.args[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, vc.qNameRange(insn.pos));
+        check validOperandType(vc, args[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, vc.qNameRange(insn.pos));
     }
 }
 
