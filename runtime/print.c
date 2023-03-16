@@ -150,7 +150,7 @@ static void printTaggedInner(FILE *fp, TaggedPtr p, int style, struct PrintStack
                 fprintf(fp, "%s", decStr);
             }
             break;
-        case TAG_FUNCTION: 
+        case TAG_FUNCTION:
             {
                 UntypedPtr ptr = taggedToPtr(p);
                 fprintf(fp, "function %p", ptr);

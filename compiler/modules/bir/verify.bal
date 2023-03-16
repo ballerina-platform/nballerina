@@ -415,7 +415,10 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
 
 function verifyFunctionCreateConstValue(VerifyContext vc, FunctionCreateConstValueInsn insn) returns err:Internal? {
     if !vc.isSameType(insn.result.semType, insn.operand.semType) {
-        return vc.invalidErr("function const value create result type is not same as operand type", insn.pos);
+        return vc.invalidErr("create function const value result type is not same as operand type", insn.pos);
+    }
+    if !vc.isSubtype(insn.operand.semType, t:FUNCTION) {
+        return vc.invalidErr("operand type is not a function type", insn.pos);
     }
 }
 

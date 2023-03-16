@@ -262,8 +262,7 @@ class Scaffold {
             return curDefn.value;
         }
         llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func, signature, self.mod.functionValueDefns.length());
-        FunctionValueDefn newDefn = {value, symbol };
-        self.mod.functionValueDefns.add(newDefn);
+        self.mod.functionValueDefns.add({value, symbol });
         return value;
     }
 

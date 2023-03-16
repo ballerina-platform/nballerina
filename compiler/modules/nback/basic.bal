@@ -238,13 +238,13 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     bir:FunctionRef funcRef = insn.funcRef;
     bir:FunctionSignature signature = funcRef.erasedSignature;
     llvm:Value[] args = check buildFunctionCallArgs(builder, scaffold, funcRef, insn.args);
-    llvm:PointerType fnStrucPtrTy = llvm:pointerType(llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]));
+    llvm:PointerType fnStructPtrTy = llvm:pointerType(llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]));
     llvm:PointerValue fnStructTaggedPtr = <llvm:PointerValue>builder.load(scaffold.address(insn.func));
     llvm:Value unTaggedVal = builder.iBitwise("and",
                                                builder.ptrToInt(fnStructTaggedPtr, LLVM_INT),
                                                constInt(scaffold, POINTER_MASK));
     llvm:PointerValue unTaggedPtr = builder.getElementPtr(constNil(scaffold), [unTaggedVal], "inbounds");
-    llvm:PointerValue fnStructPtr = builder.bitCast(builder.addrSpaceCast(unTaggedPtr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), fnStrucPtrTy);
+    llvm:PointerValue fnStructPtr = builder.bitCast(builder.addrSpaceCast(unTaggedPtr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), fnStructPtrTy);
     llvm:PointerValue fnGlobalPtr = builder.getElementPtr(fnStructPtr, [constIndex(scaffold, 0), constIndex(scaffold, 0)], "inbounds");
     llvm:PointerValue funcPtr = <llvm:PointerValue>builder.load(fnGlobalPtr);
     llvm:Value? retValue = buildFunctionCall(builder, scaffold, funcPtr, args);

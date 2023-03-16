@@ -610,7 +610,7 @@ public type CallInsn readonly & record {|
 |};
 
 # Call a function using a function value.
-# This has all the restrictions of CallInsn.
+# This behaves similar to CallInsn.
 public type CallIndirectInsn readonly & record {|
     *ResultInsnBase;
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
