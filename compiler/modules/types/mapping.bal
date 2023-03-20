@@ -4,6 +4,7 @@ public type Field record {|
     string name;
     SemType ty;
     boolean ro = false;
+    boolean opt = false;
 |};
 
 public type CellField [string, CellSemType];
@@ -80,7 +81,8 @@ public class MappingDefinition {
 }
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
-    CellField[] cellFields = from var { name, ty, ro } in fields select [name, cellContaining(env, ty, ro ? CELL_MUT_NONE : mut)];
+    CellField[] cellFields = from var { name, ty, ro, opt } in fields
+        select [name, cellContaining(env, opt ? union(ty, UNDEF) : ty, ro ? CELL_MUT_NONE : mut)];
     CellSemType restCell = cellContaining(env, union(rest, UNDEF), rest == NEVER ? CELL_MUT_NONE : mut);
     return md.define(env, cellFields, restCell);
 }
@@ -155,47 +157,27 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
     else {
         MappingAtomicType neg = cx.mappingAtomType(negList.atom);
 
-        MappingPairing pairing;
-
-        if pos.names != neg.names {
-            // If this negative type has required fields that the positive one does not allow
-            // or vice-versa, then this negative type has no effect,
-            // so we can move on to the next one
-
-            // Deal the easy case of two closed records fast.
-            if  cellInner(pos.rest) == UNDEF &&  cellInner(neg.rest) == UNDEF {
-                return mappingInhabited(cx, pos, negList.next);
-            }
-            pairing = new (pos, neg);
-            foreach var {type1: posType, type2: negType} in pairing {
-                if  cellInner(posType) == UNDEF ||  cellInner(negType) == UNDEF {
-                    return mappingInhabited(cx, pos, negList.next);
-                }
-            }
-            pairing.reset();
-        }
-        else {
-            pairing = new (pos, neg);
-        }
-
+        MappingPairing pairing = new (pos, neg);
         if !isEmpty(cx, diff(pos.rest, neg.rest)) {
             return mappingInhabited(cx, pos, negList.next);
         }
-        foreach var { index1, type1: posType, type2: negType } in pairing {
+        foreach var { name, index1, type1: posType, type2: negType } in pairing {
             CellSemType d = <CellSemType>diff(posType, negType);
-             if index1 is () {
-                // We cannot match the rest field of the positive with named field of a negative atom
-                return mappingInhabited(cx, pos, negList.next);
-            }
             if !isEmpty(cx, d) {
                 TempMappingSubtype mt;
-                CellSemType[] posTypes = shallowCopyCellTypes(pos.types);
-                posTypes[index1] = d;
-                mt = { types: posTypes, names: pos.names, rest: pos.rest };
+                if index1 is () {
+                    // the posType came from the rest type
+                    mt = insertField(pos, name, d);
+                }
+                else {
+                    CellSemType[] posTypes = shallowCopyCellTypes(pos.types);
+                    posTypes[index1] = d;
+                    mt = { types: posTypes, names: pos.names, rest: pos.rest };
+                }
                 if mappingInhabited(cx, mt, negList.next) {
                     return true;
                 }
-            }          
+            }
         }
         return false; 
     }
