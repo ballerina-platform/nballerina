@@ -398,7 +398,6 @@ public type FloatOperand FloatConstOperand|Register;
 public type DecimalOperand DecimalConstOperand|Register;
 public type BooleanOperand BooleanConstOperand|Register;
 public type StringOperand StringConstOperand|Register;
-public type FunctionOperand FunctionRef|FunctionConstOperand|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
     return t:isSubtype(tc, operand.semType, semType);
@@ -613,7 +612,6 @@ public type CallInsn readonly & record {|
 public type CallIndirectInsn readonly & record {|
     *ResultInsnBase;
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
-    FunctionRef funcRef;
     [Register, Operand...] operands;
 |};
 

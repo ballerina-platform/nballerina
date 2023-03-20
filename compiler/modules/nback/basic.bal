@@ -212,9 +212,11 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
     bir:FunctionRef funcRef = insn.func;
+    t:SemType[] paramTypes = funcRef.erasedSignature.paramTypes;
+    t:SemType[] instantiatedParamTypes = funcRef.signature.paramTypes;
     bir:FunctionSignature signature = funcRef.erasedSignature;
     bir:Symbol funcSymbol = funcRef.symbol;
-    llvm:Value[] args = check buildFunctionCallArgs(builder, scaffold, funcRef, insn.args);
+    llvm:Value[] args = check buildFunctionCallArgs(builder, scaffold, paramTypes, instantiatedParamTypes, insn.args);
     llvm:Function func;
     if funcSymbol is bir:InternalSymbol {
         func = scaffold.getFunctionDefn(funcSymbol.identifier);
@@ -228,9 +230,9 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
 }
 
 function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns BuildError? {
-    bir:FunctionRef funcRef = insn.funcRef;
-    bir:FunctionSignature signature = funcRef.erasedSignature;
-    llvm:Value[] args = check buildFunctionCallArgs(builder, scaffold, funcRef, from int i in 1 ..< insn.operands.length() select insn.operands[i]);
+    var [returnType, paramTypes, restParamType] = t:deconstructFunctionType(scaffold.typeContext(), insn.operands[0].semType);
+    bir:FunctionSignature signature = { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
+    llvm:Value[] args = check buildFunctionCallArgs(builder, scaffold, paramTypes, paramTypes, from int i in 1 ..< insn.operands.length() select insn.operands[i]);
     llvm:PointerType fnStructPtrTy = llvm:pointerType(llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]));
     llvm:PointerValue fnStructTaggedPtr = <llvm:PointerValue>builder.load(scaffold.address(insn.operands[0]));
     llvm:Value unTaggedVal = builder.iBitwise("and",
@@ -241,14 +243,11 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     llvm:PointerValue fnGlobalPtr = builder.getElementPtr(fnStructPtr, [constIndex(scaffold, 0), constIndex(scaffold, 0)], "inbounds");
     llvm:PointerValue funcPtr = <llvm:PointerValue>builder.load(fnGlobalPtr);
     llvm:Value? retValue = buildFunctionCall(builder, scaffold, funcPtr, args);
-    RetRepr retRepr = semTypeRetRepr(signature.returnType);
+    RetRepr retRepr = semTypeRetRepr(returnType);
     buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
-function buildFunctionCallArgs(llvm:Builder builder, Scaffold scaffold, bir:FunctionRef funcRef, bir:Operand[] args) returns llvm:Value[]|BuildError {
-    bir:FunctionSignature signature = funcRef.erasedSignature;
-    t:SemType[] paramTypes = signature.paramTypes;
-    t:SemType[] instantiatedParamTypes = funcRef.signature.paramTypes;
+function buildFunctionCallArgs(llvm:Builder builder, Scaffold scaffold, t:SemType[] paramTypes, t:SemType[] instantiatedParamTypes, bir:Operand[] args) returns llvm:Value[]|BuildError {
     return from int i in 0 ..< args.length()
            select check buildWideRepr(builder, scaffold, args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]);
 }

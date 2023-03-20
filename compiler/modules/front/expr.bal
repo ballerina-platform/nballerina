@@ -1502,7 +1502,6 @@ function codeGenCallIndirect(ExprContext cx, bir:BasicBlock curBlock, bir:Regist
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
     [bir:Register, bir:Operand...] operands = [func, ...args];
     bir:CallIndirectInsn call = {
-        funcRef,
         result: reg,
         operands: operands.cloneReadOnly(),
         pos
