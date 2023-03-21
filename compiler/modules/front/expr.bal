@@ -1165,10 +1165,9 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
     Binding? binding;
     string? prefix = ref.prefix;
     if prefix != () {
-        var v = check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name);
-        if v is bir:FunctionSignature {
-            bir:FunctionRef funcRef = check genImportedFunctionRef(cx, prefix, ref.name, ref.qNamePos);
-            result = functionValOperand(cx.mod.tc, funcRef);
+        var v = check lookupImportedValue(cx, prefix, ref.name, ref.qNamePos);
+        if v is bir:FunctionRef {
+            result = functionValOperand(cx.mod.tc, v);
         } 
         else {
             result = singletonOperand(cx, v);
@@ -1599,24 +1598,15 @@ function groupOriginsByUnnarrowed(BindingChain? bindingLimit, TypeMergerOrigin? 
 }
 
 function genImportedFunctionRef(ExprContext cx, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
-    Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
-    var defn = mod.defns[identifier];
-    if defn is bir:FunctionSignature {
-        return {
-            symbol: { module: mod.moduleId, identifier },
-            signature: defn,
-            erasedSignature: defn
-        };
+    var defn = lookupImportedValue(cx, prefix, identifier, pos);
+    if defn is bir:FunctionRef {
+        return defn;
     }
-    else if defn == () {
+    else {
+        Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
         if mod.partial {
             return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, cx.qNameRange(pos));
         }
-        else {
-            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, cx.qNameRange(pos));
-        }
-    }
-    else {
         return cx.semanticErr("reference to non-function where function required", cx.qNameRange(pos));
     }
 }
@@ -2047,4 +2037,20 @@ function narrow(BindingChain? bindings, Binding binding, bir:NarrowRegister reg,
 
 function unnarrowBinding(Binding binding) returns DeclBinding {
     return binding is DeclBinding ? binding : binding.unnarrowed;
+}
+
+function lookupImportedValue(ExprContext cx, string prefix, string identifier, Position pos) returns t:SingleValue|bir:FunctionRef|err:Semantic {
+    Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
+    ExportedDefn? defn = mod.defns[identifier];
+    if defn is s:ResolvedConst {
+        return defn[1];
+    }
+    else if defn is bir:FunctionSignature {
+        return {
+            symbol: { module: mod.moduleId, identifier },
+            signature: defn,
+            erasedSignature: defn
+        };
+    }
+    return cx.semanticErr(`no public definition for ${prefix + ":" + identifier}`, cx.qNameRange(pos));
 }
