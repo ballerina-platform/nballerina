@@ -1165,10 +1165,10 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
     Binding? binding;
     string? prefix = ref.prefix;
     if prefix != () {
-        var v = check lookupImportedValue(cx, prefix, ref.name, ref.qNamePos);
+        var v = check lookupImportedVarRef(cx, prefix, ref.name, ref.qNamePos);
         if v is bir:FunctionRef {
             result = functionValOperand(cx.mod.tc, v);
-        } 
+        }
         else {
             result = singletonOperand(cx, v);
         }
@@ -1506,7 +1506,7 @@ function codeGenCallIndirect(ExprContext cx, bir:BasicBlock curBlock, bir:Regist
         pos
     };
     curBlock.insns.push(call);
-    return { result: constifyRegister(reg), block: curBlock };    
+    return { result: constifyRegister(reg), block: curBlock };
 }
 
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
@@ -1598,7 +1598,7 @@ function groupOriginsByUnnarrowed(BindingChain? bindingLimit, TypeMergerOrigin? 
 }
 
 function genImportedFunctionRef(ExprContext cx, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
-    var defn = lookupImportedValue(cx, prefix, identifier, pos);
+    var defn = lookupImportedVarRef(cx, prefix, identifier, pos);
     if defn is bir:FunctionRef {
         return defn;
     }
@@ -2039,7 +2039,7 @@ function unnarrowBinding(Binding binding) returns DeclBinding {
     return binding is DeclBinding ? binding : binding.unnarrowed;
 }
 
-function lookupImportedValue(ExprContext cx, string prefix, string identifier, Position pos) returns t:SingleValue|bir:FunctionRef|err:Semantic {
+function lookupImportedVarRef(ExprContext cx, string prefix, string identifier, Position pos) returns t:SingleValue|bir:FunctionRef|err:Semantic {
     Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
     ExportedDefn? defn = mod.defns[identifier];
     if defn is s:ResolvedConst {
