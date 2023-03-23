@@ -523,6 +523,7 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
                                          rest == INCLUSIVE_RECORD_TYPE_DESC ? { token: "}" } : { token: "|}" });
     }
     else {
+        // TODO: handle record { }, record {| T...; |} and record {| |}
         return nonTerminalSyntaxNode(td, { token: "map", pos: td.startPos },
                                          { token: "<" },
                                          rest is TypeDesc ? syntaxNodeFromTypeDesc(rest) : { token: "never" },

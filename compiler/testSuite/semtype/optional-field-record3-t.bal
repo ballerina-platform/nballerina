@@ -137,37 +137,37 @@ type R101 record {| int? a?; |};
 // @type R72 < R102
 type R102 record {| int? a?; anydata...; |};
 
-// @type R111 < R21
-// @type R111 < R22
-// @type R111 < R61
-// @type R111 < R62
-// @type R111 < R81
-// @type R111 < R82
-// @type R111 < R91
-// @type R111 < R92
-// @type R111 < R101
-// @type R111 < R102
-// @type R111 < R112
-type R111 record {| |};
+// @type M1 < R21
+// @type M1 < R22
+// @type M1 < R61
+// @type M1 < R62
+// @type M1 < R81
+// @type M1 < R82
+// @type M1 < R91
+// @type M1 < R92
+// @type M1 < R101
+// @type M1 < R102
+// @type M1 < M2
+type M1 map<never>;
 
-// @type R11 < R112
-// @type R12 < R112
-// @type R21 < R112
-// @type R22 < R112
-// @type R31 < R112
-// @type R32 < R112
-// @type R41 < R112
-// @type R42 < R112
-// @type R51 < R112
-// @type R52 < R112
-// @type R61 < R112
-// @type R62 < R112
-// @type R71 < R112
-// @type R72 < R112
-// @type R81 < R112
-// @type R82 < R112
-// @type R91 < R112
-// @type R92 < R112
-// @type R101 < R112
-// @type R102 < R112
-type R112 record {| anydata...; |};
+// @type R11 < M2
+// @type R12 < M2
+// @type R21 < M2
+// @type R22 < M2
+// @type R31 < M2
+// @type R32 < M2
+// @type R41 < M2
+// @type R42 < M2
+// @type R51 < M2
+// @type R52 < M2
+// @type R61 < M2
+// @type R62 < M2
+// @type R71 < M2
+// @type R72 < M2
+// @type R81 < M2
+// @type R82 < M2
+// @type R91 < M2
+// @type R92 < M2
+// @type R101 < M2
+// @type R102 < M2
+type M2 map<anydata>;
