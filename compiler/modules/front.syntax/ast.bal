@@ -445,7 +445,7 @@ public type FieldDesc record {|
 public const INCLUSIVE_RECORD_TYPE_DESC = true;
 public type MappingTypeDesc record {|
     *PositionFields;
-    FieldDesc[] fields;
+    FieldDesc[]? fields;
     TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest;
     t:MappingDefinition? defn = ();
 |};

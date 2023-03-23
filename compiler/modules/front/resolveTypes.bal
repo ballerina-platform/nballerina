@@ -232,19 +232,22 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             td.defn = d;
             // JBUG this panics if done with `from` and there's an error is resolveTypeDesc
             t:Field[] fields = [];
-            foreach var { name, typeDesc, ro } in td.fields {
-                t:SemType ty = check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc);
-                if ty == t:NEVER {
-                    return err:semantic("record field can't be never", s:locationInDefn(modDefn, { startPos: typeDesc.startPos, endPos: typeDesc.endPos }));
+            s:FieldDesc[]? fieldDescs = td.fields;
+            if fieldDescs != () {
+                foreach var { name, typeDesc, ro } in fieldDescs {
+                    t:SemType ty = check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc);
+                    if ty == t:NEVER {
+                        return err:semantic("record field can't be never", s:locationInDefn(modDefn, { startPos: typeDesc.startPos, endPos: typeDesc.endPos }));
+                    }
+                    fields.push({ name, ty, ro });
                 }
-                fields.push({ name, ty, ro });
-            }
-            map<s:FieldDesc> fieldsByName = {};
-            foreach var fd in td.fields {
-                if fieldsByName[fd.name] != () {
-                    return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn, fd.startPos));
+                map<s:FieldDesc> fieldsByName = {};
+                foreach var fd in fieldDescs {
+                    if fieldsByName[fd.name] != () {
+                        return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn, fd.startPos));
+                    }
+                    fieldsByName[fd.name] = fd;
                 }
-                fieldsByName[fd.name] = fd;
             }
             s:TypeDesc|s:INCLUSIVE_RECORD_TYPE_DESC? restTd = td.rest;
             t:SemType rest;
