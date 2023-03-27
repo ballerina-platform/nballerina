@@ -90,6 +90,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:CallInsn {
             check buildCall(builder, scaffold, insn);
         }
+        else if insn is bir:CallIndirectInsn {
+            check buildCallIndirect(builder, scaffold, insn);
+        }
         else if insn is bir:ListConstructInsn {
             check buildListConstruct(builder, scaffold, insn);
         }
@@ -208,17 +211,12 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
-    // Handler indirect calls later
-    bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
-    llvm:Value[] args = [];
-    bir:FunctionSignature signature = funcRef.erasedSignature;
-    t:SemType[] paramTypes = signature.paramTypes;
+    bir:FunctionRef funcRef = insn.func;
+    t:SemType[] paramTypes = funcRef.erasedSignature.paramTypes;
     t:SemType[] instantiatedParamTypes = funcRef.signature.paramTypes;
-    foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]));
-    }
-
+    bir:FunctionSignature signature = funcRef.erasedSignature;
     bir:Symbol funcSymbol = funcRef.symbol;
+    llvm:Value[] args = check buildFunctionCallArgs(builder, scaffold, paramTypes, instantiatedParamTypes, insn.args);
     llvm:Function func;
     if funcSymbol is bir:InternalSymbol {
         func = scaffold.getFunctionDefn(funcSymbol.identifier);
@@ -231,6 +229,29 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
+function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns BuildError? {
+    var [returnType, paramTypes, restParamType] = t:deconstructFunctionType(scaffold.typeContext(), insn.operands[0].semType);
+    bir:FunctionSignature signature = { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
+    llvm:Value[] args = check buildFunctionCallArgs(builder, scaffold, paramTypes, paramTypes, from int i in 1 ..< insn.operands.length() select insn.operands[i]);
+    llvm:PointerType fnStructPtrTy = llvm:pointerType(llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]));
+    llvm:PointerValue fnStructTaggedPtr = <llvm:PointerValue>builder.load(scaffold.address(insn.operands[0]));
+    llvm:Value unTaggedVal = builder.iBitwise("and",
+                                               builder.ptrToInt(fnStructTaggedPtr, LLVM_INT),
+                                               constInt(scaffold, POINTER_MASK));
+    llvm:PointerValue unTaggedPtr = builder.getElementPtr(constNil(scaffold), [unTaggedVal], "inbounds");
+    llvm:PointerValue fnStructPtr = builder.bitCast(builder.addrSpaceCast(unTaggedPtr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), fnStructPtrTy);
+    llvm:PointerValue fnGlobalPtr = builder.getElementPtr(fnStructPtr, [constIndex(scaffold, 0), constIndex(scaffold, 0)], "inbounds");
+    llvm:PointerValue funcPtr = <llvm:PointerValue>builder.load(fnGlobalPtr);
+    llvm:Value? retValue = buildFunctionCall(builder, scaffold, funcPtr, args);
+    RetRepr retRepr = semTypeRetRepr(returnType);
+    buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
+}
+
+function buildFunctionCallArgs(llvm:Builder builder, Scaffold scaffold, t:SemType[] paramTypes, t:SemType[] instantiatedParamTypes, bir:Operand[] args) returns llvm:Value[]|BuildError {
+    return from int i in 0 ..< args.length()
+           select check buildWideRepr(builder, scaffold, args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]);
+}
+
 function buildRuntimeFunctionCall(llvm:Builder builder, Scaffold scaffold, RuntimeFunction rf, llvm:Value[] args) returns llvm:Value {
     return <llvm:Value>buildFunctionCall(builder, scaffold, scaffold.getRuntimeFunctionDecl(rf), args);
 }
@@ -239,7 +260,7 @@ function buildVoidRuntimeFunctionCall(llvm:Builder builder, Scaffold scaffold, R
     return <()>buildFunctionCall(builder, scaffold, scaffold.getRuntimeFunctionDecl(rf), args);
 }
 
-function buildFunctionCall(llvm:Builder builder, Scaffold scaffold, llvm:Function fn, llvm:Value[] args) returns llvm:Value? {
+function buildFunctionCall(llvm:Builder builder, Scaffold scaffold, llvm:Function|llvm:PointerValue fn, llvm:Value[] args) returns llvm:Value? {
     scaffold.useDebugLocation(builder, DEBUG_USAGE_CALL);
     llvm:Value? result = builder.call(fn, args);
     scaffold.clearDebugLocation(builder);

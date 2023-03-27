@@ -355,6 +355,10 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is AssignInsn {
         check verifyOperandType(vc, insn.operand, insn.result.semType, "value is not a subtype of the LHS", insn.pos);
+        // TODO: remove this when we support function variance
+        if t:isSubtypeSimple(insn.result.semType, t:FUNCTION) && !vc.isSameType(insn.result.semType, insn.operand.semType) {
+            return vc.semanticErr("function assignment with type variance not supported", insn.pos);
+        }
     }
     else if insn is CondBranchInsn {
         check validOperandBoolean(vc, name, insn.operand, insn.pos);
@@ -367,6 +371,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is CallInsn {
         check verifyCall(vc, insn);
+    }
+    else if insn is CallIndirectInsn {
+        check verifyCallIndirect(vc, insn);
     }
     else if insn is TypeCastInsn {
         check verifyTypeCast(vc, insn);
@@ -441,21 +448,35 @@ function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Int
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     // XXX verify insn.semType
-    FunctionRef func = <FunctionRef>insn.func;
-    FunctionSignature sig = func.signature;
-    int nSuppliedArgs = insn.args.length();
-    int nExpectedArgs = sig.paramTypes.length();
+    return verifyFunctionCallArgs(vc, insn.func.signature.paramTypes, insn);
+}
+
+function verifyCallIndirect(VerifyContext vc, CallIndirectInsn insn) returns err:Internal? {
+    return verifyFunctionCallArgs(vc, t:deconstructFunctionType(vc.typeContext(), insn.operands[0].semType)[1], insn);
+}
+
+function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallIndirectInsn|CallInsn insn) returns err:Internal? {
+    // JBUG: can't do
+    // Operand[] args = insn is CallInsn ? insn.args : from int i in 1 ..< insn.operands.length() select insn.operands[i];
+    Operand[] args;
+    if insn is CallInsn {
+        args = insn.args;
+    }
+    else {
+        args = from int i in 1 ..< insn.operands.length() select insn.operands[i];
+    }
+    int nSuppliedArgs = args.length();
+    int nExpectedArgs = paramTypes.length();
     if nSuppliedArgs != nExpectedArgs {
-        string name = vc.symbolToString(func.symbol);
         if nSuppliedArgs < nExpectedArgs {
-            return vc.invalidErr(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too few arguments for call to function`, vc.qNameRange(insn.pos));
         }
         else {
-            return vc.invalidErr(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too many arguments for call to function`, vc.qNameRange(insn.pos));
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check validOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
+        check validOperandType(vc, args[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, vc.qNameRange(insn.pos));
     }
 }
 

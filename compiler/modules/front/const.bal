@@ -48,7 +48,7 @@ function resolvedConstHasType(s:ResolvedConst resolvedConst, t:SemType? expected
 function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, t:SemType? expectedType) returns s:ResolvedConst|ResolveTypeError {
     ExprContext cx = new ExprContext(mod, defn, constCode, (), ());
     var { result } = check codeGenExpr(cx, constBasicBlock, expectedType, expr);
-    bir:ConstOperand operand = <bir:ConstOperand>result;
+    bir:SingleValueConstOperand operand = <bir:SingleValueConstOperand>result;
     t:SemType semType = operand.semType;
     if t:singleShape(semType) == () {
         semType = t:singleton(mod.tc, operand.value);

@@ -101,6 +101,11 @@ type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT
 type StringDefn llvm:ConstPointerValue;
 type DecimalDefn llvm:ConstPointerValue;
 
+type FunctionValueDefn record {|
+    readonly bir:Symbol symbol;
+    llvm:ConstPointerValue value;
+|};
+
 type Module record {|
     llvm:Context llContext;
     llvm:Module llMod;
@@ -111,6 +116,7 @@ type Module record {|
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
     map<DecimalDefn> decimalDefns = {};
+    table<FunctionValueDefn> key(symbol) functionValueDefns = table [];
     t:Context typeContext;
     bir:Module bir;
     bir:ModuleId modId;
@@ -248,6 +254,16 @@ class Scaffold {
         StringDefn newDefn = addStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
         self.mod.stringDefns[str] = newDefn;
         return newDefn;
+    }
+
+    function getFunctionValue(llvm:Function func, bir:FunctionSignature signature, bir:Symbol symbol) returns llvm:ConstPointerValue {
+        FunctionValueDefn? curDefn = self.mod.functionValueDefns[symbol];
+        if curDefn != () {
+            return curDefn.value;
+        }
+        llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func, signature, self.mod.functionValueDefns.length());
+        self.mod.functionValueDefns.add({value, symbol });
+        return value;
     }
 
     function getDecimal(decimal val) returns DecimalDefn {
@@ -544,9 +560,9 @@ function semTypeRepr(t:SemType ty) returns Repr {
     if w == t:NEVER {
         panic err:impossible("allocate register with never type");
     }
-    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:DECIMAL|t:STRING|t:LIST|t:MAPPING|t:ERROR;
+    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:DECIMAL|t:STRING|t:LIST|t:MAPPING|t:ERROR|t:FUNCTION;
     int maximized = w | supported;
-    if maximized == t:VAL || maximized == (t:NON_BEHAVIOURAL|t:ERROR) || (w & supported) == w {
+    if maximized == t:VAL || maximized == (t:NON_BEHAVIOURAL|t:ERROR|t:FUNCTION) || (w & supported) == w {
         TaggedRepr repr = { subtype: w, alwaysImmediate: isSemTypeAlwaysImmediate(ty, w) };
         return repr;
     }
@@ -590,4 +606,18 @@ function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean
         return false;
     }
     return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
+}
+
+function addFunctionValueDefn(llvm:Context context, llvm:Module mod, llvm:Function func, bir:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
+    llvm:StructType ty = llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]);
+    llvm:ConstValue initValue = context.constStruct([func]);
+    llvm:ConstPointerValue ptr = mod.addGlobal(ty,
+                                               functionDefnSymbol(defnIndex),
+                                               initializer = initValue,
+                                               align = 8,
+                                               isConstant=true,
+                                               unnamedAddr=true,
+                                               linkage= "internal");
+    return context.constGetElementPtr(context.constAddrSpaceCast(ptr, LLVM_TAGGED_PTR),
+                                      [context.constInt(LLVM_INT, TAG_FUNCTION)]);
 }

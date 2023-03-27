@@ -19,7 +19,7 @@ public type BlockPanic readonly & (["no-panic"]|["on-panic", Label]);
 public type Block readonly & [sexpr:Symbol, BlockPanic, Insn...];
 public type RegisterName sexpr:Symbol;
 public type Result RegisterName;
-public type Operand RegisterName|sexpr:Data[0]|sexpr:String|["float", sexpr:String]|["decimal", sexpr:String]|int|boolean;
+public type Operand RegisterName|sexpr:Data[0]|sexpr:String|["float", sexpr:String]|["decimal", sexpr:String]|["function", FunctionRef]|int|boolean;
 public type Label sexpr:Symbol;
 
 public type PublicVisibility readonly & ["public"];

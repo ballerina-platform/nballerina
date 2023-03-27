@@ -19,6 +19,7 @@ const int TAG_FLOAT    = t:BT_FLOAT << TAG_SHIFT;
 const int TAG_DECIMAL  = t:BT_DECIMAL << TAG_SHIFT;
 const int TAG_STRING   = t:BT_STRING << TAG_SHIFT;
 const int TAG_ERROR    = t:BT_ERROR << TAG_SHIFT;
+const int TAG_FUNCTION = t:BT_FUNCTION << TAG_SHIFT;
 
 const int TAG_LIST     = t:BT_LIST << TAG_SHIFT;
 
@@ -339,6 +340,10 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     if operand is bir:Register {
         return buildLoad(builder, scaffold, operand);
     }
+    else if operand is bir:FunctionConstOperand {
+        TaggedRepr repr = { subtype: t:FUNCTION, alwaysImmediate: false };
+        return [repr, check buildFunctionConstValue(scaffold, operand)];
+    }
     else {
         t:SingleValue value = operand.value;
         if value is string {
@@ -367,6 +372,18 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
             return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, value)];
         }
     }
+}
+
+function buildFunctionConstValue(Scaffold scaffold, bir:FunctionConstOperand val) returns llvm:Value|BuildError {
+    var { symbol, signature } = val.value;
+    llvm:Function func;
+    if symbol is bir:InternalSymbol {
+        func = scaffold.getFunctionDefn(symbol.identifier);
+    }
+    else {
+        func = check buildFunctionDecl(scaffold, symbol, signature);
+    }
+    return scaffold.getFunctionValue(func, signature, symbol);
 }
 
 function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:ConstPointerValue|BuildError {   

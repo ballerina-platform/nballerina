@@ -116,11 +116,3 @@ function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefi
         return imported;
     }
 }
-
-function lookupImportedConst(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix, string varName) returns t:SingleValue|err:Semantic {
-    ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix, modDefn.namePos)).defns[varName];
-    if defn is s:ResolvedConst {
-        return defn[1];
-    }
-    return err:semantic(`${prefix + ":" + varName} is not defined as a public const`, loc=s:locationInDefn(modDefn, modDefn.namePos), defnName=modDefn.name);
-}

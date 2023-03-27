@@ -87,6 +87,33 @@ function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) ret
     }
 }
 
+public function functionAtomicType(Context cx, SemType semType) returns FunctionAtomicType? {
+    if !isSubtype(cx, semType, FUNCTION) {
+        return ();
+    }
+    if semType is BasicTypeBitSet {
+        // TODO: when supporting function type variance we will need to support t:FUNCTION
+        return ();
+    }
+    BddNode bdd = <BddNode>semType.subtypeDataList[0];
+    if bdd.left == true && bdd.middle == false && bdd.right == false {
+        return cx.functionAtomType(bdd.atom);
+    }
+    return ();
+}
+
+public function deconstructFunctionType(Context cx, SemType semType) returns [SemType, SemType[], SemType?] {
+    // This is not exactly correct since semType could be diff/union of function types
+    // We need something to select a function inherent type similar to how `selectListInherentType` works
+    // But until we support function variance we don't need to handle it (not possible to have a diff/union of function types)
+    var [argList, returnType] = <FunctionAtomicType>functionAtomicType(cx, semType);
+    ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
+    var { members: fixedLengthArray, rest } = listAtom;
+    SemType[] paramTypes = from int i in 0 ..< fixedLengthArray.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
+    SemType? restType = cellInnerVal(rest) == NEVER ? () : rest;
+    return [returnType, paramTypes, restType];
+}
+
 BasicTypeOps functionOps =  {  
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,

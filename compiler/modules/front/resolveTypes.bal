@@ -315,26 +315,35 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
         return resolveTypeDesc(mod, modDefn, depth + 1, td.td);
     }
-    if !mod.allowAllTypes {
-        return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, s:range(td)));
-    }
     if td is s:FunctionTypeDesc {
         t:FunctionDefinition? defn = td.defn;
         if defn == () {
             t:FunctionDefinition d = new(env);
             td.defn = d;
             s:TypeDesc[] a = [];
+            t:SemType rest = t:NEVER;
             foreach var arg in td.params {
-                a.push(arg.td);
+                if arg.isRest {
+                    rest = check resolveTypeDesc(mod, modDefn, depth + 1, arg.td);
+                }
+                else {
+                    a.push(arg.td);
+                }
             }
             t:SemType[] args = from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
+            if rest != t:NEVER {
+                args.push(t:defineListTypeWrapped(new(), env, rest=rest, mut=t:CELL_MUT_NONE));
+            }
             s:TypeDesc? retTy = td.ret;
             t:SemType ret = retTy != () ? check resolveTypeDesc(mod, modDefn, depth + 1, retTy) : t:NIL;
-            return d.define(env, t:tupleTypeWrappedRo(env, ...args), ret);
+            return d.define(env, t:defineListTypeWrapped(new(), env, args, rest=rest, mut=t:CELL_MUT_NONE), ret);
         }
         else {
             return defn.getSemType(env);
         }
+    }
+    if !mod.allowAllTypes {
+        return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, s:range(td)));
     }
     if td is s:ErrorTypeDesc {
         return t:errorDetail(check resolveTypeDesc(mod, modDefn, depth, td.detail));

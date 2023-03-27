@@ -325,12 +325,12 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         // Int literal
         var { digits, base, startPos: pos } => {
-            bir:ConstOperand result = singletonOperand(cx, check intLiteralValue(cx, expected, base, digits, pos));
+            bir:SingleValueConstOperand result = singletonOperand(cx, check intLiteralValue(cx, expected, base, digits, pos));
             return { result, block: bb };
         }
         // FP literal
         var { untypedLiteral, typeSuffix, startPos: pos } => {
-            bir:ConstOperand result = singletonOperand(cx, check fpLiteralValue(cx, expected, untypedLiteral, typeSuffix, pos));
+            bir:SingleValueConstOperand result = singletonOperand(cx, check fpLiteralValue(cx, expected, untypedLiteral, typeSuffix, pos));
             return { result, block: bb };
         }
     }
@@ -1165,7 +1165,13 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
     Binding? binding;
     string? prefix = ref.prefix;
     if prefix != () {
-        result = singletonOperand(cx, check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name));
+        var v = check lookupImportedVarRef(cx, prefix, ref.name, ref.qNamePos);
+        if v is bir:FunctionRef {
+            result = functionValOperand(cx.mod.tc, v);
+        }
+        else {
+            result = singletonOperand(cx, v);
+        }
         binding = ();
     }
     else {
@@ -1175,7 +1181,8 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             binding = ();
         }
         else if v is bir:FunctionRef {
-            return cx.unimplementedErr("values of function type are not implemented", ref.startPos);
+            result = functionValOperand(cx.mod.tc, v);
+            binding = ();
         }
         else {
             result = constifyRegister(v.reg);
@@ -1187,6 +1194,9 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
 
 function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
     t:SemType toType = check cx.resolveTypeDesc(tcExpr.td);
+    if t:isSubtype(cx.mod.tc, toType, t:FUNCTION) && !t:isSameType(cx.mod.tc, toType, t:FUNCTION) {
+        return cx.semanticErr("type cast for proper subtypes of function type not supported", tcExpr.opPos);
+    }
     t:SemType operandExpectedType = expected == () ? toType : t:intersect(toType, expected);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, operandExpectedType, tcExpr.operand);
     t:SemType fromType = operandSemType(cx.mod.tc, operand);
@@ -1260,6 +1270,9 @@ function codeGenNumericConvert(ExprContext cx, bir:BasicBlock nextBlock, bir:Ope
 }
 
 function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemType semType, Binding opBinding, boolean negated, Position pos, PrevTypeMergers? prevs) returns CodeGenError|CondExprEffect {
+    if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) && !t:isSameType(cx.mod.tc, semType, t:FUNCTION) {
+        return cx.semanticErr("type test for proper subtypes of function type not supported", pos);
+    }
     bir:Register reg = opBinding.reg;
     t:Context tc = cx.mod.tc;
     t:SemType curSemType = reg.semType;
@@ -1320,6 +1333,9 @@ function createMerger(ExprContext cx, bir:Label originLabel, TypeMerger? merger)
 
 function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeDesc td, s:Expr left, boolean negated, Position pos) returns CodeGenError|ExprEffect {
     t:SemType semType = check cx.resolveTypeDesc(td);
+    if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) && !t:isSameType(cx.mod.tc, semType, t:FUNCTION) {
+        return cx.semanticErr("type test for proper subtypes of function type not supported", pos);
+    }
     var { result, block: nextBlock } = check codeGenExpr(cx, bb, expected, left);
     return finishCodeGenTypeTest(cx, semType, result, nextBlock, negated, pos);
 }
@@ -1382,10 +1398,15 @@ function codeGenCheckingTerminator(bir:BasicBlock bb, s:CheckingKeyword checking
 function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr) returns CodeGenError|ExprEffect {
     string? prefix = expr.prefix;
     bir:FunctionRef func;
+    bir:Register? funcRegister = ();
     if prefix == () {
         var ref = cx.lookupLocalVarRef(expr.funcName, expr.qNamePos);
         if ref is bir:FunctionRef {
             func = ref;
+        }
+        else if ref is Binding {
+            func = functionRefFromRegister(cx.mod.tc, ref.reg);
+            funcRegister = ref.reg;
         }
         else {
             return cx.semanticErr("only a value of function type can be called", expr.qNamePos);
@@ -1423,7 +1444,10 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
+    if funcRegister != () {
+        return codeGenCallIndirect(cx, curBlock, funcRegister, func, func.signature.returnType, args, expr.qNamePos);
+    }
+    return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.qNamePos);
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
@@ -1436,11 +1460,32 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    return codeGenCall(cx, curBlock, func, args, expr.namePos);
+    return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.namePos);
 }
 
-function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, bir:Operand[] args, Position pos) returns ExprEffect {
-    t:SemType returnType = func.signature.returnType;
+function functionRefFromRegister(t:Context tc, bir:Register register) returns bir:FunctionRef {
+    // TODO: when we support type variance we will need to support t:FUNCTION here as well
+    bir:FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
+    bir:InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
+    return { symbol, signature, erasedSignature: signature };
+}
+
+function registerName(bir:Register register) returns string {
+    if register is bir:DeclRegister {
+        return register.name;
+    }
+    else if register is bir:NarrowRegister {
+        return registerName(register.underlying);
+    }
+    return <string>register.name;
+}
+
+function functionSignature(t:Context tc, t:ComplexSemType semType) returns bir:FunctionSignature {
+    var [returnType, paramTypes, restParamType] = t:deconstructFunctionType(tc, semType);
+    return { paramTypes: paramTypes.cloneReadOnly(), returnType, restParamType };
+}
+
+function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
     bir:CallInsn call = {
         func,
@@ -1450,6 +1495,18 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
     };
     curBlock.insns.push(call);
     return { result: constifyRegister(reg), block: curBlock };    
+}
+
+function codeGenCallIndirect(ExprContext cx, bir:BasicBlock curBlock, bir:Register func, bir:FunctionRef funcRef, t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {
+    bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
+    [bir:Register, bir:Operand...] operands = [func, ...args];
+    bir:CallIndirectInsn call = {
+        result: reg,
+        operands: operands.cloneReadOnly(),
+        pos
+    };
+    curBlock.insns.push(call);
+    return { result: constifyRegister(reg), block: curBlock };
 }
 
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
@@ -1541,24 +1598,15 @@ function groupOriginsByUnnarrowed(BindingChain? bindingLimit, TypeMergerOrigin? 
 }
 
 function genImportedFunctionRef(ExprContext cx, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
-    Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
-    var defn = mod.defns[identifier];
-    if defn is bir:FunctionSignature {
-        return {
-            symbol: { module: mod.moduleId, identifier },
-            signature: defn,
-            erasedSignature: defn
-        };
+    var defn = lookupImportedVarRef(cx, prefix, identifier, pos);
+    if defn is bir:FunctionRef {
+        return defn;
     }
-    else if defn == () {
+    else {
+        Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
         if mod.partial {
             return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, cx.qNameRange(pos));
         }
-        else {
-            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, cx.qNameRange(pos));
-        }
-    }
-    else {
         return cx.semanticErr("reference to non-function where function required", cx.qNameRange(pos));
     }
 }
@@ -1747,15 +1795,23 @@ function validIntOperand(ExprContext cx, bir:Operand operand, s:Expr expr) retur
     return cx.semanticErr("expected an int operand", s:range(expr));
 }
 
-function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
-    return operand is bir:Register ? () : { value: operand.value };
+function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue|bir:FunctionRef? {
+    if operand is bir:Register {
+        return ();
+    }
+    else if operand is bir:FunctionConstOperand {
+        return operand.value;
+    }
+    else {
+        return { value: operand.value };
+    }
 }
 
 function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
-    return operand is bir:Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
+    return operand is bir:Register|bir:FunctionConstOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
 }
 
-function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
+function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:SingleValueConstOperand {
     return { value, semType: t:singleton(cx.mod.tc, value) };
 }
 
@@ -1769,6 +1825,18 @@ function singletonStringOperand(t:Context tc, string value) returns bir:StringCo
 
 function singletonBooleanOperand(t:Context tc, boolean value) returns bir:BooleanConstOperand {
     return { value, semType: t:singleton(tc, value) };
+}
+
+function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionConstOperand {
+    return { value, semType: functionRefTy(tc, value) };
+}
+
+function functionRefTy(t:Context tc, bir:FunctionRef value) returns t:SemType {
+    t:Env env = tc.env;
+    t:FunctionDefinition defn = new(env);
+    var { paramTypes, restParamType, returnType } = value.signature;
+    t:SemType rest = restParamType is () ? t:NEVER : restParamType;
+    return defn.define(env, t:defineListTypeWrapped(new(), env, paramTypes, rest=rest, mut=t:CELL_MUT_NONE), returnType);
 }
 
 function constifyRegister(bir:Register reg) returns bir:Operand {
@@ -1806,7 +1874,7 @@ const VALUE_SINGLE_SHAPE = 2;
 type ValueFlags int;
 
 function operandValue(bir:Operand operand) returns [t:SingleValue, ValueFlags] {
-    if operand is bir:ConstOperand {
+    if operand is bir:SingleValueConstOperand {
         var value = operand.value;
         ValueFlags flags = VALUE_CONST;
         t:WrappedSingleValue? wrapped = t:singleShape(operand.semType);
@@ -1969,4 +2037,20 @@ function narrow(BindingChain? bindings, Binding binding, bir:NarrowRegister reg,
 
 function unnarrowBinding(Binding binding) returns DeclBinding {
     return binding is DeclBinding ? binding : binding.unnarrowed;
+}
+
+function lookupImportedVarRef(ExprContext cx, string prefix, string identifier, Position pos) returns t:SingleValue|bir:FunctionRef|err:Semantic {
+    Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
+    ExportedDefn? defn = mod.defns[identifier];
+    if defn is s:ResolvedConst {
+        return defn[1];
+    }
+    else if defn is bir:FunctionSignature {
+        return {
+            symbol: { module: mod.moduleId, identifier },
+            signature: defn,
+            erasedSignature: defn
+        };
+    }
+    return cx.semanticErr(`no public definition for ${prefix + ":" + identifier}`, cx.qNameRange(pos));
 }

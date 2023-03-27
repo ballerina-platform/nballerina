@@ -306,6 +306,7 @@ public enum InsnName {
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
+    INSN_CALL_INDIRECT,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -342,13 +343,15 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
 
-public type ConstOperand  readonly & record {|
+public type ConstOperand SingleValueConstOperand|FunctionConstOperand;
+
+public type SingleValueConstOperand  readonly & record {|
     t:SemType semType;
     t:SingleValue value;
 |};
@@ -385,12 +388,16 @@ public type StringConstOperand readonly & record {|
     string value;
 |};
 
+public type FunctionConstOperand readonly & record {|
+    t:SemType semType;
+    FunctionRef value;
+|};
+
 public type IntOperand IntConstOperand|Register;
 public type FloatOperand FloatConstOperand|Register;
 public type DecimalOperand DecimalConstOperand|Register;
 public type BooleanOperand BooleanConstOperand|Register;
 public type StringOperand StringConstOperand|Register;
-public type FunctionOperand FunctionRef|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
     return t:isSubtype(tc, operand.semType, semType);
@@ -596,8 +603,16 @@ public type CallInsn readonly & record {|
     *ResultInsnBase;
     # Position in the source that resulted in the instruction
     INSN_CALL name = INSN_CALL;
-    FunctionOperand func;
+    FunctionRef func;
     Operand[] args;
+|};
+
+# Call a function using a function value.
+# This behaves similar to CallInsn.
+public type CallIndirectInsn readonly & record {|
+    *ResultInsnBase;
+    INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
+    [Register, Operand...] operands;
 |};
 
 # Assign a value to a register.
