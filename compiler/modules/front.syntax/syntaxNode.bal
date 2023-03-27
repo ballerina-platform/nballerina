@@ -513,8 +513,9 @@ function syntaxNodeFromArrayTypeDesc(ArrayTypeDesc td) returns NonTerminalSyntax
 
 function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSyntaxNode {
     TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest = td.rest;
-    if td.fields.length() > 0 {
-        SubSyntaxNode[] fields = from FieldDesc f in td.fields select syntaxNodeFromFieldDesc(f);
+    FieldDesc[]? fieldDescs = td.fields;
+    if fieldDescs != () {
+        SubSyntaxNode[] fields = from FieldDesc f in fieldDescs select syntaxNodeFromFieldDesc(f);
         return nonTerminalSyntaxNode(td, { token: "record", pos: td.startPos },
                                          rest == INCLUSIVE_RECORD_TYPE_DESC ? { token: "{" } : { token: "{|" },
                                          // JBUG: can't use query expression directly

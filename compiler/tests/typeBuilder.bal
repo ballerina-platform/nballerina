@@ -227,7 +227,10 @@ class AstBasedTypeDefBuilder {
             tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         }
         else if typeDesc is s:MappingTypeDesc {
-            dependencies.push(...self.findIndices(...(from var { typeDesc: td } in typeDesc.fields select td)));
+            s:FieldDesc[]? fieldDescs = typeDesc.fields;
+            if fieldDescs != () {
+                dependencies.push(...self.findIndices(...(from var { typeDesc: td } in fieldDescs select td)));
+            }
             s:TypeDesc|boolean? rest = typeDesc.rest;
             if rest is s:TypeDesc {
                 dependencies.push(...self.findIndices(rest));
