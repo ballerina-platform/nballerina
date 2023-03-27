@@ -286,6 +286,7 @@
     ["V", "td", "a|b", "a | b"],
     ["V", "td", "a|b[]", "a | (b[])"],
     ["V", "td", "(a|b)[]", "(a | b)[]"],
+    ["V", "td", "map<int>", "map<int>"],
 
     { "comment" : "statement" },
     ["E", "stmt", ";", ""],

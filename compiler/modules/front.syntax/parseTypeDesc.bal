@@ -170,7 +170,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             check tok.advance();
             var rest = check parseTypeParam(tok);
             Position endPos = tok.previousEndPos();
-            return { startPos, endPos, rest, fields: [] };
+            return { startPos, endPos, rest, fields: () };
         }
         "error" => {
             Position endPos = tok.currentEndPos();
