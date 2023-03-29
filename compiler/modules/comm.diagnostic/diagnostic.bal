@@ -26,8 +26,9 @@ public type File readonly & object {
     public function filename() returns string;
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
-    public function lineContent(Position|Range range) returns [string, string, string];
-    public function qNameRange(Position startPos) returns Range;
+    // Returns source splitted at the given range into prefix, content, and suffix.
+    // Returns nil if underlying file does not support textual source.
+    public function lineContent(Position|Range range) returns [string, string, string]?;
 };
 
 public type Location readonly & record {|
@@ -126,17 +127,20 @@ public function format(Diagnostic d) returns string[] {
     line += ": error: " + d.message;
     lines.push(line);
     Range|Position range = loc.range;
-    string[] content = loc.file.lineContent(range);
-    if content[1] == "" {
+    var src = loc.file.lineContent(range);
+    if src == () {
+        return lines;
+    }
+    var [prefix, content, _] = src;
+    if content == "" {
         panic error(string `error range ${lc.toString()} is empty in ${loc.file.filename()}`);
     }
-    lines.push("".'join(...content));
-    lines.push(caretLine(loc.file, range));
+    lines.push("".'join(...src));
+    lines.push(caretLine(prefix, content.length()));
     return lines;
 }
 
-function caretLine(File file, Range|Position range) returns string {
-    var [prefix, content, _] = file.lineContent(range);
+function caretLine(string prefix, int contentLength) returns string {
     string[] paddingContent = [];
     foreach string:Char c in prefix {
         if c == "\t" {
@@ -147,6 +151,6 @@ function caretLine(File file, Range|Position range) returns string {
         }
     }
     string padding = "".'join(...paddingContent);
-    string carets = lib:stringRepeat("^", content.length());
+    string carets = lib:stringRepeat("^", contentLength);
     return padding + carets;
 }
