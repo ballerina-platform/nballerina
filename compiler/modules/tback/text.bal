@@ -8,16 +8,17 @@ public function toBirText(bir:Module birMod) returns string|err:Semantic|err:Uni
     t:Context tc = birMod.getTypeContext();
     return sexpr:prettyPrint(check bs:fromModule(tc, birMod), indentAt);
 }
+
 function indentAt(int[] index) returns boolean {
     match index {
-        [_]|[_, _]|[1, _, 2, 2]|[1, _, 2, 3]|[1, _, 2, 2, _]|[1, _, 2, 3, _] => {
+        [_, _]|[1, _, 2, 4]|[1, _, 2, 5]|[1, _, 2, 4, _]|[1, _, 2, 5, _] => {
             return true;
         }
-        [1, _, 2, 3, _, var n] => {
-            return n > 1;
-        }
-        [2, _, var n] => {
+        [var n]|[2, _, var n]|[3, 1, var n] => {
             return n > 0;
+        }
+        [1, _, 2, 5, _, var n] => {
+            return n > 1;
         }
     }
     return false;

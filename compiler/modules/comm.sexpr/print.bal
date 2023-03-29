@@ -1,6 +1,7 @@
 // Given an input array where n-th int is m, returns true if m-th token at n-th level sexpr tree should be indented.
 public type Indenter function(int[]) returns boolean;
 
+// see https://gist.github.com/manuranga/a9948a5af91ef580ffe2bb0572dd449c
 public function prettyPrint(Data[] topLevel, Indenter? indentAt = ()) returns string {
     string[] buf = [];
     append(buf, indentAt, topLevel, -1, [], topLevel = true);
