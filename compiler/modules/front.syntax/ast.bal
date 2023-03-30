@@ -440,6 +440,7 @@ public type FieldDesc record {|
     string name;
     TypeDesc typeDesc;
     boolean ro = false;
+    boolean opt = false;
 |};
 
 public const INCLUSIVE_RECORD_TYPE_DESC = true;

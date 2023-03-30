@@ -16,8 +16,6 @@ The implementation currently handles a subset of Ballerina type system:
 * nil, boolean, int, float, decimal, string, handle types
 * array and tuple types
 * map and record types
-    * no optional record fields yet
-    * no readonly record fields yet
 * function types
 * readonly
 * union

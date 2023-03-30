@@ -234,12 +234,12 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             t:Field[] fields = [];
             s:FieldDesc[]? fieldDescs = td.fields;
             if fieldDescs != () {
-                foreach var { name, typeDesc, ro } in fieldDescs {
+                foreach var { name, typeDesc, ro, opt } in fieldDescs {
                     t:SemType ty = check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc);
                     if ty == t:NEVER {
                         return err:semantic("record field can't be never", s:locationInDefn(modDefn, { startPos: typeDesc.startPos, endPos: typeDesc.endPos }));
                     }
-                    fields.push({ name, ty, ro });
+                    fields.push({ name, ty, ro, opt });
                 }
                 map<s:FieldDesc> fieldsByName = {};
                 foreach var fd in fieldDescs {
