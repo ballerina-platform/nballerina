@@ -1,33 +1,48 @@
-@_bal_stack_guard = external global i8*
+@_bal_stack_guard = external global ptr
 @.str0 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 10, i16 10, [12 x i8] c"Intersect!\00\00"}, align 8
-declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
-declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare void @_Bb02ioprintln(i8 addrspace(1)*)
+@_Bi04root0 = external constant {i32}
+declare ptr addrspace(1) @_bal_panic_construct(i64) cold
+declare void @_bal_panic(ptr addrspace(1)) noreturn cold
+declare ptr addrspace(1) @_bal_list_construct_8(ptr, i64)
+declare void @_Bb02ioprintln(ptr addrspace(1))
 define void @_B04rootmain() !dbg !5 {
-  %s1 = alloca i8 addrspace(1)*
-  %s2 = alloca i8 addrspace(1)*
-  %s3 = alloca i8 addrspace(1)*
-  %s4 = alloca i8 addrspace(1)*
-  %1 = alloca i8 addrspace(1)*
-  %2 = alloca i8
-  %3 = load i8*, i8** @_bal_stack_guard
-  %4 = icmp ult i8* %2, %3
-  br i1 %4, label %10, label %5
-5:
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %s1
-  %6 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  store i8 addrspace(1)* %6, i8 addrspace(1)** %s2
-  %7 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  store i8 addrspace(1)* %7, i8 addrspace(1)** %s3
-  %8 = load i8 addrspace(1)*, i8 addrspace(1)** %s3
-  store i8 addrspace(1)* %8, i8 addrspace(1)** %s4
-  %9 = load i8 addrspace(1)*, i8 addrspace(1)** %s4, !dbg !8
-  call void @_Bb02ioprintln(i8 addrspace(1)* %9), !dbg !8
-  store i8 addrspace(1)* null, i8 addrspace(1)** %1, !dbg !8
+  %s1 = alloca ptr addrspace(1)
+  %s2 = alloca ptr addrspace(1)
+  %s3 = alloca ptr addrspace(1)
+  %s4 = alloca ptr addrspace(1)
+  %1 = alloca ptr addrspace(1)
+  %2 = alloca ptr addrspace(1)
+  %3 = alloca i8
+  %4 = load ptr, ptr @_bal_stack_guard
+  %5 = icmp ult ptr %3, %4
+  br i1 %5, label %20, label %6
+6:
+  store ptr addrspace(1) getelementptr(i8, ptr addrspace(1) addrspacecast(ptr bitcast(ptr @.str0 to ptr) to ptr addrspace(1)), i64 360287970189639680), ptr %s1
+  %7 = load ptr addrspace(1), ptr %s1
+  store ptr addrspace(1) %7, ptr %s2
+  %8 = load ptr addrspace(1), ptr %s2
+  store ptr addrspace(1) %8, ptr %s3
+  %9 = load ptr addrspace(1), ptr %s3
+  store ptr addrspace(1) %9, ptr %s4
+  %10 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !9
+  %11 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %10, i64 0, i32 3
+  %12 = load ptr addrspace(1), ptr addrspace(1) %11, align 8
+  %13 = bitcast ptr addrspace(1) %12 to ptr addrspace(1)
+  %14 = load ptr addrspace(1), ptr %s4
+  %15 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %13, i64 0, i64 0
+  store ptr addrspace(1) %14, ptr addrspace(1) %15
+  %16 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %10, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %16
+  %17 = bitcast ptr addrspace(1) %10 to ptr addrspace(1)
+  %18 = getelementptr i8, ptr addrspace(1) %17, i64 864691128455135236
+  store ptr addrspace(1) %18, ptr %1
+  %19 = load ptr addrspace(1), ptr %1
+  call void @_Bb02ioprintln(ptr addrspace(1) %19), !dbg !10
+  store ptr addrspace(1) null, ptr %2
   ret void
-10:
-  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 1796), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %11)
+20:
+  %21 = call ptr addrspace(1) @_bal_panic_construct(i64 1796), !dbg !7
+  call void @_bal_panic(ptr addrspace(1) %21), !dbg !8
   unreachable
 }
 !llvm.module.flags = !{!0}
@@ -40,4 +55,6 @@ define void @_B04rootmain() !dbg !5 {
 !5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 7, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
 !6 = !{}
 !7 = !DILocation(line: 0, column: 0, scope: !5)
-!8 = !DILocation(line: 12, column: 4, scope: !5)
+!8 = !DILocation(line: 7, column: 16, scope: !5)
+!9 = !DILocation(line: 12, column: 15, scope: !5)
+!10 = !DILocation(line: 12, column: 4, scope: !5)

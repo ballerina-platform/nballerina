@@ -1,62 +1,77 @@
-@_bal_stack_guard = external global i8*
-declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
-declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
-declare i8 addrspace(1)* @_bal_float_to_tagged(double)
-declare void @_Bb02ioprintln(i8 addrspace(1)*)
+@_bal_stack_guard = external global ptr
+@_Bi04root0 = external constant {i32}
+declare ptr addrspace(1) @_bal_panic_construct(i64) cold
+declare void @_bal_panic(ptr addrspace(1)) noreturn cold
+declare double @_bal_tagged_to_float(ptr addrspace(1)) readonly
+declare ptr addrspace(1) @_bal_list_construct_8(ptr, i64)
+declare ptr addrspace(1) @_bal_float_to_tagged(double)
+declare void @_Bb02ioprintln(ptr addrspace(1))
 define void @_B04rootmain() !dbg !5 {
   %f = alloca double
-  %1 = alloca i8 addrspace(1)*
+  %1 = alloca ptr addrspace(1)
   %2 = alloca double
-  %3 = alloca i8 addrspace(1)*
-  %4 = alloca i8 addrspace(1)*
-  %5 = alloca i8
-  %6 = load i8*, i8** @_bal_stack_guard
-  %7 = icmp ult i8* %5, %6
-  br i1 %7, label %17, label %8
-8:
-  %9 = call i8 addrspace(1)* @_B_g(), !dbg !10
-  store i8 addrspace(1)* %9, i8 addrspace(1)** %1, !dbg !10
-  %10 = load i8 addrspace(1)*, i8 addrspace(1)** %1
-  %11 = addrspacecast i8 addrspace(1)* %10 to i8*
-  %12 = ptrtoint i8* %11 to i64
-  %13 = and i64 %12, 2233785415175766016
-  %14 = icmp eq i64 %13, 576460752303423488
-  br i1 %14, label %19, label %24
-15:
-  %16 = load i8 addrspace(1)*, i8 addrspace(1)** %4
-  call void @_bal_panic(i8 addrspace(1)* %16)
+  %3 = alloca ptr addrspace(1)
+  %4 = alloca ptr addrspace(1)
+  %5 = alloca ptr addrspace(1)
+  %6 = alloca i8
+  %7 = load ptr, ptr @_bal_stack_guard
+  %8 = icmp ult ptr %6, %7
+  br i1 %8, label %18, label %9
+9:
+  %10 = call ptr addrspace(1) @_B_g(), !dbg !11
+  store ptr addrspace(1) %10, ptr %1
+  %11 = load ptr addrspace(1), ptr %1
+  %12 = addrspacecast ptr addrspace(1) %11 to ptr
+  %13 = ptrtoint ptr %12 to i64
+  %14 = and i64 %13, 2233785415175766016
+  %15 = icmp eq i64 %14, 216172782113783808
+  br i1 %15, label %20, label %34
+16:
+  %17 = load ptr addrspace(1), ptr %5
+  call void @_bal_panic(ptr addrspace(1) %17), !dbg !16
   unreachable
-17:
-  %18 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
-  call void @_bal_panic(i8 addrspace(1)* %18)
+18:
+  %19 = call ptr addrspace(1) @_bal_panic_construct(i64 1028), !dbg !9
+  call void @_bal_panic(ptr addrspace(1) %19), !dbg !10
   unreachable
-19:
-  %20 = call double @_bal_tagged_to_float(i8 addrspace(1)* %10)
-  store double %20, double* %2
-  %21 = load double, double* %2
-  store double %21, double* %f
-  %22 = load double, double* %f, !dbg !11
-  %23 = call i8 addrspace(1)* @_bal_float_to_tagged(double %22), !dbg !11
-  call void @_Bb02ioprintln(i8 addrspace(1)* %23), !dbg !11
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !11
+20:
+  %21 = call double @_bal_tagged_to_float(ptr addrspace(1) %11), !dbg !12
+  store double %21, ptr %2
+  %22 = load double, ptr %2
+  store double %22, ptr %f
+  %23 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !13
+  %24 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %23, i64 0, i32 3
+  %25 = load ptr addrspace(1), ptr addrspace(1) %24, align 8
+  %26 = bitcast ptr addrspace(1) %25 to ptr addrspace(1)
+  %27 = load double, ptr %f
+  %28 = call ptr addrspace(1) @_bal_float_to_tagged(double %27), !dbg !14
+  %29 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %26, i64 0, i64 0
+  store ptr addrspace(1) %28, ptr addrspace(1) %29
+  %30 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %23, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %30
+  %31 = bitcast ptr addrspace(1) %23 to ptr addrspace(1)
+  %32 = getelementptr i8, ptr addrspace(1) %31, i64 864691128455135236
+  store ptr addrspace(1) %32, ptr %3
+  %33 = load ptr addrspace(1), ptr %3
+  call void @_Bb02ioprintln(ptr addrspace(1) %33), !dbg !15
+  store ptr addrspace(1) null, ptr %4
   ret void
-24:
-  %25 = call i8 addrspace(1)* @_bal_panic_construct(i64 1283), !dbg !9
-  store i8 addrspace(1)* %25, i8 addrspace(1)** %4
-  br label %15
+34:
+  %35 = call ptr addrspace(1) @_bal_panic_construct(i64 1283), !dbg !9
+  store ptr addrspace(1) %35, ptr %5
+  br label %16
 }
-define internal i8 addrspace(1)* @_B_g() !dbg !7 {
+define internal ptr addrspace(1) @_B_g() !dbg !7 {
   %1 = alloca i8
-  %2 = load i8*, i8** @_bal_stack_guard
-  %3 = icmp ult i8* %1, %2
+  %2 = load ptr, ptr @_bal_stack_guard
+  %3 = icmp ult ptr %1, %2
   br i1 %3, label %6, label %4
 4:
-  %5 = call i8 addrspace(1)* @_bal_float_to_tagged(double 4.86)
-  ret i8 addrspace(1)* %5
+  %5 = call ptr addrspace(1) @_bal_float_to_tagged(double 4.86), !dbg !19
+  ret ptr addrspace(1) %5
 6:
-  %7 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308), !dbg !12
-  call void @_bal_panic(i8 addrspace(1)* %7)
+  %7 = call ptr addrspace(1) @_bal_panic_construct(i64 2308), !dbg !17
+  call void @_bal_panic(ptr addrspace(1) %7), !dbg !18
   unreachable
 }
 !llvm.module.flags = !{!0}
@@ -71,6 +86,13 @@ define internal i8 addrspace(1)* @_B_g() !dbg !7 {
 !7 = distinct !DISubprogram(name:"g", linkageName:"_B_g", scope: !1, file: !1, line: 9, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
 !8 = !{}
 !9 = !DILocation(line: 0, column: 0, scope: !5)
-!10 = !DILocation(line: 5, column: 21, scope: !5)
-!11 = !DILocation(line: 6, column: 4, scope: !5)
-!12 = !DILocation(line: 0, column: 0, scope: !7)
+!10 = !DILocation(line: 4, column: 16, scope: !5)
+!11 = !DILocation(line: 5, column: 21, scope: !5)
+!12 = !DILocation(line: 5, column: 14, scope: !5)
+!13 = !DILocation(line: 6, column: 15, scope: !5)
+!14 = !DILocation(line: 6, column: 15, scope: !5)
+!15 = !DILocation(line: 6, column: 4, scope: !5)
+!16 = !DILocation(line: 7, column: 0, scope: !5)
+!17 = !DILocation(line: 0, column: 0, scope: !7)
+!18 = !DILocation(line: 9, column: 9, scope: !7)
+!19 = !DILocation(line: 10, column: 4, scope: !7)

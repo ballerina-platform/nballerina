@@ -1,50 +1,57 @@
-%UniformSubtype = type {i1(%UniformSubtype*, i8 addrspace(1)*)*}
-%Type0 = type {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [1 x i32]}
-%Type1 = type {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32}
-%Type2 = type {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [1 x i32]}
-%Type3 = type {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [1 x i32]}
-%Type4 = type {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [1 x i32]}
-%Type5 = type {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [1 x i32]}
-%Type6 = type {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [0 x i32]}
-%Type7 = type {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [1 x i32]}
-%Type8 = type {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [1 x i32]}
-@_Bi04root0 = constant {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*} {i32 0, i8 addrspace(1)*(i8 addrspace(1)*, i64)* @_bal_list_generic_get_tagged, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)* @_bal_list_generic_set_tagged, i64(i8 addrspace(1)*, i64)* @_bal_list_generic_get_int, i64(i8 addrspace(1)*, i64, i64)* @_bal_list_generic_set_int, double(i8 addrspace(1)*, i64)* @_bal_list_generic_get_float, i64(i8 addrspace(1)*, i64, double)* @_bal_list_generic_set_float, i64 2049, {i32}* null}
-@_Bi04root1 = constant {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*} {i32 1, i8 addrspace(1)*(i8 addrspace(1)*, i64)* @_bal_list_generic_get_tagged, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)* @_bal_list_generic_set_tagged, i64(i8 addrspace(1)*, i64)* @_bal_list_generic_get_int, i64(i8 addrspace(1)*, i64, i64)* @_bal_list_generic_set_int, double(i8 addrspace(1)*, i64)* @_bal_list_generic_get_float, i64(i8 addrspace(1)*, i64, double)* @_bal_list_generic_set_float, i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member0 to i64), {i32}* null}
-@.subtype0 = internal constant %Type0 {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 3]}, align 8
-@.member0 = internal constant {i32, i32, [1 x %UniformSubtype*]} {i32 128, i32 524288, [1 x %UniformSubtype*] [%UniformSubtype* bitcast(%Type0* @.subtype0 to %UniformSubtype*)]}
-@_Bi04root2 = constant {i32, i32, i64, {i32}*, [3 x i64]} {i32 0, i32 3, i64 1, {i32}* null, [3 x i64] [i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member1 to i64), i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member0 to i64), i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member2 to i64)]}
-@.subtype1 = internal constant %Type1 {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_array_subtype_contains, i32 1024}, align 8
-@.member1 = internal constant {i32, i32, [1 x %UniformSubtype*]} {i32 0, i32 262144, [1 x %UniformSubtype*] [%UniformSubtype* bitcast(%Type1* @.subtype1 to %UniformSubtype*)]}
-@.subtype2 = internal constant %Type2 {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 1]}, align 8
-@.member2 = internal constant {i32, i32, [1 x %UniformSubtype*]} {i32 0, i32 262144, [1 x %UniformSubtype*] [%UniformSubtype* bitcast(%Type2* @.subtype2 to %UniformSubtype*)]}
-@_Bi04root3 = constant {i32, i32, i64, {i32}*, [2 x i64]} {i32 1, i32 2, i64 1, {i32}* null, [2 x i64] [i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member3 to i64), i64 257]}
-@.subtype3 = internal constant %Type3 {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 0]}, align 8
-@.member3 = internal constant {i32, i32, [1 x %UniformSubtype*]} {i32 0, i32 524288, [1 x %UniformSubtype*] [%UniformSubtype* bitcast(%Type3* @.subtype3 to %UniformSubtype*)]}
-@_Bi04root4 = constant {i32, i32, i64, {i32}*, [4 x i64]} {i32 2, i32 4, i64 1, {i32}* null, [4 x i64] [i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member4 to i64), i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member5 to i64), i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member5 to i64), i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member5 to i64)]}
-@.subtype4 = internal constant %Type4 {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 1]}, align 8
-@.member4 = internal constant {i32, i32, [1 x %UniformSubtype*]} {i32 128, i32 524288, [1 x %UniformSubtype*] [%UniformSubtype* bitcast(%Type4* @.subtype4 to %UniformSubtype*)]}
-@.subtype5 = internal constant %Type5 {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 2]}, align 8
-@.member5 = internal constant {i32, i32, [1 x %UniformSubtype*]} {i32 2, i32 524288, [1 x %UniformSubtype*] [%UniformSubtype* bitcast(%Type5* @.subtype5 to %UniformSubtype*)]}
-@_Bi04root5 = constant {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*} {i32 2, i8 addrspace(1)*(i8 addrspace(1)*, i64)* @_bal_list_generic_get_tagged, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)* @_bal_list_generic_set_tagged, i64(i8 addrspace(1)*, i64)* @_bal_list_generic_get_int, i64(i8 addrspace(1)*, i64, i64)* @_bal_list_generic_set_int, double(i8 addrspace(1)*, i64)* @_bal_list_generic_get_float, i64(i8 addrspace(1)*, i64, double)* @_bal_list_generic_set_float, i64 ptrtoint({i32, i32, [2 x %UniformSubtype*]}* @.member6 to i64), {i32}* null}
-@.subtype6 = internal constant %Type6 {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_precomputed_subtype_contains, i32 0, [0 x i32] []}, align 8
-@.subtype7 = internal constant %Type7 {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 2]}, align 8
-@.member6 = internal constant {i32, i32, [2 x %UniformSubtype*]} {i32 0, i32 786432, [2 x %UniformSubtype*] [%UniformSubtype* bitcast(%Type6* @.subtype6 to %UniformSubtype*), %UniformSubtype* bitcast(%Type7* @.subtype7 to %UniformSubtype*)]}
-@_Bi04root6 = constant {i32, i32, i64, {i32}*, [3 x i64]} {i32 3, i32 3, i64 1, {i32}* null, [3 x i64] [i64 257, i64 257, i64 ptrtoint({i32, i32, [1 x %UniformSubtype*]}* @.member7 to i64)]}
-@.subtype8 = internal constant %Type8 {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 2]}, align 8
-@.member7 = internal constant {i32, i32, [1 x %UniformSubtype*]} {i32 0, i32 262144, [1 x %UniformSubtype*] [%UniformSubtype* bitcast(%Type8* @.subtype8 to %UniformSubtype*)]}
-@_Be04root2 = constant i32 0
-@_Be04root4 = constant i32 2
-@_Bt04root7 = constant {i32, i32, [1 x %UniformSubtype*]} {i32 0, i32 524288, [1 x %UniformSubtype*] [%UniformSubtype* bitcast(%Type5* @.subtype5 to %UniformSubtype*)]}
-@.subtype9 = internal constant {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [1 x i32]} {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 0]}, align 8
-@_Bt04root8 = constant {i32, i32, [1 x %UniformSubtype*]} {i32 0, i32 524288, [1 x %UniformSubtype*] [%UniformSubtype* bitcast({i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, [1 x i32]}* @.subtype9 to %UniformSubtype*)]}
-declare i8 addrspace(1)* @_bal_list_generic_get_tagged(i8 addrspace(1)*, i64)
-declare i64 @_bal_list_generic_set_tagged(i8 addrspace(1)*, i64, i8 addrspace(1)*)
-declare i64 @_bal_list_generic_get_int(i8 addrspace(1)*, i64)
-declare i64 @_bal_list_generic_set_int(i8 addrspace(1)*, i64, i64)
-declare double @_bal_list_generic_get_float(i8 addrspace(1)*, i64)
-declare i64 @_bal_list_generic_set_float(i8 addrspace(1)*, i64, double)
-declare i1 @_bal_precomputed_subtype_contains(%UniformSubtype*, i8 addrspace(1)*)
-declare i1 @_bal_array_subtype_contains(%UniformSubtype*, i8 addrspace(1)*)
+%BasicSubtype = type {ptr}
+%FillerDesc = type {ptr}
+%Type0 = type {ptr, i32, [1 x i32]}
+%Type1 = type {ptr, i32}
+%Type2 = type {ptr, i32, [1 x i32]}
+%Type3 = type {ptr, i32, [1 x i32]}
+%Type4 = type {ptr, i32, [1 x i32]}
+%Type5 = type {ptr, i32, [1 x i32]}
+%Type6 = type {ptr, i32, [0 x i32]}
+%Type7 = type {ptr, i32, [1 x i32]}
+%Type8 = type {ptr, i32, [1 x i32]}
+@_Bi04root0 = constant {i32, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64, ptr, [0 x i64]} {i32 0, i32 0, i64 0, ptr @_bal_list_generic_get_tagged, ptr @_bal_list_generic_set_tagged, ptr @_bal_list_generic_inexact_set_tagged, ptr @_bal_list_generic_get_int, ptr @_bal_list_generic_set_int, ptr @_bal_list_generic_inexact_set_int, ptr @_bal_list_generic_get_float, ptr @_bal_list_generic_set_float, ptr @_bal_list_generic_inexact_set_float, i64 65, ptr bitcast(ptr @_bal_string_empty_filler_desc to ptr), [0 x i64] []}
+@_bal_string_empty_filler_desc = external global %FillerDesc
+@_Bi04root1 = constant {i32, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64, ptr, [0 x i64]} {i32 1, i32 0, i64 0, ptr @_bal_list_generic_get_tagged, ptr @_bal_list_generic_set_tagged, ptr @_bal_list_generic_inexact_set_tagged, ptr @_bal_list_generic_get_int, ptr @_bal_list_generic_set_int, ptr @_bal_list_generic_inexact_set_int, ptr @_bal_list_generic_get_float, ptr @_bal_list_generic_set_float, ptr @_bal_list_generic_inexact_set_float, i64 ptrtoint(ptr @.member0 to i64), ptr null, [0 x i64] []}
+@.subtype0 = internal constant %Type0 {ptr @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 3]}, align 8
+@.member0 = internal constant {i32, i32, [1 x ptr]} {i32 4, i32 8192, [1 x ptr] [ptr bitcast(ptr @.subtype0 to ptr)]}
+@_Bi04root2 = constant {i32, i32, i64, ptr, [3 x i64]} {i32 0, i32 3, i64 1, ptr null, [3 x i64] [i64 ptrtoint(ptr @.member1 to i64), i64 ptrtoint(ptr @.member0 to i64), i64 ptrtoint(ptr @.member2 to i64)]}
+@.subtype1 = internal constant %Type1 {ptr @_bal_array_subtype_contains, i32 32}, align 8
+@.member1 = internal constant {i32, i32, [1 x ptr]} {i32 0, i32 4096, [1 x ptr] [ptr bitcast(ptr @.subtype1 to ptr)]}
+@.subtype2 = internal constant %Type2 {ptr @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 1]}, align 8
+@.member2 = internal constant {i32, i32, [1 x ptr]} {i32 0, i32 4096, [1 x ptr] [ptr bitcast(ptr @.subtype2 to ptr)]}
+@_Bi04root3 = constant {i32, i32, i64, ptr, [2 x i64]} {i32 1, i32 2, i64 1, ptr null, [2 x i64] [i64 ptrtoint(ptr @.member3 to i64), i64 9]}
+@.subtype3 = internal constant %Type3 {ptr @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 0]}, align 8
+@.member3 = internal constant {i32, i32, [1 x ptr]} {i32 0, i32 8192, [1 x ptr] [ptr bitcast(ptr @.subtype3 to ptr)]}
+@_Bi04root4 = constant {i32, i32, i64, ptr, [4 x i64]} {i32 2, i32 4, i64 1, ptr null, [4 x i64] [i64 ptrtoint(ptr @.member4 to i64), i64 ptrtoint(ptr @.member5 to i64), i64 ptrtoint(ptr @.member5 to i64), i64 ptrtoint(ptr @.member5 to i64)]}
+@.subtype4 = internal constant %Type4 {ptr @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 1]}, align 8
+@.member4 = internal constant {i32, i32, [1 x ptr]} {i32 4, i32 8192, [1 x ptr] [ptr bitcast(ptr @.subtype4 to ptr)]}
+@.subtype5 = internal constant %Type5 {ptr @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 2]}, align 8
+@.member5 = internal constant {i32, i32, [1 x ptr]} {i32 2, i32 8192, [1 x ptr] [ptr bitcast(ptr @.subtype5 to ptr)]}
+@_Bi04root5 = constant {i32, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64, ptr, [0 x i64]} {i32 2, i32 0, i64 0, ptr @_bal_list_generic_get_tagged, ptr @_bal_list_generic_set_tagged, ptr @_bal_list_generic_inexact_set_tagged, ptr @_bal_list_generic_get_int, ptr @_bal_list_generic_set_int, ptr @_bal_list_generic_inexact_set_int, ptr @_bal_list_generic_get_float, ptr @_bal_list_generic_set_float, ptr @_bal_list_generic_inexact_set_float, i64 ptrtoint(ptr @.member6 to i64), ptr null, [0 x i64] []}
+@.subtype6 = internal constant %Type6 {ptr @_bal_precomputed_subtype_contains, i32 0, [0 x i32] []}, align 8
+@.subtype7 = internal constant %Type7 {ptr @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 2]}, align 8
+@.member6 = internal constant {i32, i32, [2 x ptr]} {i32 0, i32 12288, [2 x ptr] [ptr bitcast(ptr @.subtype6 to ptr), ptr bitcast(ptr @.subtype7 to ptr)]}
+@_Bi04root6 = constant {i32, i32, i64, ptr, [3 x i64]} {i32 3, i32 3, i64 1, ptr null, [3 x i64] [i64 9, i64 9, i64 ptrtoint(ptr @.member7 to i64)]}
+@.subtype8 = internal constant %Type8 {ptr @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 2]}, align 8
+@.member7 = internal constant {i32, i32, [1 x ptr]} {i32 0, i32 4096, [1 x ptr] [ptr bitcast(ptr @.subtype8 to ptr)]}
+@_Bi04root7 = constant {i32, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64, ptr, [0 x i64]} {i32 3, i32 0, i64 0, ptr @_bal_list_generic_get_tagged, ptr @_bal_list_generic_set_tagged, ptr @_bal_list_generic_inexact_set_tagged, ptr @_bal_list_generic_get_int, ptr @_bal_list_generic_set_int, ptr @_bal_list_generic_inexact_set_int, ptr @_bal_list_generic_get_float, ptr @_bal_list_generic_set_float, ptr @_bal_list_generic_inexact_set_float, i64 262143, ptr bitcast(ptr @_bal_nil_filler_desc to ptr), [0 x i64] []}
+@_bal_nil_filler_desc = external global %FillerDesc
+@_Be04root8 = constant i32 -1
+@_Be04root9 = constant i32 -1
+@.subtype9 = internal constant {ptr, i32, [1 x i32]} {ptr @_bal_precomputed_subtype_contains, i32 1, [1 x i32] [i32 0]}, align 8
+@_Bt04root2 = constant {i32, i32, [1 x ptr]} {i32 0, i32 8192, [1 x ptr] [ptr bitcast(ptr @.subtype9 to ptr)]}
+@_Bt04root4 = constant {i32, i32, [1 x ptr]} {i32 0, i32 8192, [1 x ptr] [ptr bitcast(ptr @.subtype5 to ptr)]}
+declare ptr addrspace(1) @_bal_list_generic_get_tagged(ptr addrspace(1), i64)
+declare i64 @_bal_list_generic_set_tagged(ptr addrspace(1), i64, ptr addrspace(1))
+declare i64 @_bal_list_generic_inexact_set_tagged(ptr addrspace(1), i64, ptr addrspace(1))
+declare i64 @_bal_list_generic_get_int(ptr addrspace(1), i64)
+declare i64 @_bal_list_generic_set_int(ptr addrspace(1), i64, i64)
+declare i64 @_bal_list_generic_inexact_set_int(ptr addrspace(1), i64, i64)
+declare double @_bal_list_generic_get_float(ptr addrspace(1), i64)
+declare i64 @_bal_list_generic_set_float(ptr addrspace(1), i64, double)
+declare i64 @_bal_list_generic_inexact_set_float(ptr addrspace(1), i64, double)
+declare i1 @_bal_precomputed_subtype_contains(ptr, ptr addrspace(1))
+declare i1 @_bal_array_subtype_contains(ptr, ptr addrspace(1))
 declare void @_B04rootmain()
 define void @_bal_main() {
   call void @_B04rootmain()

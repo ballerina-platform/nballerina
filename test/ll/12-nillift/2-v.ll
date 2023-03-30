@@ -1,980 +1,1177 @@
-@_bal_stack_guard = external global i8*
-declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
-declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_float_to_tagged(double)
-declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
-declare void @_Bb02ioprintln(i8 addrspace(1)*)
+@_bal_stack_guard = external global ptr
+@_Bi04root0 = external constant {i32}
+declare ptr addrspace(1) @_bal_panic_construct(i64) cold
+declare void @_bal_panic(ptr addrspace(1)) noreturn cold
+declare ptr addrspace(1) @_bal_float_to_tagged(double)
+declare double @_bal_tagged_to_float(ptr addrspace(1)) readonly
+declare ptr addrspace(1) @_bal_list_construct_8(ptr, i64)
+declare void @_Bb02ioprintln(ptr addrspace(1))
 define void @_B04rootmain() !dbg !5 {
-  %a = alloca i8 addrspace(1)*
-  %b = alloca i8 addrspace(1)*
-  %c = alloca i8 addrspace(1)*
-  %v1 = alloca i8 addrspace(1)*
-  %1 = alloca i1
-  %2 = alloca double
-  %3 = alloca i1
-  %4 = alloca double
+  %a = alloca ptr addrspace(1)
+  %b = alloca ptr addrspace(1)
+  %c = alloca ptr addrspace(1)
+  %v1 = alloca ptr addrspace(1)
+  %a.1 = alloca ptr addrspace(1)
+  %a.2 = alloca double
+  %b.1 = alloca ptr addrspace(1)
+  %b.2 = alloca double
+  %1 = alloca double
+  %2 = alloca ptr addrspace(1)
+  %3 = alloca ptr addrspace(1)
+  %4 = alloca ptr addrspace(1)
+  %a.3 = alloca ptr addrspace(1)
+  %a.4 = alloca double
+  %b.3 = alloca ptr addrspace(1)
+  %b.4 = alloca double
   %5 = alloca double
-  %6 = alloca i8 addrspace(1)*
-  %7 = alloca i8 addrspace(1)*
-  %8 = alloca i1
+  %6 = alloca ptr addrspace(1)
+  %7 = alloca ptr addrspace(1)
+  %8 = alloca ptr addrspace(1)
+  %v2 = alloca ptr addrspace(1)
+  %a.5 = alloca ptr addrspace(1)
+  %a.6 = alloca double
+  %b.5 = alloca ptr addrspace(1)
+  %b.6 = alloca double
   %9 = alloca double
-  %10 = alloca i1
-  %11 = alloca double
+  %10 = alloca ptr addrspace(1)
+  %11 = alloca ptr addrspace(1)
   %12 = alloca double
-  %13 = alloca i8 addrspace(1)*
-  %14 = alloca i8 addrspace(1)*
-  %v2 = alloca i8 addrspace(1)*
-  %15 = alloca i1
-  %16 = alloca double
-  %17 = alloca i1
-  %18 = alloca double
-  %19 = alloca double
-  %20 = alloca i8 addrspace(1)*
-  %21 = alloca i1
-  %22 = alloca double
-  %23 = alloca i1
-  %24 = alloca double
+  %c.1 = alloca ptr addrspace(1)
+  %c.2 = alloca double
+  %13 = alloca double
+  %14 = alloca ptr addrspace(1)
+  %15 = alloca ptr addrspace(1)
+  %16 = alloca ptr addrspace(1)
+  %a.7 = alloca ptr addrspace(1)
+  %a.8 = alloca double
+  %b.7 = alloca ptr addrspace(1)
+  %b.8 = alloca double
+  %17 = alloca double
+  %18 = alloca ptr addrspace(1)
+  %19 = alloca ptr addrspace(1)
+  %20 = alloca double
+  %c.3 = alloca ptr addrspace(1)
+  %c.4 = alloca double
+  %21 = alloca double
+  %22 = alloca ptr addrspace(1)
+  %23 = alloca ptr addrspace(1)
+  %24 = alloca ptr addrspace(1)
+  %v3 = alloca ptr addrspace(1)
+  %a.9 = alloca ptr addrspace(1)
+  %a.10 = alloca double
+  %b.9 = alloca ptr addrspace(1)
+  %b.10 = alloca double
   %25 = alloca double
-  %26 = alloca i8 addrspace(1)*
-  %27 = alloca i8 addrspace(1)*
-  %28 = alloca i1
+  %26 = alloca ptr addrspace(1)
+  %27 = alloca ptr addrspace(1)
+  %28 = alloca ptr addrspace(1)
+  %v4 = alloca ptr addrspace(1)
+  %a.11 = alloca ptr addrspace(1)
+  %a.12 = alloca double
+  %b.11 = alloca ptr addrspace(1)
+  %b.12 = alloca double
   %29 = alloca double
-  %30 = alloca i1
-  %31 = alloca double
+  %30 = alloca ptr addrspace(1)
+  %31 = alloca ptr addrspace(1)
   %32 = alloca double
-  %33 = alloca i8 addrspace(1)*
-  %34 = alloca i1
-  %35 = alloca double
-  %36 = alloca i1
+  %c.5 = alloca ptr addrspace(1)
+  %c.6 = alloca double
+  %33 = alloca double
+  %34 = alloca ptr addrspace(1)
+  %35 = alloca ptr addrspace(1)
+  %36 = alloca ptr addrspace(1)
+  %b.13 = alloca ptr addrspace(1)
+  %b.14 = alloca double
+  %c.7 = alloca ptr addrspace(1)
+  %c.8 = alloca double
   %37 = alloca double
-  %38 = alloca double
-  %39 = alloca i8 addrspace(1)*
-  %40 = alloca i8 addrspace(1)*
-  %v3 = alloca i8 addrspace(1)*
-  %41 = alloca i1
-  %42 = alloca double
-  %43 = alloca i1
-  %44 = alloca double
+  %38 = alloca ptr addrspace(1)
+  %39 = alloca ptr addrspace(1)
+  %40 = alloca ptr addrspace(1)
+  %v5 = alloca ptr addrspace(1)
+  %b.15 = alloca ptr addrspace(1)
+  %b.16 = alloca double
+  %41 = alloca double
+  %42 = alloca ptr addrspace(1)
+  %43 = alloca ptr addrspace(1)
+  %44 = alloca ptr addrspace(1)
+  %v6 = alloca ptr addrspace(1)
+  %a.13 = alloca ptr addrspace(1)
+  %a.14 = alloca double
   %45 = alloca double
-  %46 = alloca i8 addrspace(1)*
-  %47 = alloca i8 addrspace(1)*
-  %v4 = alloca i8 addrspace(1)*
-  %48 = alloca i1
+  %46 = alloca ptr addrspace(1)
+  %47 = alloca ptr addrspace(1)
+  %48 = alloca ptr addrspace(1)
+  %c.9 = alloca ptr addrspace(1)
+  %c.10 = alloca double
   %49 = alloca double
-  %50 = alloca i1
-  %51 = alloca double
-  %52 = alloca double
-  %53 = alloca i8 addrspace(1)*
-  %54 = alloca i1
-  %55 = alloca double
-  %56 = alloca i1
+  %50 = alloca ptr addrspace(1)
+  %51 = alloca ptr addrspace(1)
+  %52 = alloca ptr addrspace(1)
+  %d = alloca double
+  %v7 = alloca ptr addrspace(1)
+  %a.15 = alloca ptr addrspace(1)
+  %a.16 = alloca double
+  %53 = alloca double
+  %54 = alloca ptr addrspace(1)
+  %55 = alloca ptr addrspace(1)
+  %56 = alloca ptr addrspace(1)
+  %a.17 = alloca ptr addrspace(1)
+  %a.18 = alloca double
+  %b.17 = alloca ptr addrspace(1)
+  %b.18 = alloca double
   %57 = alloca double
-  %58 = alloca double
-  %59 = alloca i8 addrspace(1)*
-  %60 = alloca i8 addrspace(1)*
-  %61 = alloca i1
-  %62 = alloca double
-  %63 = alloca i1
+  %58 = alloca ptr addrspace(1)
+  %59 = alloca ptr addrspace(1)
+  %60 = alloca double
+  %c.11 = alloca ptr addrspace(1)
+  %c.12 = alloca double
+  %61 = alloca double
+  %62 = alloca ptr addrspace(1)
+  %63 = alloca ptr addrspace(1)
   %64 = alloca double
   %65 = alloca double
-  %66 = alloca i8 addrspace(1)*
-  %67 = alloca i8 addrspace(1)*
-  %v5 = alloca i8 addrspace(1)*
-  %68 = alloca i1
+  %66 = alloca ptr addrspace(1)
+  %67 = alloca ptr addrspace(1)
+  %68 = alloca ptr addrspace(1)
+  %e = alloca ptr addrspace(1)
+  %v8 = alloca ptr addrspace(1)
+  %a.19 = alloca ptr addrspace(1)
+  %a.20 = alloca double
+  %e.1 = alloca ptr addrspace(1)
+  %e.2 = alloca double
   %69 = alloca double
-  %70 = alloca double
-  %71 = alloca i8 addrspace(1)*
-  %72 = alloca i8 addrspace(1)*
-  %v6 = alloca i8 addrspace(1)*
-  %73 = alloca i1
-  %74 = alloca double
-  %75 = alloca double
-  %76 = alloca i8 addrspace(1)*
-  %77 = alloca i8 addrspace(1)*
-  %78 = alloca i1
-  %79 = alloca double
+  %70 = alloca ptr addrspace(1)
+  %71 = alloca ptr addrspace(1)
+  %72 = alloca ptr addrspace(1)
+  %a.21 = alloca ptr addrspace(1)
+  %a.22 = alloca double
+  %b.19 = alloca ptr addrspace(1)
+  %b.20 = alloca double
+  %73 = alloca double
+  %74 = alloca ptr addrspace(1)
+  %75 = alloca ptr addrspace(1)
+  %76 = alloca double
+  %c.13 = alloca ptr addrspace(1)
+  %c.14 = alloca double
+  %77 = alloca double
+  %78 = alloca ptr addrspace(1)
+  %79 = alloca ptr addrspace(1)
   %80 = alloca double
-  %81 = alloca i8 addrspace(1)*
-  %82 = alloca i8 addrspace(1)*
-  %d = alloca double
-  %v7 = alloca i8 addrspace(1)*
-  %83 = alloca i1
+  %81 = alloca double
+  %82 = alloca ptr addrspace(1)
+  %83 = alloca ptr addrspace(1)
   %84 = alloca double
+  %e.3 = alloca ptr addrspace(1)
+  %e.4 = alloca double
   %85 = alloca double
-  %86 = alloca i8 addrspace(1)*
-  %87 = alloca i8 addrspace(1)*
-  %88 = alloca i1
+  %86 = alloca ptr addrspace(1)
+  %87 = alloca ptr addrspace(1)
+  %88 = alloca ptr addrspace(1)
+  %a.23 = alloca ptr addrspace(1)
+  %a.24 = alloca double
   %89 = alloca double
-  %90 = alloca i1
-  %91 = alloca double
-  %92 = alloca double
-  %93 = alloca i8 addrspace(1)*
-  %94 = alloca i1
-  %95 = alloca double
-  %96 = alloca i1
-  %97 = alloca double
-  %98 = alloca double
-  %99 = alloca i8 addrspace(1)*
-  %100 = alloca i1
-  %101 = alloca double
-  %102 = alloca double
-  %103 = alloca i8 addrspace(1)*
-  %104 = alloca i8 addrspace(1)*
-  %e = alloca i8 addrspace(1)*
-  %v8 = alloca i8 addrspace(1)*
-  %105 = alloca i1
-  %106 = alloca double
-  %107 = alloca i1
-  %108 = alloca double
-  %109 = alloca double
-  %110 = alloca i8 addrspace(1)*
-  %111 = alloca i8 addrspace(1)*
-  %112 = alloca i1
-  %113 = alloca double
-  %114 = alloca i1
-  %115 = alloca double
-  %116 = alloca double
-  %117 = alloca i8 addrspace(1)*
-  %118 = alloca i1
-  %119 = alloca double
-  %120 = alloca i1
-  %121 = alloca double
-  %122 = alloca double
-  %123 = alloca i8 addrspace(1)*
-  %124 = alloca i1
-  %125 = alloca double
-  %126 = alloca double
-  %127 = alloca i8 addrspace(1)*
-  %128 = alloca i1
-  %129 = alloca double
-  %130 = alloca i1
-  %131 = alloca double
-  %132 = alloca double
-  %133 = alloca i8 addrspace(1)*
-  %134 = alloca i8 addrspace(1)*
-  %135 = alloca i1
-  %136 = alloca double
-  %137 = alloca double
-  %138 = alloca i8 addrspace(1)*
-  %139 = alloca i8 addrspace(1)*
-  %140 = alloca i8
-  %141 = load i8*, i8** @_bal_stack_guard
-  %142 = icmp ult i8* %140, %141
-  br i1 %142, label %678, label %143
-143:
-  %144 = call i8 addrspace(1)* @_bal_float_to_tagged(double 5.0)
-  store i8 addrspace(1)* %144, i8 addrspace(1)** %a
-  %145 = call i8 addrspace(1)* @_bal_float_to_tagged(double 6.0)
-  store i8 addrspace(1)* %145, i8 addrspace(1)** %b
-  %146 = call i8 addrspace(1)* @_bal_float_to_tagged(double 1.0)
-  store i8 addrspace(1)* %146, i8 addrspace(1)** %c
-  %147 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %148 = addrspacecast i8 addrspace(1)* %147 to i8*
-  %149 = ptrtoint i8* %148 to i64
-  %150 = and i64 %149, 2233785415175766016
-  %151 = icmp eq i64 %150, 0
-  store i1 %151, i1* %1
-  %152 = load i1, i1* %1
-  br i1 %152, label %162, label %153
-153:
-  %154 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %155 = call double @_bal_tagged_to_float(i8 addrspace(1)* %154)
-  store double %155, double* %2
-  %156 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %157 = addrspacecast i8 addrspace(1)* %156 to i8*
-  %158 = ptrtoint i8* %157 to i64
-  %159 = and i64 %158, 2233785415175766016
-  %160 = icmp eq i64 %159, 0
-  store i1 %160, i1* %3
-  %161 = load i1, i1* %3
-  br i1 %161, label %162, label %163
-162:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %6
-  br label %171
-163:
-  %164 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %165 = call double @_bal_tagged_to_float(i8 addrspace(1)* %164)
-  store double %165, double* %4
-  %166 = load double, double* %2
-  %167 = load double, double* %4
-  %168 = fadd double %166, %167
-  store double %168, double* %5
-  %169 = load double, double* %5
-  %170 = call i8 addrspace(1)* @_bal_float_to_tagged(double %169)
-  store i8 addrspace(1)* %170, i8 addrspace(1)** %6
-  br label %171
-171:
-  %172 = load i8 addrspace(1)*, i8 addrspace(1)** %6
-  store i8 addrspace(1)* %172, i8 addrspace(1)** %v1
-  %173 = load i8 addrspace(1)*, i8 addrspace(1)** %v1, !dbg !8
-  call void @_Bb02ioprintln(i8 addrspace(1)* %173), !dbg !8
-  store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !8
-  %174 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %175 = addrspacecast i8 addrspace(1)* %174 to i8*
-  %176 = ptrtoint i8* %175 to i64
-  %177 = and i64 %176, 2233785415175766016
-  %178 = icmp eq i64 %177, 0
-  store i1 %178, i1* %8
-  %179 = load i1, i1* %8
-  br i1 %179, label %189, label %180
-180:
-  %181 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %182 = call double @_bal_tagged_to_float(i8 addrspace(1)* %181)
-  store double %182, double* %9
-  %183 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %184 = addrspacecast i8 addrspace(1)* %183 to i8*
-  %185 = ptrtoint i8* %184 to i64
-  %186 = and i64 %185, 2233785415175766016
-  %187 = icmp eq i64 %186, 0
-  store i1 %187, i1* %10
-  %188 = load i1, i1* %10
-  br i1 %188, label %189, label %190
-189:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %13
-  br label %198
-190:
-  %191 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %192 = call double @_bal_tagged_to_float(i8 addrspace(1)* %191)
-  store double %192, double* %11
-  %193 = load double, double* %9
-  %194 = load double, double* %11
-  %195 = fadd double %193, %194
-  store double %195, double* %12
-  %196 = load double, double* %12
-  %197 = call i8 addrspace(1)* @_bal_float_to_tagged(double %196)
-  store i8 addrspace(1)* %197, i8 addrspace(1)** %13
-  br label %198
-198:
-  %199 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !9
-  call void @_Bb02ioprintln(i8 addrspace(1)* %199), !dbg !9
-  store i8 addrspace(1)* null, i8 addrspace(1)** %14, !dbg !9
-  %200 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %201 = addrspacecast i8 addrspace(1)* %200 to i8*
-  %202 = ptrtoint i8* %201 to i64
-  %203 = and i64 %202, 2233785415175766016
-  %204 = icmp eq i64 %203, 0
-  store i1 %204, i1* %15
-  %205 = load i1, i1* %15
-  br i1 %205, label %215, label %206
-206:
-  %207 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %208 = call double @_bal_tagged_to_float(i8 addrspace(1)* %207)
-  store double %208, double* %16
-  %209 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %210 = addrspacecast i8 addrspace(1)* %209 to i8*
-  %211 = ptrtoint i8* %210 to i64
-  %212 = and i64 %211, 2233785415175766016
-  %213 = icmp eq i64 %212, 0
-  store i1 %213, i1* %17
-  %214 = load i1, i1* %17
-  br i1 %214, label %215, label %216
-215:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %20
-  br label %224
-216:
-  %217 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %218 = call double @_bal_tagged_to_float(i8 addrspace(1)* %217)
-  store double %218, double* %18
-  %219 = load double, double* %16
-  %220 = load double, double* %18
-  %221 = fadd double %219, %220
-  store double %221, double* %19
-  %222 = load double, double* %19
-  %223 = call i8 addrspace(1)* @_bal_float_to_tagged(double %222)
-  store i8 addrspace(1)* %223, i8 addrspace(1)** %20
-  br label %224
-224:
-  %225 = load i8 addrspace(1)*, i8 addrspace(1)** %20
-  %226 = addrspacecast i8 addrspace(1)* %225 to i8*
-  %227 = ptrtoint i8* %226 to i64
-  %228 = and i64 %227, 2233785415175766016
-  %229 = icmp eq i64 %228, 0
-  store i1 %229, i1* %21
-  %230 = load i1, i1* %21
-  br i1 %230, label %240, label %231
-231:
-  %232 = load i8 addrspace(1)*, i8 addrspace(1)** %20
-  %233 = call double @_bal_tagged_to_float(i8 addrspace(1)* %232)
-  store double %233, double* %22
-  %234 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %235 = addrspacecast i8 addrspace(1)* %234 to i8*
-  %236 = ptrtoint i8* %235 to i64
-  %237 = and i64 %236, 2233785415175766016
-  %238 = icmp eq i64 %237, 0
-  store i1 %238, i1* %23
-  %239 = load i1, i1* %23
-  br i1 %239, label %240, label %241
-240:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %26
-  br label %249
-241:
-  %242 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %243 = call double @_bal_tagged_to_float(i8 addrspace(1)* %242)
-  store double %243, double* %24
-  %244 = load double, double* %22
-  %245 = load double, double* %24
-  %246 = fadd double %244, %245
-  store double %246, double* %25
-  %247 = load double, double* %25
-  %248 = call i8 addrspace(1)* @_bal_float_to_tagged(double %247)
-  store i8 addrspace(1)* %248, i8 addrspace(1)** %26
-  br label %249
-249:
-  %250 = load i8 addrspace(1)*, i8 addrspace(1)** %26
-  store i8 addrspace(1)* %250, i8 addrspace(1)** %v2
-  %251 = load i8 addrspace(1)*, i8 addrspace(1)** %v2, !dbg !10
-  call void @_Bb02ioprintln(i8 addrspace(1)* %251), !dbg !10
-  store i8 addrspace(1)* null, i8 addrspace(1)** %27, !dbg !10
-  %252 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %253 = addrspacecast i8 addrspace(1)* %252 to i8*
-  %254 = ptrtoint i8* %253 to i64
-  %255 = and i64 %254, 2233785415175766016
-  %256 = icmp eq i64 %255, 0
-  store i1 %256, i1* %28
-  %257 = load i1, i1* %28
-  br i1 %257, label %267, label %258
-258:
-  %259 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %260 = call double @_bal_tagged_to_float(i8 addrspace(1)* %259)
-  store double %260, double* %29
-  %261 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %262 = addrspacecast i8 addrspace(1)* %261 to i8*
-  %263 = ptrtoint i8* %262 to i64
-  %264 = and i64 %263, 2233785415175766016
-  %265 = icmp eq i64 %264, 0
-  store i1 %265, i1* %30
-  %266 = load i1, i1* %30
-  br i1 %266, label %267, label %268
-267:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %33
-  br label %276
-268:
-  %269 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %270 = call double @_bal_tagged_to_float(i8 addrspace(1)* %269)
-  store double %270, double* %31
-  %271 = load double, double* %29
-  %272 = load double, double* %31
-  %273 = fadd double %271, %272
-  store double %273, double* %32
-  %274 = load double, double* %32
-  %275 = call i8 addrspace(1)* @_bal_float_to_tagged(double %274)
-  store i8 addrspace(1)* %275, i8 addrspace(1)** %33
-  br label %276
-276:
-  %277 = load i8 addrspace(1)*, i8 addrspace(1)** %33
-  %278 = addrspacecast i8 addrspace(1)* %277 to i8*
-  %279 = ptrtoint i8* %278 to i64
-  %280 = and i64 %279, 2233785415175766016
-  %281 = icmp eq i64 %280, 0
-  store i1 %281, i1* %34
-  %282 = load i1, i1* %34
-  br i1 %282, label %292, label %283
-283:
-  %284 = load i8 addrspace(1)*, i8 addrspace(1)** %33
-  %285 = call double @_bal_tagged_to_float(i8 addrspace(1)* %284)
-  store double %285, double* %35
-  %286 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %287 = addrspacecast i8 addrspace(1)* %286 to i8*
-  %288 = ptrtoint i8* %287 to i64
-  %289 = and i64 %288, 2233785415175766016
-  %290 = icmp eq i64 %289, 0
-  store i1 %290, i1* %36
-  %291 = load i1, i1* %36
-  br i1 %291, label %292, label %293
-292:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %39
-  br label %301
-293:
-  %294 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %295 = call double @_bal_tagged_to_float(i8 addrspace(1)* %294)
-  store double %295, double* %37
-  %296 = load double, double* %35
-  %297 = load double, double* %37
-  %298 = fadd double %296, %297
-  store double %298, double* %38
-  %299 = load double, double* %38
-  %300 = call i8 addrspace(1)* @_bal_float_to_tagged(double %299)
-  store i8 addrspace(1)* %300, i8 addrspace(1)** %39
-  br label %301
-301:
-  %302 = load i8 addrspace(1)*, i8 addrspace(1)** %39, !dbg !11
-  call void @_Bb02ioprintln(i8 addrspace(1)* %302), !dbg !11
-  store i8 addrspace(1)* null, i8 addrspace(1)** %40, !dbg !11
-  %303 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %304 = addrspacecast i8 addrspace(1)* %303 to i8*
-  %305 = ptrtoint i8* %304 to i64
-  %306 = and i64 %305, 2233785415175766016
-  %307 = icmp eq i64 %306, 0
-  store i1 %307, i1* %41
-  %308 = load i1, i1* %41
-  br i1 %308, label %318, label %309
-309:
-  %310 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %311 = call double @_bal_tagged_to_float(i8 addrspace(1)* %310)
-  store double %311, double* %42
-  %312 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %313 = addrspacecast i8 addrspace(1)* %312 to i8*
-  %314 = ptrtoint i8* %313 to i64
-  %315 = and i64 %314, 2233785415175766016
-  %316 = icmp eq i64 %315, 0
-  store i1 %316, i1* %43
-  %317 = load i1, i1* %43
-  br i1 %317, label %318, label %319
-318:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %46
-  br label %327
-319:
-  %320 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %321 = call double @_bal_tagged_to_float(i8 addrspace(1)* %320)
-  store double %321, double* %44
-  %322 = load double, double* %42
-  %323 = load double, double* %44
-  %324 = fsub double %322, %323
-  store double %324, double* %45
-  %325 = load double, double* %45
-  %326 = call i8 addrspace(1)* @_bal_float_to_tagged(double %325)
-  store i8 addrspace(1)* %326, i8 addrspace(1)** %46
-  br label %327
-327:
-  %328 = load i8 addrspace(1)*, i8 addrspace(1)** %46
-  store i8 addrspace(1)* %328, i8 addrspace(1)** %v3
-  %329 = load i8 addrspace(1)*, i8 addrspace(1)** %v3, !dbg !12
-  call void @_Bb02ioprintln(i8 addrspace(1)* %329), !dbg !12
-  store i8 addrspace(1)* null, i8 addrspace(1)** %47, !dbg !12
-  %330 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %331 = addrspacecast i8 addrspace(1)* %330 to i8*
-  %332 = ptrtoint i8* %331 to i64
-  %333 = and i64 %332, 2233785415175766016
-  %334 = icmp eq i64 %333, 0
-  store i1 %334, i1* %48
-  %335 = load i1, i1* %48
-  br i1 %335, label %345, label %336
-336:
-  %337 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %338 = call double @_bal_tagged_to_float(i8 addrspace(1)* %337)
-  store double %338, double* %49
-  %339 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %340 = addrspacecast i8 addrspace(1)* %339 to i8*
-  %341 = ptrtoint i8* %340 to i64
-  %342 = and i64 %341, 2233785415175766016
-  %343 = icmp eq i64 %342, 0
-  store i1 %343, i1* %50
-  %344 = load i1, i1* %50
-  br i1 %344, label %345, label %346
-345:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %53
-  br label %354
-346:
-  %347 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %348 = call double @_bal_tagged_to_float(i8 addrspace(1)* %347)
-  store double %348, double* %51
-  %349 = load double, double* %49
-  %350 = load double, double* %51
-  %351 = fadd double %349, %350
-  store double %351, double* %52
-  %352 = load double, double* %52
-  %353 = call i8 addrspace(1)* @_bal_float_to_tagged(double %352)
-  store i8 addrspace(1)* %353, i8 addrspace(1)** %53
-  br label %354
-354:
-  %355 = load i8 addrspace(1)*, i8 addrspace(1)** %53
-  %356 = addrspacecast i8 addrspace(1)* %355 to i8*
-  %357 = ptrtoint i8* %356 to i64
-  %358 = and i64 %357, 2233785415175766016
-  %359 = icmp eq i64 %358, 0
-  store i1 %359, i1* %54
-  %360 = load i1, i1* %54
-  br i1 %360, label %370, label %361
-361:
-  %362 = load i8 addrspace(1)*, i8 addrspace(1)** %53
-  %363 = call double @_bal_tagged_to_float(i8 addrspace(1)* %362)
-  store double %363, double* %55
-  %364 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %365 = addrspacecast i8 addrspace(1)* %364 to i8*
-  %366 = ptrtoint i8* %365 to i64
-  %367 = and i64 %366, 2233785415175766016
-  %368 = icmp eq i64 %367, 0
-  store i1 %368, i1* %56
-  %369 = load i1, i1* %56
-  br i1 %369, label %370, label %371
-370:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %59
-  br label %379
-371:
-  %372 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %373 = call double @_bal_tagged_to_float(i8 addrspace(1)* %372)
-  store double %373, double* %57
-  %374 = load double, double* %55
-  %375 = load double, double* %57
-  %376 = fsub double %374, %375
-  store double %376, double* %58
-  %377 = load double, double* %58
-  %378 = call i8 addrspace(1)* @_bal_float_to_tagged(double %377)
-  store i8 addrspace(1)* %378, i8 addrspace(1)** %59
-  br label %379
-379:
-  %380 = load i8 addrspace(1)*, i8 addrspace(1)** %59
-  store i8 addrspace(1)* %380, i8 addrspace(1)** %v4
-  %381 = load i8 addrspace(1)*, i8 addrspace(1)** %v4, !dbg !13
-  call void @_Bb02ioprintln(i8 addrspace(1)* %381), !dbg !13
-  store i8 addrspace(1)* null, i8 addrspace(1)** %60, !dbg !13
-  %382 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %383 = addrspacecast i8 addrspace(1)* %382 to i8*
-  %384 = ptrtoint i8* %383 to i64
-  %385 = and i64 %384, 2233785415175766016
-  %386 = icmp eq i64 %385, 0
-  store i1 %386, i1* %61
-  %387 = load i1, i1* %61
-  br i1 %387, label %397, label %388
-388:
-  %389 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %390 = call double @_bal_tagged_to_float(i8 addrspace(1)* %389)
-  store double %390, double* %62
-  %391 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %392 = addrspacecast i8 addrspace(1)* %391 to i8*
-  %393 = ptrtoint i8* %392 to i64
-  %394 = and i64 %393, 2233785415175766016
-  %395 = icmp eq i64 %394, 0
-  store i1 %395, i1* %63
-  %396 = load i1, i1* %63
-  br i1 %396, label %397, label %398
-397:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %66
-  br label %406
-398:
-  %399 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %400 = call double @_bal_tagged_to_float(i8 addrspace(1)* %399)
-  store double %400, double* %64
-  %401 = load double, double* %62
-  %402 = load double, double* %64
-  %403 = fdiv double %401, %402
-  store double %403, double* %65
-  %404 = load double, double* %65
-  %405 = call i8 addrspace(1)* @_bal_float_to_tagged(double %404)
-  store i8 addrspace(1)* %405, i8 addrspace(1)** %66
-  br label %406
-406:
-  %407 = load i8 addrspace(1)*, i8 addrspace(1)** %66, !dbg !14
-  call void @_Bb02ioprintln(i8 addrspace(1)* %407), !dbg !14
-  store i8 addrspace(1)* null, i8 addrspace(1)** %67, !dbg !14
-  %408 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %409 = addrspacecast i8 addrspace(1)* %408 to i8*
-  %410 = ptrtoint i8* %409 to i64
-  %411 = and i64 %410, 2233785415175766016
-  %412 = icmp eq i64 %411, 0
-  store i1 %412, i1* %68
-  %413 = load i1, i1* %68
-  br i1 %413, label %421, label %414
-414:
-  %415 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %416 = call double @_bal_tagged_to_float(i8 addrspace(1)* %415)
-  store double %416, double* %69
-  %417 = load double, double* %69
-  %418 = fdiv double %417, 3.0
-  store double %418, double* %70
-  %419 = load double, double* %70
-  %420 = call i8 addrspace(1)* @_bal_float_to_tagged(double %419)
-  store i8 addrspace(1)* %420, i8 addrspace(1)** %71
-  br label %422
-421:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %71
-  br label %422
-422:
-  %423 = load i8 addrspace(1)*, i8 addrspace(1)** %71
-  store i8 addrspace(1)* %423, i8 addrspace(1)** %v5
-  %424 = load i8 addrspace(1)*, i8 addrspace(1)** %v5, !dbg !15
-  call void @_Bb02ioprintln(i8 addrspace(1)* %424), !dbg !15
-  store i8 addrspace(1)* null, i8 addrspace(1)** %72, !dbg !15
-  %425 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %426 = addrspacecast i8 addrspace(1)* %425 to i8*
-  %427 = ptrtoint i8* %426 to i64
-  %428 = and i64 %427, 2233785415175766016
-  %429 = icmp eq i64 %428, 0
-  store i1 %429, i1* %73
-  %430 = load i1, i1* %73
-  br i1 %430, label %438, label %431
-431:
-  %432 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %433 = call double @_bal_tagged_to_float(i8 addrspace(1)* %432)
-  store double %433, double* %74
-  %434 = load double, double* %74
-  %435 = fneg double %434
-  store double %435, double* %75
-  %436 = load double, double* %75
-  %437 = call i8 addrspace(1)* @_bal_float_to_tagged(double %436)
-  store i8 addrspace(1)* %437, i8 addrspace(1)** %76
-  br label %439
+  %90 = alloca ptr addrspace(1)
+  %91 = alloca ptr addrspace(1)
+  %92 = alloca ptr addrspace(1)
+  %93 = alloca i8
+  %94 = load ptr, ptr @_bal_stack_guard
+  %95 = icmp ult ptr %93, %94
+  br i1 %95, label %766, label %96
+96:
+  %97 = call ptr addrspace(1) @_bal_float_to_tagged(double 5.0), !dbg !9
+  store ptr addrspace(1) %97, ptr %a
+  %98 = call ptr addrspace(1) @_bal_float_to_tagged(double 6.0), !dbg !10
+  store ptr addrspace(1) %98, ptr %b
+  %99 = call ptr addrspace(1) @_bal_float_to_tagged(double 1.0), !dbg !11
+  store ptr addrspace(1) %99, ptr %c
+  %100 = load ptr addrspace(1), ptr %a
+  %101 = addrspacecast ptr addrspace(1) %100 to ptr
+  %102 = ptrtoint ptr %101 to i64
+  %103 = and i64 %102, 2233785415175766016
+  %104 = icmp eq i64 %103, 0
+  br i1 %104, label %113, label %105
+105:
+  %106 = load ptr addrspace(1), ptr %a
+  %107 = call double @_bal_tagged_to_float(ptr addrspace(1) %106), !dbg !12
+  store double %107, ptr %a.2
+  %108 = load ptr addrspace(1), ptr %b
+  %109 = addrspacecast ptr addrspace(1) %108 to ptr
+  %110 = ptrtoint ptr %109 to i64
+  %111 = and i64 %110, 2233785415175766016
+  %112 = icmp eq i64 %111, 0
+  br i1 %112, label %113, label %116
+113:
+  %114 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %114, ptr %a.1
+  %115 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %115, ptr %b.1
+  store ptr addrspace(1) null, ptr %2
+  br label %124
+116:
+  %117 = load ptr addrspace(1), ptr %b
+  %118 = call double @_bal_tagged_to_float(ptr addrspace(1) %117), !dbg !13
+  store double %118, ptr %b.2
+  %119 = load double, ptr %a.2
+  %120 = load double, ptr %b.2
+  %121 = fadd double %119, %120
+  store double %121, ptr %1
+  %122 = load double, ptr %1
+  %123 = call ptr addrspace(1) @_bal_float_to_tagged(double %122), !dbg !14
+  store ptr addrspace(1) %123, ptr %2
+  br label %124
+124:
+  %125 = load ptr addrspace(1), ptr %2
+  store ptr addrspace(1) %125, ptr %v1
+  %126 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !15
+  %127 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %126, i64 0, i32 3
+  %128 = load ptr addrspace(1), ptr addrspace(1) %127, align 8
+  %129 = bitcast ptr addrspace(1) %128 to ptr addrspace(1)
+  %130 = load ptr addrspace(1), ptr %v1
+  %131 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %129, i64 0, i64 0
+  store ptr addrspace(1) %130, ptr addrspace(1) %131
+  %132 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %126, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %132
+  %133 = bitcast ptr addrspace(1) %126 to ptr addrspace(1)
+  %134 = getelementptr i8, ptr addrspace(1) %133, i64 864691128455135236
+  store ptr addrspace(1) %134, ptr %3
+  %135 = load ptr addrspace(1), ptr %3
+  call void @_Bb02ioprintln(ptr addrspace(1) %135), !dbg !16
+  store ptr addrspace(1) null, ptr %4
+  %136 = load ptr addrspace(1), ptr %a
+  %137 = addrspacecast ptr addrspace(1) %136 to ptr
+  %138 = ptrtoint ptr %137 to i64
+  %139 = and i64 %138, 2233785415175766016
+  %140 = icmp eq i64 %139, 0
+  br i1 %140, label %149, label %141
+141:
+  %142 = load ptr addrspace(1), ptr %a
+  %143 = call double @_bal_tagged_to_float(ptr addrspace(1) %142), !dbg !17
+  store double %143, ptr %a.4
+  %144 = load ptr addrspace(1), ptr %b
+  %145 = addrspacecast ptr addrspace(1) %144 to ptr
+  %146 = ptrtoint ptr %145 to i64
+  %147 = and i64 %146, 2233785415175766016
+  %148 = icmp eq i64 %147, 0
+  br i1 %148, label %149, label %152
+149:
+  %150 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %150, ptr %a.3
+  %151 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %151, ptr %b.3
+  store ptr addrspace(1) null, ptr %6
+  br label %160
+152:
+  %153 = load ptr addrspace(1), ptr %b
+  %154 = call double @_bal_tagged_to_float(ptr addrspace(1) %153), !dbg !18
+  store double %154, ptr %b.4
+  %155 = load double, ptr %a.4
+  %156 = load double, ptr %b.4
+  %157 = fadd double %155, %156
+  store double %157, ptr %5
+  %158 = load double, ptr %5
+  %159 = call ptr addrspace(1) @_bal_float_to_tagged(double %158), !dbg !19
+  store ptr addrspace(1) %159, ptr %6
+  br label %160
+160:
+  %161 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !20
+  %162 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %161, i64 0, i32 3
+  %163 = load ptr addrspace(1), ptr addrspace(1) %162, align 8
+  %164 = bitcast ptr addrspace(1) %163 to ptr addrspace(1)
+  %165 = load ptr addrspace(1), ptr %6
+  %166 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %164, i64 0, i64 0
+  store ptr addrspace(1) %165, ptr addrspace(1) %166
+  %167 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %161, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %167
+  %168 = bitcast ptr addrspace(1) %161 to ptr addrspace(1)
+  %169 = getelementptr i8, ptr addrspace(1) %168, i64 864691128455135236
+  store ptr addrspace(1) %169, ptr %7
+  %170 = load ptr addrspace(1), ptr %7
+  call void @_Bb02ioprintln(ptr addrspace(1) %170), !dbg !21
+  store ptr addrspace(1) null, ptr %8
+  %171 = load ptr addrspace(1), ptr %a
+  %172 = addrspacecast ptr addrspace(1) %171 to ptr
+  %173 = ptrtoint ptr %172 to i64
+  %174 = and i64 %173, 2233785415175766016
+  %175 = icmp eq i64 %174, 0
+  br i1 %175, label %184, label %176
+176:
+  %177 = load ptr addrspace(1), ptr %a
+  %178 = call double @_bal_tagged_to_float(ptr addrspace(1) %177), !dbg !22
+  store double %178, ptr %a.6
+  %179 = load ptr addrspace(1), ptr %b
+  %180 = addrspacecast ptr addrspace(1) %179 to ptr
+  %181 = ptrtoint ptr %180 to i64
+  %182 = and i64 %181, 2233785415175766016
+  %183 = icmp eq i64 %182, 0
+  br i1 %183, label %184, label %187
+184:
+  %185 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %185, ptr %a.5
+  %186 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %186, ptr %b.5
+  store ptr addrspace(1) null, ptr %10
+  br label %195
+187:
+  %188 = load ptr addrspace(1), ptr %b
+  %189 = call double @_bal_tagged_to_float(ptr addrspace(1) %188), !dbg !23
+  store double %189, ptr %b.6
+  %190 = load double, ptr %a.6
+  %191 = load double, ptr %b.6
+  %192 = fadd double %190, %191
+  store double %192, ptr %9
+  %193 = load double, ptr %9
+  %194 = call ptr addrspace(1) @_bal_float_to_tagged(double %193), !dbg !24
+  store ptr addrspace(1) %194, ptr %10
+  br label %195
+195:
+  %196 = load ptr addrspace(1), ptr %10
+  %197 = addrspacecast ptr addrspace(1) %196 to ptr
+  %198 = ptrtoint ptr %197 to i64
+  %199 = and i64 %198, 2233785415175766016
+  %200 = icmp eq i64 %199, 0
+  br i1 %200, label %209, label %201
+201:
+  %202 = load ptr addrspace(1), ptr %10
+  %203 = call double @_bal_tagged_to_float(ptr addrspace(1) %202), !dbg !25
+  store double %203, ptr %12
+  %204 = load ptr addrspace(1), ptr %c
+  %205 = addrspacecast ptr addrspace(1) %204 to ptr
+  %206 = ptrtoint ptr %205 to i64
+  %207 = and i64 %206, 2233785415175766016
+  %208 = icmp eq i64 %207, 0
+  br i1 %208, label %209, label %212
+209:
+  %210 = load ptr addrspace(1), ptr %10
+  store ptr addrspace(1) %210, ptr %11
+  %211 = load ptr addrspace(1), ptr %c
+  store ptr addrspace(1) %211, ptr %c.1
+  store ptr addrspace(1) null, ptr %14
+  br label %220
+212:
+  %213 = load ptr addrspace(1), ptr %c
+  %214 = call double @_bal_tagged_to_float(ptr addrspace(1) %213), !dbg !26
+  store double %214, ptr %c.2
+  %215 = load double, ptr %12
+  %216 = load double, ptr %c.2
+  %217 = fadd double %215, %216
+  store double %217, ptr %13
+  %218 = load double, ptr %13
+  %219 = call ptr addrspace(1) @_bal_float_to_tagged(double %218), !dbg !27
+  store ptr addrspace(1) %219, ptr %14
+  br label %220
+220:
+  %221 = load ptr addrspace(1), ptr %14
+  store ptr addrspace(1) %221, ptr %v2
+  %222 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !28
+  %223 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %222, i64 0, i32 3
+  %224 = load ptr addrspace(1), ptr addrspace(1) %223, align 8
+  %225 = bitcast ptr addrspace(1) %224 to ptr addrspace(1)
+  %226 = load ptr addrspace(1), ptr %v2
+  %227 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %225, i64 0, i64 0
+  store ptr addrspace(1) %226, ptr addrspace(1) %227
+  %228 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %222, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %228
+  %229 = bitcast ptr addrspace(1) %222 to ptr addrspace(1)
+  %230 = getelementptr i8, ptr addrspace(1) %229, i64 864691128455135236
+  store ptr addrspace(1) %230, ptr %15
+  %231 = load ptr addrspace(1), ptr %15
+  call void @_Bb02ioprintln(ptr addrspace(1) %231), !dbg !29
+  store ptr addrspace(1) null, ptr %16
+  %232 = load ptr addrspace(1), ptr %a
+  %233 = addrspacecast ptr addrspace(1) %232 to ptr
+  %234 = ptrtoint ptr %233 to i64
+  %235 = and i64 %234, 2233785415175766016
+  %236 = icmp eq i64 %235, 0
+  br i1 %236, label %245, label %237
+237:
+  %238 = load ptr addrspace(1), ptr %a
+  %239 = call double @_bal_tagged_to_float(ptr addrspace(1) %238), !dbg !30
+  store double %239, ptr %a.8
+  %240 = load ptr addrspace(1), ptr %b
+  %241 = addrspacecast ptr addrspace(1) %240 to ptr
+  %242 = ptrtoint ptr %241 to i64
+  %243 = and i64 %242, 2233785415175766016
+  %244 = icmp eq i64 %243, 0
+  br i1 %244, label %245, label %248
+245:
+  %246 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %246, ptr %a.7
+  %247 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %247, ptr %b.7
+  store ptr addrspace(1) null, ptr %18
+  br label %256
+248:
+  %249 = load ptr addrspace(1), ptr %b
+  %250 = call double @_bal_tagged_to_float(ptr addrspace(1) %249), !dbg !31
+  store double %250, ptr %b.8
+  %251 = load double, ptr %a.8
+  %252 = load double, ptr %b.8
+  %253 = fadd double %251, %252
+  store double %253, ptr %17
+  %254 = load double, ptr %17
+  %255 = call ptr addrspace(1) @_bal_float_to_tagged(double %254), !dbg !32
+  store ptr addrspace(1) %255, ptr %18
+  br label %256
+256:
+  %257 = load ptr addrspace(1), ptr %18
+  %258 = addrspacecast ptr addrspace(1) %257 to ptr
+  %259 = ptrtoint ptr %258 to i64
+  %260 = and i64 %259, 2233785415175766016
+  %261 = icmp eq i64 %260, 0
+  br i1 %261, label %270, label %262
+262:
+  %263 = load ptr addrspace(1), ptr %18
+  %264 = call double @_bal_tagged_to_float(ptr addrspace(1) %263), !dbg !33
+  store double %264, ptr %20
+  %265 = load ptr addrspace(1), ptr %c
+  %266 = addrspacecast ptr addrspace(1) %265 to ptr
+  %267 = ptrtoint ptr %266 to i64
+  %268 = and i64 %267, 2233785415175766016
+  %269 = icmp eq i64 %268, 0
+  br i1 %269, label %270, label %273
+270:
+  %271 = load ptr addrspace(1), ptr %18
+  store ptr addrspace(1) %271, ptr %19
+  %272 = load ptr addrspace(1), ptr %c
+  store ptr addrspace(1) %272, ptr %c.3
+  store ptr addrspace(1) null, ptr %22
+  br label %281
+273:
+  %274 = load ptr addrspace(1), ptr %c
+  %275 = call double @_bal_tagged_to_float(ptr addrspace(1) %274), !dbg !34
+  store double %275, ptr %c.4
+  %276 = load double, ptr %20
+  %277 = load double, ptr %c.4
+  %278 = fadd double %276, %277
+  store double %278, ptr %21
+  %279 = load double, ptr %21
+  %280 = call ptr addrspace(1) @_bal_float_to_tagged(double %279), !dbg !35
+  store ptr addrspace(1) %280, ptr %22
+  br label %281
+281:
+  %282 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !36
+  %283 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %282, i64 0, i32 3
+  %284 = load ptr addrspace(1), ptr addrspace(1) %283, align 8
+  %285 = bitcast ptr addrspace(1) %284 to ptr addrspace(1)
+  %286 = load ptr addrspace(1), ptr %22
+  %287 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %285, i64 0, i64 0
+  store ptr addrspace(1) %286, ptr addrspace(1) %287
+  %288 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %282, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %288
+  %289 = bitcast ptr addrspace(1) %282 to ptr addrspace(1)
+  %290 = getelementptr i8, ptr addrspace(1) %289, i64 864691128455135236
+  store ptr addrspace(1) %290, ptr %23
+  %291 = load ptr addrspace(1), ptr %23
+  call void @_Bb02ioprintln(ptr addrspace(1) %291), !dbg !37
+  store ptr addrspace(1) null, ptr %24
+  %292 = load ptr addrspace(1), ptr %a
+  %293 = addrspacecast ptr addrspace(1) %292 to ptr
+  %294 = ptrtoint ptr %293 to i64
+  %295 = and i64 %294, 2233785415175766016
+  %296 = icmp eq i64 %295, 0
+  br i1 %296, label %305, label %297
+297:
+  %298 = load ptr addrspace(1), ptr %a
+  %299 = call double @_bal_tagged_to_float(ptr addrspace(1) %298), !dbg !38
+  store double %299, ptr %a.10
+  %300 = load ptr addrspace(1), ptr %b
+  %301 = addrspacecast ptr addrspace(1) %300 to ptr
+  %302 = ptrtoint ptr %301 to i64
+  %303 = and i64 %302, 2233785415175766016
+  %304 = icmp eq i64 %303, 0
+  br i1 %304, label %305, label %308
+305:
+  %306 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %306, ptr %a.9
+  %307 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %307, ptr %b.9
+  store ptr addrspace(1) null, ptr %26
+  br label %316
+308:
+  %309 = load ptr addrspace(1), ptr %b
+  %310 = call double @_bal_tagged_to_float(ptr addrspace(1) %309), !dbg !39
+  store double %310, ptr %b.10
+  %311 = load double, ptr %a.10
+  %312 = load double, ptr %b.10
+  %313 = fsub double %311, %312
+  store double %313, ptr %25
+  %314 = load double, ptr %25
+  %315 = call ptr addrspace(1) @_bal_float_to_tagged(double %314), !dbg !40
+  store ptr addrspace(1) %315, ptr %26
+  br label %316
+316:
+  %317 = load ptr addrspace(1), ptr %26
+  store ptr addrspace(1) %317, ptr %v3
+  %318 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !41
+  %319 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %318, i64 0, i32 3
+  %320 = load ptr addrspace(1), ptr addrspace(1) %319, align 8
+  %321 = bitcast ptr addrspace(1) %320 to ptr addrspace(1)
+  %322 = load ptr addrspace(1), ptr %v3
+  %323 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %321, i64 0, i64 0
+  store ptr addrspace(1) %322, ptr addrspace(1) %323
+  %324 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %318, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %324
+  %325 = bitcast ptr addrspace(1) %318 to ptr addrspace(1)
+  %326 = getelementptr i8, ptr addrspace(1) %325, i64 864691128455135236
+  store ptr addrspace(1) %326, ptr %27
+  %327 = load ptr addrspace(1), ptr %27
+  call void @_Bb02ioprintln(ptr addrspace(1) %327), !dbg !42
+  store ptr addrspace(1) null, ptr %28
+  %328 = load ptr addrspace(1), ptr %a
+  %329 = addrspacecast ptr addrspace(1) %328 to ptr
+  %330 = ptrtoint ptr %329 to i64
+  %331 = and i64 %330, 2233785415175766016
+  %332 = icmp eq i64 %331, 0
+  br i1 %332, label %341, label %333
+333:
+  %334 = load ptr addrspace(1), ptr %a
+  %335 = call double @_bal_tagged_to_float(ptr addrspace(1) %334), !dbg !43
+  store double %335, ptr %a.12
+  %336 = load ptr addrspace(1), ptr %b
+  %337 = addrspacecast ptr addrspace(1) %336 to ptr
+  %338 = ptrtoint ptr %337 to i64
+  %339 = and i64 %338, 2233785415175766016
+  %340 = icmp eq i64 %339, 0
+  br i1 %340, label %341, label %344
+341:
+  %342 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %342, ptr %a.11
+  %343 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %343, ptr %b.11
+  store ptr addrspace(1) null, ptr %30
+  br label %352
+344:
+  %345 = load ptr addrspace(1), ptr %b
+  %346 = call double @_bal_tagged_to_float(ptr addrspace(1) %345), !dbg !44
+  store double %346, ptr %b.12
+  %347 = load double, ptr %a.12
+  %348 = load double, ptr %b.12
+  %349 = fadd double %347, %348
+  store double %349, ptr %29
+  %350 = load double, ptr %29
+  %351 = call ptr addrspace(1) @_bal_float_to_tagged(double %350), !dbg !45
+  store ptr addrspace(1) %351, ptr %30
+  br label %352
+352:
+  %353 = load ptr addrspace(1), ptr %30
+  %354 = addrspacecast ptr addrspace(1) %353 to ptr
+  %355 = ptrtoint ptr %354 to i64
+  %356 = and i64 %355, 2233785415175766016
+  %357 = icmp eq i64 %356, 0
+  br i1 %357, label %366, label %358
+358:
+  %359 = load ptr addrspace(1), ptr %30
+  %360 = call double @_bal_tagged_to_float(ptr addrspace(1) %359), !dbg !46
+  store double %360, ptr %32
+  %361 = load ptr addrspace(1), ptr %c
+  %362 = addrspacecast ptr addrspace(1) %361 to ptr
+  %363 = ptrtoint ptr %362 to i64
+  %364 = and i64 %363, 2233785415175766016
+  %365 = icmp eq i64 %364, 0
+  br i1 %365, label %366, label %369
+366:
+  %367 = load ptr addrspace(1), ptr %30
+  store ptr addrspace(1) %367, ptr %31
+  %368 = load ptr addrspace(1), ptr %c
+  store ptr addrspace(1) %368, ptr %c.5
+  store ptr addrspace(1) null, ptr %34
+  br label %377
+369:
+  %370 = load ptr addrspace(1), ptr %c
+  %371 = call double @_bal_tagged_to_float(ptr addrspace(1) %370), !dbg !47
+  store double %371, ptr %c.6
+  %372 = load double, ptr %32
+  %373 = load double, ptr %c.6
+  %374 = fsub double %372, %373
+  store double %374, ptr %33
+  %375 = load double, ptr %33
+  %376 = call ptr addrspace(1) @_bal_float_to_tagged(double %375), !dbg !48
+  store ptr addrspace(1) %376, ptr %34
+  br label %377
+377:
+  %378 = load ptr addrspace(1), ptr %34
+  store ptr addrspace(1) %378, ptr %v4
+  %379 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !49
+  %380 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %379, i64 0, i32 3
+  %381 = load ptr addrspace(1), ptr addrspace(1) %380, align 8
+  %382 = bitcast ptr addrspace(1) %381 to ptr addrspace(1)
+  %383 = load ptr addrspace(1), ptr %v4
+  %384 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %382, i64 0, i64 0
+  store ptr addrspace(1) %383, ptr addrspace(1) %384
+  %385 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %379, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %385
+  %386 = bitcast ptr addrspace(1) %379 to ptr addrspace(1)
+  %387 = getelementptr i8, ptr addrspace(1) %386, i64 864691128455135236
+  store ptr addrspace(1) %387, ptr %35
+  %388 = load ptr addrspace(1), ptr %35
+  call void @_Bb02ioprintln(ptr addrspace(1) %388), !dbg !50
+  store ptr addrspace(1) null, ptr %36
+  %389 = load ptr addrspace(1), ptr %b
+  %390 = addrspacecast ptr addrspace(1) %389 to ptr
+  %391 = ptrtoint ptr %390 to i64
+  %392 = and i64 %391, 2233785415175766016
+  %393 = icmp eq i64 %392, 0
+  br i1 %393, label %402, label %394
+394:
+  %395 = load ptr addrspace(1), ptr %b
+  %396 = call double @_bal_tagged_to_float(ptr addrspace(1) %395), !dbg !51
+  store double %396, ptr %b.14
+  %397 = load ptr addrspace(1), ptr %c
+  %398 = addrspacecast ptr addrspace(1) %397 to ptr
+  %399 = ptrtoint ptr %398 to i64
+  %400 = and i64 %399, 2233785415175766016
+  %401 = icmp eq i64 %400, 0
+  br i1 %401, label %402, label %405
+402:
+  %403 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %403, ptr %b.13
+  %404 = load ptr addrspace(1), ptr %c
+  store ptr addrspace(1) %404, ptr %c.7
+  store ptr addrspace(1) null, ptr %38
+  br label %413
+405:
+  %406 = load ptr addrspace(1), ptr %c
+  %407 = call double @_bal_tagged_to_float(ptr addrspace(1) %406), !dbg !52
+  store double %407, ptr %c.8
+  %408 = load double, ptr %b.14
+  %409 = load double, ptr %c.8
+  %410 = fdiv double %408, %409
+  store double %410, ptr %37
+  %411 = load double, ptr %37
+  %412 = call ptr addrspace(1) @_bal_float_to_tagged(double %411), !dbg !53
+  store ptr addrspace(1) %412, ptr %38
+  br label %413
+413:
+  %414 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !54
+  %415 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %414, i64 0, i32 3
+  %416 = load ptr addrspace(1), ptr addrspace(1) %415, align 8
+  %417 = bitcast ptr addrspace(1) %416 to ptr addrspace(1)
+  %418 = load ptr addrspace(1), ptr %38
+  %419 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %417, i64 0, i64 0
+  store ptr addrspace(1) %418, ptr addrspace(1) %419
+  %420 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %414, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %420
+  %421 = bitcast ptr addrspace(1) %414 to ptr addrspace(1)
+  %422 = getelementptr i8, ptr addrspace(1) %421, i64 864691128455135236
+  store ptr addrspace(1) %422, ptr %39
+  %423 = load ptr addrspace(1), ptr %39
+  call void @_Bb02ioprintln(ptr addrspace(1) %423), !dbg !55
+  store ptr addrspace(1) null, ptr %40
+  %424 = load ptr addrspace(1), ptr %b
+  %425 = addrspacecast ptr addrspace(1) %424 to ptr
+  %426 = ptrtoint ptr %425 to i64
+  %427 = and i64 %426, 2233785415175766016
+  %428 = icmp eq i64 %427, 0
+  br i1 %428, label %436, label %429
+429:
+  %430 = load ptr addrspace(1), ptr %b
+  %431 = call double @_bal_tagged_to_float(ptr addrspace(1) %430), !dbg !56
+  store double %431, ptr %b.16
+  %432 = load double, ptr %b.16
+  %433 = fdiv double %432, 3.0
+  store double %433, ptr %41
+  %434 = load double, ptr %41
+  %435 = call ptr addrspace(1) @_bal_float_to_tagged(double %434), !dbg !57
+  store ptr addrspace(1) %435, ptr %42
+  br label %438
+436:
+  %437 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %437, ptr %b.15
+  store ptr addrspace(1) null, ptr %42
+  br label %438
 438:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %76
-  br label %439
-439:
-  %440 = load i8 addrspace(1)*, i8 addrspace(1)** %76
-  store i8 addrspace(1)* %440, i8 addrspace(1)** %v6
-  %441 = load i8 addrspace(1)*, i8 addrspace(1)** %v6, !dbg !16
-  call void @_Bb02ioprintln(i8 addrspace(1)* %441), !dbg !16
-  store i8 addrspace(1)* null, i8 addrspace(1)** %77, !dbg !16
-  %442 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %443 = addrspacecast i8 addrspace(1)* %442 to i8*
-  %444 = ptrtoint i8* %443 to i64
-  %445 = and i64 %444, 2233785415175766016
-  %446 = icmp eq i64 %445, 0
-  store i1 %446, i1* %78
-  %447 = load i1, i1* %78
-  br i1 %447, label %455, label %448
-448:
-  %449 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %450 = call double @_bal_tagged_to_float(i8 addrspace(1)* %449)
-  store double %450, double* %79
-  %451 = load double, double* %79
-  %452 = fneg double %451
-  store double %452, double* %80
-  %453 = load double, double* %80
-  %454 = call i8 addrspace(1)* @_bal_float_to_tagged(double %453)
-  store i8 addrspace(1)* %454, i8 addrspace(1)** %81
-  br label %456
+  %439 = load ptr addrspace(1), ptr %42
+  store ptr addrspace(1) %439, ptr %v5
+  %440 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !58
+  %441 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %440, i64 0, i32 3
+  %442 = load ptr addrspace(1), ptr addrspace(1) %441, align 8
+  %443 = bitcast ptr addrspace(1) %442 to ptr addrspace(1)
+  %444 = load ptr addrspace(1), ptr %v5
+  %445 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %443, i64 0, i64 0
+  store ptr addrspace(1) %444, ptr addrspace(1) %445
+  %446 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %440, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %446
+  %447 = bitcast ptr addrspace(1) %440 to ptr addrspace(1)
+  %448 = getelementptr i8, ptr addrspace(1) %447, i64 864691128455135236
+  store ptr addrspace(1) %448, ptr %43
+  %449 = load ptr addrspace(1), ptr %43
+  call void @_Bb02ioprintln(ptr addrspace(1) %449), !dbg !59
+  store ptr addrspace(1) null, ptr %44
+  %450 = load ptr addrspace(1), ptr %a
+  %451 = addrspacecast ptr addrspace(1) %450 to ptr
+  %452 = ptrtoint ptr %451 to i64
+  %453 = and i64 %452, 2233785415175766016
+  %454 = icmp eq i64 %453, 0
+  br i1 %454, label %462, label %455
 455:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %81
-  br label %456
-456:
-  %457 = load i8 addrspace(1)*, i8 addrspace(1)** %81, !dbg !17
-  call void @_Bb02ioprintln(i8 addrspace(1)* %457), !dbg !17
-  store i8 addrspace(1)* null, i8 addrspace(1)** %82, !dbg !17
-  store double 13.0, double* %d
-  %458 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %459 = addrspacecast i8 addrspace(1)* %458 to i8*
-  %460 = ptrtoint i8* %459 to i64
-  %461 = and i64 %460, 2233785415175766016
-  %462 = icmp eq i64 %461, 0
-  store i1 %462, i1* %83
-  %463 = load i1, i1* %83
-  br i1 %463, label %472, label %464
+  %456 = load ptr addrspace(1), ptr %a
+  %457 = call double @_bal_tagged_to_float(ptr addrspace(1) %456), !dbg !60
+  store double %457, ptr %a.14
+  %458 = load double, ptr %a.14
+  %459 = fneg double %458
+  store double %459, ptr %45
+  %460 = load double, ptr %45
+  %461 = call ptr addrspace(1) @_bal_float_to_tagged(double %460), !dbg !61
+  store ptr addrspace(1) %461, ptr %46
+  br label %464
+462:
+  %463 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %463, ptr %a.13
+  store ptr addrspace(1) null, ptr %46
+  br label %464
 464:
-  %465 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %466 = call double @_bal_tagged_to_float(i8 addrspace(1)* %465)
-  store double %466, double* %84
-  %467 = load double, double* %84
-  %468 = load double, double* %d
-  %469 = fadd double %467, %468
-  store double %469, double* %85
-  %470 = load double, double* %85
-  %471 = call i8 addrspace(1)* @_bal_float_to_tagged(double %470)
-  store i8 addrspace(1)* %471, i8 addrspace(1)** %86
-  br label %473
-472:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %86
-  br label %473
-473:
-  %474 = load i8 addrspace(1)*, i8 addrspace(1)** %86
-  store i8 addrspace(1)* %474, i8 addrspace(1)** %v7
-  %475 = load i8 addrspace(1)*, i8 addrspace(1)** %v7, !dbg !18
-  call void @_Bb02ioprintln(i8 addrspace(1)* %475), !dbg !18
-  store i8 addrspace(1)* null, i8 addrspace(1)** %87, !dbg !18
-  %476 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %477 = addrspacecast i8 addrspace(1)* %476 to i8*
-  %478 = ptrtoint i8* %477 to i64
+  %465 = load ptr addrspace(1), ptr %46
+  store ptr addrspace(1) %465, ptr %v6
+  %466 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !62
+  %467 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %466, i64 0, i32 3
+  %468 = load ptr addrspace(1), ptr addrspace(1) %467, align 8
+  %469 = bitcast ptr addrspace(1) %468 to ptr addrspace(1)
+  %470 = load ptr addrspace(1), ptr %v6
+  %471 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %469, i64 0, i64 0
+  store ptr addrspace(1) %470, ptr addrspace(1) %471
+  %472 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %466, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %472
+  %473 = bitcast ptr addrspace(1) %466 to ptr addrspace(1)
+  %474 = getelementptr i8, ptr addrspace(1) %473, i64 864691128455135236
+  store ptr addrspace(1) %474, ptr %47
+  %475 = load ptr addrspace(1), ptr %47
+  call void @_Bb02ioprintln(ptr addrspace(1) %475), !dbg !63
+  store ptr addrspace(1) null, ptr %48
+  %476 = load ptr addrspace(1), ptr %c
+  %477 = addrspacecast ptr addrspace(1) %476 to ptr
+  %478 = ptrtoint ptr %477 to i64
   %479 = and i64 %478, 2233785415175766016
   %480 = icmp eq i64 %479, 0
-  store i1 %480, i1* %88
-  %481 = load i1, i1* %88
-  br i1 %481, label %491, label %482
-482:
-  %483 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %484 = call double @_bal_tagged_to_float(i8 addrspace(1)* %483)
-  store double %484, double* %89
-  %485 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %486 = addrspacecast i8 addrspace(1)* %485 to i8*
-  %487 = ptrtoint i8* %486 to i64
-  %488 = and i64 %487, 2233785415175766016
-  %489 = icmp eq i64 %488, 0
-  store i1 %489, i1* %90
-  %490 = load i1, i1* %90
-  br i1 %490, label %491, label %492
-491:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %93
-  br label %500
-492:
-  %493 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %494 = call double @_bal_tagged_to_float(i8 addrspace(1)* %493)
-  store double %494, double* %91
-  %495 = load double, double* %89
-  %496 = load double, double* %91
-  %497 = fadd double %495, %496
-  store double %497, double* %92
-  %498 = load double, double* %92
-  %499 = call i8 addrspace(1)* @_bal_float_to_tagged(double %498)
-  store i8 addrspace(1)* %499, i8 addrspace(1)** %93
-  br label %500
-500:
-  %501 = load i8 addrspace(1)*, i8 addrspace(1)** %93
-  %502 = addrspacecast i8 addrspace(1)* %501 to i8*
-  %503 = ptrtoint i8* %502 to i64
+  br i1 %480, label %488, label %481
+481:
+  %482 = load ptr addrspace(1), ptr %c
+  %483 = call double @_bal_tagged_to_float(ptr addrspace(1) %482), !dbg !64
+  store double %483, ptr %c.10
+  %484 = load double, ptr %c.10
+  %485 = fneg double %484
+  store double %485, ptr %49
+  %486 = load double, ptr %49
+  %487 = call ptr addrspace(1) @_bal_float_to_tagged(double %486), !dbg !65
+  store ptr addrspace(1) %487, ptr %50
+  br label %490
+488:
+  %489 = load ptr addrspace(1), ptr %c
+  store ptr addrspace(1) %489, ptr %c.9
+  store ptr addrspace(1) null, ptr %50
+  br label %490
+490:
+  %491 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !66
+  %492 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %491, i64 0, i32 3
+  %493 = load ptr addrspace(1), ptr addrspace(1) %492, align 8
+  %494 = bitcast ptr addrspace(1) %493 to ptr addrspace(1)
+  %495 = load ptr addrspace(1), ptr %50
+  %496 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %494, i64 0, i64 0
+  store ptr addrspace(1) %495, ptr addrspace(1) %496
+  %497 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %491, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %497
+  %498 = bitcast ptr addrspace(1) %491 to ptr addrspace(1)
+  %499 = getelementptr i8, ptr addrspace(1) %498, i64 864691128455135236
+  store ptr addrspace(1) %499, ptr %51
+  %500 = load ptr addrspace(1), ptr %51
+  call void @_Bb02ioprintln(ptr addrspace(1) %500), !dbg !67
+  store ptr addrspace(1) null, ptr %52
+  store double 13.0, ptr %d
+  %501 = load ptr addrspace(1), ptr %a
+  %502 = addrspacecast ptr addrspace(1) %501 to ptr
+  %503 = ptrtoint ptr %502 to i64
   %504 = and i64 %503, 2233785415175766016
   %505 = icmp eq i64 %504, 0
-  store i1 %505, i1* %94
-  %506 = load i1, i1* %94
-  br i1 %506, label %516, label %507
-507:
-  %508 = load i8 addrspace(1)*, i8 addrspace(1)** %93
-  %509 = call double @_bal_tagged_to_float(i8 addrspace(1)* %508)
-  store double %509, double* %95
-  %510 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %511 = addrspacecast i8 addrspace(1)* %510 to i8*
-  %512 = ptrtoint i8* %511 to i64
-  %513 = and i64 %512, 2233785415175766016
-  %514 = icmp eq i64 %513, 0
-  store i1 %514, i1* %96
-  %515 = load i1, i1* %96
-  br i1 %515, label %516, label %517
+  br i1 %505, label %514, label %506
+506:
+  %507 = load ptr addrspace(1), ptr %a
+  %508 = call double @_bal_tagged_to_float(ptr addrspace(1) %507), !dbg !68
+  store double %508, ptr %a.16
+  %509 = load double, ptr %a.16
+  %510 = load double, ptr %d
+  %511 = fadd double %509, %510
+  store double %511, ptr %53
+  %512 = load double, ptr %53
+  %513 = call ptr addrspace(1) @_bal_float_to_tagged(double %512), !dbg !69
+  store ptr addrspace(1) %513, ptr %54
+  br label %516
+514:
+  %515 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %515, ptr %a.15
+  store ptr addrspace(1) null, ptr %54
+  br label %516
 516:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %99
-  br label %525
-517:
-  %518 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %519 = call double @_bal_tagged_to_float(i8 addrspace(1)* %518)
-  store double %519, double* %97
-  %520 = load double, double* %95
-  %521 = load double, double* %97
-  %522 = fadd double %520, %521
-  store double %522, double* %98
-  %523 = load double, double* %98
-  %524 = call i8 addrspace(1)* @_bal_float_to_tagged(double %523)
-  store i8 addrspace(1)* %524, i8 addrspace(1)** %99
-  br label %525
-525:
-  %526 = load i8 addrspace(1)*, i8 addrspace(1)** %99
-  %527 = addrspacecast i8 addrspace(1)* %526 to i8*
-  %528 = ptrtoint i8* %527 to i64
-  %529 = and i64 %528, 2233785415175766016
-  %530 = icmp eq i64 %529, 0
-  store i1 %530, i1* %100
-  %531 = load i1, i1* %100
-  br i1 %531, label %540, label %532
-532:
-  %533 = load i8 addrspace(1)*, i8 addrspace(1)** %99
-  %534 = call double @_bal_tagged_to_float(i8 addrspace(1)* %533)
-  store double %534, double* %101
-  %535 = load double, double* %101
-  %536 = load double, double* %d
-  %537 = fadd double %535, %536
-  store double %537, double* %102
-  %538 = load double, double* %102
-  %539 = call i8 addrspace(1)* @_bal_float_to_tagged(double %538)
-  store i8 addrspace(1)* %539, i8 addrspace(1)** %103
-  br label %541
-540:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %103
-  br label %541
+  %517 = load ptr addrspace(1), ptr %54
+  store ptr addrspace(1) %517, ptr %v7
+  %518 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !70
+  %519 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %518, i64 0, i32 3
+  %520 = load ptr addrspace(1), ptr addrspace(1) %519, align 8
+  %521 = bitcast ptr addrspace(1) %520 to ptr addrspace(1)
+  %522 = load ptr addrspace(1), ptr %v7
+  %523 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %521, i64 0, i64 0
+  store ptr addrspace(1) %522, ptr addrspace(1) %523
+  %524 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %518, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %524
+  %525 = bitcast ptr addrspace(1) %518 to ptr addrspace(1)
+  %526 = getelementptr i8, ptr addrspace(1) %525, i64 864691128455135236
+  store ptr addrspace(1) %526, ptr %55
+  %527 = load ptr addrspace(1), ptr %55
+  call void @_Bb02ioprintln(ptr addrspace(1) %527), !dbg !71
+  store ptr addrspace(1) null, ptr %56
+  %528 = load ptr addrspace(1), ptr %a
+  %529 = addrspacecast ptr addrspace(1) %528 to ptr
+  %530 = ptrtoint ptr %529 to i64
+  %531 = and i64 %530, 2233785415175766016
+  %532 = icmp eq i64 %531, 0
+  br i1 %532, label %541, label %533
+533:
+  %534 = load ptr addrspace(1), ptr %a
+  %535 = call double @_bal_tagged_to_float(ptr addrspace(1) %534), !dbg !72
+  store double %535, ptr %a.18
+  %536 = load ptr addrspace(1), ptr %b
+  %537 = addrspacecast ptr addrspace(1) %536 to ptr
+  %538 = ptrtoint ptr %537 to i64
+  %539 = and i64 %538, 2233785415175766016
+  %540 = icmp eq i64 %539, 0
+  br i1 %540, label %541, label %544
 541:
-  %542 = load i8 addrspace(1)*, i8 addrspace(1)** %103, !dbg !19
-  call void @_Bb02ioprintln(i8 addrspace(1)* %542), !dbg !19
-  store i8 addrspace(1)* null, i8 addrspace(1)** %104, !dbg !19
-  store i8 addrspace(1)* null, i8 addrspace(1)** %e
-  %543 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %544 = addrspacecast i8 addrspace(1)* %543 to i8*
-  %545 = ptrtoint i8* %544 to i64
-  %546 = and i64 %545, 2233785415175766016
-  %547 = icmp eq i64 %546, 0
-  store i1 %547, i1* %105
-  %548 = load i1, i1* %105
-  br i1 %548, label %558, label %549
-549:
-  %550 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %551 = call double @_bal_tagged_to_float(i8 addrspace(1)* %550)
-  store double %551, double* %106
-  %552 = load i8 addrspace(1)*, i8 addrspace(1)** %e
-  %553 = addrspacecast i8 addrspace(1)* %552 to i8*
-  %554 = ptrtoint i8* %553 to i64
-  %555 = and i64 %554, 2233785415175766016
-  %556 = icmp eq i64 %555, 0
-  store i1 %556, i1* %107
-  %557 = load i1, i1* %107
-  br i1 %557, label %558, label %559
+  %542 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %542, ptr %a.17
+  %543 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %543, ptr %b.17
+  store ptr addrspace(1) null, ptr %58
+  br label %552
+544:
+  %545 = load ptr addrspace(1), ptr %b
+  %546 = call double @_bal_tagged_to_float(ptr addrspace(1) %545), !dbg !73
+  store double %546, ptr %b.18
+  %547 = load double, ptr %a.18
+  %548 = load double, ptr %b.18
+  %549 = fadd double %547, %548
+  store double %549, ptr %57
+  %550 = load double, ptr %57
+  %551 = call ptr addrspace(1) @_bal_float_to_tagged(double %550), !dbg !74
+  store ptr addrspace(1) %551, ptr %58
+  br label %552
+552:
+  %553 = load ptr addrspace(1), ptr %58
+  %554 = addrspacecast ptr addrspace(1) %553 to ptr
+  %555 = ptrtoint ptr %554 to i64
+  %556 = and i64 %555, 2233785415175766016
+  %557 = icmp eq i64 %556, 0
+  br i1 %557, label %566, label %558
 558:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %110
-  br label %567
-559:
-  %560 = load i8 addrspace(1)*, i8 addrspace(1)** %e
-  %561 = call double @_bal_tagged_to_float(i8 addrspace(1)* %560)
-  store double %561, double* %108
-  %562 = load double, double* %106
-  %563 = load double, double* %108
-  %564 = fadd double %562, %563
-  store double %564, double* %109
-  %565 = load double, double* %109
-  %566 = call i8 addrspace(1)* @_bal_float_to_tagged(double %565)
-  store i8 addrspace(1)* %566, i8 addrspace(1)** %110
-  br label %567
-567:
-  %568 = load i8 addrspace(1)*, i8 addrspace(1)** %110
-  store i8 addrspace(1)* %568, i8 addrspace(1)** %v8
-  %569 = load i8 addrspace(1)*, i8 addrspace(1)** %v8, !dbg !20
-  call void @_Bb02ioprintln(i8 addrspace(1)* %569), !dbg !20
-  store i8 addrspace(1)* null, i8 addrspace(1)** %111, !dbg !20
-  %570 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %571 = addrspacecast i8 addrspace(1)* %570 to i8*
-  %572 = ptrtoint i8* %571 to i64
-  %573 = and i64 %572, 2233785415175766016
-  %574 = icmp eq i64 %573, 0
-  store i1 %574, i1* %112
-  %575 = load i1, i1* %112
-  br i1 %575, label %585, label %576
-576:
-  %577 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %578 = call double @_bal_tagged_to_float(i8 addrspace(1)* %577)
-  store double %578, double* %113
-  %579 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %580 = addrspacecast i8 addrspace(1)* %579 to i8*
-  %581 = ptrtoint i8* %580 to i64
-  %582 = and i64 %581, 2233785415175766016
-  %583 = icmp eq i64 %582, 0
-  store i1 %583, i1* %114
-  %584 = load i1, i1* %114
-  br i1 %584, label %585, label %586
-585:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %117
-  br label %594
-586:
-  %587 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %588 = call double @_bal_tagged_to_float(i8 addrspace(1)* %587)
-  store double %588, double* %115
-  %589 = load double, double* %113
-  %590 = load double, double* %115
-  %591 = fadd double %589, %590
-  store double %591, double* %116
-  %592 = load double, double* %116
-  %593 = call i8 addrspace(1)* @_bal_float_to_tagged(double %592)
-  store i8 addrspace(1)* %593, i8 addrspace(1)** %117
-  br label %594
-594:
-  %595 = load i8 addrspace(1)*, i8 addrspace(1)** %117
-  %596 = addrspacecast i8 addrspace(1)* %595 to i8*
-  %597 = ptrtoint i8* %596 to i64
-  %598 = and i64 %597, 2233785415175766016
-  %599 = icmp eq i64 %598, 0
-  store i1 %599, i1* %118
-  %600 = load i1, i1* %118
-  br i1 %600, label %610, label %601
-601:
-  %602 = load i8 addrspace(1)*, i8 addrspace(1)** %117
-  %603 = call double @_bal_tagged_to_float(i8 addrspace(1)* %602)
-  store double %603, double* %119
-  %604 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %605 = addrspacecast i8 addrspace(1)* %604 to i8*
-  %606 = ptrtoint i8* %605 to i64
+  %559 = load ptr addrspace(1), ptr %58
+  %560 = call double @_bal_tagged_to_float(ptr addrspace(1) %559), !dbg !75
+  store double %560, ptr %60
+  %561 = load ptr addrspace(1), ptr %c
+  %562 = addrspacecast ptr addrspace(1) %561 to ptr
+  %563 = ptrtoint ptr %562 to i64
+  %564 = and i64 %563, 2233785415175766016
+  %565 = icmp eq i64 %564, 0
+  br i1 %565, label %566, label %569
+566:
+  %567 = load ptr addrspace(1), ptr %58
+  store ptr addrspace(1) %567, ptr %59
+  %568 = load ptr addrspace(1), ptr %c
+  store ptr addrspace(1) %568, ptr %c.11
+  store ptr addrspace(1) null, ptr %62
+  br label %577
+569:
+  %570 = load ptr addrspace(1), ptr %c
+  %571 = call double @_bal_tagged_to_float(ptr addrspace(1) %570), !dbg !76
+  store double %571, ptr %c.12
+  %572 = load double, ptr %60
+  %573 = load double, ptr %c.12
+  %574 = fadd double %572, %573
+  store double %574, ptr %61
+  %575 = load double, ptr %61
+  %576 = call ptr addrspace(1) @_bal_float_to_tagged(double %575), !dbg !77
+  store ptr addrspace(1) %576, ptr %62
+  br label %577
+577:
+  %578 = load ptr addrspace(1), ptr %62
+  %579 = addrspacecast ptr addrspace(1) %578 to ptr
+  %580 = ptrtoint ptr %579 to i64
+  %581 = and i64 %580, 2233785415175766016
+  %582 = icmp eq i64 %581, 0
+  br i1 %582, label %591, label %583
+583:
+  %584 = load ptr addrspace(1), ptr %62
+  %585 = call double @_bal_tagged_to_float(ptr addrspace(1) %584), !dbg !78
+  store double %585, ptr %64
+  %586 = load double, ptr %64
+  %587 = load double, ptr %d
+  %588 = fadd double %586, %587
+  store double %588, ptr %65
+  %589 = load double, ptr %65
+  %590 = call ptr addrspace(1) @_bal_float_to_tagged(double %589), !dbg !79
+  store ptr addrspace(1) %590, ptr %66
+  br label %593
+591:
+  %592 = load ptr addrspace(1), ptr %62
+  store ptr addrspace(1) %592, ptr %63
+  store ptr addrspace(1) null, ptr %66
+  br label %593
+593:
+  %594 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !80
+  %595 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %594, i64 0, i32 3
+  %596 = load ptr addrspace(1), ptr addrspace(1) %595, align 8
+  %597 = bitcast ptr addrspace(1) %596 to ptr addrspace(1)
+  %598 = load ptr addrspace(1), ptr %66
+  %599 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %597, i64 0, i64 0
+  store ptr addrspace(1) %598, ptr addrspace(1) %599
+  %600 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %594, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %600
+  %601 = bitcast ptr addrspace(1) %594 to ptr addrspace(1)
+  %602 = getelementptr i8, ptr addrspace(1) %601, i64 864691128455135236
+  store ptr addrspace(1) %602, ptr %67
+  %603 = load ptr addrspace(1), ptr %67
+  call void @_Bb02ioprintln(ptr addrspace(1) %603), !dbg !81
+  store ptr addrspace(1) null, ptr %68
+  store ptr addrspace(1) null, ptr %e
+  %604 = load ptr addrspace(1), ptr %a
+  %605 = addrspacecast ptr addrspace(1) %604 to ptr
+  %606 = ptrtoint ptr %605 to i64
   %607 = and i64 %606, 2233785415175766016
   %608 = icmp eq i64 %607, 0
-  store i1 %608, i1* %120
-  %609 = load i1, i1* %120
-  br i1 %609, label %610, label %611
-610:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %123
-  br label %619
-611:
-  %612 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %613 = call double @_bal_tagged_to_float(i8 addrspace(1)* %612)
-  store double %613, double* %121
-  %614 = load double, double* %119
-  %615 = load double, double* %121
-  %616 = fadd double %614, %615
-  store double %616, double* %122
-  %617 = load double, double* %122
-  %618 = call i8 addrspace(1)* @_bal_float_to_tagged(double %617)
-  store i8 addrspace(1)* %618, i8 addrspace(1)** %123
-  br label %619
-619:
-  %620 = load i8 addrspace(1)*, i8 addrspace(1)** %123
-  %621 = addrspacecast i8 addrspace(1)* %620 to i8*
-  %622 = ptrtoint i8* %621 to i64
-  %623 = and i64 %622, 2233785415175766016
-  %624 = icmp eq i64 %623, 0
-  store i1 %624, i1* %124
-  %625 = load i1, i1* %124
-  br i1 %625, label %634, label %626
-626:
-  %627 = load i8 addrspace(1)*, i8 addrspace(1)** %123
-  %628 = call double @_bal_tagged_to_float(i8 addrspace(1)* %627)
-  store double %628, double* %125
-  %629 = load double, double* %125
-  %630 = load double, double* %d
-  %631 = fadd double %629, %630
-  store double %631, double* %126
-  %632 = load double, double* %126
-  %633 = call i8 addrspace(1)* @_bal_float_to_tagged(double %632)
-  store i8 addrspace(1)* %633, i8 addrspace(1)** %127
-  br label %635
-634:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %127
-  br label %635
-635:
-  %636 = load i8 addrspace(1)*, i8 addrspace(1)** %127
-  %637 = addrspacecast i8 addrspace(1)* %636 to i8*
-  %638 = ptrtoint i8* %637 to i64
-  %639 = and i64 %638, 2233785415175766016
-  %640 = icmp eq i64 %639, 0
-  store i1 %640, i1* %128
-  %641 = load i1, i1* %128
-  br i1 %641, label %651, label %642
-642:
-  %643 = load i8 addrspace(1)*, i8 addrspace(1)** %127
-  %644 = call double @_bal_tagged_to_float(i8 addrspace(1)* %643)
-  store double %644, double* %129
-  %645 = load i8 addrspace(1)*, i8 addrspace(1)** %e
-  %646 = addrspacecast i8 addrspace(1)* %645 to i8*
-  %647 = ptrtoint i8* %646 to i64
-  %648 = and i64 %647, 2233785415175766016
-  %649 = icmp eq i64 %648, 0
-  store i1 %649, i1* %130
-  %650 = load i1, i1* %130
-  br i1 %650, label %651, label %652
-651:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %133
-  br label %660
-652:
-  %653 = load i8 addrspace(1)*, i8 addrspace(1)** %e
-  %654 = call double @_bal_tagged_to_float(i8 addrspace(1)* %653)
-  store double %654, double* %131
-  %655 = load double, double* %129
-  %656 = load double, double* %131
-  %657 = fadd double %655, %656
-  store double %657, double* %132
-  %658 = load double, double* %132
-  %659 = call i8 addrspace(1)* @_bal_float_to_tagged(double %658)
-  store i8 addrspace(1)* %659, i8 addrspace(1)** %133
-  br label %660
-660:
-  %661 = load i8 addrspace(1)*, i8 addrspace(1)** %133, !dbg !21
-  call void @_Bb02ioprintln(i8 addrspace(1)* %661), !dbg !21
-  store i8 addrspace(1)* null, i8 addrspace(1)** %134, !dbg !21
-  %662 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %663 = addrspacecast i8 addrspace(1)* %662 to i8*
-  %664 = ptrtoint i8* %663 to i64
-  %665 = and i64 %664, 2233785415175766016
-  %666 = icmp eq i64 %665, 0
-  store i1 %666, i1* %135
-  %667 = load i1, i1* %135
-  br i1 %667, label %675, label %668
-668:
-  %669 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %670 = call double @_bal_tagged_to_float(i8 addrspace(1)* %669)
-  store double %670, double* %136
-  %671 = load double, double* %136
-  %672 = fneg double %671
-  store double %672, double* %137
-  %673 = load double, double* %137
-  %674 = call i8 addrspace(1)* @_bal_float_to_tagged(double %673)
-  store i8 addrspace(1)* %674, i8 addrspace(1)** %138
-  br label %676
-675:
-  store i8 addrspace(1)* null, i8 addrspace(1)** %138
-  br label %676
-676:
-  %677 = load i8 addrspace(1)*, i8 addrspace(1)** %138, !dbg !22
-  call void @_Bb02ioprintln(i8 addrspace(1)* %677), !dbg !22
-  store i8 addrspace(1)* null, i8 addrspace(1)** %139, !dbg !22
-  ret void
+  br i1 %608, label %617, label %609
+609:
+  %610 = load ptr addrspace(1), ptr %a
+  %611 = call double @_bal_tagged_to_float(ptr addrspace(1) %610), !dbg !82
+  store double %611, ptr %a.20
+  %612 = load ptr addrspace(1), ptr %e
+  %613 = addrspacecast ptr addrspace(1) %612 to ptr
+  %614 = ptrtoint ptr %613 to i64
+  %615 = and i64 %614, 2233785415175766016
+  %616 = icmp eq i64 %615, 0
+  br i1 %616, label %617, label %620
+617:
+  %618 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %618, ptr %a.19
+  %619 = load ptr addrspace(1), ptr %e
+  store ptr addrspace(1) %619, ptr %e.1
+  store ptr addrspace(1) null, ptr %70
+  br label %628
+620:
+  %621 = load ptr addrspace(1), ptr %e
+  %622 = call double @_bal_tagged_to_float(ptr addrspace(1) %621), !dbg !83
+  store double %622, ptr %e.2
+  %623 = load double, ptr %a.20
+  %624 = load double, ptr %e.2
+  %625 = fadd double %623, %624
+  store double %625, ptr %69
+  %626 = load double, ptr %69
+  %627 = call ptr addrspace(1) @_bal_float_to_tagged(double %626), !dbg !84
+  store ptr addrspace(1) %627, ptr %70
+  br label %628
+628:
+  %629 = load ptr addrspace(1), ptr %70
+  store ptr addrspace(1) %629, ptr %v8
+  %630 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !85
+  %631 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %630, i64 0, i32 3
+  %632 = load ptr addrspace(1), ptr addrspace(1) %631, align 8
+  %633 = bitcast ptr addrspace(1) %632 to ptr addrspace(1)
+  %634 = load ptr addrspace(1), ptr %v8
+  %635 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %633, i64 0, i64 0
+  store ptr addrspace(1) %634, ptr addrspace(1) %635
+  %636 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %630, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %636
+  %637 = bitcast ptr addrspace(1) %630 to ptr addrspace(1)
+  %638 = getelementptr i8, ptr addrspace(1) %637, i64 864691128455135236
+  store ptr addrspace(1) %638, ptr %71
+  %639 = load ptr addrspace(1), ptr %71
+  call void @_Bb02ioprintln(ptr addrspace(1) %639), !dbg !86
+  store ptr addrspace(1) null, ptr %72
+  %640 = load ptr addrspace(1), ptr %a
+  %641 = addrspacecast ptr addrspace(1) %640 to ptr
+  %642 = ptrtoint ptr %641 to i64
+  %643 = and i64 %642, 2233785415175766016
+  %644 = icmp eq i64 %643, 0
+  br i1 %644, label %653, label %645
+645:
+  %646 = load ptr addrspace(1), ptr %a
+  %647 = call double @_bal_tagged_to_float(ptr addrspace(1) %646), !dbg !87
+  store double %647, ptr %a.22
+  %648 = load ptr addrspace(1), ptr %b
+  %649 = addrspacecast ptr addrspace(1) %648 to ptr
+  %650 = ptrtoint ptr %649 to i64
+  %651 = and i64 %650, 2233785415175766016
+  %652 = icmp eq i64 %651, 0
+  br i1 %652, label %653, label %656
+653:
+  %654 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %654, ptr %a.21
+  %655 = load ptr addrspace(1), ptr %b
+  store ptr addrspace(1) %655, ptr %b.19
+  store ptr addrspace(1) null, ptr %74
+  br label %664
+656:
+  %657 = load ptr addrspace(1), ptr %b
+  %658 = call double @_bal_tagged_to_float(ptr addrspace(1) %657), !dbg !88
+  store double %658, ptr %b.20
+  %659 = load double, ptr %a.22
+  %660 = load double, ptr %b.20
+  %661 = fadd double %659, %660
+  store double %661, ptr %73
+  %662 = load double, ptr %73
+  %663 = call ptr addrspace(1) @_bal_float_to_tagged(double %662), !dbg !89
+  store ptr addrspace(1) %663, ptr %74
+  br label %664
+664:
+  %665 = load ptr addrspace(1), ptr %74
+  %666 = addrspacecast ptr addrspace(1) %665 to ptr
+  %667 = ptrtoint ptr %666 to i64
+  %668 = and i64 %667, 2233785415175766016
+  %669 = icmp eq i64 %668, 0
+  br i1 %669, label %678, label %670
+670:
+  %671 = load ptr addrspace(1), ptr %74
+  %672 = call double @_bal_tagged_to_float(ptr addrspace(1) %671), !dbg !90
+  store double %672, ptr %76
+  %673 = load ptr addrspace(1), ptr %c
+  %674 = addrspacecast ptr addrspace(1) %673 to ptr
+  %675 = ptrtoint ptr %674 to i64
+  %676 = and i64 %675, 2233785415175766016
+  %677 = icmp eq i64 %676, 0
+  br i1 %677, label %678, label %681
 678:
-  %679 = call i8 addrspace(1)* @_bal_panic_construct(i64 516), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %679)
+  %679 = load ptr addrspace(1), ptr %74
+  store ptr addrspace(1) %679, ptr %75
+  %680 = load ptr addrspace(1), ptr %c
+  store ptr addrspace(1) %680, ptr %c.13
+  store ptr addrspace(1) null, ptr %78
+  br label %689
+681:
+  %682 = load ptr addrspace(1), ptr %c
+  %683 = call double @_bal_tagged_to_float(ptr addrspace(1) %682), !dbg !91
+  store double %683, ptr %c.14
+  %684 = load double, ptr %76
+  %685 = load double, ptr %c.14
+  %686 = fadd double %684, %685
+  store double %686, ptr %77
+  %687 = load double, ptr %77
+  %688 = call ptr addrspace(1) @_bal_float_to_tagged(double %687), !dbg !92
+  store ptr addrspace(1) %688, ptr %78
+  br label %689
+689:
+  %690 = load ptr addrspace(1), ptr %78
+  %691 = addrspacecast ptr addrspace(1) %690 to ptr
+  %692 = ptrtoint ptr %691 to i64
+  %693 = and i64 %692, 2233785415175766016
+  %694 = icmp eq i64 %693, 0
+  br i1 %694, label %703, label %695
+695:
+  %696 = load ptr addrspace(1), ptr %78
+  %697 = call double @_bal_tagged_to_float(ptr addrspace(1) %696), !dbg !93
+  store double %697, ptr %80
+  %698 = load double, ptr %80
+  %699 = load double, ptr %d
+  %700 = fadd double %698, %699
+  store double %700, ptr %81
+  %701 = load double, ptr %81
+  %702 = call ptr addrspace(1) @_bal_float_to_tagged(double %701), !dbg !94
+  store ptr addrspace(1) %702, ptr %82
+  br label %705
+703:
+  %704 = load ptr addrspace(1), ptr %78
+  store ptr addrspace(1) %704, ptr %79
+  store ptr addrspace(1) null, ptr %82
+  br label %705
+705:
+  %706 = load ptr addrspace(1), ptr %82
+  %707 = addrspacecast ptr addrspace(1) %706 to ptr
+  %708 = ptrtoint ptr %707 to i64
+  %709 = and i64 %708, 2233785415175766016
+  %710 = icmp eq i64 %709, 0
+  br i1 %710, label %719, label %711
+711:
+  %712 = load ptr addrspace(1), ptr %82
+  %713 = call double @_bal_tagged_to_float(ptr addrspace(1) %712), !dbg !95
+  store double %713, ptr %84
+  %714 = load ptr addrspace(1), ptr %e
+  %715 = addrspacecast ptr addrspace(1) %714 to ptr
+  %716 = ptrtoint ptr %715 to i64
+  %717 = and i64 %716, 2233785415175766016
+  %718 = icmp eq i64 %717, 0
+  br i1 %718, label %719, label %722
+719:
+  %720 = load ptr addrspace(1), ptr %82
+  store ptr addrspace(1) %720, ptr %83
+  %721 = load ptr addrspace(1), ptr %e
+  store ptr addrspace(1) %721, ptr %e.3
+  store ptr addrspace(1) null, ptr %86
+  br label %730
+722:
+  %723 = load ptr addrspace(1), ptr %e
+  %724 = call double @_bal_tagged_to_float(ptr addrspace(1) %723), !dbg !96
+  store double %724, ptr %e.4
+  %725 = load double, ptr %84
+  %726 = load double, ptr %e.4
+  %727 = fadd double %725, %726
+  store double %727, ptr %85
+  %728 = load double, ptr %85
+  %729 = call ptr addrspace(1) @_bal_float_to_tagged(double %728), !dbg !97
+  store ptr addrspace(1) %729, ptr %86
+  br label %730
+730:
+  %731 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !98
+  %732 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %731, i64 0, i32 3
+  %733 = load ptr addrspace(1), ptr addrspace(1) %732, align 8
+  %734 = bitcast ptr addrspace(1) %733 to ptr addrspace(1)
+  %735 = load ptr addrspace(1), ptr %86
+  %736 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %734, i64 0, i64 0
+  store ptr addrspace(1) %735, ptr addrspace(1) %736
+  %737 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %731, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %737
+  %738 = bitcast ptr addrspace(1) %731 to ptr addrspace(1)
+  %739 = getelementptr i8, ptr addrspace(1) %738, i64 864691128455135236
+  store ptr addrspace(1) %739, ptr %87
+  %740 = load ptr addrspace(1), ptr %87
+  call void @_Bb02ioprintln(ptr addrspace(1) %740), !dbg !99
+  store ptr addrspace(1) null, ptr %88
+  %741 = load ptr addrspace(1), ptr %a
+  %742 = addrspacecast ptr addrspace(1) %741 to ptr
+  %743 = ptrtoint ptr %742 to i64
+  %744 = and i64 %743, 2233785415175766016
+  %745 = icmp eq i64 %744, 0
+  br i1 %745, label %753, label %746
+746:
+  %747 = load ptr addrspace(1), ptr %a
+  %748 = call double @_bal_tagged_to_float(ptr addrspace(1) %747), !dbg !100
+  store double %748, ptr %a.24
+  %749 = load double, ptr %a.24
+  %750 = fneg double %749
+  store double %750, ptr %89
+  %751 = load double, ptr %89
+  %752 = call ptr addrspace(1) @_bal_float_to_tagged(double %751), !dbg !101
+  store ptr addrspace(1) %752, ptr %90
+  br label %755
+753:
+  %754 = load ptr addrspace(1), ptr %a
+  store ptr addrspace(1) %754, ptr %a.23
+  store ptr addrspace(1) null, ptr %90
+  br label %755
+755:
+  %756 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !102
+  %757 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %756, i64 0, i32 3
+  %758 = load ptr addrspace(1), ptr addrspace(1) %757, align 8
+  %759 = bitcast ptr addrspace(1) %758 to ptr addrspace(1)
+  %760 = load ptr addrspace(1), ptr %90
+  %761 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %759, i64 0, i64 0
+  store ptr addrspace(1) %760, ptr addrspace(1) %761
+  %762 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %756, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %762
+  %763 = bitcast ptr addrspace(1) %756 to ptr addrspace(1)
+  %764 = getelementptr i8, ptr addrspace(1) %763, i64 864691128455135236
+  store ptr addrspace(1) %764, ptr %91
+  %765 = load ptr addrspace(1), ptr %91
+  call void @_Bb02ioprintln(ptr addrspace(1) %765), !dbg !103
+  store ptr addrspace(1) null, ptr %92
+  ret void
+766:
+  %767 = call ptr addrspace(1) @_bal_panic_construct(i64 516), !dbg !7
+  call void @_bal_panic(ptr addrspace(1) %767), !dbg !8
   unreachable
 }
 !llvm.module.flags = !{!0}
@@ -987,18 +1184,99 @@ define void @_B04rootmain() !dbg !5 {
 !5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 2, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
 !6 = !{}
 !7 = !DILocation(line: 0, column: 0, scope: !5)
-!8 = !DILocation(line: 8, column: 4, scope: !5)
-!9 = !DILocation(line: 9, column: 4, scope: !5)
-!10 = !DILocation(line: 12, column: 4, scope: !5)
-!11 = !DILocation(line: 13, column: 4, scope: !5)
-!12 = !DILocation(line: 16, column: 4, scope: !5)
-!13 = !DILocation(line: 19, column: 4, scope: !5)
-!14 = !DILocation(line: 21, column: 4, scope: !5)
-!15 = !DILocation(line: 24, column: 4, scope: !5)
-!16 = !DILocation(line: 27, column: 4, scope: !5)
-!17 = !DILocation(line: 28, column: 4, scope: !5)
-!18 = !DILocation(line: 32, column: 4, scope: !5)
-!19 = !DILocation(line: 33, column: 4, scope: !5)
-!20 = !DILocation(line: 37, column: 4, scope: !5)
-!21 = !DILocation(line: 38, column: 4, scope: !5)
-!22 = !DILocation(line: 40, column: 4, scope: !5)
+!8 = !DILocation(line: 2, column: 16, scope: !5)
+!9 = !DILocation(line: 3, column: 13, scope: !5)
+!10 = !DILocation(line: 4, column: 13, scope: !5)
+!11 = !DILocation(line: 5, column: 13, scope: !5)
+!12 = !DILocation(line: 7, column: 18, scope: !5)
+!13 = !DILocation(line: 7, column: 18, scope: !5)
+!14 = !DILocation(line: 7, column: 18, scope: !5)
+!15 = !DILocation(line: 8, column: 15, scope: !5)
+!16 = !DILocation(line: 8, column: 4, scope: !5)
+!17 = !DILocation(line: 9, column: 17, scope: !5)
+!18 = !DILocation(line: 9, column: 17, scope: !5)
+!19 = !DILocation(line: 9, column: 17, scope: !5)
+!20 = !DILocation(line: 9, column: 15, scope: !5)
+!21 = !DILocation(line: 9, column: 4, scope: !5)
+!22 = !DILocation(line: 11, column: 18, scope: !5)
+!23 = !DILocation(line: 11, column: 18, scope: !5)
+!24 = !DILocation(line: 11, column: 18, scope: !5)
+!25 = !DILocation(line: 11, column: 22, scope: !5)
+!26 = !DILocation(line: 11, column: 22, scope: !5)
+!27 = !DILocation(line: 11, column: 22, scope: !5)
+!28 = !DILocation(line: 12, column: 15, scope: !5)
+!29 = !DILocation(line: 12, column: 4, scope: !5)
+!30 = !DILocation(line: 13, column: 17, scope: !5)
+!31 = !DILocation(line: 13, column: 17, scope: !5)
+!32 = !DILocation(line: 13, column: 17, scope: !5)
+!33 = !DILocation(line: 13, column: 21, scope: !5)
+!34 = !DILocation(line: 13, column: 21, scope: !5)
+!35 = !DILocation(line: 13, column: 21, scope: !5)
+!36 = !DILocation(line: 13, column: 15, scope: !5)
+!37 = !DILocation(line: 13, column: 4, scope: !5)
+!38 = !DILocation(line: 15, column: 18, scope: !5)
+!39 = !DILocation(line: 15, column: 18, scope: !5)
+!40 = !DILocation(line: 15, column: 18, scope: !5)
+!41 = !DILocation(line: 16, column: 15, scope: !5)
+!42 = !DILocation(line: 16, column: 4, scope: !5)
+!43 = !DILocation(line: 18, column: 18, scope: !5)
+!44 = !DILocation(line: 18, column: 18, scope: !5)
+!45 = !DILocation(line: 18, column: 18, scope: !5)
+!46 = !DILocation(line: 18, column: 22, scope: !5)
+!47 = !DILocation(line: 18, column: 22, scope: !5)
+!48 = !DILocation(line: 18, column: 22, scope: !5)
+!49 = !DILocation(line: 19, column: 15, scope: !5)
+!50 = !DILocation(line: 19, column: 4, scope: !5)
+!51 = !DILocation(line: 21, column: 17, scope: !5)
+!52 = !DILocation(line: 21, column: 17, scope: !5)
+!53 = !DILocation(line: 21, column: 17, scope: !5)
+!54 = !DILocation(line: 21, column: 15, scope: !5)
+!55 = !DILocation(line: 21, column: 4, scope: !5)
+!56 = !DILocation(line: 23, column: 18, scope: !5)
+!57 = !DILocation(line: 23, column: 18, scope: !5)
+!58 = !DILocation(line: 24, column: 15, scope: !5)
+!59 = !DILocation(line: 24, column: 4, scope: !5)
+!60 = !DILocation(line: 26, column: 16, scope: !5)
+!61 = !DILocation(line: 26, column: 16, scope: !5)
+!62 = !DILocation(line: 27, column: 15, scope: !5)
+!63 = !DILocation(line: 27, column: 4, scope: !5)
+!64 = !DILocation(line: 28, column: 15, scope: !5)
+!65 = !DILocation(line: 28, column: 15, scope: !5)
+!66 = !DILocation(line: 28, column: 15, scope: !5)
+!67 = !DILocation(line: 28, column: 4, scope: !5)
+!68 = !DILocation(line: 31, column: 18, scope: !5)
+!69 = !DILocation(line: 31, column: 18, scope: !5)
+!70 = !DILocation(line: 32, column: 15, scope: !5)
+!71 = !DILocation(line: 32, column: 4, scope: !5)
+!72 = !DILocation(line: 33, column: 17, scope: !5)
+!73 = !DILocation(line: 33, column: 17, scope: !5)
+!74 = !DILocation(line: 33, column: 17, scope: !5)
+!75 = !DILocation(line: 33, column: 21, scope: !5)
+!76 = !DILocation(line: 33, column: 21, scope: !5)
+!77 = !DILocation(line: 33, column: 21, scope: !5)
+!78 = !DILocation(line: 33, column: 25, scope: !5)
+!79 = !DILocation(line: 33, column: 25, scope: !5)
+!80 = !DILocation(line: 33, column: 15, scope: !5)
+!81 = !DILocation(line: 33, column: 4, scope: !5)
+!82 = !DILocation(line: 36, column: 18, scope: !5)
+!83 = !DILocation(line: 36, column: 18, scope: !5)
+!84 = !DILocation(line: 36, column: 18, scope: !5)
+!85 = !DILocation(line: 37, column: 15, scope: !5)
+!86 = !DILocation(line: 37, column: 4, scope: !5)
+!87 = !DILocation(line: 38, column: 17, scope: !5)
+!88 = !DILocation(line: 38, column: 17, scope: !5)
+!89 = !DILocation(line: 38, column: 17, scope: !5)
+!90 = !DILocation(line: 38, column: 21, scope: !5)
+!91 = !DILocation(line: 38, column: 21, scope: !5)
+!92 = !DILocation(line: 38, column: 21, scope: !5)
+!93 = !DILocation(line: 38, column: 25, scope: !5)
+!94 = !DILocation(line: 38, column: 25, scope: !5)
+!95 = !DILocation(line: 38, column: 29, scope: !5)
+!96 = !DILocation(line: 38, column: 29, scope: !5)
+!97 = !DILocation(line: 38, column: 29, scope: !5)
+!98 = !DILocation(line: 38, column: 15, scope: !5)
+!99 = !DILocation(line: 38, column: 4, scope: !5)
+!100 = !DILocation(line: 40, column: 15, scope: !5)
+!101 = !DILocation(line: 40, column: 15, scope: !5)
+!102 = !DILocation(line: 40, column: 15, scope: !5)
+!103 = !DILocation(line: 40, column: 4, scope: !5)

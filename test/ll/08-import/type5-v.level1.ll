@@ -1,4 +1,4 @@
-@_bal_stack_guard = external global i8*
+@_bal_stack_guard = external global ptr
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
 !0 = !{i32 2, !"Debug Info Version", i32 3}

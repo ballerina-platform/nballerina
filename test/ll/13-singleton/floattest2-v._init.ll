@@ -1,7 +1,19 @@
-%UniformSubtype = type {i1(%UniformSubtype*, i8 addrspace(1)*)*}
-@.subtype0 = internal constant {i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, i32, [4 x double]} {i1(%UniformSubtype*, i8 addrspace(1)*)* @_bal_float_subtype_contains, i32 4, i32 1, [4 x double] [double 0x7FF8000000000000, double 0xFFF0000000000000, double 0.0, double 0x7FF0000000000000]}, align 8
-@_Bt04root0 = constant {i32, i32, [1 x %UniformSubtype*]} {i32 0, i32 256, [1 x %UniformSubtype*] [%UniformSubtype* bitcast({i1(%UniformSubtype*, i8 addrspace(1)*)*, i32, i32, [4 x double]}* @.subtype0 to %UniformSubtype*)]}
-declare i1 @_bal_float_subtype_contains(%UniformSubtype*, i8 addrspace(1)*)
+%BasicSubtype = type {ptr}
+%FillerDesc = type {ptr}
+@_Bi04root1 = constant {i32, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64, ptr, [0 x i64]} {i32 0, i32 0, i64 0, ptr @_bal_list_generic_get_tagged, ptr @_bal_list_generic_set_tagged, ptr @_bal_list_generic_inexact_set_tagged, ptr @_bal_list_generic_get_int, ptr @_bal_list_generic_set_int, ptr @_bal_list_generic_inexact_set_int, ptr @_bal_list_generic_get_float, ptr @_bal_list_generic_set_float, ptr @_bal_list_generic_inexact_set_float, i64 262143, ptr bitcast(ptr @_bal_nil_filler_desc to ptr), [0 x i64] []}
+@_bal_nil_filler_desc = external global %FillerDesc
+@.subtype0 = internal constant {ptr, i32, i32, [4 x double]} {ptr @_bal_float_subtype_contains, i32 4, i32 1, [4 x double] [double 0x7FF8000000000000, double 0xFFF0000000000000, double 0.0, double 0x7FF0000000000000]}, align 8
+@_Bt04root0 = constant {i32, i32, [1 x ptr]} {i32 0, i32 8, [1 x ptr] [ptr bitcast(ptr @.subtype0 to ptr)]}
+declare ptr addrspace(1) @_bal_list_generic_get_tagged(ptr addrspace(1), i64)
+declare i64 @_bal_list_generic_set_tagged(ptr addrspace(1), i64, ptr addrspace(1))
+declare i64 @_bal_list_generic_inexact_set_tagged(ptr addrspace(1), i64, ptr addrspace(1))
+declare i64 @_bal_list_generic_get_int(ptr addrspace(1), i64)
+declare i64 @_bal_list_generic_set_int(ptr addrspace(1), i64, i64)
+declare i64 @_bal_list_generic_inexact_set_int(ptr addrspace(1), i64, i64)
+declare double @_bal_list_generic_get_float(ptr addrspace(1), i64)
+declare i64 @_bal_list_generic_set_float(ptr addrspace(1), i64, double)
+declare i64 @_bal_list_generic_inexact_set_float(ptr addrspace(1), i64, double)
+declare i1 @_bal_float_subtype_contains(ptr, ptr addrspace(1))
 declare void @_B04rootmain()
 define void @_bal_main() {
   call void @_B04rootmain()
