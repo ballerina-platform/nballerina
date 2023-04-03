@@ -42,10 +42,6 @@ class VerifyContext {
         return self.tc;
     }
 
-    function qNameRange(Position startPos) returns Range {
-        return self.mod.getPartFile(self.defn.partIndex).qNameRange(startPos);
-    }
-
     function semanticErr(d:Message msg, Position|Range pos) returns err:Semantic {
         return err:semantic(msg, loc=self.location(pos), defnName=self.defn.symbol.identifier);
     }
@@ -469,14 +465,14 @@ function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallIndi
     int nExpectedArgs = paramTypes.length();
     if nSuppliedArgs != nExpectedArgs {
         if nSuppliedArgs < nExpectedArgs {
-            return vc.invalidErr(`too few arguments for call to function`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too few arguments for call to function`, insn.pos);
         }
         else {
-            return vc.invalidErr(`too many arguments for call to function`, vc.qNameRange(insn.pos));
+            return vc.invalidErr(`too many arguments for call to function`, insn.pos);
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check validOperandType(vc, args[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, vc.qNameRange(insn.pos));
+        check validOperandType(vc, args[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, insn.pos);
     }
 }
 
