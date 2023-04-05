@@ -185,8 +185,8 @@ Function subtypes
 
 | Ballerina Syntax                        | Sexpr                             |
 |-----------------------------------------|-----------------------------------|
-| `function(int, boolean) returns string` | `(function (int boolean) string)` |
-| `function(int, int) returns float`      | `(function (int int) float)`      |
+| `function(int, boolean) returns string` | `(function (int boolean) never string)` |
+| `function(int, int) returns float`      | `(function (int int) never float)`      |
 
 Examples
 ========

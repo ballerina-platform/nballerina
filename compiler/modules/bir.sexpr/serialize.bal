@@ -215,7 +215,8 @@ function addGetModDecls(FuncSerializeContext sc, readonly & ModuleId id) returns
 function fromSignature(FuncSerializeContext sc, t:FunctionSignature sig) returns readonly & Signature {
     readonly & ts:Type[] params = from var t in sig.paramTypes select fromType(sc, t).cloneReadOnly();
     readonly & ts:Type ret = fromType(sc, sig.returnType);
-    return [params, ret];
+    readonly & ts:Type rest = sig.restParamType != () ? fromType(sc, <t:SemType>sig.restParamType) : fromType(sc, t:NEVER);
+    return [params, rest, ret];
 }
 
 

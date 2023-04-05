@@ -28,3 +28,14 @@ type H2 function(H) returns H;
 // @type HH0 < H
 type HH H | string;
 type HH0 function(HH) returns int;
+
+type I function(I...);
+
+// @type I < I0
+// @type I < I1
+// @type I < I2
+// @type I < I3
+type I0 function();
+type I1 function(I);
+type I2 function(I, I);
+type I3 function(I, I, I);

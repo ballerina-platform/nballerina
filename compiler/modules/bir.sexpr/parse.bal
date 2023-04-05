@@ -132,11 +132,10 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     }
     ExternalFuncDecls extFuncDecl = table[];
     foreach var [importedModId, ...funcDecls] in decl {
-        foreach var [identifier, _, [params, ret]] in funcDecls {
-            readonly & t:SemType[] paramTypes = from var p in params select t:fromSexpr(env ,atoms, p);
+        foreach var [identifier, _, signature] in funcDecls {
             extFuncDecl.add({
                 symbol: { module: toModuleId(importedModId), identifier: identifier.s },
-                signature: { returnType: t:fromSexpr(env ,atoms, ret), paramTypes: paramTypes, restParamType: () } // SUBSET: restParamType is not used by backend
+                signature: toFunctionSignature(env, atoms, signature)
             });
         }
     }
@@ -147,10 +146,11 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
 }
 
 function toFunctionSignature(t:Env env, t:AtomTable atoms, Signature sexpr) returns t:FunctionSignature {
-    var [params, ret] = sexpr;
+    var [params, rest, ret] = sexpr;
+    t:SemType restParamType = t:fromSexpr(env, atoms, rest);
     return { returnType: t:fromSexpr(env, atoms, ret),
              paramTypes: from var p in params select t:fromSexpr(env, atoms, p),
-             restParamType: () };
+             restParamType: restParamType != t:NEVER ? restParamType : () };
 }
 
 function toFunctionCode(ParseContext pc, FunctionCode code) returns bir:FunctionCode {

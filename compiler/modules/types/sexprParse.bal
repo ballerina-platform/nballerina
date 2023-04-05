@@ -206,13 +206,14 @@ function fromAtomSexpr(SexprAtomParseContext pc, string name, ts:Atom atomSexpr)
         ["mapping", var fieldsSexpr, var rest] => {
             return fromMappingSexpr(pc, name, <ts:Field[]>fieldsSexpr, rest);
         }
-        ["function", var args, var ret] => {
-            FunctionDefinition d = new;
-            pc.started[name] = d;
-            ListDefinition listDef = new;
-            SemType[] initial = from var member in <ts:Type[]>args select fromSexprInternal(pc, member);
-            SemType argsTuple = defineListTypeWrapped(listDef, pc.env, initial, initial.length(), mut = CELL_MUT_NONE);
-            return d.define(pc.env, argsTuple, fromSexprInternal(pc, <ts:Type>ret));
+        ["function", var args, var rest, var ret] => {
+            readonly & SemType[] paramTypes = from var param in args select fromSexprInternal(pc, param);
+            SemType r = fromSexprInternal(pc, rest);
+            SemType? restParamType = r == NEVER ? () : r;
+            SemType returnType = fromSexprInternal(pc, ret);
+            FunctionSignature sig = { paramTypes, restParamType, returnType };
+            Context cx = contextFromEnv(pc.env);
+            return functionSemType(cx, sig);
         }
         // Only to be used from *.typetest files
         ["cell", var ty, "none"] => {

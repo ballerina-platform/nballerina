@@ -292,19 +292,27 @@ function atomToSexprAccum(SerializationContext sc, Atom atom, BddTopSexpr top) r
     return name;
 }
 
+// FIXME: we need to properly represent rest atoms
 function fromFuncAtom(SerializationContext sc, Atom atom) returns ts:Atom {
     Context tc = sc.tc;
-    var [args, ret] = tc.functionAtomType(atom);
-    var argsLat = <ListAtomicType>listAtomicType(tc, args);
-    ts:Type[] members = from var member in argsLat.members.initial select sexprFormSemTypeInternal(sc, cellInner(member));
-    int compressedCount = argsLat.members.fixedLength - argsLat.members.initial.length();
-    if compressedCount > 0 {
-        ts:Type repeatedMember = members[members.length() - 1];
-        foreach int i in 0 ..< compressedCount {
-            members.push(repeatedMember);
-        }
+    var { paramTypes, restParamType, returnType } = functionSignature(tc, tc.functionAtomType(atom));
+    // FIXME:
+    if restParamType is CellSemType {
+        restParamType = cellInnerVal(restParamType);
     }
-    return ["function", members, sexprFormSemTypeInternal(sc, ret)];
+    if returnType is CellSemType {
+        returnType = cellInnerVal(returnType);
+    }
+    ts:Type[] params = from var param in paramTypes select sexprFormSemTypeInternal(sc, param);
+    ts:Type rest = restParamType != () ? sexprFormSemTypeInternal(sc, restParamType) : sexprFormSemTypeInternal(sc, NEVER);
+    // int compressedCount = argsLat.members.fixedLength - argsLat.members.initial.length();
+    // if compressedCount > 0 {
+    //     ts:Type repeatedMember = members[members.length() - 1];
+    //     foreach int i in 0 ..< compressedCount {
+    //         members.push(repeatedMember);
+    //     }
+    // }
+    return ["function", params, rest, sexprFormSemTypeInternal(sc, returnType)];
 }
 
 function fromListAtom(SerializationContext sc, Atom atom) returns ts:Atom {
