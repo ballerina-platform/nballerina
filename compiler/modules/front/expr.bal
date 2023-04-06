@@ -1465,7 +1465,7 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
 
 function functionRefFromRegister(t:Context tc, bir:Register register) returns bir:FunctionRef {
     // TODO: when we support type variance we will need to support t:FUNCTION here as well
-    bir:FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
+    t:FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
     bir:InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
     return { symbol, signature, erasedSignature: signature };
 }
@@ -1480,7 +1480,8 @@ function registerName(bir:Register register) returns string {
     return <string>register.name;
 }
 
-function functionSignature(t:Context tc, t:ComplexSemType semType) returns bir:FunctionSignature {
+// TODO: remove this
+function functionSignature(t:Context tc, t:ComplexSemType semType) returns t:FunctionSignature {
     var [returnType, paramTypes, restParamType] = t:deconstructFunctionType(tc, semType);
     return { paramTypes: paramTypes.cloneReadOnly(), returnType, restParamType };
 }
@@ -1614,7 +1615,7 @@ function genImportedFunctionRef(ExprContext cx, string prefix, string identifier
 function getLangLibFunctionRef(ExprContext cx, bir:Operand target, string methodName, Position|Range nameRange) returns bir:FunctionRef|CodeGenError {
     LangLibModuleName? moduleName = operandLangLibModuleName(target);
     if moduleName != () {
-        bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
+        t:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature == () {
             return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, nameRange);
         }
@@ -1623,7 +1624,7 @@ function getLangLibFunctionRef(ExprContext cx, bir:Operand target, string method
                 module: { org: "ballerina", names: ["lang", moduleName] },
                 identifier: methodName
             };
-            bir:FunctionSignature signature = erasedSignature;
+            t:FunctionSignature signature = erasedSignature;
             if moduleName == "array" {
                 signature = instantiateArrayFunctionSignature(cx.mod.tc, signature, (<bir:Register>target).semType);
             }
@@ -1637,10 +1638,10 @@ type Counter record {|
     int n = 0;
 |};
 
-function instantiateArrayFunctionSignature(t:Context tc, bir:FunctionSignature sig, t:SemType listType) returns bir:FunctionSignature {
+function instantiateArrayFunctionSignature(t:Context tc, t:FunctionSignature sig, t:SemType listType) returns t:FunctionSignature {
     var [memberType, arrayType] = arraySupertype(tc, listType); 
     Counter counter = {};
-    bir:FunctionSignature inst = instantiateSignature(sig, memberType, arrayType, counter);
+    t:FunctionSignature inst = instantiateSignature(sig, memberType, arrayType, counter);
     if counter.n > 1 {
         return inst;
     }
@@ -1660,7 +1661,7 @@ function arraySupertype(t:Context tc, t:SemType listType) returns [t:SemType, t:
     }
 }
 
-function instantiateSignature(bir:FunctionSignature sig, t:SemType memberType, t:SemType containerType, Counter counter) returns bir:FunctionSignature {
+function instantiateSignature(t:FunctionSignature sig, t:SemType memberType, t:SemType containerType, Counter counter) returns t:FunctionSignature {
     bir:SemType? restParamType = sig.restParamType;
     bir:SemType[] paramTypes = from var ty in sig.paramTypes select instantiateType(ty, memberType, containerType, counter);
     return {
@@ -2045,7 +2046,7 @@ function lookupImportedVarRef(ExprContext cx, string prefix, string identifier, 
     if defn is s:ResolvedConst {
         return defn[1];
     }
-    else if defn is bir:FunctionSignature {
+    else if defn is t:FunctionSignature {
         return {
             symbol: { module: mod.moduleId, identifier },
             signature: defn,

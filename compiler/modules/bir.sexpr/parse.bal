@@ -38,7 +38,7 @@ type FunctionCode record {|
 
 type ExternalFuncDecl readonly & record {|
     bir:ExternalSymbol symbol;
-    bir:FunctionSignature signature;
+    t:FunctionSignature signature;
 |};
 
 type ExternalFuncDecls table<ExternalFuncDecl> key(symbol);
@@ -47,7 +47,7 @@ type ParseContext record {|
     t:Context tc;
     t:AtomTable atoms;
     ExternalFuncDecls extFuncDecl;
-    map<bir:FunctionSignature> internalFuncDecl;
+    map<t:FunctionSignature> internalFuncDecl;
 |};
 
 type FuncParseContext record {|
@@ -119,11 +119,11 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     t:AtomTable atoms = t:atomTableFromSexpr(env, sexprAtoms);
     map<VirtualFile> vFilesByName = map from var [i, f] in files.enumerate() select [f[0].s, new(i, f[1].s, f.length() > 2 ? f[2].s : ())];
     bir:FunctionDefn[] funcDefns = [];
-    map<bir:FunctionSignature> internalFuncDecl = {};
+    map<t:FunctionSignature> internalFuncDecl = {};
     FunctionCode[] funcCodes = [];
     foreach var [identifier, visibility, [_, [params, ret], [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks]]] in funcs { // JBUG: can't use { s: identifier }
         readonly & t:SemType[] paramTypes = from var t in params select t:fromSexpr(env, atoms, t);
-        bir:FunctionSignature signature = { returnType: t:fromSexpr(env ,atoms, ret), paramTypes, restParamType: () };
+        t:FunctionSignature signature = { returnType: t:fromSexpr(env ,atoms, ret), paramTypes, restParamType: () };
         internalFuncDecl[identifier.s] = signature;
         funcDefns.push({ symbol: { isPublic: visibility is PublicVisibility , identifier: identifier.s },
                          signature,
@@ -390,9 +390,9 @@ type BirInsnBase readonly & record {|
 function toCallInsn(FuncParseContext pc, bir:Symbol symbol, Operand[] argsSexpr, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallInsn {
     readonly & bir:Operand[] args = from var arg in argsSexpr select toOperand(pc, arg);
     var result = toResultRegister(pc, resultSexpr);
-    bir:FunctionSignature erasedSignature = lookupSignature(pc, symbol);
+    t:FunctionSignature erasedSignature = lookupSignature(pc, symbol);
 
-    bir:FunctionSignature signature;
+    t:FunctionSignature signature;
     if sigSexpr != () {
         var [paramTys, retTy] = sigSexpr;
         signature = {
@@ -437,7 +437,7 @@ function toOperand(FuncParseContext pc, Operand operand) returns bir:Operand {
         }
         ["function", var symbolSexpr] => {
             bir:Symbol symbol = symbolFromSexpr(<FunctionRef>symbolSexpr);
-            bir:FunctionSignature signature = lookupSignature(pc, symbol);
+            t:FunctionSignature signature = lookupSignature(pc, symbol);
             t:Env env = pc.tc.env;
             t:FunctionDefinition d = new(env);
             t:SemType semType =  d.define(env, t:defineListTypeWrapped(new(), env, signature.paramTypes, rest= signature.restParamType ?: t:NEVER, mut=t:CELL_MUT_NONE), signature.returnType);
@@ -483,6 +483,6 @@ function createPosition(int line, int column) returns d:Position {
     return (line << 32) | column;
 }
 
-function lookupSignature(FuncParseContext pc, bir:Symbol symbol) returns bir:FunctionSignature {
+function lookupSignature(FuncParseContext pc, bir:Symbol symbol) returns t:FunctionSignature {
     return symbol is bir:ExternalSymbol ? pc.extFuncDecl.get(symbol).signature : pc.internalFuncDecl.get(symbol.identifier);
 }

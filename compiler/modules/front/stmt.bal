@@ -214,7 +214,7 @@ class StmtContext {
 
 }
 
-function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
+function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, t:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
     StmtContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     BindingChain? bindings = ();

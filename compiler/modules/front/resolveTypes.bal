@@ -1,6 +1,5 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
-import wso2/nballerina.bir;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
 
@@ -74,7 +73,7 @@ function resolveDefn(ModuleSymbols mod, s:ModuleLevelDefn defn) returns ResolveT
     }
 }
 
-function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) returns bir:FunctionSignature|ResolveTypeError {
+function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) returns t:FunctionSignature|ResolveTypeError {
     // JBUG doing this as a from/select panics if resolveSubsetTypeDesc returns an error
     // e.g.10-intersect/never2-e.bal
     t:SemType[] paramTypes = [];

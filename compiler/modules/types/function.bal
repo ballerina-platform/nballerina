@@ -25,6 +25,19 @@ public class FunctionDefinition {
     }    
 }
 
+# This represents the signature of a function definition.
+# We don't need to convert this to a `SemType` unless
+# the definition is converted to a function value,
+# by referencing the name of the function as a variable
+# reference.
+public type FunctionSignature readonly & record {|
+    SemType returnType;
+    SemType[] paramTypes;
+    # if non-nil, last member of paramTypes will be an array type whose member type is restParamType
+    SemType? restParamType = ();
+|};
+
+
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return memoSubtypeIsEmpty(cx, cx.functionMemo, functionBddIsEmpty, <Bdd>t);
 }
@@ -102,6 +115,7 @@ public function functionAtomicType(Context cx, SemType semType) returns Function
     return ();
 }
 
+// FIXME: replace this with a function SemType -> FunctionSignature
 public function deconstructFunctionType(Context cx, SemType semType) returns [SemType, SemType[], SemType?] {
     // This is not exactly correct since semType could be diff/union of function types
     // We need something to select a function inherent type similar to how `selectListInherentType` works

@@ -306,7 +306,7 @@ class TestBirEmitter {
         test:assertEquals(firstRoundLl, secondRoundLl);
     }
 
-    function finalize(t:Env env, map<bir:FunctionSignature> potentialEntryFuncs) returns CompileError? {
+    function finalize(t:Env env, map<t:FunctionSignature> potentialEntryFuncs) returns CompileError? {
     }
 }
 
