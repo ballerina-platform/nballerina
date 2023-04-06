@@ -1,12 +1,17 @@
-import ballerina/test;
 import ballerina/file;
-import wso2/nballerina.front;
 import ballerina/io;
-import wso2/nballerina.types as t;
-import wso2/nballerina.front.syntax as s;
+import ballerina/test;
 
-import wso2/nballerina.comm.err;
+import wso2/nballerina.bir.sexpr as bsexpr;
+import wso2/nballerina.bir;
 import wso2/nballerina.comm.diagnostic as d;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.sexpr;
+import wso2/nballerina.front.syntax as s;
+import wso2/nballerina.front;
+import wso2/nballerina.nback;
+import wso2/nballerina.tback;
+import wso2/nballerina.types as t;
 
 type TestSuiteCases map<[string, string]>;
 
@@ -282,4 +287,33 @@ function testListAllMemberTypesProjection(t:Context tc, t:SemType t) {
             test:assertFail(string `All projection for member index ${r.min} is not equal to individual projection`);
         }
     }
+}
+
+// Test bir's validity by: First lowering a given module to bir. Second, convert the module to bir text, parse it and lower it to llvm.
+// Then compare first and second are textually equal.
+class TestBirEmitter {
+    *Emitter;
+
+    function emitModule(bir:Module birMod) returns CompileError? {
+        string birText = check tback:toBirText(birMod);
+        var [firstRoundLlMod, _] = check nback:buildModule(birMod, {debugLevel: nback:DEBUG_NONE});
+        string firstRoundLl = firstRoundLlMod.printModuleToString();
+        sexpr:Data[] secondRoundSexpr = checkpanic sexpr:parse(birText); // using if and assertFail will lose the error trace
+        bsexpr:Module secondRoundTypeSexpr = checkpanic secondRoundSexpr.cloneWithType();
+        bir:Module secondRoundBirMod = bsexpr:toModule(secondRoundTypeSexpr, birMod.getId());
+        var [secondRoundLlMod, _] = check nback:buildModule(secondRoundBirMod, {debugLevel: nback:DEBUG_NONE});
+        string secondRoundLl = secondRoundLlMod.printModuleToString();
+        test:assertEquals(firstRoundLl, secondRoundLl);
+    }
+
+    function finalize(t:Env env, map<bir:FunctionSignature> potentialEntryFuncs) returns CompileError? {
+    }
+}
+
+@test:Config {
+    dataProvider: listSourcesVPO
+}
+function testBirCompile(string filename, string kind) returns error? {
+    var [basename, _] = basenameExtension(filename);
+    check compileBalFile({ filename }, basename, new TestBirEmitter());
 }

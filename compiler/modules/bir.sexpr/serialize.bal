@@ -43,9 +43,11 @@ public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Sema
     ModuleDecls[] decl = from var { id, funcs } in sc.decls
                          select [id, ...from var [name, sig] in funcs.entries()
                                         select <FuncDecl>[{ s: name }, "function", sig]];
-    return [["atoms", ...atoms], ["defn", ...funcSexprs], ["decl", ...decl]];
+    File[] files = from var f in mod.getPartFiles()
+                   let string? dir = f.directory(), string name = f.filename()
+                   select dir == () ? [{ s: basename(name) }, { s: name }] : [{ s: basename(name) }, { s: name }, { s: dir}];
+    return [["atoms", ...atoms], ["defns", ...funcSexprs], ["decls", ...decl], ["files", ...files]];
 }
-
 
 function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCode code, bir:File file) returns Function {
     bir:BasicBlock[] blocks = code.blocks; // JBUG: NPE if destructuring is used
@@ -55,9 +57,16 @@ function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCo
     FuncSerializeContext fsc = { ...sc, blockNames, regNames };
     sexpr:String name = { s: defn.symbol.identifier };
     FunctionVisibility access = defn.symbol.isPublic ? PUBLIC_VISIBILITY : MODULE_VISIBILITY;
-    return [name, access, ["function", fromSignature(fsc, defn.signature),
+    var [line, col] = file.lineColumn(defn.position);
+    return [name, access, ["function", fromSignature(fsc, defn.signature), ["file", { s: basename(file.filename()) }], ["loc", line, col],
                               ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
                               ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)]]];
+}
+
+function basename(string path) returns string {
+    int? i = path.lastIndexOf("/");
+    string filename = i == () ? path : path.substring(i + 1);
+    return filename.substring(0, filename.lastIndexOf(".") ?: filename.length());
 }
 
 // Register definition.
@@ -70,15 +79,24 @@ function defnFromRegister(FuncSerializeContext sc, bir:Register reg) returns Reg
     }
 }
 
+type PositionDependentInsn bir:IntArithmeticBinaryInsn|bir:TypeTestInsn|bir:ConvertToDecimalInsn|bir:ConvertToIntInsn|bir:DecimalArithmeticBinaryInsn|
+                           bir:ErrorConstructInsn|bir:ListGetInsn|bir:ListSetInsn|bir:MappingGetInsn|bir:MappingSetInsn|bir:TypeCastInsn;
+
 function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File file) returns Block {
         bir:Label? onPanic = block.onPanic;
         readonly & BlockPanic blockPanic = onPanic == () ? ["no-panic"] : ["on-panic", formLabel(sc, onPanic)];
-        return [formLabel(sc, block.label), blockPanic,
-                ...from var insn in block.insns select formInsn(sc, insn, file)];
+        (Insn & readonly|Position & readonly)[] insns = [];
+        foreach var insn in block.insns {
+            if insn is PositionDependentInsn {
+                var [line, col] = file.lineColumn(insn.pos);
+                insns.push(["loc", line, col]);
+            }
+            insns.push(formInsn(sc, insn, file));
+        }
+        return [formLabel(sc, block.label), blockPanic, ...insns];
 }
 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
-    // io:println(insn.name + " " + file.lineColumn(insn.pos).toString());
     if insn is bir:CallInsn {
         bir:FunctionRef func =  insn.func;
         FunctionRef ref = fromFunctionRefAccum(sc, func);
@@ -128,7 +146,7 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
         return ["panic", fromOperand(sc, insn.operand)];
     }
     // Generic serialization to handle others.
-    sexpr:Data[] insnSexpr = [fromInsnNameOp(insn.name, insn?.op)];
+    sexpr:Data[] insnSexpr = [INSN_NAMES_SEXPR.get([insn.name, insn?.op]).sexpr];
     bir:Register? result = insn?.result;
     if result != () {
         insnSexpr.push(fromRegister(sc, result));
@@ -208,20 +226,18 @@ function formModuleId(bir:ModuleId id) returns ModuleId & readonly {
             ...from var i in 1 ..< id.names.length() select <sexpr:String>{ s: id.names[i] }]; // JBUG: can't infer sexpr:String
 }
 
-// Given a list of maybe names and ids, return a table of distinct names, by appending the id to subsequent non-unique names.
-// Id is used as the name for unnamed items. Each name is prefixed. Names are delimited by ".".
+// Given a list of maybe names and ids, return a table of distinct names, by
+// 1. Using id as the name for unnamed items. 2. Using id to differentiate subsequent non-unique names.
 function differentiate(string prefix, int len, function(int i) returns [string?, int] iter) returns IdNames {
     IdNames result = table[];
-    map<true> nameId = {};
+    map<true> names = {};
     foreach var i in 0 ..< len {
-        var [currentName, id] = iter(i);
-        if currentName != () {
-            string name = prefix + "." + currentName;
-            if nameId.hasKey(currentName) {
-                name += "." + id.toString();
-            }
+        var [srcName, id] = iter(i);
+        if srcName != () && srcName != "_" {
+            string maybeId = names.hasKey(srcName) ? id.toString() : "";
+            string name = prefix + maybeId + "." + srcName;
             result.add({ id, name });
-            nameId[currentName] = true;
+            names[srcName] = true;
         }
         else {
             result.add({ id, name: prefix + id.toString() });

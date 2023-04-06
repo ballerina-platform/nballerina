@@ -7,16 +7,19 @@ public type FunctionTag "function";
 public type RegistersTag "registers";
 public type BlocksTag "blocks";
 
-public type Module [["atoms", [sexpr:String, ts:Atom]...], ["defn", Function...], ["decl", ModuleDecls...]];
+public type Position ["loc", int, int];
+public type File [sexpr:String, sexpr:String]|[sexpr:String, sexpr:String, sexpr:String]; // [name, path, ?dir]
+public type FileRef ["file", sexpr:String];
+public type Module [["atoms", [sexpr:String, ts:Atom]...], ["defns", Function...], ["decls", ModuleDecls...], ["files", File...]];
 public type ModuleId [sexpr:String, sexpr:String, sexpr:String...];
 public type Signature [ts:Type[], ts:Type];
 public type FuncDecl [sexpr:String, FunctionTag, Signature];
 public type ModuleDecls [ModuleId, FuncDecl...];
-public type Function [sexpr:String, FunctionVisibility, [FunctionTag, Signature, [RegistersTag, Register...], [BlocksTag, Block...]]];
+public type Function [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
 public type Register [sexpr:Symbol, bir:DeclRegisterKind|bir:TMP_REGISTER_KIND|bir:ASSIGN_TMP_REGISTER_KIND , ts:Type]|
                      [sexpr:Symbol, bir:NARROW_REGISTER_KIND, ts:Type, sexpr:Symbol];
 public type BlockPanic readonly & (["no-panic"]|["on-panic", Label]);
-public type Block readonly & [sexpr:Symbol, BlockPanic, Insn...];
+public type Block readonly & [sexpr:Symbol, BlockPanic, (Position|Insn)...];
 public type RegisterName sexpr:Symbol;
 public type Result RegisterName;
 public type Operand RegisterName|sexpr:Data[0]|sexpr:String|["float", sexpr:String]|["decimal", sexpr:String]|["function", FunctionRef]|int|boolean;
@@ -46,8 +49,8 @@ public type ListConstructInsn readonly & ["list-construct", Result, Operand...];
 public type TypeMergeInsn readonly & ["type-merge", Result, [Label, Operand]...];
 public type BranchInsn readonly & ["branch"|"branch-back", Label];
 
-type ResultInsn EqualityInsn|AssignInsn|IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|DecimalArithmeticBinaryInsn|ConvertToIntInsn|ListGetInsn|
-                BooleanNotInsn|CatchInsn|CompareInsn|MappingGetInsn|StringConcatInsn|FloatArithmeticBinaryInsn|ConvertToFloatInsn|MappingFillingGetInsn|ConvertToDecimalInsn|FloatNegateInsn|ErrorConstructInsn|DecimalNegateInsn;
+type ResultInsn EqualityInsn|AssignInsn|IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|DecimalArithmeticBinaryInsn|ConvertToIntInsn|ListGetInsn|BooleanNotInsn|CatchInsn|CompareInsn|MappingGetInsn|
+                StringConcatInsn|FloatArithmeticBinaryInsn|ConvertToFloatInsn|MappingFillingGetInsn|ConvertToDecimalInsn|FloatNegateInsn|ErrorConstructInsn|DecimalNegateInsn|CallIndirectInsn;
 public type EqualityInsn readonly & ["equal"|"not-equal"|"exact-equal"|"not-exact-equal", Result, Operand, Operand];
 public type AssignInsn readonly & ["set", Result, Operand];
 public type IntBinaryInsn readonly & ["int+"|"int/"|"int-"|"int*"|"int%"|"int^"|"int&"|"int|"|"int<<"|"int>>"|"int>>>", Result, Operand, Operand];
@@ -67,6 +70,7 @@ public type MappingGetInsn readonly & ["mapping-get", Result, RegisterName, Oper
 public type MappingFillingGetInsn readonly & ["mapping-filling-get", Result, RegisterName, Operand];
 public type ErrorConstructInsn readonly & ["error-construct", Result, Operand];
 public type ListGetInsn readonly & ["list-get"|"list-filling-get", Result, Operand, Operand];
+public type CallIndirectInsn readonly & ["call-indirect", Result, RegisterName, Operand...];
 
 type OperandInsn RetInsn|AbnormalRetInsn|MappingSetInsn|PanicInsn|ListSetInsn;
 public type RetInsn readonly & ["ret", Operand];
