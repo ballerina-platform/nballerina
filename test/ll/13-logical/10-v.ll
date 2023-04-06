@@ -1,66 +1,54 @@
-@_bal_stack_guard = external global i8*
-declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
-declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+@_bal_stack_guard = external global ptr
+declare ptr addrspace(1) @_bal_panic_construct(i64) cold
+declare void @_bal_panic(ptr addrspace(1)) noreturn cold
 define void @_B04rootmain() !dbg !5 {
-  %x = alloca i8 addrspace(1)*
-  %1 = alloca i1
-  %x.1 = alloca i8 addrspace(1)*
-  %2 = alloca i1
-  %3 = alloca i1
-  %x.2 = alloca i8 addrspace(1)*
-  %_ = alloca i8 addrspace(1)*
-  %x.3 = alloca i8 addrspace(1)*
-  %_.1 = alloca i8 addrspace(1)*
-  %4 = alloca i8
-  %5 = load i8*, i8** @_bal_stack_guard
-  %6 = icmp ult i8* %4, %5
-  br i1 %6, label %33, label %7
-7:
-  %8 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  store i8 addrspace(1)* %8, i8 addrspace(1)** %x
-  %9 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %10 = addrspacecast i8 addrspace(1)* %9 to i8*
-  %11 = ptrtoint i8* %10 to i64
-  %12 = and i64 %11, 2233785415175766016
-  %13 = icmp eq i64 %12, 504403158265495552
-  store i1 %13, i1* %1
-  %14 = load i1, i1* %1
-  br i1 %14, label %23, label %15
+  %x = alloca ptr addrspace(1)
+  %x.1 = alloca i64
+  %x.2 = alloca ptr addrspace(1)
+  %1 = alloca double
+  %2 = alloca ptr addrspace(1)
+  %x.3 = alloca ptr addrspace(1)
+  %_ = alloca ptr addrspace(1)
+  %_.1 = alloca ptr addrspace(1)
+  %3 = alloca i8
+  %4 = load ptr, ptr @_bal_stack_guard
+  %5 = icmp ult ptr %3, %4
+  br i1 %5, label %28, label %6
+6:
+  %7 = and i64 72057594037927935, 1
+  %8 = or i64 2449958197289549824, %7
+  %9 = getelementptr i8, ptr addrspace(1) null, i64 %8
+  store ptr addrspace(1) %9, ptr %x
+  %10 = load ptr addrspace(1), ptr %x
+  %11 = addrspacecast ptr addrspace(1) %10 to ptr
+  %12 = ptrtoint ptr %11 to i64
+  %13 = and i64 %12, 2233785415175766016
+  %14 = icmp eq i64 %13, 144115188075855872
+  br i1 %14, label %15, label %18
 15:
-  %16 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  store i8 addrspace(1)* %16, i8 addrspace(1)** %x.1
-  %17 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
-  %18 = addrspacecast i8 addrspace(1)* %17 to i8*
-  %19 = ptrtoint i8* %18 to i64
-  %20 = and i64 %19, 2233785415175766016
-  %21 = icmp eq i64 %20, 576460752303423488
-  store i1 %21, i1* %2
-  %22 = load i1, i1* %2
-  store i1 %22, i1* %3
-  br label %25
-23:
-  %24 = load i1, i1* %1
-  store i1 %24, i1* %3
-  br label %25
+  %16 = load ptr addrspace(1), ptr %x
+  store ptr addrspace(1) %16, ptr %x.3
+  %17 = load ptr addrspace(1), ptr %x.3
+  store ptr addrspace(1) %17, ptr %_
+  ret void
+18:
+  %19 = load ptr addrspace(1), ptr %x
+  store ptr addrspace(1) %19, ptr %x.2
+  %20 = load ptr addrspace(1), ptr %x.2
+  %21 = addrspacecast ptr addrspace(1) %20 to ptr
+  %22 = ptrtoint ptr %21 to i64
+  %23 = and i64 %22, 2233785415175766016
+  %24 = icmp eq i64 %23, 216172782113783808
+  br i1 %24, label %15, label %25
 25:
-  %26 = load i1, i1* %3
-  br i1 %26, label %27, label %30
-27:
-  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
-  store i8 addrspace(1)* %28, i8 addrspace(1)** %x.2
-  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
-  store i8 addrspace(1)* %29, i8 addrspace(1)** %_
+  %26 = load ptr addrspace(1), ptr %x.2
+  store ptr addrspace(1) %26, ptr %2
+  %27 = load ptr addrspace(1), ptr %2
+  store ptr addrspace(1) %27, ptr %_.1
   ret void
-30:
-  %31 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
-  store i8 addrspace(1)* %31, i8 addrspace(1)** %x.3
-  %32 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
-  store i8 addrspace(1)* %32, i8 addrspace(1)** %_.1
-  ret void
-33:
-  %34 = call i8 addrspace(1)* @_bal_panic_construct(i64 260), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %34)
+28:
+  %29 = call ptr addrspace(1) @_bal_panic_construct(i64 260), !dbg !7
+  call void @_bal_panic(ptr addrspace(1) %29), !dbg !8
   unreachable
 }
 !llvm.module.flags = !{!0}
@@ -73,3 +61,4 @@ define void @_B04rootmain() !dbg !5 {
 !5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 1, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
 !6 = !{}
 !7 = !DILocation(line: 0, column: 0, scope: !5)
+!8 = !DILocation(line: 1, column: 16, scope: !5)

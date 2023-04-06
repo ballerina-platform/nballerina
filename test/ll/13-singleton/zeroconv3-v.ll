@@ -1,22 +1,37 @@
-@_bal_stack_guard = external global i8*
-declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
-declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_float_to_tagged(double)
-declare void @_Bb02ioprintln(i8 addrspace(1)*)
+@_bal_stack_guard = external global ptr
+@_Bi04root0 = external constant {i32}
+declare ptr addrspace(1) @_bal_panic_construct(i64) cold
+declare void @_bal_panic(ptr addrspace(1)) noreturn cold
+declare ptr addrspace(1) @_bal_list_construct_8(ptr, i64)
+declare ptr addrspace(1) @_bal_float_to_tagged(double)
+declare void @_Bb02ioprintln(ptr addrspace(1))
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
-  %2 = alloca i8
-  %3 = load i8*, i8** @_bal_stack_guard
-  %4 = icmp ult i8* %2, %3
-  br i1 %4, label %7, label %5
-5:
-  %6 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0.0), !dbg !8
-  call void @_Bb02ioprintln(i8 addrspace(1)* %6), !dbg !8
-  store i8 addrspace(1)* null, i8 addrspace(1)** %1, !dbg !8
+  %1 = alloca ptr addrspace(1)
+  %2 = alloca ptr addrspace(1)
+  %3 = alloca i8
+  %4 = load ptr, ptr @_bal_stack_guard
+  %5 = icmp ult ptr %3, %4
+  br i1 %5, label %17, label %6
+6:
+  %7 = call ptr addrspace(1) @_bal_list_construct_8(ptr @_Bi04root0, i64 1), !dbg !9
+  %8 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %7, i64 0, i32 3
+  %9 = load ptr addrspace(1), ptr addrspace(1) %8, align 8
+  %10 = bitcast ptr addrspace(1) %9 to ptr addrspace(1)
+  %11 = call ptr addrspace(1) @_bal_float_to_tagged(double 0.0), !dbg !10
+  %12 = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) %10, i64 0, i64 0
+  store ptr addrspace(1) %11, ptr addrspace(1) %12
+  %13 = getelementptr inbounds {ptr, i64, i64, ptr addrspace(1)}, ptr addrspace(1) %7, i64 0, i32 1
+  store i64 1, ptr addrspace(1) %13
+  %14 = bitcast ptr addrspace(1) %7 to ptr addrspace(1)
+  %15 = getelementptr i8, ptr addrspace(1) %14, i64 864691128455135236
+  store ptr addrspace(1) %15, ptr %1
+  %16 = load ptr addrspace(1), ptr %1
+  call void @_Bb02ioprintln(ptr addrspace(1) %16), !dbg !11
+  store ptr addrspace(1) null, ptr %2
   ret void
-7:
-  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 772), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %8)
+17:
+  %18 = call ptr addrspace(1) @_bal_panic_construct(i64 772), !dbg !7
+  call void @_bal_panic(ptr addrspace(1) %18), !dbg !8
   unreachable
 }
 !llvm.module.flags = !{!0}
@@ -29,4 +44,7 @@ define void @_B04rootmain() !dbg !5 {
 !5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 3, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
 !6 = !{}
 !7 = !DILocation(line: 0, column: 0, scope: !5)
-!8 = !DILocation(line: 4, column: 4, scope: !5)
+!8 = !DILocation(line: 3, column: 16, scope: !5)
+!9 = !DILocation(line: 4, column: 15, scope: !5)
+!10 = !DILocation(line: 4, column: 15, scope: !5)
+!11 = !DILocation(line: 4, column: 4, scope: !5)

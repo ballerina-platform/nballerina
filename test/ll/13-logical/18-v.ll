@@ -1,74 +1,67 @@
-@_bal_stack_guard = external global i8*
-declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
-declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+@_bal_stack_guard = external global ptr
+declare ptr addrspace(1) @_bal_panic_construct(i64) cold
+declare void @_bal_panic(ptr addrspace(1)) noreturn cold
+declare i64 @_bal_tagged_to_int(ptr addrspace(1)) readonly
+declare double @_bal_tagged_to_float(ptr addrspace(1)) readonly
 define void @_B04rootmain() !dbg !5 {
-  %x = alloca i8 addrspace(1)*
-  %y = alloca i8 addrspace(1)*
-  %1 = alloca i1
-  %x.1 = alloca i8 addrspace(1)*
-  %2 = alloca i1
-  %3 = alloca i1
-  %x.2 = alloca i8 addrspace(1)*
-  %y.1 = alloca i1
-  %_ = alloca i8 addrspace(1)*
+  %x = alloca ptr addrspace(1)
+  %y = alloca ptr addrspace(1)
+  %x.1 = alloca i64
+  %x.2 = alloca ptr addrspace(1)
+  %y.1 = alloca double
+  %y.2 = alloca i1
+  %_ = alloca ptr addrspace(1)
   %_.1 = alloca i1
-  %4 = alloca i8
-  %5 = load i8*, i8** @_bal_stack_guard
-  %6 = icmp ult i8* %4, %5
-  br i1 %6, label %39, label %7
-7:
-  %8 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  store i8 addrspace(1)* %8, i8 addrspace(1)** %x
-  %9 = zext i1 1 to i64
-  %10 = or i64 %9, 72057594037927936
-  %11 = getelementptr i8, i8 addrspace(1)* null, i64 %10
-  store i8 addrspace(1)* %11, i8 addrspace(1)** %y
-  %12 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %13 = addrspacecast i8 addrspace(1)* %12 to i8*
-  %14 = ptrtoint i8* %13 to i64
-  %15 = and i64 %14, 2233785415175766016
-  %16 = icmp eq i64 %15, 504403158265495552
-  store i1 %16, i1* %1
-  %17 = load i1, i1* %1
-  br i1 %17, label %26, label %18
-18:
-  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  store i8 addrspace(1)* %19, i8 addrspace(1)** %x.1
-  %20 = load i8 addrspace(1)*, i8 addrspace(1)** %y
-  %21 = addrspacecast i8 addrspace(1)* %20 to i8*
-  %22 = ptrtoint i8* %21 to i64
-  %23 = and i64 %22, 2233785415175766016
-  %24 = icmp eq i64 %23, 576460752303423488
-  store i1 %24, i1* %2
-  %25 = load i1, i1* %2
-  store i1 %25, i1* %3
-  br label %28
-26:
-  %27 = load i1, i1* %1
-  store i1 %27, i1* %3
-  br label %28
+  %1 = alloca i8
+  %2 = load ptr, ptr @_bal_stack_guard
+  %3 = icmp ult ptr %1, %2
+  br i1 %3, label %35, label %4
+4:
+  %5 = and i64 72057594037927935, 1
+  %6 = or i64 2449958197289549824, %5
+  %7 = getelementptr i8, ptr addrspace(1) null, i64 %6
+  store ptr addrspace(1) %7, ptr %x
+  %8 = zext i1 1 to i64
+  %9 = or i64 %8, 72057594037927936
+  %10 = getelementptr i8, ptr addrspace(1) null, i64 %9
+  store ptr addrspace(1) %10, ptr %y
+  %11 = load ptr addrspace(1), ptr %x
+  %12 = addrspacecast ptr addrspace(1) %11 to ptr
+  %13 = ptrtoint ptr %12 to i64
+  %14 = and i64 %13, 2233785415175766016
+  %15 = icmp eq i64 %14, 144115188075855872
+  br i1 %15, label %16, label %21
+16:
+  %17 = load ptr addrspace(1), ptr %x
+  %18 = call i64 @_bal_tagged_to_int(ptr addrspace(1) %17), !dbg !9
+  store i64 %18, ptr %x.1
+  %19 = load ptr addrspace(1), ptr %y
+  %20 = call double @_bal_tagged_to_float(ptr addrspace(1) %19), !dbg !10
+  store double %20, ptr %y.1
+  ret void
+21:
+  %22 = load ptr addrspace(1), ptr %x
+  store ptr addrspace(1) %22, ptr %x.2
+  %23 = load ptr addrspace(1), ptr %y
+  %24 = addrspacecast ptr addrspace(1) %23 to ptr
+  %25 = ptrtoint ptr %24 to i64
+  %26 = and i64 %25, 2233785415175766016
+  %27 = icmp eq i64 %26, 216172782113783808
+  br i1 %27, label %16, label %28
 28:
-  %29 = load i1, i1* %3
-  br i1 %29, label %30, label %31
-30:
+  %29 = load ptr addrspace(1), ptr %y
+  %30 = addrspacecast ptr addrspace(1) %29 to ptr
+  %31 = ptrtoint ptr %30 to i64
+  %32 = trunc i64 %31 to i1
+  store i1 %32, ptr %y.2
+  %33 = load ptr addrspace(1), ptr %x.2
+  store ptr addrspace(1) %33, ptr %_
+  %34 = load i1, ptr %y.2
+  store i1 %34, ptr %_.1
   ret void
-31:
-  %32 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  store i8 addrspace(1)* %32, i8 addrspace(1)** %x.2
-  %33 = load i8 addrspace(1)*, i8 addrspace(1)** %y
-  %34 = addrspacecast i8 addrspace(1)* %33 to i8*
-  %35 = ptrtoint i8* %34 to i64
-  %36 = trunc i64 %35 to i1
-  store i1 %36, i1* %y.1
-  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
-  store i8 addrspace(1)* %37, i8 addrspace(1)** %_
-  %38 = load i1, i1* %y.1
-  store i1 %38, i1* %_.1
-  ret void
-39:
-  %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 260), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %40)
+35:
+  %36 = call ptr addrspace(1) @_bal_panic_construct(i64 260), !dbg !7
+  call void @_bal_panic(ptr addrspace(1) %36), !dbg !8
   unreachable
 }
 !llvm.module.flags = !{!0}
@@ -81,3 +74,6 @@ define void @_B04rootmain() !dbg !5 {
 !5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 1, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
 !6 = !{}
 !7 = !DILocation(line: 0, column: 0, scope: !5)
+!8 = !DILocation(line: 1, column: 16, scope: !5)
+!9 = !DILocation(line: 9, column: 0, scope: !5)
+!10 = !DILocation(line: 9, column: 0, scope: !5)
