@@ -121,9 +121,8 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     bir:FunctionDefn[] funcDefns = [];
     map<t:FunctionSignature> internalFuncDecl = {};
     FunctionCode[] funcCodes = [];
-    foreach var [identifier, visibility, [_, [paramNames, [params, ret]], [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks]]] in funcs { // JBUG: can't use { s: identifier }
-        readonly & t:SemType[] paramTypes = from var t in params select t:fromSexpr(env, atoms, t);
-        t:FunctionSignature signature = { returnType: t:fromSexpr(env ,atoms, ret), paramTypes, restParamType: () };
+    foreach var [identifier, visibility, [_, [paramNames, sig], [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks]]] in funcs { // JBUG: can't use { s: identifier }
+        t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
         internalFuncDecl[identifier.s] = signature;
         funcDefns.push({ symbol: { isPublic: visibility is PublicVisibility , identifier: identifier.s },
                          decl: { signature, paramNames: paramNames.cloneReadOnly() },
@@ -145,6 +144,15 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     VirtualFile[] vFiles = from var f in vFilesByName order by f.partIndex() select f;
     VirtualModule mod = new(pc, modId, funcDefns.cloneReadOnly(), funcCodes, vFiles);
     return mod;
+}
+
+// FIXME:
+function toFunctionSignature(t:Env env, t:AtomTable atoms, Signature sexpr) returns t:FunctionSignature {
+    var [params, ret] = sexpr;
+    return { returnType: t:fromSexpr(env, atoms, ret),
+             paramTypes: from var p in params select t:fromSexpr(env, atoms, p),
+             restParamType: ()
+           };
 }
 
 function toFunctionCode(ParseContext pc, FunctionCode code) returns bir:FunctionCode {
@@ -394,12 +402,7 @@ function toCallInsn(FuncParseContext pc, bir:Symbol symbol, Operand[] argsSexpr,
 
     t:FunctionSignature signature;
     if sigSexpr != () {
-        var [paramTys, retTy] = sigSexpr;
-        signature = {
-            returnType: toSemType(pc, retTy),
-            paramTypes: from var ty in <ts:Type[]>paramTys select toSemType(pc, ty),
-            restParamType: ()
-        };
+        signature = toFunctionSignature(pc.tc.env, pc.atoms, sigSexpr);
     }
     else {
         signature = erasedSignature;
@@ -438,9 +441,7 @@ function toOperand(FuncParseContext pc, Operand operand) returns bir:Operand {
         ["function", var symbolSexpr] => {
             bir:Symbol symbol = symbolFromSexpr(<FunctionRef>symbolSexpr);
             t:FunctionSignature signature = lookupSignature(pc, symbol);
-            t:Env env = pc.tc.env;
-            t:FunctionDefinition d = new(env);
-            t:SemType semType =  d.define(env, t:defineListTypeWrapped(new(), env, signature.paramTypes, rest= signature.restParamType ?: t:NEVER, mut=t:CELL_MUT_NONE), signature.returnType);
+            t:SemType semType =  t:semTypeFromSignature(pc.tc, signature);
             return <bir:FunctionConstOperand>{ value: { symbol, signature, erasedSignature: signature }, semType };
         }
         ["float", var f] => {

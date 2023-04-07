@@ -42,16 +42,16 @@ public function signatureFromSemType(Context cx, SemType semType) returns Functi
     ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
     SemType[] paramTypes = from int i in 0 ..< listAtom.members.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
     SemType restInnerVal = cellInnerVal(listAtom.rest);
-    SemType? restParamType;
-    if restInnerVal == NEVER {
-        restParamType = ();
-    }
-    else {
-        restParamType = restInnerVal;
-        // SemType arrTy = defineListTypeWrapped(new, cx.env, rest = restInnerVal, mut = CELL_MUT_NONE);
-        // paramTypes.push(arrTy);
-    }
+    SemType? restParamType = restInnerVal == NEVER ? () : listAtom.rest;
     return { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
+}
+
+public function semTypeFromSignature(Context cx, FunctionSignature signature) returns SemType {
+    Env env = cx.env;
+    FunctionDefinition defn = new(env);
+    var { paramTypes, restParamType, returnType } = signature;
+    SemType rest = restParamType is () ? NEVER : restParamType;
+    return defn.define(env, defineListTypeWrapped(new(), env, paramTypes, rest=rest, mut=CELL_MUT_NONE), returnType);
 }
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
