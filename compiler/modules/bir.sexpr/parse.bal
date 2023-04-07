@@ -204,9 +204,14 @@ function toRegister(ParseContext pc, map<bir:Register> prevRegs, int number, Reg
     bir:RegisterScope scope = { scope: (), startPos: 0, endPos: 0 };
     bir:Position pos = 0;
     match regSexpr {
-        [var name, var kind, var semType] if kind is bir:DeclRegisterKind => {
-            bir:DeclRegisterBase declReg = { name: toMaybeName(name) ?: "_", kind, pos, number, semType: toSemType(pc, semType), scope };
-            return [name, checkpanic declReg.cloneWithType()]; // need cloneWithType #ballerina-spec/1220
+        [var nameSexpr, var kind, var semTypeSexpr] if kind is bir:DeclRegisterKind => {
+            string name = toMaybeName(nameSexpr) ?: "_";
+            t:SemType semType = toSemType(pc, semTypeSexpr);
+            match kind {
+                bir:PARAM_REGISTER_KIND => { return [nameSexpr, <bir:ParamRegister>{ name, pos, number, semType, scope }]; }
+                bir:VAR_REGISTER_KIND   => { return [nameSexpr, <bir:VarRegister>  { name, pos, number, semType, scope }]; }
+                bir:FINAL_REGISTER_KIND => { return [nameSexpr, <bir:FinalRegister>{ name, pos, number, semType, scope }]; }
+            }
         }
         [var name, bir:NARROW_REGISTER_KIND, var semType, var underlyingName] => {
             bir:Register? underlying = prevRegs[underlyingName];
@@ -215,9 +220,13 @@ function toRegister(ParseContext pc, map<bir:Register> prevRegs, int number, Reg
             }
             return [name, <bir:NarrowRegister>{ pos, underlying, number, semType: toSemType(pc, semType) }];
         }
-        [var name, var kind, var semType] => {
-            bir:RegisterBase genericReg = { kind, name: toMaybeName(name), pos, number, semType: toSemType(pc, semType) };
-            return [name, checkpanic genericReg.cloneWithType()]; // need cloneWithType #ballerina-spec/1220
+        [var nameSexpr, var kind, var semTypeSexpr] => {
+            string? name = toMaybeName(nameSexpr);
+            t:SemType semType = toSemType(pc, semTypeSexpr);
+            match kind {
+                bir:TMP_REGISTER_KIND        => { return [nameSexpr, <bir:TmpRegister>      { name, pos, number, semType }]; }
+                bir:ASSIGN_TMP_REGISTER_KIND => { return [nameSexpr, <bir:AssignTmpRegister>{ name, pos, number, semType }]; }
+            }
         }
     }
     panic error("imposable");
