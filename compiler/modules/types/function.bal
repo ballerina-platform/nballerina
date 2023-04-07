@@ -37,6 +37,22 @@ public type FunctionSignature readonly & record {|
     SemType? restParamType = ();
 |};
 
+public function signatureFromSemType(Context cx, SemType semType) returns FunctionSignature {
+    var [argList, returnType] = <FunctionAtomicType>functionAtomicType(cx, semType);
+    ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
+    SemType[] paramTypes = from int i in 0 ..< listAtom.members.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
+    SemType restInnerVal = cellInnerVal(listAtom.rest);
+    SemType? restParamType;
+    if restInnerVal == NEVER {
+        restParamType = ();
+    }
+    else {
+        restParamType = restInnerVal;
+        // SemType arrTy = defineListTypeWrapped(new, cx.env, rest = restInnerVal, mut = CELL_MUT_NONE);
+        // paramTypes.push(arrTy);
+    }
+    return { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
+}
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return memoSubtypeIsEmpty(cx, cx.functionMemo, functionBddIsEmpty, <Bdd>t);
@@ -113,19 +129,6 @@ public function functionAtomicType(Context cx, SemType semType) returns Function
         return cx.functionAtomType(bdd.atom);
     }
     return ();
-}
-
-// FIXME: replace this with a function SemType -> FunctionSignature
-public function deconstructFunctionType(Context cx, SemType semType) returns [SemType, SemType[], SemType?] {
-    // This is not exactly correct since semType could be diff/union of function types
-    // We need something to select a function inherent type similar to how `selectListInherentType` works
-    // But until we support function variance we don't need to handle it (not possible to have a diff/union of function types)
-    var [argList, returnType] = <FunctionAtomicType>functionAtomicType(cx, semType);
-    ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
-    var { members: fixedLengthArray, rest } = listAtom;
-    SemType[] paramTypes = from int i in 0 ..< fixedLengthArray.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
-    SemType? restType = cellInnerVal(rest) == NEVER ? () : rest;
-    return [returnType, paramTypes, restType];
 }
 
 BasicTypeOps functionOps =  {  

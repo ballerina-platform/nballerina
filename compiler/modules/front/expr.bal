@@ -1464,8 +1464,7 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
 }
 
 function functionRefFromRegister(t:Context tc, bir:Register register) returns bir:FunctionRef {
-    // TODO: when we support type variance we will need to support t:FUNCTION here as well
-    t:FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
+    t:FunctionSignature signature = t:signatureFromSemType(tc, register.semType);
     bir:InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
     return { symbol, signature, erasedSignature: signature };
 }
@@ -1478,12 +1477,6 @@ function registerName(bir:Register register) returns string {
         return registerName(register.underlying);
     }
     return <string>register.name;
-}
-
-// TODO: remove this
-function functionSignature(t:Context tc, t:ComplexSemType semType) returns t:FunctionSignature {
-    var [returnType, paramTypes, restParamType] = t:deconstructFunctionType(tc, semType);
-    return { paramTypes: paramTypes.cloneReadOnly(), returnType, restParamType };
 }
 
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {

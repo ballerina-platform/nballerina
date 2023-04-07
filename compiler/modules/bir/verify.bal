@@ -448,7 +448,7 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
 }
 
 function verifyCallIndirect(VerifyContext vc, CallIndirectInsn insn) returns err:Internal? {
-    return verifyFunctionCallArgs(vc, t:deconstructFunctionType(vc.typeContext(), insn.operands[0].semType)[1], insn);
+    return verifyFunctionCallArgs(vc, t:signatureFromSemType(vc.typeContext(), insn.operands[0].semType).paramTypes, insn);
 }
 
 function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallIndirectInsn|CallInsn insn) returns err:Internal? {
