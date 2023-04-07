@@ -57,6 +57,51 @@ type RuntimeFunction readonly & record {|
     llvm:EnumAttribute[] attrs;
 |};
 
+final RuntimeFunction isExactFunction = {
+    name: "is_exact",
+    ty: {
+        returnType: LLVM_BOOLEAN,
+        paramTypes: [llvm:pointerType(LLVM_FUNCTION_SIGNATURE), LLVM_FUNCTION_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction createUniformArgArray = {
+    name: "create_uniform_arg_array",
+    ty: {
+        returnType: llvm:pointerType(LLVM_TAGGED_PTR),
+        paramTypes: ["i32"]
+    },
+    attrs: []
+};
+
+final RuntimeFunction addUniformArg = {
+    name: "add_uniform_arg",
+    ty: {
+        returnType: LLVM_VOID,
+        paramTypes: [llvm:pointerType(LLVM_TAGGED_PTR), LLVM_INT, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction addRestArgs = {
+    name: "add_rest_args",
+    ty: {
+        returnType: LLVM_VOID,
+        paramTypes: [llvm:pointerType(LLVM_TAGGED_PTR), LLVM_INT, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction addUniformArgsToRestArray = {
+    name: "add_uniform_args_to_rest_array",
+    ty: {
+        returnType: LLVM_VOID,
+        paramTypes: [llvm:pointerType(LLVM_TAGGED_PTR), LLVM_INT, LLVM_INT, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
 final RuntimeFunction panicConstructFunction = {
     name: "panic_construct",
     ty: {
@@ -318,18 +363,6 @@ function buildTestTag(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue
                                                        constInt(scaffold, mask)),
                               constInt(scaffold, tag));
 
-}
-
-function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
-    return buildRuntimeFunctionCall(builder, scaffold, taggedToIntFunction, [tagged]);
-}
-
-function buildUntagFloat(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
-    return buildRuntimeFunctionCall(builder, scaffold, taggedToFloatFunction, [tagged]);
-}
-
-function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
-    return builder.trunc(buildTaggedPtrToInt(builder, tagged), LLVM_BOOLEAN);
 }
 
 function buildTaggedPtrToInt(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {

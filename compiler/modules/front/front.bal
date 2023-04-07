@@ -28,8 +28,6 @@ class Module {
         foreach var defn in syms.defns {
             if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
-                readonly & string[] paramNames = from var param in defn.params where !param.isRest select param.name;
-                readonly & bir:FunctionDecl decl = { signature: <t:FunctionSignature>defn.signature, paramNames };
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`

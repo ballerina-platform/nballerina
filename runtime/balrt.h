@@ -127,7 +127,7 @@ typedef uint64_t MemberType;
 // All mapping and list descriptors start with this.
 typedef struct {
     Tid tid;
-} StructureDesc, *StructureDescPtr;
+} DerivedDesc, *DerivedDescPtr;
 
 // This is the abstract version of filler descriptor. Each type must
 // implement there own version (or reuse a common version such as GenericFillerDesc)
@@ -142,10 +142,10 @@ typedef struct GenericFillerDesc {
 
 // All mapping and list values start with this
 typedef GC struct {
-    StructureDescPtr desc;
+    DerivedDescPtr desc;
 } Structure, *StructurePtr;
 
-// This extends StructureDesc
+// This extends DerivedDesc
 // i.e must start with tid
 typedef struct {
     Tid tid;
@@ -199,7 +199,7 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
-// This extends StructureDesc
+// This extends DerivedDesc
 // i.e must start with tid
 typedef struct {
     Tid tid;
@@ -312,6 +312,14 @@ typedef struct {
 } *StringSubtypePtr;
 
 typedef struct {
+    UniformSubtype uniform;
+    uint32_t returnBitSet;
+    uint32_t restBitSet;
+    int64_t nParams;
+    uint32_t paramBitSets[];
+} *FunctionSubtypePtr;
+
+typedef struct {
    uint32_t all;
    uint32_t some;
    UniformSubtypePtr subtypes[];
@@ -347,7 +355,20 @@ typedef GC struct LargeString {
 } *LargeStringPtr;
 
 typedef void (*FunctionPtr)();
+// result type is an approximation
+typedef void (*UniformCallFunction)(TaggedPtr uniformArgs, int64_t nArgs, FunctionPtr funcPtr, TaggedPtr *result);
+
+typedef struct FunctionSignature {
+    UniformCallFunction uniformCallFunction;
+    MemberType returnTy;
+    MemberType restTy;
+    int64_t nParams;
+    MemberType paramTys[];
+} *FunctionSignaturePtr;
+
 typedef GC struct FunctionValue {
+    DerivedDescPtr derivedDesc;
+    FunctionSignaturePtr signature;
     FunctionPtr funcPtr;
 } *FunctionValuePtr;
 

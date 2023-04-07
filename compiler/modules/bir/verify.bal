@@ -351,10 +351,6 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     }
     else if insn is AssignInsn {
         check verifyOperandType(vc, insn.operand, insn.result.semType, "value is not a subtype of the LHS", insn.pos);
-        // TODO: remove this when we support function variance
-        if t:isSubtypeSimple(insn.result.semType, t:FUNCTION) && !vc.isSameType(insn.result.semType, insn.operand.semType) {
-            return vc.semanticErr("function assignment with type variance not supported", insn.pos);
-        }
     }
     else if insn is CondBranchInsn {
         check validOperandBoolean(vc, name, insn.operand, insn.pos);

@@ -4,8 +4,8 @@ type F0 function(int);
 
 public function main() {
     any a = f1;
-    if a is F|F0 { // @error
-        io:println(a);
+    if a is F|F0 {
+      io:println(a(1)); // @error
     }
 }
 

@@ -54,6 +54,10 @@ public type FunctionSignature readonly & record {|
 |};
 
 public function functionSignature(Context cx, FunctionAtomicType atomic) returns FunctionSignature {
+    FunctionSignatureMemo? memo = cx.functionSignatureMemo[atomic];
+    if memo != () {
+        return memo.signature;
+    }
     var [argList, returnType] = atomic;
     ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
     SemType[] paramTypes = from int i in 0 ..< listAtom.members.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
@@ -64,10 +68,55 @@ public function functionSignature(Context cx, FunctionAtomicType atomic) returns
         paramTypes.push(defineListTypeWrapped(listDefn, cx.env, rest=restInnerVal));
     }
     FunctionSignature signature = { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
+    cx.functionSignatureMemo.add({ atomic, signature });
     return signature;
 }
 
 public function functionSemType(Context cx, FunctionSignature signature) returns SemType {
+    FunctionTypeMemo? memo = cx.functionAtomicTypeMemo[signature];
+    if memo != () {
+        return memo.semType;
+    }
+    Env env = cx.env;
+    FunctionDefinition defn = new;
+    var { paramTypes, restParamType, returnType } = signature;
+    SemType[] requiredParams;
+    if restParamType != () {
+        requiredParams = paramTypes.slice(0, paramTypes.length() - 1);
+    }
+    else {
+        requiredParams = paramTypes;
+    }
+    SemType rest = restParamType is () ? NEVER : restParamType;
+    SemType semType = defn.define(env, defineListTypeWrapped(new(), env, requiredParams, rest=rest, mut=CELL_MUT_NONE), returnType);
+    FunctionAtomicType atomic = <FunctionAtomicType>functionAtomicType(cx, semType);
+    cx.functionSignatureMemo.put({ atomic, signature });
+    cx.functionAtomicTypeMemo.add({ signature, semType });
+    return semType;
+}
+
+public function semTypeFromSignature(Context cx, FunctionSignature signature) returns SemType {
+    FunctionTypeMemo? memo = cx.functionAtomicTypeMemo[signature];
+    if memo != () {
+        return memo.semType;
+    }
+    Env env = cx.env;
+    FunctionDefinition defn = new;
+    var { paramTypes, restParamType, returnType } = signature;
+    SemType[] requiredParams;
+    if restParamType != () {
+        requiredParams = paramTypes.slice(0, paramTypes.length() - 1);
+    }
+    else {
+        requiredParams = paramTypes;
+    }
+    SemType rest = restParamType is () ? NEVER : restParamType;
+    SemType semType = defn.define(env, defineListTypeWrapped(new(), env, requiredParams, rest=rest, mut=CELL_MUT_NONE), returnType);
+    cx.functionAtomicTypeMemo.add({ signature, semType });
+    return semType;
+}
+
+public function semTypeFromSignature(Context cx, FunctionSignature signature) returns SemType {
     FunctionTypeMemo? memo = cx.functionAtomicTypeMemo[signature];
     if memo != () {
         return memo.semType;
@@ -136,6 +185,28 @@ function functionIntersectRet(Context cx, Conjunction? pos) returns SemType {
         return VAL;
     }
     return intersect(cx.functionAtomType(pos.atom)[1], functionIntersectRet(cx, pos.next));
+}
+
+function intersectFunctionAtoms(Context cx, FunctionAtomicType[] atoms) returns [SemType, FunctionAtomicType]? {
+    Env env = cx.env;
+    if atoms.length() == 0 {
+        return ();
+    }
+    var [params, returnTy] = atoms[0];
+    foreach int i in 1 ..< atoms.length() {
+        var [nextParams, nextReturnTy] = atoms[i];
+        ListAtomicType curParamsAtom = <ListAtomicType>listAtomicType(cx, params);
+        ListAtomicType nextParamAtom = <ListAtomicType>listAtomicType(cx, nextParams);
+        var intersectionParams = intersectListAtoms(env, [curParamsAtom, nextParamAtom]);
+        if intersectionParams == () {
+            return ();
+        }
+        params = intersectionParams[0];
+        returnTy = intersect(returnTy, nextReturnTy);
+    }
+    FunctionAtomicType atom = [params, returnTy];
+    SemType semType = createBasicSemType(BT_FUNCTION, bddAtom(env.functionAtom(atom)));
+    return [semType, atom];
 }
 
 // pnwamk tutorial

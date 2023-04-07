@@ -296,12 +296,12 @@ class TestBirEmitter {
 
     function emitModule(bir:Module birMod) returns CompileError? {
         string birText = check tback:toBirText(birMod);
-        var [firstRoundLlMod, _] = check nback:buildModule(birMod, {debugLevel: nback:DEBUG_NONE});
+        var [firstRoundLlMod, _, _] = check nback:buildModule(birMod, {debugLevel: nback:DEBUG_NONE});
         string firstRoundLl = firstRoundLlMod.printModuleToString();
         sexpr:Data[] secondRoundSexpr = checkpanic sexpr:parse(birText); // using if and assertFail will lose the error trace
         bsexpr:Module secondRoundTypeSexpr = checkpanic secondRoundSexpr.cloneWithType();
         bir:Module secondRoundBirMod = bsexpr:toModule(secondRoundTypeSexpr, birMod.getId());
-        var [secondRoundLlMod, _] = check nback:buildModule(secondRoundBirMod, {debugLevel: nback:DEBUG_NONE});
+        var [secondRoundLlMod, _, _] = check nback:buildModule(secondRoundBirMod, {debugLevel: nback:DEBUG_NONE});
         string secondRoundLl = secondRoundLlMod.printModuleToString();
         test:assertEquals(firstRoundLl, secondRoundLl);
     }

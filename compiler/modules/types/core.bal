@@ -244,6 +244,11 @@ type FunctionTypeMemo readonly & record {|
     SemType semType;
 |};
 
+type FunctionSignatureMemo readonly & record {|
+    FunctionAtomicType atomic;
+    FunctionSignature signature;
+|};
+
 // Used in testing types.regex to create context without a Module
 public function contextFromEnv(Env env) returns Context {
     return new(env);
@@ -268,6 +273,7 @@ public class Context {
     final table<SingletonMemo> key(value) singletonMemo = table [];
     final table<FillerMemo> key(semType) fillerMemo = table [];
     final table<FunctionTypeMemo> key(signature) functionAtomicTypeMemo = table [];
+    final table<FunctionSignatureMemo> key(atomic) functionSignatureMemo = table [];
 
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
@@ -1197,6 +1203,12 @@ public type ListAlternative record {|
     ListAtomicType[] neg;
 |};
 
+public type FunctionAlternative record {|
+    SemType semType;
+    FunctionAtomicType? pos;
+    FunctionAtomicType[] neg;
+|};
+
 public function listAlternatives(Context cx, SemType t) returns ListAlternative[] {
     if t is BasicTypeBitSet {
         if (t & LIST) == 0 {
@@ -1224,6 +1236,39 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
                     semType: intersection[0],
                     pos: intersection[1],
                     neg: from var atom in neg select cx.listAtomType(atom)
+                });
+            }
+        }
+        return alts;
+    }
+}
+
+public function functionAlternatives(Context cx, SemType t) returns FunctionAlternative[] {
+    if t is BasicTypeBitSet {
+        if (t & FUNCTION) == 0 {
+            return [];
+        }
+        else {
+            return [
+                {
+                    semType: FUNCTION,
+                    pos: (),
+                    neg: []
+                }
+            ];
+        }
+    }
+    else {
+        BddPath[] paths = [];
+        bddPaths(<Bdd>getComplexSubtypeData(t, BT_FUNCTION), paths, {});
+        FunctionAlternative[] alts = [];
+        foreach var { pos, neg } in paths {
+            var intersection = intersectFunctionAtoms(cx, from var atom in pos select cx.functionAtomType(atom));
+            if intersection !is () {
+                alts.push({
+                    semType: intersection[0],
+                    pos: intersection[1],
+                    neg: from var atom in neg select cx.functionAtomType(atom)
                 });
             }
         }

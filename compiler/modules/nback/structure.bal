@@ -34,7 +34,7 @@ final RuntimeFunction listConstruct8Function = {
     name: "list_construct_8",
     ty: {
         returnType: heapPointerType(llListType),
-        paramTypes: [llvm:pointerType(llStructureDescType), LLVM_INT]
+        paramTypes: [llvm:pointerType(llDerivedDescType), LLVM_INT]
     },
     attrs: []
 };
@@ -43,7 +43,7 @@ final RuntimeFunction listConstruct1Function = {
     name: "list_construct_1",
     ty: {
         returnType: heapPointerType(llListType),
-        paramTypes: [llvm:pointerType(llStructureDescType), LLVM_INT]
+        paramTypes: [llvm:pointerType(llDerivedDescType), LLVM_INT]
     },
     attrs: []
 };
@@ -97,7 +97,7 @@ final RuntimeFunction mappingConstructFunction = {
     name: "mapping_construct",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: [llvm:pointerType(llStructureDescType), "i64"]
+        paramTypes: [llvm:pointerType(llDerivedDescType), "i64"]
     },
     attrs: []
 };

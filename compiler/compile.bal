@@ -41,13 +41,13 @@ class LlvmEmitter {
     }
 
     function emitModule(bir:Module birMod) returns CompileError? {
-        var [llMod, typeUsage] = check nback:buildModule(birMod, self.nbackOptions);
+        var [llMod, typeUsage, functionUsage ] = check nback:buildModule(birMod, self.nbackOptions);
         bir:ModuleId id = birMod.getId();
         string? outputBasename = self.outputBasename;
         if outputBasename != () {
             check outputModule(llMod, outputFilename(outputBasename, id.names.slice(1), OUTPUT_EXTENSION), self.outputOptions);
         }
-        self.programModules.push({ id, typeUsage });
+        self.programModules.push({ id, typeUsage, functionUsage: functionUsage.cloneReadOnly() });
     }
 
     function finalize(t:Env env, map<t:FunctionSignature> potentialEntryFuncs) returns CompileError? {
