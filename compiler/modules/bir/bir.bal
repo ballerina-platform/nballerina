@@ -47,9 +47,7 @@ public type FunctionDefn readonly & record {|
     *ModuleDefn;
     # Name within the module
     InternalSymbol symbol;
-    # The signature of the function
-    # TODO: change var name
-    t:FunctionSignature signature;
+    FunctionDecl decl;
 
     # Index of source part in which the definition occurs
     int partIndex;
@@ -66,7 +64,7 @@ public type Symbol InternalSymbol|ExternalSymbol;
 
 public type FunctionRef readonly & record {|
     Symbol symbol;
-    // TODO: this needs a function Decl
+    // Should we have a FunctionDecl here? one problem is creating a functionRef from a function value (registers only have functionType)
     t:FunctionSignature erasedSignature;
     t:FunctionSignature signature;
 |};
@@ -90,7 +88,7 @@ public type FunctionCode record {|
 
 public type FunctionDecl record {|
     t:FunctionSignature signature;
-    // TODO: add param names
+    string[] paramNames;
 |};
 
 public type Region record {|

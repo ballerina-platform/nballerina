@@ -41,7 +41,7 @@ public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Sema
     [sexpr:String, ts:Atom][] atoms = from var [s, atom] in sc.atoms.entries() select [{ s }, atom];
     ModuleDecls[] decl = from var { id, funcs } in sc.decls
                          select [id, ...from var [name, sig] in funcs.entries()
-                                        select <FuncDecl>[{ s: name }, "function", sig]];
+                                        select <FuncDefn>[{ s: name }, "function", sig]];
     File[] files = from var f in mod.getPartFiles()
                    let string? dir = f.directory(), string name = f.filename()
                    select dir == () ? [{ s: basename(name) }, { s: name }] : [{ s: basename(name) }, { s: name }, { s: dir}];
@@ -57,9 +57,9 @@ function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCo
     sexpr:String name = { s: defn.symbol.identifier };
     FunctionVisibility access = defn.symbol.isPublic ? PUBLIC_VISIBILITY : MODULE_VISIBILITY;
     var [line, col] = file.lineColumn(defn.position);
-    return [name, access, ["function", fromSignature(fsc, defn.signature), ["file", { s: basename(file.filename()) }], ["loc", line, col],
-                              ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
-                              ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)]]];
+    return [name, access, ["function", [defn.decl.paramNames, fromSignature(fsc, defn.decl.signature)], ["file", { s: basename(file.filename()) }], ["loc", line, col],
+                          ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
+                          ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)]]];
 }
 
 function basename(string path) returns string {
