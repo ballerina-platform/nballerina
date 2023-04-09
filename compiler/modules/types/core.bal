@@ -230,6 +230,11 @@ public type MappingFiller readonly & record {|
     SemType semType;
 |};
 
+type FunctionTypeMemo readonly & record {|
+    FunctionSignature signature;
+    SemType semType;
+|};
+
 // Used in testing types.regex to create context without a Module
 public function contextFromEnv(Env env) returns Context {
     return new(env);
@@ -253,6 +258,8 @@ public class Context {
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
     final table<SingletonMemo> key(value) singletonMemo = table [];
     final table<FillerMemo> key(semType) fillerMemo = table [];
+    final table<FunctionTypeMemo> key(signature) functionAtomicTypeMemo = table [];
+    final table<FunctionTypeMemo> key(semType) functionSignatureMemo = table [];
 
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();

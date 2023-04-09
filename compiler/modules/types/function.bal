@@ -54,20 +54,32 @@ public type FunctionSignature readonly & record {|
 |};
 
 public function signatureFromSemType(Context cx, SemType semType) returns FunctionSignature {
+    FunctionTypeMemo? memo = cx.functionSignatureMemo[semType];
+    if memo != () {
+        return memo.signature;
+    }
     var [argList, returnType] = <FunctionAtomicType>functionAtomicType(cx, semType);
     ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
     SemType[] paramTypes = from int i in 0 ..< listAtom.members.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
     SemType restInnerVal = cellInnerVal(listAtom.rest);
     SemType? restParamType = restInnerVal == NEVER ? () : listAtom.rest;
-    return { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
+    FunctionSignature signature = { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
+    cx.functionSignatureMemo.add({ signature, semType });
+    return signature;
 }
 
 public function semTypeFromSignature(Context cx, FunctionSignature signature) returns SemType {
+    FunctionTypeMemo? memo = cx.functionAtomicTypeMemo[signature];
+    if memo != () {
+        return memo.semType;    
+    }
     Env env = cx.env;
     FunctionDefinition defn = new;
     var { paramTypes, restParamType, returnType } = signature;
     SemType rest = restParamType is () ? NEVER : restParamType;
-    return defn.define(env, defineListTypeWrapped(new(), env, paramTypes, rest=rest, mut=CELL_MUT_NONE), returnType);
+    SemType semType = defn.define(env, defineListTypeWrapped(new(), env, paramTypes, rest=rest, mut=CELL_MUT_NONE), returnType);
+    cx.functionAtomicTypeMemo.add({ signature, semType });
+    return semType;
 }
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
