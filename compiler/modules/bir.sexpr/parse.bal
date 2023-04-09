@@ -146,13 +146,11 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     return mod;
 }
 
-// FIXME:
 function toFunctionSignature(t:Env env, t:AtomTable atoms, Signature sexpr) returns t:FunctionSignature {
     var [params, ret] = sexpr;
     return { returnType: t:fromSexpr(env, atoms, ret),
              paramTypes: from var p in params select t:fromSexpr(env, atoms, p),
-             restParamType: ()
-           };
+             restParamType: () };
 }
 
 function toFunctionCode(ParseContext pc, FunctionCode code) returns bir:FunctionCode {

@@ -64,7 +64,6 @@ public type Symbol InternalSymbol|ExternalSymbol;
 
 public type FunctionRef readonly & record {|
     Symbol symbol;
-    // Should we have a FunctionDecl here? one problem is creating a functionRef from a function value (registers only have functionType)
     t:FunctionSignature erasedSignature;
     t:FunctionSignature signature;
 |};
