@@ -156,7 +156,7 @@ function tupleTest4() {
 }
 
 function func(Env env, SemType args, SemType ret) returns SemType {
-    FunctionDefinition def = new(env);
+    FunctionDefinition def = new;
     return def.define(env, args, ret);  
 }
 

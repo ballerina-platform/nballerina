@@ -317,7 +317,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     if td is s:FunctionTypeDesc {
         t:FunctionDefinition? defn = td.defn;
         if defn == () {
-            t:FunctionDefinition d = new(env);
+            t:FunctionDefinition d = new;
             td.defn = d;
             s:TypeDesc[] a = [];
             t:SemType rest = t:NEVER;

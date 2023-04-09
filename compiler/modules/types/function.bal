@@ -6,23 +6,39 @@ public type FunctionAtomicType readonly & SemType[2];
 
 public class FunctionDefinition {
     *Definition;
-    private RecAtom atom;
-    private SemType semType;
+    private RecAtom? rec = ();
+    private SemType? semType = ();
    
-    public function init(Env env) {
-        self.atom = env.recFunctionAtom();
-        self.semType = basicSubtype(BT_FUNCTION, bddAtom(self.atom));
-    }
-
     public function getSemType(Env env) returns SemType {
-        return self.semType;
+        SemType? s = self.semType;
+        if s == () {
+            RecAtom rec = env.recFunctionAtom();
+            self.rec = rec;
+            return self.createSemType(env, rec);
+        }
+        return s;
     }
 
     public function define(Env env, SemType args, SemType ret) returns SemType {
-        FunctionAtomicType t = [args, ret];
-        env.setRecFunctionAtomType(self.atom, t);
-        return self.semType;
-    }    
+        FunctionAtomicType atomicType = [args, ret];
+        Atom atom;
+        RecAtom? rec = self.rec;
+        if rec != () {
+            atom = rec;
+            env.setRecFunctionAtomType(rec, atomicType);
+        }
+        else {
+            atom = env.functionAtom(atomicType);
+        }
+        return self.createSemType(env, atom);
+    }
+
+    private function createSemType(Env env, Atom atom) returns ComplexSemType {
+        BddNode bdd = bddAtom(atom);
+        ComplexSemType s = basicSubtype(BT_FUNCTION, bdd);
+        self.semType = s;
+        return s;
+    }
 }
 
 # This represents the signature of a function definition.
@@ -48,7 +64,7 @@ public function signatureFromSemType(Context cx, SemType semType) returns Functi
 
 public function semTypeFromSignature(Context cx, FunctionSignature signature) returns SemType {
     Env env = cx.env;
-    FunctionDefinition defn = new(env);
+    FunctionDefinition defn = new;
     var { paramTypes, restParamType, returnType } = signature;
     SemType rest = restParamType is () ? NEVER : restParamType;
     return defn.define(env, defineListTypeWrapped(new(), env, paramTypes, rest=rest, mut=CELL_MUT_NONE), returnType);
