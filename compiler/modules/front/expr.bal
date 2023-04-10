@@ -1464,7 +1464,8 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
 }
 
 function functionRefFromRegister(t:Context tc, bir:Register register) returns bir:FunctionRef {
-    t:FunctionSignature signature = t:signatureFromSemType(tc, register.semType);
+    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(tc, register.semType);
+    t:FunctionSignature signature = t:functionSignature(tc, atomic);
     bir:InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
     return { symbol, signature, erasedSignature: signature };
 }
@@ -1822,7 +1823,7 @@ function singletonBooleanOperand(t:Context tc, boolean value) returns bir:Boolea
 }
 
 function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionConstOperand {
-    return { value, semType: t:semTypeFromSignature(tc, value.signature) };
+    return { value, semType: t:functionSemType(tc, value.signature) };
 }
 
 function constifyRegister(bir:Register reg) returns bir:Operand {

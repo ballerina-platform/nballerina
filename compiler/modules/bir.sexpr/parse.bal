@@ -439,7 +439,7 @@ function toOperand(FuncParseContext pc, Operand operand) returns bir:Operand {
         ["function", var symbolSexpr] => {
             bir:Symbol symbol = symbolFromSexpr(<FunctionRef>symbolSexpr);
             t:FunctionSignature signature = lookupSignature(pc, symbol);
-            t:SemType semType =  t:semTypeFromSignature(pc.tc, signature);
+            t:SemType semType =  t:functionSemType(pc.tc, signature);
             return <bir:FunctionConstOperand>{ value: { symbol, signature, erasedSignature: signature }, semType };
         }
         ["float", var f] => {

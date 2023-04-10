@@ -122,6 +122,15 @@ public isolated class Env {
         }
     }
 
+    isolated function functionAtomType(Atom atom) returns FunctionAtomicType {
+        if atom is RecAtom {
+            return self.getRecFunctionAtomType(atom);
+        }
+        else {
+            return <FunctionAtomicType>atom.atomicType;
+        }
+    }
+
     isolated function recListAtom() returns RecAtom {
         lock {
             int result = self.recListAtoms.length();
@@ -259,7 +268,6 @@ public class Context {
     final table<SingletonMemo> key(value) singletonMemo = table [];
     final table<FillerMemo> key(semType) fillerMemo = table [];
     final table<FunctionTypeMemo> key(signature) functionAtomicTypeMemo = table [];
-    final table<FunctionTypeMemo> key(semType) functionSignatureMemo = table [];
 
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();

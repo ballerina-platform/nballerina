@@ -28,7 +28,6 @@ class Module {
         foreach var defn in syms.defns {
             if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
-                readonly & string[] paramNames = from var param in defn.params where !param.isRest select param.name;
                 readonly & bir:FunctionDecl decl = <t:FunctionSignature>defn.signature;
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },

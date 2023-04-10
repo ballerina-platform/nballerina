@@ -53,25 +53,19 @@ public type FunctionSignature readonly & record {|
     SemType? restParamType = ();
 |};
 
-public function signatureFromSemType(Context cx, SemType semType) returns FunctionSignature {
-    FunctionTypeMemo? memo = cx.functionSignatureMemo[semType];
-    if memo != () {
-        return memo.signature;
-    }
-    var [argList, returnType] = <FunctionAtomicType>functionAtomicType(cx, semType);
+public function functionSignature(Context cx, FunctionAtomicType atomic) returns FunctionSignature {
+    var [argList, returnType] = atomic;
     ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
     SemType[] paramTypes = from int i in 0 ..< listAtom.members.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
     SemType restInnerVal = cellInnerVal(listAtom.rest);
     SemType? restParamType = restInnerVal == NEVER ? () : listAtom.rest;
-    FunctionSignature signature = { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
-    cx.functionSignatureMemo.add({ signature, semType });
-    return signature;
+    return { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
 }
 
-public function semTypeFromSignature(Context cx, FunctionSignature signature) returns SemType {
+public function functionSemType(Context cx, FunctionSignature signature) returns SemType {
     FunctionTypeMemo? memo = cx.functionAtomicTypeMemo[signature];
     if memo != () {
-        return memo.semType;    
+        return memo.semType;
     }
     Env env = cx.env;
     FunctionDefinition defn = new;
@@ -145,16 +139,22 @@ function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) ret
 }
 
 public function functionAtomicType(Context cx, SemType semType) returns FunctionAtomicType? {
-    if !isSubtype(cx, semType, FUNCTION) {
-        return ();
-    }
     if semType is BasicTypeBitSet {
         // TODO: when supporting function type variance we will need to support t:FUNCTION
         return ();
     }
-    BddNode bdd = <BddNode>semType.subtypeDataList[0];
-    if bdd.left == true && bdd.middle == false && bdd.right == false {
-        return cx.functionAtomType(bdd.atom);
+    if !isSubtypeSimple(semType, FUNCTION) {
+        return ();
+    }
+    return bddFunctionAtomicType(cx.env, <Bdd>getComplexSubtypeData(semType, BT_FUNCTION));
+}
+
+function bddFunctionAtomicType(Env env, Bdd bdd) returns FunctionAtomicType? {
+    if bdd is boolean {
+        return ();
+    }
+    else if bdd.left == true && bdd.middle == false && bdd.right == false {
+        return env.functionAtomType(bdd.atom);
     }
     return ();
 }
