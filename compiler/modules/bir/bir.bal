@@ -85,10 +85,8 @@ public type FunctionCode record {|
     Region[] regions = [];
 |};
 
-public type FunctionDecl record {|
-    t:FunctionSignature signature;
-    string[] paramNames;
-|};
+# This is sufficient until we support named parameters and default values.
+public type FunctionDecl t:FunctionSignature;
 
 public type Region record {|
     Label entry;

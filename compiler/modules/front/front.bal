@@ -29,7 +29,7 @@ class Module {
             if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
                 readonly & string[] paramNames = from var param in defn.params where !param.isRest select param.name;
-                readonly & bir:FunctionDecl decl = { signature: <t:FunctionSignature>defn.signature, paramNames };
+                readonly & bir:FunctionDecl decl = <t:FunctionSignature>defn.signature;
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
@@ -47,7 +47,7 @@ class Module {
     public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        return codeGenFunction(self.syms, self.functionDefnSource[i], self.functionDefns[i].decl.signature);
+        return codeGenFunction(self.syms, self.functionDefnSource[i], self.functionDefns[i].decl);
     }
    
     public function finish() returns err:Semantic? {

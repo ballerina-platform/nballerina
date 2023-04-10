@@ -121,11 +121,11 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     bir:FunctionDefn[] funcDefns = [];
     map<t:FunctionSignature> internalFuncDecl = {};
     FunctionCode[] funcCodes = [];
-    foreach var [identifier, visibility, [_, [paramNames, sig], [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks]]] in funcs { // JBUG: can't use { s: identifier }
+    foreach var [identifier, visibility, [_, sig, [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks]]] in funcs { // JBUG: can't use { s: identifier }
         t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
         internalFuncDecl[identifier.s] = signature;
         funcDefns.push({ symbol: { isPublic: visibility is PublicVisibility , identifier: identifier.s },
-                         decl: { signature, paramNames: paramNames.cloneReadOnly() },
+                         decl: signature,
                          partIndex: vFilesByName.get(partIndex.s).partIndex(),
                          position: createPosition(line, col) });
         funcCodes.push({ registers, blocks });

@@ -18,7 +18,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     llvm:FunctionType[] llFuncTypes = [];
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
-        llvm:FunctionType ty = buildFunctionSignature(defn.decl.signature);
+        llvm:FunctionType ty = buildFunctionSignature(defn.decl);
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
         string mangledName = mangleInternalSymbol(modId, symbol);

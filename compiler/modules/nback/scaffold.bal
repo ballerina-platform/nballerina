@@ -171,9 +171,9 @@ class Scaffold {
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select semTypeRepr(reg.semType);
         self.reprs = reprs;
-        self.returnType = defn.decl.signature.returnType;
+        self.returnType = defn.decl.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
-        self.nParams = defn.decl.signature.paramTypes.length();
+        self.nParams = defn.decl.paramTypes.length();
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock(b.name);

@@ -13,10 +13,9 @@ public type FileRef ["file", sexpr:String];
 public type Module [["atoms", [sexpr:String, ts:Atom]...], ["defns", Function...], ["decls", ModuleDecls...], ["files", File...]];
 public type ModuleId [sexpr:String, sexpr:String, sexpr:String...];
 public type Signature [ts:Type[], ts:Type];
-public type FuncDecl [sexpr:Symbol[], Signature];
-public type FuncDefn [sexpr:String, FunctionTag, Signature];
-public type ModuleDecls [ModuleId, FuncDefn...];
-public type Function [sexpr:String, FunctionVisibility, [FunctionTag, FuncDecl, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
+public type FuncDecl [sexpr:String, FunctionTag, Signature];
+public type ModuleDecls [ModuleId, FuncDecl...];
+public type Function [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
 public type Register [sexpr:Symbol, bir:DeclRegisterKind|bir:TMP_REGISTER_KIND|bir:ASSIGN_TMP_REGISTER_KIND , ts:Type]|
                      [sexpr:Symbol, bir:NARROW_REGISTER_KIND, ts:Type, sexpr:Symbol];
 public type BlockPanic readonly & (["no-panic"]|["on-panic", Label]);

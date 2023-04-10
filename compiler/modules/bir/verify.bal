@@ -54,7 +54,7 @@ class VerifyContext {
         return d:location(self.mod.getPartFile(self.defn.partIndex), pos);
     }
 
-    function returnType() returns t:SemType => self.defn.decl.signature.returnType;
+    function returnType() returns t:SemType => self.defn.decl.returnType;
 
     function symbolToString(Symbol sym) returns string {
         return self.mod.symbolToString(self.defn.partIndex, sym);
