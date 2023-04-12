@@ -37,7 +37,6 @@ function testParser(Kind k, ProductionRule rule, string[] subject, string[] expe
         return;
     }
     if actualNode is err:Syntax {
-        io:println(actualNode);
         panic err:impossible("expected a syntax node");
     }
     SyntaxNode normalizedActualNode = normalizeSyntaxNode(actualNode);

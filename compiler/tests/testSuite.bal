@@ -311,8 +311,7 @@ class TestBirEmitter {
 }
 
 @test:Config {
-    dataProvider: listSourcesVPO,
-    enable: false
+    dataProvider: listSourcesVPO
 }
 function testBirCompile(string filename, string kind) returns error? {
     var [basename, _] = basenameExtension(filename);
