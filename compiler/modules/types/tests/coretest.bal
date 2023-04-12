@@ -198,6 +198,20 @@ function funcTest4() {
 }
 
 @test:Config{}
+function funcExactTest() {
+    Env env = new;
+    SemType t1 = func(env, tupleTypeWrapped(env, INT, INT), INT);
+    SemType t2 = func(env, tupleTypeWrapped(env, INT, INT), INT);
+    test:assertEquals(t1, t2);
+    SemType t3 = func(env, tupleTypeWrapped(env), NEVER);
+    SemType t4 = func(env, tupleTypeWrapped(env), NEVER);
+    test:assertEquals(t3, t4);
+    SemType t5 = func(env, defineListTypeWrapped(new, env, rest = INT), INT);
+    SemType t6 = func(env, defineListTypeWrapped(new, env, rest = INT), INT);
+    test:assertEquals(t5, t6);
+}
+
+@test:Config{}
 function stringTest() {
     string [] result = [];
     enumerableListUnion(["a", "b", "d"], ["c"], result);
