@@ -2,14 +2,6 @@
 import wso2/nballerina.comm.err;
 
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
-    if tok.current() == "function" {
-        check tok.advance();
-        return parseFunctionTypeDesc(tok);
-    }
-    return parseUnion(tok);
-}
-
-function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     TypeDesc td = check parseIntersection(tok);
     if tok.current() == "|" {
@@ -99,6 +91,10 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? cur = tok.current();
     Position startPos = tok.currentStartPos();
     match cur {
+        "function" => {
+            check tok.advance();
+            return parseFunctionTypeDesc(tok);
+        }
         "(" => {
             check tok.advance();
             Position endPos;
