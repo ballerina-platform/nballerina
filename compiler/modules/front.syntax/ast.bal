@@ -512,7 +512,7 @@ public type SingletonTypeDesc record {|
     ExtendedLiteralExpr valueExpr;
 |};
 
-public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"byte"|"int"|"decimal"|"float"|"string"|"error";
+public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"byte"|"int"|"decimal"|"float"|"string"|"error"|"function";
 
 public type BuiltinTypeName SubsetBuiltinTypeName|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
 
