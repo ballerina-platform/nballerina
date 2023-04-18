@@ -339,7 +339,10 @@ public type Insn
 
 public type Operand ConstOperand|Register;
 
-public type ConstOperand SingleValueConstOperand|FunctionConstOperand;
+public type ConstOperand readonly & record {|
+    t:SemType semType;
+    t:SingleValue|FunctionRef value;
+|};
 
 public type SingleValueConstOperand  readonly & record {|
     t:SemType semType;

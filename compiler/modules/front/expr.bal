@@ -1405,7 +1405,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
             func = ref;
         }
         else if ref is Binding {
-            func = functionRefFromRegister(cx.mod.tc, ref.reg);
+            func = check functionRefFromRegister(cx, ref.reg, expr.qNamePos);
             funcRegister = ref.reg;
         }
         else {
@@ -1463,8 +1463,12 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
     return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.namePos);
 }
 
-function functionRefFromRegister(t:Context tc, bir:Register register) returns bir:FunctionRef {
-    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(tc, register.semType);
+function functionRefFromRegister(ExprContext cx, bir:Register register, bir:Position pos) returns CodeGenError|bir:FunctionRef {
+    t:Context tc = cx.mod.tc;
+    t:FunctionAtomicType? atomic = t:functionAtomicType(tc, register.semType);
+    if atomic == () {
+        return cx.semanticErr("only a value of proper subtype function type can be called", pos);
+    }
     t:FunctionSignature signature = t:functionSignature(tc, atomic);
     bir:InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
     return { symbol, signature, erasedSignature: signature };
@@ -1794,16 +1798,12 @@ function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue|bir
     if operand is bir:Register {
         return ();
     }
-    else if operand is bir:FunctionConstOperand {
-        return operand.value;
-    }
-    else {
-        return { value: operand.value };
-    }
+    t:SingleValue|bir:FunctionRef value = operand.value;
+    return value is bir:FunctionRef ? value : { value };
 }
 
 function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
-    return operand is bir:Register|bir:FunctionConstOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
+    return operand is bir:Register|bir:FunctionConstOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, <t:SingleValue>operand.value);
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:SingleValueConstOperand {

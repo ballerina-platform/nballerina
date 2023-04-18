@@ -28,11 +28,10 @@ class Module {
         foreach var defn in syms.defns {
             if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
-                readonly & bir:FunctionDecl decl = <t:FunctionSignature>defn.signature;
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
-                    decl,
+                    decl: <t:FunctionSignature>defn.signature,
                     position: defn.namePos,
                     partIndex: defn.part.partIndex
                 });

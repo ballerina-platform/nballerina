@@ -139,11 +139,7 @@ function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) ret
 }
 
 public function functionAtomicType(Context cx, SemType semType) returns FunctionAtomicType? {
-    if semType is BasicTypeBitSet {
-        // TODO: when supporting function type variance we will need to support t:FUNCTION
-        return ();
-    }
-    if !isSubtypeSimple(semType, FUNCTION) {
+    if !isSubtypeSimple(semType, FUNCTION) || semType is BasicTypeBitSet {
         return ();
     }
     return bddFunctionAtomicType(cx.env, <Bdd>getComplexSubtypeData(semType, BT_FUNCTION));
@@ -153,7 +149,7 @@ function bddFunctionAtomicType(Env env, Bdd bdd) returns FunctionAtomicType? {
     if bdd is boolean {
         return ();
     }
-    else if bdd.left == true && bdd.middle == false && bdd.right == false {
+    if bdd.left == true && bdd.middle == false && bdd.right == false {
         return env.functionAtomType(bdd.atom);
     }
     return ();

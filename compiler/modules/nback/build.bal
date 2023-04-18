@@ -340,13 +340,13 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     if operand is bir:Register {
         return buildLoad(builder, scaffold, operand);
     }
-    else if operand is bir:FunctionConstOperand {
-        TaggedRepr repr = { subtype: t:FUNCTION, alwaysImmediate: false };
-        return [repr, check buildFunctionConstValue(scaffold, operand)];
-    }
     else {
-        t:SingleValue value = operand.value;
-        if value is string {
+        t:SingleValue|bir:FunctionRef value = operand.value;
+        if value is bir:FunctionRef {
+            TaggedRepr repr = { subtype: t:FUNCTION, alwaysImmediate: false };
+            return [repr, check buildFunctionConstValue(scaffold, value)];
+        }
+        else if value is string {
             byte[] bytes = value.toBytes();
             int nBytes = bytes.length();
             boolean alwaysImmediate = isSmallString(value.length(), bytes, nBytes);
@@ -374,8 +374,8 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     }
 }
 
-function buildFunctionConstValue(Scaffold scaffold, bir:FunctionConstOperand val) returns llvm:Value|BuildError {
-    var { symbol, signature } = val.value;
+function buildFunctionConstValue(Scaffold scaffold, bir:FunctionRef ref) returns llvm:Value|BuildError {
+    var { symbol, signature } = ref;
     llvm:Function func;
     if symbol is bir:InternalSymbol {
         func = scaffold.getFunctionDefn(symbol.identifier);

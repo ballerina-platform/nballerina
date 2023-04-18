@@ -167,10 +167,10 @@ function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & 
     if op is bir:Register {
         return fromRegister(sc, op);
     }
-    if op is bir:FunctionConstOperand {
-        return ["function", fromFunctionRefAccum(sc, op.value)];
+    t:SingleValue|bir:FunctionRef value = op.value;
+    if value is bir:FunctionRef {
+        return ["function", fromFunctionRefAccum(sc, value)];
     }
-    t:SingleValue value = op.value;
     if value is string {
         return <sexpr:String>{ s: value };
     }

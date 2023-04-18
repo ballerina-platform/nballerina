@@ -346,6 +346,11 @@ typedef GC struct LargeString {
     char bytes[];
 } *LargeStringPtr;
 
+typedef void(*FunctionPtr)();
+typedef GC struct FunctionValue {
+    FunctionPtr funcPtr;
+} *FunctionValuePtr;
+
 // Roundup to multiple of 8
 static inline int roundUpInt(int n) {
     return (n + 7) & ~7;
