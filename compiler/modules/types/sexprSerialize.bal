@@ -292,26 +292,11 @@ function atomToSexprAccum(SerializationContext sc, Atom atom, BddTopSexpr top) r
     return name;
 }
 
-// FIXME: we need to properly represent rest atoms
 function fromFuncAtom(SerializationContext sc, Atom atom) returns ts:Atom {
     Context tc = sc.tc;
     var { paramTypes, restParamType, returnType } = functionSignature(tc, tc.functionAtomType(atom));
-    // FIXME:
-    if restParamType is CellSemType {
-        restParamType = cellInnerVal(restParamType);
-    }
-    if returnType is CellSemType {
-        returnType = cellInnerVal(returnType);
-    }
     ts:Type[] params = from var param in paramTypes select sexprFormSemTypeInternal(sc, param);
     ts:Type rest = restParamType != () ? sexprFormSemTypeInternal(sc, restParamType) : sexprFormSemTypeInternal(sc, NEVER);
-    // int compressedCount = argsLat.members.fixedLength - argsLat.members.initial.length();
-    // if compressedCount > 0 {
-    //     ts:Type repeatedMember = members[members.length() - 1];
-    //     foreach int i in 0 ..< compressedCount {
-    //         members.push(repeatedMember);
-    //     }
-    // }
     return ["function", params, rest, sexprFormSemTypeInternal(sc, returnType)];
 }
 

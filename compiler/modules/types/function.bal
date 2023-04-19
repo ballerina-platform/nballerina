@@ -58,7 +58,7 @@ public function functionSignature(Context cx, FunctionAtomicType atomic) returns
     ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
     SemType[] paramTypes = from int i in 0 ..< listAtom.members.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
     SemType restInnerVal = cellInnerVal(listAtom.rest);
-    SemType? restParamType = restInnerVal == NEVER ? () : listAtom.rest;
+    SemType? restParamType = restInnerVal == NEVER ? () : restInnerVal;
     if restParamType != () {
         ListDefinition listDefn = new;
         paramTypes.push(defineListTypeWrapped(listDefn, cx.env, rest=restInnerVal));
