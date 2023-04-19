@@ -607,7 +607,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
             bir:NarrowRegister ifFalseRegister = cx.createNarrowRegister(clauseUnmatchedLooksLike[i], binding.reg, pos);
             bir:BasicBlock nextBlock;
             nextBlock = cx.createBasicBlock("gard." + i.toString());
-            bir:TypeBranchInsn typeBranch = {
+            bir:TypeCondBranchInsn branch = {
                 ifTrue: clauseBlocks[i].label,
                 ifFalse: nextBlock.label,
                 ifTrueRegister,
@@ -618,7 +618,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
             };
             unmatchedReg = ifFalseRegister;
             clauseBindings[i] = narrow(initialBindings, binding, ifTrueRegister, pos);
-            testBlock.insns.push(typeBranch);
+            testBlock.insns.push(branch);
             testBlock = nextBlock;
         }
     }
@@ -1105,7 +1105,7 @@ function codeGenCheckingCond(ExprContext cx, bir:BasicBlock bb, bir:Register ope
     bir:Register reg = <bir:Register>operand;
     bir:NarrowRegister errorReg = cx.createNarrowRegister(errorType, reg);
     bir:NarrowRegister result = cx.createNarrowRegister(okType, reg);
-    bir:TypeBranchInsn insn = {
+    bir:TypeCondBranchInsn insn = {
         operand: operand,
         semType: t:ERROR,
         ifTrue: errorBlock.label,

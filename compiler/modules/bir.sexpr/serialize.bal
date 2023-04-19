@@ -111,10 +111,10 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
     else if insn is bir:BranchInsn {
         return [insn.backward ? "branch-back" : "branch", formLabel(sc, insn.dest)];
     }
-    else if insn is bir:TypeBranchInsn {
-        return ["type-branch", fromOperand(sc, insn.operand), fromType(sc, insn.semType),
-                               formLabel(sc, insn.ifTrue), formLabel(sc, insn.ifFalse),
-                               fromRegister(sc, insn.ifTrueRegister), fromRegister(sc, insn.ifFalseRegister)];
+    else if insn is bir:TypeCondBranchInsn {
+        return ["type-cond-branch", fromOperand(sc, insn.operand), fromType(sc, insn.semType),
+                                    formLabel(sc, insn.ifTrue), formLabel(sc, insn.ifFalse),
+                                    fromRegister(sc, insn.ifTrueRegister), fromRegister(sc, insn.ifFalseRegister)];
     }
     else if insn is bir:CondBranchInsn {
         return ["cond-branch", fromRegister(sc, insn.operand), formLabel(sc, insn.ifTrue), formLabel(sc, insn.ifFalse)];

@@ -526,7 +526,7 @@ function codeGenNilLift(ExprContext cx, t:SemType? expected, s:Expr[] operands, 
             newOperands[i] = ifFalseRegister;
             bir:BasicBlock ifTrueBlock = maybeCreateBasicBlock(cx, ifNilBlock);
             ifNilBlock = ifTrueBlock;
-            bir:TypeBranchInsn branchInsn = {
+            bir:TypeCondBranchInsn branchInsn = {
                 operand,
                 semType: t:NIL,
                 ifTrue: ifTrueBlock.label,
@@ -1298,7 +1298,7 @@ function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemT
     bir:NarrowRegister ifFalseRegister = cx.createNarrowRegister(diff, reg);
     TypeMerger trueMerger = createNarrowMerger(cx, opBinding, ifTrueRegister, pos, nextBlock.label, prevs?.trueMerger);
     TypeMerger falseMerger = createNarrowMerger(cx, opBinding, ifFalseRegister, pos, nextBlock.label, prevs?.falseMerger);
-    bir:TypeBranchInsn insn = { operand: reg, semType: intersect, ifTrue: trueMerger.dest.label, ifFalse: falseMerger.dest.label, ifTrueRegister, ifFalseRegister, pos };
+    bir:TypeCondBranchInsn insn = { operand: reg, semType: intersect, ifTrue: trueMerger.dest.label, ifFalse: falseMerger.dest.label, ifTrueRegister, ifFalseRegister, pos };
     nextBlock.insns.push(insn);
     return { trueMerger, falseMerger };
 }

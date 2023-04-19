@@ -313,7 +313,7 @@ public enum InsnName {
     INSN_TYPE_TEST,
     INSN_BRANCH,
     INSN_COND_BRANCH,
-    INSN_TYPE_BRANCH,
+    INSN_TYPE_COND_BRANCH,
     INSN_TYPE_MERGE,
     INSN_CATCH,
     INSN_PANIC
@@ -345,7 +345,7 @@ public type Insn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
     |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
-    |BranchInsn|TypeBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
+    |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
 
@@ -659,9 +659,9 @@ public type TypeTestInsn readonly & record {|
     boolean negated;
 |};
 
-public type TypeBranchInsn readonly & record {|
+public type TypeCondBranchInsn readonly & record {|
     *InsnBase;
-    INSN_TYPE_BRANCH name = INSN_TYPE_BRANCH;
+    INSN_TYPE_COND_BRANCH name = INSN_TYPE_COND_BRANCH;
     Register operand;
     t:SemType semType;
     Label ifTrue;

@@ -133,7 +133,7 @@ function verifyGraph(VerifyCodeContext cx, Label current, Position? predPos = ()
     if term is BranchInsn {
         check verifyChildGraph(cx, term.dest, termPos, term.backward);
     }
-    else if term is TypeBranchInsn|CondBranchInsn {
+    else if term is TypeCondBranchInsn|CondBranchInsn {
         check verifyChildGraph(cx, term.ifTrue, termPos);
         check verifyChildGraph(cx, term.ifFalse, termPos);
     }
@@ -240,7 +240,7 @@ function verifyRegFlow(VerifyCodeContext cx, Label current, RegFlow viaFlow, Pos
         check verifyRegFlow(cx, term.ifTrue, { origin: current, regs: regs.clone() }, termPos);
         check verifyRegFlow(cx, term.ifFalse, { origin: current, regs }, termPos);
     }
-    else if term is TypeBranchInsn {
+    else if term is TypeCondBranchInsn {
         RegSet trueRegs = regs.clone();
         RegSet falseRegs = regs;
         trueRegs[term.ifTrueRegister.number] = true;
@@ -404,8 +404,8 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is TypeMergeInsn {
         check verifyTypeMerge(vc, insn);
     }
-    else if insn is TypeBranchInsn {
-        check verifyTypeBranch(vc, insn);
+    else if insn is TypeCondBranchInsn {
+        check verifyTypeCondBranch(vc, insn);
     }
 }
 
@@ -429,7 +429,7 @@ function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Inter
     }
 }
 
-function verifyTypeBranch(VerifyContext vc, TypeBranchInsn insn) returns err:Internal? {
+function verifyTypeCondBranch(VerifyContext vc, TypeCondBranchInsn insn) returns err:Internal? {
     Register unnarrowedOp = unnarrow(insn.operand);
     if unnarrowedOp.number != unnarrow(insn.ifFalseRegister).number || unnarrowedOp.number != unnarrow(insn.ifTrueRegister).number {
         return vc.invalidErr("underlying register of NarrowRegister is incorrect", insn.pos);
