@@ -114,7 +114,7 @@ function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Regis
     return { hasType, valueToExactify, value, repr };
 }
 
-function buildTypeBranch(llvm:Builder builder, Scaffold scaffold, bir:TypeBranchInsn insn) returns BuildError? {
+function buildTypeCondBranch(llvm:Builder builder, Scaffold scaffold, bir:TypeCondBranchInsn insn) returns BuildError? {
     TypeTestedValue { hasType } = check buildTypeTestedValue(builder, scaffold, insn.operand, insn.pos, insn.semType);
     llvm:BasicBlock ifTrue = scaffold.basicBlock(insn.ifTrue);
     llvm:BasicBlock ifFalse = scaffold.basicBlock(insn.ifFalse);
