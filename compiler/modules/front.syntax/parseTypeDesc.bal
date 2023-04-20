@@ -2,6 +2,10 @@
 import wso2/nballerina.comm.err;
 
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
+    return parseUnion(tok);
+}
+
+function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     TypeDesc td = check parseIntersection(tok);
     if tok.current() == "|" {
