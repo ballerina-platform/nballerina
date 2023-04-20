@@ -145,7 +145,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
             if s != () {
                 return s;
             }
-            t:FunctionDefinition def = new(env);
+            t:FunctionDefinition def = new;
             t:SemType[] v = check parseTypes(tc, consDefBinding(jlist, def, b), jlist, parent, 1);
             if v.length() == 0 {
                 return t:FUNCTION;

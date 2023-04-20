@@ -47,8 +47,7 @@ public type FunctionDefn readonly & record {|
     *ModuleDefn;
     # Name within the module
     InternalSymbol symbol;
-    # The signature of the function
-    FunctionSignature signature;
+    FunctionDecl decl;
 
     # Index of source part in which the definition occurs
     int partIndex;
@@ -65,8 +64,8 @@ public type Symbol InternalSymbol|ExternalSymbol;
 
 public type FunctionRef readonly & record {|
     Symbol symbol;
-    FunctionSignature erasedSignature;
-    FunctionSignature signature;
+    t:FunctionSignature erasedSignature;
+    t:FunctionSignature signature;
 |};
 
 # A function's code is represented as a factored control flow graph.
@@ -86,17 +85,8 @@ public type FunctionCode record {|
     Region[] regions = [];
 |};
 
-# This represents the signature of a function definition.
-# We don't need to convert this to a `SemType` unless
-# the definition is converted to a function value,
-# by referencing the name of the function as a variable
-# reference.
-public type FunctionSignature readonly & record {|
-    SemType returnType;
-    SemType[] paramTypes;
-    # if non-nil, last member of paramTypes will be an array type whose member type is restParamType
-    SemType? restParamType = ();
-|};
+# This is sufficient until we support named parameters and default values.
+public type FunctionDecl t:FunctionSignature;
 
 public type Region record {|
     Label entry;
@@ -349,7 +339,10 @@ public type Insn
 
 public type Operand ConstOperand|Register;
 
-public type ConstOperand SingleValueConstOperand|FunctionConstOperand;
+public type ConstOperand readonly & record {|
+    t:SemType semType;
+    t:SingleValue|FunctionRef value;
+|};
 
 public type SingleValueConstOperand  readonly & record {|
     t:SemType semType;

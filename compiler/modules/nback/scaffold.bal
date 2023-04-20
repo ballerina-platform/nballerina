@@ -171,9 +171,9 @@ class Scaffold {
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select semTypeRepr(reg.semType);
         self.reprs = reprs;
-        self.returnType = defn.signature.returnType;
+        self.returnType = defn.decl.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
-        self.nParams = defn.signature.paramTypes.length();
+        self.nParams = defn.decl.paramTypes.length();
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock(b.name);
@@ -256,7 +256,7 @@ class Scaffold {
         return newDefn;
     }
 
-    function getFunctionValue(llvm:Function func, bir:FunctionSignature signature, bir:Symbol symbol) returns llvm:ConstPointerValue {
+    function getFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:Symbol symbol) returns llvm:ConstPointerValue {
         FunctionValueDefn? curDefn = self.mod.functionValueDefns[symbol];
         if curDefn != () {
             return curDefn.value;
@@ -608,7 +608,7 @@ function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean
     return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
 }
 
-function addFunctionValueDefn(llvm:Context context, llvm:Module mod, llvm:Function func, bir:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
+function addFunctionValueDefn(llvm:Context context, llvm:Module mod, llvm:Function func, t:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
     llvm:StructType ty = llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]);
     llvm:ConstValue initValue = context.constStruct([func]);
     llvm:ConstPointerValue ptr = mod.addGlobal(ty,

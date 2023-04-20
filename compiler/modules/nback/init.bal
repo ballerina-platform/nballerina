@@ -118,7 +118,7 @@ class InitModuleContext {
 
 };
 
-public function buildInitModule(t:Env env, ProgramModule[] modules, map<bir:FunctionSignature> publicFuncs) returns llvm:Module|BuildError {
+public function buildInitModule(t:Env env, ProgramModule[] modules, map<t:FunctionSignature> publicFuncs) returns llvm:Module|BuildError {
     llvm:Context llContext = new;
     llvm:Module llMod = llContext.createModule();
     buildInitTypes(llContext, llMod, env, modules);
@@ -127,7 +127,7 @@ public function buildInitModule(t:Env env, ProgramModule[] modules, map<bir:Func
     return llMod;
 }
 
-function buildMain(bir:ModuleId entryModId, string userMainName, bir:FunctionSignature? userMainSig, llvm:Module llMod, llvm:Builder builder) {
+function buildMain(bir:ModuleId entryModId, string userMainName, t:FunctionSignature? userMainSig, llvm:Module llMod, llvm:Builder builder) {
     llvm:FunctionType ty = { returnType: "void", paramTypes: [] };
     llvm:FunctionDefn func = llMod.addFunctionDefn("_bal_main", ty);
     builder.positionAtEnd(func.appendBasicBlock());

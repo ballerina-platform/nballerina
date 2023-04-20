@@ -6,23 +6,74 @@ public type FunctionAtomicType readonly & SemType[2];
 
 public class FunctionDefinition {
     *Definition;
-    private RecAtom atom;
-    private SemType semType;
+    private RecAtom? rec = ();
+    private SemType? semType = ();
    
-    public function init(Env env) {
-        self.atom = env.recFunctionAtom();
-        self.semType = basicSubtype(BT_FUNCTION, bddAtom(self.atom));
-    }
-
     public function getSemType(Env env) returns SemType {
-        return self.semType;
+        SemType? s = self.semType;
+        if s == () {
+            RecAtom rec = env.recFunctionAtom();
+            self.rec = rec;
+            return self.createSemType(env, rec);
+        }
+        return s;
     }
 
     public function define(Env env, SemType args, SemType ret) returns SemType {
-        FunctionAtomicType t = [args, ret];
-        env.setRecFunctionAtomType(self.atom, t);
-        return self.semType;
-    }    
+        FunctionAtomicType atomicType = [args, ret];
+        Atom atom;
+        RecAtom? rec = self.rec;
+        if rec != () {
+            atom = rec;
+            env.setRecFunctionAtomType(rec, atomicType);
+        }
+        else {
+            atom = env.functionAtom(atomicType);
+        }
+        return self.createSemType(env, atom);
+    }
+
+    private function createSemType(Env env, Atom atom) returns ComplexSemType {
+        BddNode bdd = bddAtom(atom);
+        ComplexSemType s = basicSubtype(BT_FUNCTION, bdd);
+        self.semType = s;
+        return s;
+    }
+}
+
+# This represents the signature of a function definition.
+# We don't need to convert this to a `SemType` unless
+# the definition is converted to a function value,
+# by referencing the name of the function as a variable
+# reference.
+public type FunctionSignature readonly & record {|
+    SemType returnType;
+    SemType[] paramTypes;
+    # if non-nil, last member of paramTypes will be an array type whose member type is restParamType
+    SemType? restParamType = ();
+|};
+
+public function functionSignature(Context cx, FunctionAtomicType atomic) returns FunctionSignature {
+    var [argList, returnType] = atomic;
+    ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
+    SemType[] paramTypes = from int i in 0 ..< listAtom.members.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
+    SemType restInnerVal = cellInnerVal(listAtom.rest);
+    SemType? restParamType = restInnerVal == NEVER ? () : listAtom.rest;
+    return { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
+}
+
+public function functionSemType(Context cx, FunctionSignature signature) returns SemType {
+    FunctionTypeMemo? memo = cx.functionAtomicTypeMemo[signature];
+    if memo != () {
+        return memo.semType;
+    }
+    Env env = cx.env;
+    FunctionDefinition defn = new;
+    var { paramTypes, restParamType, returnType } = signature;
+    SemType rest = restParamType is () ? NEVER : restParamType;
+    SemType semType = defn.define(env, defineListTypeWrapped(new(), env, paramTypes, rest=rest, mut=CELL_MUT_NONE), returnType);
+    cx.functionAtomicTypeMemo.add({ signature, semType });
+    return semType;
 }
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -88,30 +139,20 @@ function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) ret
 }
 
 public function functionAtomicType(Context cx, SemType semType) returns FunctionAtomicType? {
-    if !isSubtype(cx, semType, FUNCTION) {
+    if !isSubtypeSimple(semType, FUNCTION) || semType is BasicTypeBitSet {
         return ();
     }
-    if semType is BasicTypeBitSet {
-        // TODO: when supporting function type variance we will need to support t:FUNCTION
-        return ();
-    }
-    BddNode bdd = <BddNode>semType.subtypeDataList[0];
-    if bdd.left == true && bdd.middle == false && bdd.right == false {
-        return cx.functionAtomType(bdd.atom);
-    }
-    return ();
+    return bddFunctionAtomicType(cx.env, <Bdd>getComplexSubtypeData(semType, BT_FUNCTION));
 }
 
-public function deconstructFunctionType(Context cx, SemType semType) returns [SemType, SemType[], SemType?] {
-    // This is not exactly correct since semType could be diff/union of function types
-    // We need something to select a function inherent type similar to how `selectListInherentType` works
-    // But until we support function variance we don't need to handle it (not possible to have a diff/union of function types)
-    var [argList, returnType] = <FunctionAtomicType>functionAtomicType(cx, semType);
-    ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
-    var { members: fixedLengthArray, rest } = listAtom;
-    SemType[] paramTypes = from int i in 0 ..< fixedLengthArray.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
-    SemType? restType = cellInnerVal(rest) == NEVER ? () : rest;
-    return [returnType, paramTypes, restType];
+function bddFunctionAtomicType(Env env, Bdd bdd) returns FunctionAtomicType? {
+    if bdd is boolean {
+        return ();
+    }
+    if bdd.left == true && bdd.middle == false && bdd.right == false {
+        return env.functionAtomType(bdd.atom);
+    }
+    return ();
 }
 
 BasicTypeOps functionOps =  {  

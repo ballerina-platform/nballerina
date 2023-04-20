@@ -23,7 +23,7 @@ type Emitter object {
    // Build and write the output to a file.
    function emitModule(bir:Module birMod) returns CompileError?;
    // Called after all calls to emitModule.
-   function finalize(t:Env env, map<bir:FunctionSignature> potentialEntryFuncs) returns CompileError?;
+   function finalize(t:Env env, map<t:FunctionSignature> potentialEntryFuncs) returns CompileError?;
 };
 
 class LlvmEmitter {
@@ -50,7 +50,7 @@ class LlvmEmitter {
         self.programModules.push({ id, typeUsage });
     }
 
-    function finalize(t:Env env, map<bir:FunctionSignature> potentialEntryFuncs) returns CompileError? {
+    function finalize(t:Env env, map<t:FunctionSignature> potentialEntryFuncs) returns CompileError? {
         LlvmModule initMod = check nback:buildInitModule(env, self.programModules.reverse(), potentialEntryFuncs);
         string? outputBasename = self.outputBasename;
         if outputBasename != () {
@@ -73,7 +73,7 @@ class BirEmitter {
         check io:fileWriteString(outputFilename(self.outputBasename, id.names.slice(1), ".bir"), bir);
     }
 
-    function finalize(t:Env env, map<bir:FunctionSignature> potentialEntryFuncs) returns CompileError? {
+    function finalize(t:Env env, map<t:FunctionSignature> potentialEntryFuncs) returns CompileError? {
     }
 }
 
@@ -182,10 +182,10 @@ function subModuleSuffix(bir:ModuleId id) returns string {
     return ".".'join(...id.names.slice(1));
 }
 
-function filterFuncs(front:ModuleExports defns) returns map<bir:FunctionSignature> {
-    map<bir:FunctionSignature> result = {};
+function filterFuncs(front:ModuleExports defns) returns map<t:FunctionSignature> {
+    map<t:FunctionSignature> result = {};
     foreach var [name, defn] in defns.entries() {
-        if defn is bir:FunctionSignature {
+        if defn is t:FunctionSignature {
             result[name] = defn;
         }
     }

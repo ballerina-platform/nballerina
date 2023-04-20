@@ -38,8 +38,7 @@ public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Sema
         bir:File file = mod.getPartFile(defn.partIndex);
         funcSexprs.push(fromFunction(sc, defn, code, file));
     }
-    readonly & [sexpr:String, ts:Atom][] atoms = from var [s, atom] in sc.atoms.entries()
-                                                 select [{ s }, atom.cloneReadOnly()]; // JBUG: can't make atom readonly
+    [sexpr:String, ts:Atom][] atoms = from var [s, atom] in sc.atoms.entries() select [{ s }, atom];
     ModuleDecls[] decl = from var { id, funcs } in sc.decls
                          select [id, ...from var [name, sig] in funcs.entries()
                                         select <FuncDecl>[{ s: name }, "function", sig]];
@@ -58,9 +57,9 @@ function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCo
     sexpr:String name = { s: defn.symbol.identifier };
     FunctionVisibility access = defn.symbol.isPublic ? PUBLIC_VISIBILITY : MODULE_VISIBILITY;
     var [line, col] = file.lineColumn(defn.position);
-    return [name, access, ["function", fromSignature(fsc, defn.signature), ["file", { s: basename(file.filename()) }], ["loc", line, col],
-                              ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
-                              ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)]]];
+    return [name, access, ["function", fromSignature(fsc, defn.decl), ["file", { s: basename(file.filename()) }], ["loc", line, col],
+                          ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
+                          ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)]]];
 }
 
 function basename(string path) returns string {
@@ -168,10 +167,10 @@ function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & 
     if op is bir:Register {
         return fromRegister(sc, op);
     }
-    if op is bir:FunctionConstOperand {
-        return ["function", fromFunctionRefAccum(sc, op.value)];
+    t:SingleValue|bir:FunctionRef value = op.value;
+    if value is bir:FunctionRef {
+        return ["function", fromFunctionRefAccum(sc, value)];
     }
-    t:SingleValue value = op.value;
     if value is string {
         return <sexpr:String>{ s: value };
     }
@@ -213,7 +212,7 @@ function addGetModDecls(FuncSerializeContext sc, readonly & ModuleId id) returns
     return newDecl;
 }
 
-function fromSignature(FuncSerializeContext sc, bir:FunctionSignature sig) returns readonly & Signature {
+function fromSignature(FuncSerializeContext sc, t:FunctionSignature sig) returns readonly & Signature {
     readonly & ts:Type[] params = from var t in sig.paramTypes select fromType(sc, t).cloneReadOnly();
     readonly & ts:Type ret = fromType(sc, sig.returnType);
     return [params, ret];

@@ -1,4 +1,3 @@
-import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 
 type LangLibFunction [LangLibModuleName, string, readonly & t:SemType[], t:SemType];
@@ -13,7 +12,7 @@ final readonly & LangLibFunction[] langLibFunctions = [
     ["error", "message", [t:ERROR], t:STRING]
 ];
 
-function getLangLibFunction(string mod, string func) returns bir:FunctionSignature? {
+function getLangLibFunction(string mod, string func) returns t:FunctionSignature? {
     foreach var [moduleName, functionName, paramTypes, returnType] in langLibFunctions {
         if moduleName == mod && functionName == func {
             return { returnType, paramTypes };
@@ -22,7 +21,7 @@ function getLangLibFunction(string mod, string func) returns bir:FunctionSignatu
     return ();
 }
 
-final readonly & map<bir:FunctionSignature> ioLibFunctions = {
+final readonly & map<t:FunctionSignature> ioLibFunctions = {
     println: { paramTypes: [t:LIST], returnType: t:NIL, restParamType: t:VAL }
 };
 

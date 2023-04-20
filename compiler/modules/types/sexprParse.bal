@@ -207,7 +207,7 @@ function fromAtomSexpr(SexprAtomParseContext pc, string name, ts:Atom atomSexpr)
             return fromMappingSexpr(pc, name, <ts:Field[]>fieldsSexpr, rest);
         }
         ["function", var args, var ret] => {
-            FunctionDefinition d = new(pc.env);
+            FunctionDefinition d = new;
             pc.started[name] = d;
             ListDefinition listDef = new;
             SemType[] initial = from var member in <ts:Type[]>args select fromSexprInternal(pc, member);

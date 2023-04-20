@@ -54,7 +54,7 @@ class VerifyContext {
         return d:location(self.mod.getPartFile(self.defn.partIndex), pos);
     }
 
-    function returnType() returns t:SemType => self.defn.signature.returnType;
+    function returnType() returns t:SemType => self.defn.decl.returnType;
 
     function symbolToString(Symbol sym) returns string {
         return self.mod.symbolToString(self.defn.partIndex, sym);
@@ -448,7 +448,8 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
 }
 
 function verifyCallIndirect(VerifyContext vc, CallIndirectInsn insn) returns err:Internal? {
-    return verifyFunctionCallArgs(vc, t:deconstructFunctionType(vc.typeContext(), insn.operands[0].semType)[1], insn);
+    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(vc.typeContext(), insn.operands[0].semType);
+    return verifyFunctionCallArgs(vc, t:functionSignature(vc.typeContext(), atomic).paramTypes, insn);
 }
 
 function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallIndirectInsn|CallInsn insn) returns err:Internal? {

@@ -32,7 +32,7 @@ type Import record {|
     boolean used = false;
 |};
 
-public type ExportedDefn bir:FunctionSignature|t:SemType|s:ResolvedConst;
+public type ExportedDefn t:FunctionSignature|t:SemType|s:ResolvedConst;
 
 public type ModuleExports readonly & map<ExportedDefn>;
 

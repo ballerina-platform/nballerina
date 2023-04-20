@@ -31,7 +31,7 @@ class Module {
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
-                    signature: <bir:FunctionSignature>defn.signature,
+                    decl: <t:FunctionSignature>defn.signature,
                     position: defn.namePos,
                     partIndex: defn.part.partIndex
                 });
@@ -45,7 +45,7 @@ class Module {
     public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        return codeGenFunction(self.syms, self.functionDefnSource[i], self.functionDefns[i].signature);
+        return codeGenFunction(self.syms, self.functionDefnSource[i], self.functionDefns[i].decl);
     }
    
     public function finish() returns err:Semantic? {
@@ -214,7 +214,7 @@ function validEntryPoint(ModuleDefns mod) returns err:Diagnostic? {
         if defn.params.length() > 0 {
             return err:unimplemented(`parameters for ${"main"} not yet implemented`, s:defnLocation(defn));
         }
-        if t:intersect((<bir:FunctionSignature>defn.signature).returnType, t:ERROR) != t:NEVER {
+        if t:intersect((<t:FunctionSignature>defn.signature).returnType, t:ERROR) != t:NEVER {
             return err:unimplemented(`returning an error from ${"main"} function is not implemented`, s:defnLocation(defn));
         }
     }
@@ -235,7 +235,7 @@ function validInit(ModuleDefns defns) returns err:Diagnostic? {
 }
 
 function validInitReturnType(s:FunctionDefn defn) returns err:Semantic? {
-    t:SemType returnType = (<bir:FunctionSignature>defn.signature).returnType;
+    t:SemType returnType = (<t:FunctionSignature>defn.signature).returnType;
     if t:intersect(returnType, t:NIL) != t:NIL {
         return err:semantic(`return type of ${defn.name} function must allow nil`, s:defnLocation(defn));
     }

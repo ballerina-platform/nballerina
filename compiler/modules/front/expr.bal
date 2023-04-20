@@ -1405,7 +1405,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
             func = ref;
         }
         else if ref is Binding {
-            func = functionRefFromRegister(cx.mod.tc, ref.reg);
+            func = check functionRefFromRegister(cx, ref.reg, expr.qNamePos);
             funcRegister = ref.reg;
         }
         else {
@@ -1463,9 +1463,13 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
     return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.namePos);
 }
 
-function functionRefFromRegister(t:Context tc, bir:Register register) returns bir:FunctionRef {
-    // TODO: when we support type variance we will need to support t:FUNCTION here as well
-    bir:FunctionSignature signature = functionSignature(tc, <t:ComplexSemType>register.semType);
+function functionRefFromRegister(ExprContext cx, bir:Register register, bir:Position pos) returns CodeGenError|bir:FunctionRef {
+    t:Context tc = cx.mod.tc;
+    t:FunctionAtomicType? atomic = t:functionAtomicType(tc, register.semType);
+    if atomic == () {
+        return cx.semanticErr("only a value of proper subtype function type can be called", pos);
+    }
+    t:FunctionSignature signature = t:functionSignature(tc, atomic);
     bir:InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
     return { symbol, signature, erasedSignature: signature };
 }
@@ -1478,11 +1482,6 @@ function registerName(bir:Register register) returns string {
         return registerName(register.underlying);
     }
     return <string>register.name;
-}
-
-function functionSignature(t:Context tc, t:ComplexSemType semType) returns bir:FunctionSignature {
-    var [returnType, paramTypes, restParamType] = t:deconstructFunctionType(tc, semType);
-    return { paramTypes: paramTypes.cloneReadOnly(), returnType, restParamType };
 }
 
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {
@@ -1614,7 +1613,7 @@ function genImportedFunctionRef(ExprContext cx, string prefix, string identifier
 function getLangLibFunctionRef(ExprContext cx, bir:Operand target, string methodName, Position|Range nameRange) returns bir:FunctionRef|CodeGenError {
     LangLibModuleName? moduleName = operandLangLibModuleName(target);
     if moduleName != () {
-        bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
+        t:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature == () {
             return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, nameRange);
         }
@@ -1623,7 +1622,7 @@ function getLangLibFunctionRef(ExprContext cx, bir:Operand target, string method
                 module: { org: "ballerina", names: ["lang", moduleName] },
                 identifier: methodName
             };
-            bir:FunctionSignature signature = erasedSignature;
+            t:FunctionSignature signature = erasedSignature;
             if moduleName == "array" {
                 signature = instantiateArrayFunctionSignature(cx.mod.tc, signature, (<bir:Register>target).semType);
             }
@@ -1637,10 +1636,10 @@ type Counter record {|
     int n = 0;
 |};
 
-function instantiateArrayFunctionSignature(t:Context tc, bir:FunctionSignature sig, t:SemType listType) returns bir:FunctionSignature {
+function instantiateArrayFunctionSignature(t:Context tc, t:FunctionSignature sig, t:SemType listType) returns t:FunctionSignature {
     var [memberType, arrayType] = arraySupertype(tc, listType); 
     Counter counter = {};
-    bir:FunctionSignature inst = instantiateSignature(sig, memberType, arrayType, counter);
+    t:FunctionSignature inst = instantiateSignature(sig, memberType, arrayType, counter);
     if counter.n > 1 {
         return inst;
     }
@@ -1660,7 +1659,7 @@ function arraySupertype(t:Context tc, t:SemType listType) returns [t:SemType, t:
     }
 }
 
-function instantiateSignature(bir:FunctionSignature sig, t:SemType memberType, t:SemType containerType, Counter counter) returns bir:FunctionSignature {
+function instantiateSignature(t:FunctionSignature sig, t:SemType memberType, t:SemType containerType, Counter counter) returns t:FunctionSignature {
     bir:SemType? restParamType = sig.restParamType;
     bir:SemType[] paramTypes = from var ty in sig.paramTypes select instantiateType(ty, memberType, containerType, counter);
     return {
@@ -1799,16 +1798,12 @@ function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue|bir
     if operand is bir:Register {
         return ();
     }
-    else if operand is bir:FunctionConstOperand {
-        return operand.value;
-    }
-    else {
-        return { value: operand.value };
-    }
+    t:SingleValue|bir:FunctionRef value = operand.value;
+    return value is bir:FunctionRef ? value : { value };
 }
 
 function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
-    return operand is bir:Register|bir:FunctionConstOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
+    return operand is bir:Register|bir:FunctionConstOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, <t:SingleValue>operand.value);
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:SingleValueConstOperand {
@@ -1828,15 +1823,7 @@ function singletonBooleanOperand(t:Context tc, boolean value) returns bir:Boolea
 }
 
 function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionConstOperand {
-    return { value, semType: functionRefTy(tc, value) };
-}
-
-function functionRefTy(t:Context tc, bir:FunctionRef value) returns t:SemType {
-    t:Env env = tc.env;
-    t:FunctionDefinition defn = new(env);
-    var { paramTypes, restParamType, returnType } = value.signature;
-    t:SemType rest = restParamType is () ? t:NEVER : restParamType;
-    return defn.define(env, t:defineListTypeWrapped(new(), env, paramTypes, rest=rest, mut=t:CELL_MUT_NONE), returnType);
+    return { value, semType: t:functionSemType(tc, value.signature) };
 }
 
 function constifyRegister(bir:Register reg) returns bir:Operand {
@@ -2045,7 +2032,7 @@ function lookupImportedVarRef(ExprContext cx, string prefix, string identifier, 
     if defn is s:ResolvedConst {
         return defn[1];
     }
-    else if defn is bir:FunctionSignature {
+    else if defn is t:FunctionSignature {
         return {
             symbol: { module: mod.moduleId, identifier },
             signature: defn,

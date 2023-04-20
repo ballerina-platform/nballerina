@@ -156,7 +156,7 @@ function tupleTest4() {
 }
 
 function func(Env env, SemType args, SemType ret) returns SemType {
-    FunctionDefinition def = new(env);
+    FunctionDefinition def = new;
     return def.define(env, args, ret);  
 }
 
@@ -195,6 +195,20 @@ function funcTest4() {
     SemType t = func(env, tupleTypeWrapped(env, INT), union(NIL, INT));
     test:assertTrue(isSubtype(typeContext(env), s, t));
     test:assertFalse(isSubtype(typeContext(env), t, s));
+}
+
+@test:Config{}
+function funcExactTest() {
+    Env env = new;
+    SemType t1 = func(env, tupleTypeWrapped(env, INT, INT), INT);
+    SemType t2 = func(env, tupleTypeWrapped(env, INT, INT), INT);
+    test:assertEquals(t1, t2);
+    SemType t3 = func(env, tupleTypeWrapped(env), NEVER);
+    SemType t4 = func(env, tupleTypeWrapped(env), NEVER);
+    test:assertEquals(t3, t4);
+    SemType t5 = func(env, defineListTypeWrapped(new, env, rest = INT), INT);
+    SemType t6 = func(env, defineListTypeWrapped(new, env, rest = INT), INT);
+    test:assertEquals(t5, t6);
 }
 
 @test:Config{}

@@ -1,5 +1,4 @@
 import wso2/nballerina.types as t;
-import wso2/nballerina.bir;
 import wso2/nballerina.comm.diagnostic as d;
 
 public type Position d:Position;
@@ -39,7 +38,7 @@ public type FunctionDefn record {|
     StmtBlock body;
     Position namePos;
     // This is filled in during analysis
-    bir:FunctionSignature? signature = ();
+    t:FunctionSignature? signature = ();
 |};
 
 public type FunctionParam record {|
