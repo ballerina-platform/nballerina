@@ -20,7 +20,6 @@ For programs that are in the subset, the compiler should conform to the Ballerin
    * `any` type
    * `byte` type
    * `anydata` type
-   * `function` type
    * optional type: `T?`
    * unions: `T1|T2`
    * intersections: `T1&T2`
@@ -29,6 +28,9 @@ For programs that are in the subset, the compiler should conform to the Ballerin
       * array type: `T[]`
       * record types: `record { T1 f1; T2 f2; }` and `record {| T1 f1; T2 f2; R...; |}`
       * tuple types: `[T1, T2]` and `[T1, T2, R...]`
+   * function types
+      * bare function type: `function`
+      * proper subtypes of `function` such as: `function(T1) returns T2`
    * a reference to a type defined by a type definition
 * Statements:
    * function/method call statement
@@ -318,8 +320,7 @@ primary-expr =
   | field-access-expr
   | function-call-expr
   | method-call-expr
-  | variable-reference-expr
-  | list-constructor-expr
+  | variable-referenccallIndirec-expr
   | mapping-constructor-expr
   | "(" expression ")"
 
@@ -404,9 +405,10 @@ Two kinds of `import` are supported.
 
 * `list-constructor-expr` and `mapping-constructor-expr` are not allowed within a `const-expr`.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
-* Structure types can not have subtypes of `function` as a member type.
-* The type `T` in type test expression `E is T` or `E !is T` can not be a proper subtype of `function`.
-* The type `T` in type case expression `<T>E` can not be a proper subtype of `function`.
+* Function typing is not yet fully implemented
+  * Structure types can not have subtypes of `function` as a member type.
+  * The type `T` in type test expression `E is T` or `E !is T` can not be a proper subtype of `function`.
+  * The type `T` in type cast expression `<T>E` can not be a proper subtype of `function`.
 
 ## Additions from subset 14
 

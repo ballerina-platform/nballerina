@@ -346,7 +346,7 @@ typedef GC struct LargeString {
     char bytes[];
 } *LargeStringPtr;
 
-typedef void(*FunctionPtr)();
+typedef void (*FunctionPtr)();
 typedef GC struct FunctionValue {
     FunctionPtr funcPtr;
 } *FunctionValuePtr;
