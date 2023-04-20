@@ -266,8 +266,8 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
                 pos
             };
         }
-        ["type-branch", var operand, var ty, var ifTrue, var ifFalse, var ifTrueRegister, var ifFalseRegister] => {
-            return <bir:TypeBranchInsn>{
+        ["type-cond-branch", var operand, var ty, var ifTrue, var ifFalse, var ifTrueRegister, var ifFalseRegister] => {
+            return <bir:TypeCondBranchInsn>{
                 operand: lookupRegister(pc, <sexpr:Symbol>operand),
                 semType: toSemType(pc, <ts:Type>ty),
                 ifTrue: lookupLabel(pc, <string>ifTrue),

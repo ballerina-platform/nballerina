@@ -120,8 +120,8 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:CondBranchInsn {
             check buildCondBranch(builder, scaffold, insn);
         }
-        else if insn is bir:TypeBranchInsn {
-            check buildTypeBranch(builder, scaffold, insn);
+        else if insn is bir:TypeCondBranchInsn {
+            check buildTypeCondBranch(builder, scaffold, insn);
         }
         else if insn is bir:AbnormalRetInsn {
             buildAbnormalRet(builder, scaffold, insn);
