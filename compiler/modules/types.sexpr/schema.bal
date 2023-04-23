@@ -46,7 +46,7 @@ public type String "string";
 public type Error "error";
 public type ErrorSubtype ["error", Type];
 public type Function "function";
-public type FunctionSubtype ["function", Type, Type[]];
+public type FunctionSubtype ["function", Type[], Type];
 public type List "list";
 public type Mapping "mapping";
 public type Table "table";

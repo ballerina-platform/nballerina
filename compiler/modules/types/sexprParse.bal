@@ -213,8 +213,8 @@ function fromAtomSexpr(SexprAtomParseContext pc, string name, ts:Atom atomSexpr)
             Context cx = contextFromEnv(pc.env);
             return functionSemType(cx, sig);
         }
-        ["function", var ret, var args, var rest] => {
-            SemType[] paramTypes = from var param in <ts:Type[]>args select fromSexprInternal(pc, param);
+        ["function", var ret, var params, var rest] => {
+            SemType[] paramTypes = from var param in <ts:Type[]>params select fromSexprInternal(pc, param);
             ListDefinition ld = new;
             SemType restParamType = fromSexprInternal(pc, rest);
             paramTypes.push(defineListTypeWrapped(ld, pc.env, rest=restParamType));

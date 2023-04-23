@@ -42,14 +42,22 @@ type I3 function(I, I, I);
 
 // @type A < Aa
 // @type A < Ab
+// @type X = A
+// @type Y = A
+// @type Aax <> A
+// @type Aay <> A
 type A function() returns A;
+type X function() returns X;
+type Y function() returns A;
 type Aa function() returns A|int;
 type Ab int|A;
 
 // @type A1 < Aa1
-// @type Aax <> Aa1
+// @type Aax = A1
+// @type Aay = A1
 // @type A1 < Ab1
 type A1 function(int) returns A1;
 type Aa1 function(int) returns A1|int;
 type Aax function(int) returns Aax;
+type Aay function(int) returns A1;
 type Ab1 int|A1;
