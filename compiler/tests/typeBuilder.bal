@@ -2,10 +2,11 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.front as f;
 
+type TypeBuilderError error;
 type TypeBuilder object {
     function semtype(int index) returns t:SemType;
 
-    function typeToString(int index) returns string;
+    function typeToString(int index) returns string|TypeBuilderError;
 
     function intType() returns int;
 
@@ -157,7 +158,7 @@ class SemtypeBuilder {
         return self.push(t:union(self.defns[i1], self.defns[i2]));
     }
 
-    function typeToString(int index) returns string {
+    function typeToString(int index) returns string|TypeBuilderError {
         return self.defns[index].toString();
     }
 }
@@ -197,13 +198,13 @@ class AstBasedTypeDefBuilder {
         self.modulePart = { file: s:createSourceFile([], { filename: "" }), partIndex: 0, defns: self.defns, importDecls: [] };
     }
 
-    function typeToString(int index) returns string {
+    function typeToString(int index) returns string|TypeBuilderError {
         TypeDefnToStringTable typeDefToString = table [];
-        self.tdToString(self.defns[index], typeDefToString);
+        check self.tdToString(self.defns[index], typeDefToString);
         return "\n".'join(...from var def in typeDefToString select def.defn);
     }
 
-    function tdToString(s:TypeDefn defn, TypeDefnToStringTable tab) {
+    function tdToString(s:TypeDefn defn, TypeDefnToStringTable tab) returns TypeBuilderError? {
         int[] dependencies = [];
         s:TypeDesc typeDesc = defn.td;
 
@@ -241,11 +242,11 @@ class AstBasedTypeDefBuilder {
             tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         } 
         else {
-            panic error("Missing code to handle: " + (typeof typeDesc).toString());
+            return error("Missing code to handle: " + (typeof typeDesc).toString());
         }
 
         foreach var index in dependencies {
-            self.tdToString(self.getDefinition(index), tab);
+            check self.tdToString(self.getDefinition(index), tab);
         }
     }
 
