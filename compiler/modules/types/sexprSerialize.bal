@@ -296,8 +296,13 @@ function fromFuncAtom(SerializationContext sc, Atom atom) returns ts:Atom {
     Context tc = sc.tc;
     var { paramTypes, restParamType, returnType } = functionSignature(tc, tc.functionAtomType(atom));
     ts:Type[] params = from var param in paramTypes select sexprFormSemTypeInternal(sc, param);
-    ts:Type rest = restParamType != () ? sexprFormSemTypeInternal(sc, restParamType) : sexprFormSemTypeInternal(sc, NEVER);
-    return ["function", params, rest, sexprFormSemTypeInternal(sc, returnType)];
+    ts:Type returnTy = sexprFormSemTypeInternal(sc, returnType);
+    if restParamType == () {
+        return ["function", returnTy, params];
+    }
+    ts:Type rest = sexprFormSemTypeInternal(sc, restParamType);
+    params = params.slice(0, paramTypes.length() - 1);
+    return ["function", returnTy, params, rest];
 }
 
 function fromListAtom(SerializationContext sc, Atom atom) returns ts:Atom {

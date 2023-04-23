@@ -146,7 +146,7 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
 }
 
 function toFunctionSignature(t:Env env, t:AtomTable atoms, Signature sexpr) returns t:FunctionSignature {
-    var [params, rest, ret] = sexpr;
+    var [ret, params, rest] = sexpr;
     t:SemType restParamType = t:fromSexpr(env, atoms, rest);
     return { returnType: t:fromSexpr(env, atoms, ret),
              paramTypes: from var p in params select t:fromSexpr(env, atoms, p),

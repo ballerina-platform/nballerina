@@ -204,14 +204,22 @@ function fromAtomSexpr(SexprAtomParseContext pc, string name, ts:Atom atomSexpr)
             return fromMappingSexpr(pc, name, <ts:Field[]>fieldsSexpr);
         }
         ["mapping", var fieldsSexpr, var rest] => {
-            return fromMappingSexpr(pc, name, <ts:Field[]>fieldsSexpr, rest);
+            return fromMappingSexpr(pc, name, <ts:Field[]>fieldsSexpr, <ts:Type>rest);
         }
-        ["function", var args, var rest, var ret] => {
-            readonly & SemType[] paramTypes = from var param in args select fromSexprInternal(pc, param);
-            SemType r = fromSexprInternal(pc, rest);
-            SemType? restParamType = r == NEVER ? () : r;
-            SemType returnType = fromSexprInternal(pc, ret);
-            FunctionSignature sig = { paramTypes, restParamType, returnType };
+        ["function", var ret, var params] => {
+            readonly & SemType[] paramTypes = from var param in <ts:Type[]>params select fromSexprInternal(pc, param);
+            SemType returnType = fromSexprInternal(pc, <ts:Type>ret);
+            FunctionSignature sig = { paramTypes, restParamType: (), returnType };
+            Context cx = contextFromEnv(pc.env);
+            return functionSemType(cx, sig);
+        }
+        ["function", var ret, var args, var rest] => {
+            SemType[] paramTypes = from var param in <ts:Type[]>args select fromSexprInternal(pc, param);
+            ListDefinition ld = new;
+            SemType restParamType = fromSexprInternal(pc, rest);
+            paramTypes.push(defineListTypeWrapped(ld, pc.env, rest=restParamType));
+            SemType returnType = fromSexprInternal(pc, <ts:Type>ret);
+            FunctionSignature sig = { paramTypes: paramTypes.cloneReadOnly(), restParamType, returnType };
             Context cx = contextFromEnv(pc.env);
             return functionSemType(cx, sig);
         }

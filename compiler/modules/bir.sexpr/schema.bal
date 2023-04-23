@@ -12,7 +12,7 @@ public type File [sexpr:String, sexpr:String]|[sexpr:String, sexpr:String, sexpr
 public type FileRef ["file", sexpr:String];
 public type Module [["atoms", [sexpr:String, ts:Atom]...], ["defns", Function...], ["decls", ModuleDecls...], ["files", File...]];
 public type ModuleId [sexpr:String, sexpr:String, sexpr:String...];
-public type Signature [ts:Type[], ts:Type, ts:Type];
+public type Signature [ts:Type, ts:Type[], ts:Type];
 public type FuncDecl [sexpr:String, FunctionTag, Signature];
 public type ModuleDecls [ModuleId, FuncDecl...];
 public type Function [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
