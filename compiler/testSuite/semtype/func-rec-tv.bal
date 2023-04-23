@@ -39,3 +39,17 @@ type I0 function();
 type I1 function(I);
 type I2 function(I, I);
 type I3 function(I, I, I);
+
+// @type A < Aa
+// @type A < Ab
+type A function() returns A;
+type Aa function() returns A|int;
+type Ab int|A;
+
+// @type A1 < Aa1
+// @type Aax <> Aa1
+// @type A1 < Ab1
+type A1 function(int) returns A1;
+type Aa1 function(int) returns A1|int;
+type Aax function(int) returns Aax;
+type Ab1 int|A1;
