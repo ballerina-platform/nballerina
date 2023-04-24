@@ -207,21 +207,10 @@ function fromAtomSexpr(SexprAtomParseContext pc, string name, ts:Atom atomSexpr)
             return fromMappingSexpr(pc, name, <ts:Field[]>fieldsSexpr, <ts:Type>rest);
         }
         ["function", var ret, var params] => {
-            readonly & SemType[] paramTypes = from var param in <ts:Type[]>params select fromSexprInternal(pc, param);
-            SemType returnType = fromSexprInternal(pc, <ts:Type>ret);
-            FunctionSignature sig = { paramTypes, restParamType: (), returnType };
-            Context cx = contextFromEnv(pc.env);
-            return functionSemType(cx, sig);
+            return fromFunctionSexpr(pc, name, <ts:Type>ret, <ts:Type[]>params);
         }
         ["function", var ret, var params, var rest] => {
-            SemType[] paramTypes = from var param in <ts:Type[]>params select fromSexprInternal(pc, param);
-            ListDefinition ld = new;
-            SemType restParamType = fromSexprInternal(pc, rest);
-            paramTypes.push(defineListTypeWrapped(ld, pc.env, rest=restParamType));
-            SemType returnType = fromSexprInternal(pc, <ts:Type>ret);
-            FunctionSignature sig = { paramTypes: paramTypes.cloneReadOnly(), restParamType, returnType };
-            Context cx = contextFromEnv(pc.env);
-            return functionSemType(cx, sig);
+            return fromFunctionSexpr(pc, name, <ts:Type>ret, <ts:Type[]>params, rest);
         }
         // Only to be used from *.typetest files
         ["cell", var ty, "none"] => {
@@ -252,4 +241,22 @@ function fromMappingSexpr(SexprAtomParseContext pc, string name, ts:Field[] fiel
     pc.started[name] = d;
     Field[] fields = from var [fieldName, fieldTy] in fieldsSexpr select { name: fieldName.s, ty: fromSexprInternal(pc, fieldTy) };
     return defineMappingTypeWrapped(d, pc.env, fields, fromSexprInternal(pc, restSexpr));
+}
+
+function fromFunctionSexpr(SexprAtomParseContext pc, string name, ts:Type ret, ts:Type[] params, ts:Type? rest=()) returns SemType {
+    FunctionDefinition d = new;
+    pc.started[name] = d;
+    SemType[] paramTypes = from var param in params select fromSexprInternal(pc, param);
+    SemType returnType = fromSexprInternal(pc, ret);
+    SemType? restParamType;
+    if rest != () {
+        restParamType = fromSexprInternal(pc, rest);
+        paramTypes.push(defineListTypeWrapped(new, pc.env, rest=<SemType>restParamType));
+    }
+    else {
+        restParamType = ();
+    }
+    FunctionSignature sig = { paramTypes: paramTypes.cloneReadOnly(), restParamType, returnType };
+    Context cx = contextFromEnv(pc.env);
+    return functionSemType(cx, sig);
 }
