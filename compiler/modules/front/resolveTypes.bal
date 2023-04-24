@@ -149,6 +149,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             "int" => { return t:INT; }
             "null" => { return t:NIL; }
             "string" => { return t:STRING; }
+            "function" => { return t:FUNCTION; }
         }
         if !mod.allowAllTypes {
             return err:unimplemented(`type ${td.builtinTypeName} is not implemented`, s:locationInDefn(modDefn, td.startPos));
@@ -396,6 +397,7 @@ function resolveBuiltinTypeDesc(t:Context tc, s:SubsetBuiltinTypeDesc td) return
         "decimal" => { return t:DECIMAL; }
         "string" => { return t:STRING; }
         "error" => { return t:ERROR; }
+        "function" => { return t:FUNCTION; }
     }
     panic err:impossible("unreachable in resolveInlineBuiltinTypeDesc");
 }

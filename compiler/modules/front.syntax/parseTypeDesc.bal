@@ -96,8 +96,16 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     match cur {
         "function" => {
-            check tok.advance();
-            return parseFunctionTypeDesc(tok);
+            if tok.peek() == "(" {
+                check tok.advance();
+                return parseFunctionTypeDesc(tok);
+            }
+            else {
+                Position endPos = tok.currentEndPos();
+                check tok.advance();
+                // JBUG should not need cast #30191
+                return { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
+            }
         }
         "(" => {
             check tok.advance();
