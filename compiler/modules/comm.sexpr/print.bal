@@ -1,7 +1,8 @@
-// Given an input array where n-th int is m, returns true if m-th token at n-th level sexpr tree should be indented.
+// Each list in a sexpr tree is uniquely identified by an index array.
+// Index array is constructed by concatenating each ancestor's (including self) index among it's siblings.
+// Indenter returns true if there should be a line break before the list identified by the given index array.
 public type Indenter function(int[]) returns boolean;
 
-// see https://gist.github.com/manuranga/a9948a5af91ef580ffe2bb0572dd449c
 public function prettyPrint(Data[] topLevel, Indenter? indentAt = ()) returns string {
     string[] buf = [];
     append(buf, indentAt, topLevel, -1, [], topLevel = true);
@@ -19,6 +20,11 @@ function append(string[] buf, Indenter? indentAt, Data sexpr, int level, int[] i
         else if space {
             buf.push(" ");
         }
+
+        // Uncomment for debugging. This will annotate each list with its index in the sexpr tree.
+        // This is the index that will be passed to the indentAt function.
+        // buf.push(subscriptToString(index));
+
         pushIf(!topLevel, buf, "(");
         boolean afterFirst = false;
         index.push(0);
@@ -65,4 +71,22 @@ function appendEscaped(string[] buf, string str) {
             buf.push(checkpanic string:fromCodePointInt(c));
         }
     }
+}
+
+// For debugging purposes.
+
+final int ZERO = string:toCodePointInt("0");
+final readonly & string[] SUPER_DIGITS = ["⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸","⁹"];
+
+function subscriptToString(int[] arr) returns string {
+    if arr == [] {
+        return "⁻";
+    }
+    string[] s = [];
+    foreach int i in arr {
+        foreach int ch in i.toString().toCodePointInts() {
+            s.push(SUPER_DIGITS[ch - ZERO]);
+        }
+    }
+    return " ".'join(...s);
 }
