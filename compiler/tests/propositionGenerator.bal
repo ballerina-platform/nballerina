@@ -548,12 +548,17 @@ function printFailureMessage(PropositionGenContext cx, Proposition proposition) 
 }
 
 function propositionToString(PropositionGenContext cx, Proposition proposition) returns string {
+    string|TypeBuilderError left = cx.types.typeToString(proposition.left);
+    string|TypeBuilderError right = cx.types.typeToString(proposition.right);
+    if left !is string || right !is string {
+        panic error("failed to convert proposition to string for seed: " + cx.seed.toString());
+    }
     return "\\Failed for seed value: " + cx.seed.toString() + "\n"
             + "\\\\" + proposition.toString()
             + "\n\\\\-------------left---------------------\n"
-            + cx.types.typeToString(proposition.left)
+            + left
             + "\n\\\\-------------right--------------------\n"
-            + cx.types.typeToString(proposition.right)
+            + right
             + "\n\\\\--------------------------------------\n";
 }
 
