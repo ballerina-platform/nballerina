@@ -959,33 +959,6 @@ function selectListInherentType(ExprContext cx, t:SemType expectedType, s:ListCo
     return [semType, lat];
 }
 
-function selectFunctionInherentType(ExprContext cx, t:SemType ty, s:FunctionCallExpr expr) returns [t:SemType, t:FunctionAtomicType]|ResolveTypeError {
-    t:SemType functionTy = t:intersect(ty, t:FUNCTION);
-    t:Context tc = cx.mod.tc;
-    if t:isEmpty(tc, functionTy) {
-        return cx.semanticErr("not a subtype of function", s:range(expr));
-    }
-    t:FunctionAtomicType? atom = t:functionAtomicType(tc, functionTy);
-    if atom != () {
-        return [ty, atom];
-    }
-    t:FunctionAlternative[] alts =
-        from var alt in t:functionAlternatives(tc, functionTy)
-        select alt;
-    if alts.length() == 0 {
-        return cx.semanticErr("no applicable inherent type for function", s:range(expr));
-    }
-    else if alts.length() > 1 {
-        return cx.semanticErr("ambiguous inherent type for function", s:range(expr));
-    }
-    t:SemType semType = alts[0].semType;
-    atom = t:functionAtomicType(tc, semType);
-    if atom is () {
-        return cx.semanticErr("applicable type for function is not atomic", s:range(expr));
-    }
-    return [semType, atom];
-}
-
 function listAlternativeAllowsLength(t:ListAlternative alt, int len) returns boolean {
     t:ListAtomicType? pos = alt.pos;
     if pos !is () {
@@ -1416,18 +1389,26 @@ function codeGenCheckingTerminator(bir:BasicBlock bb, s:CheckingKeyword checking
 function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr) returns CodeGenError|ExprEffect {
     string? prefix = expr.prefix;
     bir:FunctionRef func;
-    bir:AssignTmpRegister? funcRegister = ();
+    bir:Register? funcRegister = ();
     if prefix == () {
         var ref = cx.lookupLocalVarRef(expr.funcName, expr.qNamePos);
         if ref is bir:FunctionRef {
             func = ref;
         }
         else if ref is Binding {
-            var [semType, atom] = check selectFunctionInherentType(cx, ref.reg.semType, expr);
+            t:SemType semType = ref.reg.semType;
+            t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
+            if atom == () {
+                if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) {
+                    if semType == t:FUNCTION || t:isSubtype(cx.mod.tc, t:FUNCTION, semType) {
+                        return cx.semanticErr("only values of proper subtype of function can be called", expr.qNamePos);
+                    }
+                    return cx.unimplementedErr("can't call function values that don't belong to single explicit type", expr.qNamePos);
+                }
+                return cx.semanticErr("only a value of function type can be called", expr.qNamePos);
+            }
+            funcRegister = ref.reg;
             func = functionRefFromAtom(cx, atom, registerName(ref.reg));
-            funcRegister = cx.createAssignTmpRegister(semType, expr.qNamePos);
-            bir:AssignInsn insn = { result: <bir:AssignTmpRegister>funcRegister, operand: ref.reg, pos: expr.qNamePos };
-            bb.insns.push(insn);
         }
         else {
             return cx.semanticErr("only a value of function type can be called", expr.qNamePos);

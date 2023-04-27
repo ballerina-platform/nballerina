@@ -90,7 +90,12 @@ public function functionSemType(Context cx, FunctionSignature signature) returns
     SemType rest = restParamType is () ? NEVER : restParamType;
     SemType semType = defn.define(env, defineListTypeWrapped(new(), env, requiredParams, rest=rest, mut=CELL_MUT_NONE), returnType);
     FunctionAtomicType atomic = <FunctionAtomicType>functionAtomicType(cx, semType);
-    cx.functionSignatureMemo.put({ atomic, signature });
+    // XXX: This is an optimization/workaround util we have proper function typing. If we turn signature to semType that means we have
+    // a function value and when we build a call using this value (currently) we need to go from FunctionAtomicType to signature.
+    // Caching it here avoids creating list atomic types unnecessarily in `functionSignature` function when we have a restParamType
+    if signature.restParamType != () && cx.functionSignatureMemo[atomic] == () {
+        cx.functionSignatureMemo.add({ atomic, signature });
+    }
     cx.functionAtomicTypeMemo.add({ signature, semType });
     return semType;
 }

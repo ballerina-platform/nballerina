@@ -5,7 +5,7 @@ type F0 function(int);
 public function main() {
     any a = f1;
     if a is F|F0 {
-      io:println(a(1)); // @error
+      io:println(a(1)); // @output 1
     }
 }
 

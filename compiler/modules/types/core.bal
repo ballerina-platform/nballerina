@@ -1243,39 +1243,6 @@ public function listAlternatives(Context cx, SemType t) returns ListAlternative[
     }
 }
 
-public function functionAlternatives(Context cx, SemType t) returns FunctionAlternative[] {
-    if t is BasicTypeBitSet {
-        if (t & FUNCTION) == 0 {
-            return [];
-        }
-        else {
-            return [
-                {
-                    semType: FUNCTION,
-                    pos: (),
-                    neg: []
-                }
-            ];
-        }
-    }
-    else {
-        BddPath[] paths = [];
-        bddPaths(<Bdd>getComplexSubtypeData(t, BT_FUNCTION), paths, {});
-        FunctionAlternative[] alts = [];
-        foreach var { pos, neg } in paths {
-            var intersection = intersectFunctionAtoms(cx, from var atom in pos select cx.functionAtomType(atom));
-            if intersection !is () {
-                alts.push({
-                    semType: intersection[0],
-                    pos: intersection[1],
-                    neg: from var atom in neg select cx.functionAtomType(atom)
-                });
-            }
-        }
-        return alts;
-    }
-}
-
 public function mappingAtomicType(Context cx, SemType t) returns MappingAtomicType? {
     MappingAtomicType mappingAtomicInner = MAPPING_ATOMIC_INNER;
     if t is BasicTypeBitSet {
