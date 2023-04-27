@@ -188,7 +188,7 @@ function insertField(TempMappingSubtype m, string name, CellSemType t) returns T
     CellSemType[] types = shallowCopyCellTypes(m.types);
     int i = names.length();
     while true {
-        if i == 0 || name <= names[i - 1] {
+        if i == 0 || name > names[i - 1] {
             names[i] = name;
             types[i] = t;
             break;
