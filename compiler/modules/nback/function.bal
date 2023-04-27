@@ -66,9 +66,16 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     bir:Register funcOperand = insn.operands[0];
     var { funcValuePtr, funcDescPtr, funcPtr, uniformFuncPtr } = check buildIndirectFunctionValue(builder, scaffold, funcOperand);
     var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
-    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(scaffold.typeContext(),
-                                                                             funcOperand.semType);
-    // TODO: handle the case where this is not atomic (directly buildUniformCall)
+    t:SemType funcTy = funcOperand.semType;
+    t:FunctionAtomicType? atomic = t:functionAtomicType(scaffold.typeContext(), funcTy);
+    if atomic == () {
+        t:SemType[] argTypes = from var arg in args select arg.semType;
+        t:Context tc = scaffold.typeContext();
+        t:SemType returnType = <t:SemType>t:functionReturnType(scaffold.typeContext(), funcTy,
+                                                               t:tupleTypeWrappedRo(tc.env, ...argTypes));
+        return buildCallInexact(builder, scaffold, result, funcDescPtr, funcPtr, uniformFuncPtr,
+                                uniformArgArray, nArgs, returnType);
+    }
     t:FunctionSignature signature = t:functionSignature(scaffold.typeContext(), atomic);
     llvm:ConstPointerValue signatureDescPtr = scaffold.getCalledType(signature);
     llvm:Value isExact = buildRuntimeFunctionCall(builder, scaffold, functionIsExactFunction,
@@ -86,7 +93,6 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
                            uniformArgArray, nArgs, signature.returnType);
     builder.br(afterCall);
     builder.positionAtEnd(afterCall);
-
 }
 
 function buildIndirectFunctionValue(llvm:Builder builder, Scaffold scaffold, bir:Register operand) returns IndirectFunctionValue|BuildError {

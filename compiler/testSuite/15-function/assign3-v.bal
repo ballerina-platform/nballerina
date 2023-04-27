@@ -22,17 +22,17 @@ public function main() {
         io:println("error");
     }
     x = fooBar;
-    if x is F {
-        io:println("error");
-    }
-    else if x is B {
-        io:println("error");
-    }
-    else if x is D {
+    if x is D {
         io:println(x(1)); // @output 2
         io:println(x(1, 2)); // @output 3
         io:println(x(1, 2, 3)); // @output 6
         io:println(x(1, 2, 3, 4)); // @output 10
+    }
+    else if x is F {
+        io:println("error");
+    }
+    else if x is B {
+        io:println("error");
     }
     else {
         io:println("error");

@@ -442,10 +442,26 @@ function verifyCall(VerifyContext vc, CallInsnBase insn) returns err:Internal? {
         return verifyFunctionCallArgs(vc, func.value.signature.paramTypes, insn);
     }
     t:SemType funcTy = func.semType;
-    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(vc.typeContext(), funcTy);
-    // TODO: in the non-atomic case verify restParamIsList is not set
-    t:FunctionSignature signature = t:functionSignature(vc.typeContext(), atomic);
-    return verifyFunctionCallArgs(vc, signature.paramTypes, insn);
+    t:FunctionAtomicType? atomic = t:functionAtomicType(vc.typeContext(), funcTy);
+    if atomic != () {
+        t:FunctionSignature signature = t:functionSignature(vc.typeContext(), atomic);
+        return verifyFunctionCallArgs(vc, signature.paramTypes, insn);
+    }
+    if insn !is CallIndirectInsn {
+        return vc.invalidErr("calling a non atomic function using CallDirectInsn", insn.pos);
+    }
+    if insn.restParamIsList {
+        return vc.invalidErr("calling a non atomic function value with restParamIsList = true", insn.pos);
+    }
+    if !vc.isSubtype(funcTy, t:FUNCTION) {
+        return vc.invalidErr("calling a non-function value", insn.pos);
+    }
+    t:SemType paramListType = <t:SemType>t:functionParamListType(vc.typeContext(), funcTy);
+    t:SemType[] operandTypes = from var operand in insn.operands.slice(1) select operand.semType;
+    t:SemType argListType = t:tupleTypeWrappedRo(vc.typeContext().env, ...operandTypes);
+    if !vc.isSubtype(argListType, paramListType) {
+        return vc.invalidErr("incorrect type for arguments", insn.pos);
+    }
 }
 
 function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallInsnBase insn) returns err:Internal? {

@@ -1,4 +1,5 @@
 // Implementation specific to basic type function.
+import wso2/nballerina.comm.err;
 
 // Function subtype is [args, ret]
 // Represents args as tuple type
@@ -70,6 +71,87 @@ public function functionSignature(Context cx, FunctionAtomicType atomic) returns
     FunctionSignature signature = { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
     cx.functionSignatureMemo.add({ atomic, signature });
     return signature;
+}
+
+public function functionParamListType(Context cx, SemType func) returns SemType? {
+    FunctionAtomicType? atomic = functionAtomicType(cx, func);
+    if atomic != () {
+        return atomic[0];
+    }
+    SemType functionTy = intersect(func, FUNCTION);
+    if isEmpty(cx, functionTy) {
+        return ();
+    }
+    if functionTy is BasicTypeBitSet {
+        // intersection of all list types
+        return NEVER;
+    }
+    SemType paramTy = VAL;
+    foreach var { pos } in positiveFunctionPaths(cx, functionTy) {
+        SemType[] intersectionParamTypes = from var atom in pos select cx.functionAtomType(atom)[0];
+        paramTy = intersect(paramTy, intersectionParamTypes.reduce(union, intersectionParamTypes[0]));
+    }
+    return paramTy;
+}
+
+public function functionReturnType(Context cx, SemType func, SemType argList) returns SemType? {
+    SemType functionTy = intersect(func, FUNCTION);
+    // Since we care only about well type function calls, it is safe to ignore base type
+    if isEmpty(cx, functionTy) || functionTy is BasicTypeBitSet {
+        return ();
+    }
+    SemType[] selectedReturnTypes = [];
+    foreach var { pos } in positiveFunctionPaths(cx, functionTy) {
+        SemType[] returnTypes = [];
+        SemType currentlyCoveredParamTy = NEVER;
+        // Not sure if the order of intersections matters, reverse starts with the tightest intersection
+        foreach var [intersectionParamTy, intersectionReturnTy] in allPossibleFunctionAtomIntersections(cx, pos).reverse() {
+            SemType overlappingParamTy = intersect(argList, intersectionParamTy);
+            if isEmpty(cx, overlappingParamTy) {
+                continue;
+            }
+            if !isEmpty(cx, diff(overlappingParamTy, currentlyCoveredParamTy)) {
+                currentlyCoveredParamTy = union(overlappingParamTy, currentlyCoveredParamTy);
+                returnTypes.push(intersectionReturnTy);
+            }
+        }
+        if returnTypes.length() > 0 {
+            selectedReturnTypes.push(returnTypes.reduce(intersect, returnTypes[0]));
+        }
+    }
+    if selectedReturnTypes.length() == 0 {
+        // This shouldn't happen if the function call is well typed
+        return ();
+    }
+    return selectedReturnTypes.reduce(union, selectedReturnTypes[0]);
+}
+
+function positiveFunctionPaths(Context cx, ComplexSemType funcTy) returns BddPath[] {
+    BddPath[] paths = [];
+    bddPaths(<Bdd>getComplexSubtypeData(funcTy, BT_FUNCTION), paths, {});
+    paths = paths.filter((each) => each.pos.length() > 0);
+    if paths.length() == 0 {
+        panic err:impossible("expect at least a single positive atom");
+    }
+    return paths;
+}
+
+function allPossibleFunctionAtomIntersections(Context cx, Atom[] atoms) returns [SemType, SemType][] {
+    return allPossibleFunctionAtomIntersectionsInner(cx, atoms, atoms.length());
+}
+function allPossibleFunctionAtomIntersectionsInner(Context cx, Atom[] atoms, int n) returns [SemType, SemType][] {
+    if n == 1 {
+        // cloneWithType to remove the readonly part from functionAtomType
+        return from var atom in atoms select checkpanic cx.functionAtomType(atom).cloneWithType([SemType, SemType]);
+    }
+    [SemType, SemType][] result = allPossibleFunctionAtomIntersectionsInner(cx, atoms, n - 1);
+    foreach var [paramTy, returnTy] in result {
+        foreach Atom atom in atoms {
+            var [atomParamTy, atomReturnTy] = cx.functionAtomType(atom);
+            result.push([intersect(paramTy, atomParamTy), intersect(returnTy, atomReturnTy)]);
+        }
+    }
+    return result;
 }
 
 public function functionSemType(Context cx, FunctionSignature signature) returns SemType {
