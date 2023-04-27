@@ -4,7 +4,7 @@ public type Field [sexpr:String, Type];
 public type Atom ["list", Type[]] | ["list", Type[], Type] | ["array", Type] | ["array", Type, int] | ["min-length-list", Type[], int] | ["min-length-list", Type[], int, Type] |
                  ["map", Type] | ["mapping", Field[]] | ["mapping", Field[], Type] |
                  ["cell", Type, CellMutability] |
-                 ["function", Type[], Type];
+                 ["function", Type, Type[]] | ["function", Type, Type[], Type];
 
 // jBallerina can't disambiguate following atoms sexpr
 public type Array ["array", Type];

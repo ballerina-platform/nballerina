@@ -331,9 +331,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
             }
             t:SemType[] args = from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
-            if rest != t:NEVER {
-                args.push(t:defineListTypeWrapped(new(), env, rest=rest, mut=t:CELL_MUT_NONE));
-            }
             s:TypeDesc? retTy = td.ret;
             t:SemType ret = retTy != () ? check resolveTypeDesc(mod, modDefn, depth + 1, retTy) : t:NIL;
             return d.define(env, t:defineListTypeWrapped(new(), env, args, rest=rest, mut=t:CELL_MUT_NONE), ret);
