@@ -51,7 +51,7 @@ $(BT_OBJS): %.o: %.c
 	$(CLANG) -DHAVE_CONFIG_H -funwind-tables -frandom-seed=$< $(BT_WARN_FLAGS) $(CFLAGS) -c -o $@ $<
 
 $(DTOA_OBJS) $(DN_OBJS): %.o: %.c
-	$(CLANG) $(DEFINES) $(CFLAGS) -c -o $@ $<
+	$(CLANG) $(DEFINES) -O1 -c -o $@ $<
 
 %.o: %.bc
 	$(CLANG) -O2 -c -o $@ $<
