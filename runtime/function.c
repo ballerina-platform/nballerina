@@ -42,13 +42,12 @@ void _bal_add_uniform_arg(TaggedPtr* arr, int64_t index, TaggedPtr arg) {
 }
 
 void _bal_add_rest_args(TaggedPtr* arr, int64_t index, TaggedPtr restArgArray) {
+    // XXX: can't directly memcpy since values in the array as not tagged.
     ListPtr lp = taggedToPtr(restArgArray);
     int64_t len = lp->tpArray.length;
     for (int64_t i = 0; i < len; i++) {
         arr[index + i] = lp->desc->get(restArgArray, i);
     }
-    // FIXME: can't directly memcpy since values in the array as not tagged. Why?
-    // memcpy(arr + index, lp->tpArray.members, sizeof(TaggedPtr) * len);
 }
 
 void _bal_add_uniform_args_to_rest_array(TaggedPtr* arr, int64_t nArgs, int64_t startingOffset, TaggedPtr restArgArray) {

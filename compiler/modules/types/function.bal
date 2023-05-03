@@ -192,28 +192,6 @@ function functionIntersectRet(Context cx, Conjunction? pos) returns SemType {
     return intersect(cx.functionAtomType(pos.atom)[1], functionIntersectRet(cx, pos.next));
 }
 
-function intersectFunctionAtoms(Context cx, FunctionAtomicType[] atoms) returns [SemType, FunctionAtomicType]? {
-    Env env = cx.env;
-    if atoms.length() == 0 {
-        return ();
-    }
-    var [params, returnTy] = atoms[0];
-    foreach int i in 1 ..< atoms.length() {
-        var [nextParams, nextReturnTy] = atoms[i];
-        ListAtomicType curParamsAtom = <ListAtomicType>listAtomicType(cx, params);
-        ListAtomicType nextParamAtom = <ListAtomicType>listAtomicType(cx, nextParams);
-        var intersectionParams = intersectListAtoms(env, [curParamsAtom, nextParamAtom]);
-        if intersectionParams == () {
-            return ();
-        }
-        params = intersectionParams[0];
-        returnTy = intersect(returnTy, nextReturnTy);
-    }
-    FunctionAtomicType atom = [params, returnTy];
-    SemType semType = createBasicSemType(BT_FUNCTION, bddAtom(env.functionAtom(atom)));
-    return [semType, atom];
-}
-
 // pnwamk tutorial
 function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) returns boolean {
     if pos == () {

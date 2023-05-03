@@ -14,8 +14,8 @@ const LLVM_TID = "i32";
 const LLVM_MEMBER_TYPE = "i64";
 const LLVM_PANIC_CODE = "i64";
 
-final llvm:StructType llDerivedDescType = llvm:structType([LLVM_TID]);
-final llvm:PointerType llDerivedDescPtrType = llvm:pointerType(llDerivedDescType);
+final llvm:StructType llTypeIdDescType = llvm:structType([LLVM_TID]);
+final llvm:PointerType llTypeIdDescPtrType = llvm:pointerType(llTypeIdDescType);
 
 final llvm:FunctionType LLVM_UNIFORM_CALL_FUNC_TY = llvm:functionType("void", [llvm:pointerType(LLVM_TAGGED_PTR),
                                                                                "i64",

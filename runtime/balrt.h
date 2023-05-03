@@ -124,10 +124,10 @@ typedef uint64_t MemberType;
 
 #define BITSET_MEMBER_TYPE(bitSet) (((uint64_t)(bitSet) << 1)|1)
 
-// All mapping and list descriptors start with this.
+// All mapping, list and function descriptors start with this.
 typedef struct {
     Tid tid;
-} DerivedDesc, *DerivedDescPtr;
+} TypeIdDesc, *TypeIdDescPtr;
 
 // This is the abstract version of filler descriptor. Each type must
 // implement there own version (or reuse a common version such as GenericFillerDesc)
@@ -142,10 +142,10 @@ typedef struct GenericFillerDesc {
 
 // All mapping and list values start with this
 typedef GC struct {
-    DerivedDescPtr desc;
+    TypeIdDescPtr desc;
 } Structure, *StructurePtr;
 
-// This extends DerivedDesc
+// This extends TypeIdDesc
 // i.e must start with tid
 typedef struct {
     Tid tid;
@@ -199,7 +199,7 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
-// This extends DerivedDesc
+// This extends TypeIdDesc
 // i.e must start with tid
 typedef struct {
     Tid tid;
@@ -366,8 +366,13 @@ typedef struct FunctionSignature {
     MemberType paramTys[];
 } *FunctionSignaturePtr;
 
+// This extends TypeIdDesc
+typedef struct {
+   Tid tid;
+} FunctionTypeDesc, *FunctionTypeDescPtr;
+
 typedef GC struct FunctionValue {
-    DerivedDescPtr derivedDesc;
+    FunctionTypeDescPtr functionTypeDesc;
     FunctionSignaturePtr signature;
     FunctionPtr funcPtr;
 } *FunctionValuePtr;

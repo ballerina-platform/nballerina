@@ -377,7 +377,7 @@ class Scaffold {
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(llDerivedDescType, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llTypeIdDescType, symbol, isConstant = true);
             used.inherentType = v;
             return v;
         }
@@ -651,7 +651,7 @@ function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Func
 
 
 function functionValueType(t:FunctionSignature signature) returns llvm:StructType {
-    return llvm:structType([llDerivedDescPtrType,
+    return llvm:structType([llTypeIdDescPtrType,
                             llvm:pointerType(LLVM_FUNCTION_SIGNATURE),
                             llvm:pointerType(buildFunctionSignature(signature))]);
 }
