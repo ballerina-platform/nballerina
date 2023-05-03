@@ -414,6 +414,7 @@ static decFloat * decFinalize(decFloat *df, bcdnum *num,
     // decShowNum(num, "rounded");
 
     // if exponent is >=emax may have to clamp, overflow, or fold-down
+    uByte buffer[ROUNDUP(DECPMAX+3, 4)]; // [+3 allows uInt padding]
     if (num->exponent>DECEMAX-(DECPMAX-1)) { // is edge case
       // printf("overflow checks...\n");
       if (*ulsd==0 && ulsd==umsd) {     // have zero
@@ -456,7 +457,6 @@ static decFloat * decFinalize(decFloat *df, bcdnum *num,
           // fold down needed; must copy to buffer in order to pad
           // with zeros safely; fortunately this is not the worst case
           // path because cannot have had a round
-          uByte buffer[ROUNDUP(DECPMAX+3, 4)]; // [+3 allows uInt padding]
           uByte *s=umsd;                // source
           uByte *t=buffer;              // safe target
           uByte *tlsd=buffer+(ulsd-umsd)+shift; // target LSD
