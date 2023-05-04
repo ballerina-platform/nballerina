@@ -28,34 +28,33 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     return true;
 }
 
-bool _bal_is_exact(FunctionSignaturePtr signature, FunctionValuePtr value) {
+bool _bal_function_is_exact(FunctionSignaturePtr signature, FunctionValuePtr value) {
     return signature == value->signature;
 }
 
-TaggedPtr* _bal_create_uniform_arg_array(int64_t argCount) {
-    TaggedPtr *arr = (TaggedPtr*)_bal_alloc(sizeof(TaggedPtr) * argCount);
+// nArgs = requiredArgCount + restArgCount
+// We are using uint64_t to avoid overflow in case of restArgCount close to INT64_MAX. This means indexing uniform arg array
+// must also be done using uint64_t
+GC TaggedPtr *_bal_create_uniform_arg_array(uint64_t nArgs) {
+    GC TaggedPtr *arr = _bal_alloc(sizeof(TaggedPtr) * nArgs);
     return arr;
 }
 
-void _bal_add_uniform_arg(TaggedPtr* arr, int64_t index, TaggedPtr arg) {
-    arr[index] = arg;
-}
-
-void _bal_add_rest_args(TaggedPtr* arr, int64_t index, TaggedPtr restArgArray) {
-    // XXX: can't directly memcpy since values in the array as not tagged.
+void _bal_add_rest_args_to_uniform_args(TaggedPtr *uniformArgArray, int64_t startingOffset, TaggedPtr restArgArray) {
     ListPtr lp = taggedToPtr(restArgArray);
     int64_t len = lp->tpArray.length;
     for (int64_t i = 0; i < len; i++) {
-        arr[index + i] = lp->desc->get(restArgArray, i);
+        uint64_t index = startingOffset + i;
+        uniformArgArray[index] = lp->desc->get(restArgArray, i);
     }
 }
 
-void _bal_add_uniform_args_to_rest_array(TaggedPtr* arr, int64_t nArgs, int64_t startingOffset, TaggedPtr restArgArray) {
+void _bal_add_uniform_args_to_rest_args(TaggedPtr *uniformArgArray, int64_t restArgCount, int64_t startingOffset, TaggedPtr restArgArray) {
     ListPtr lp = taggedToPtr(restArgArray);
-    for (int64_t i = 0; i < nArgs; i++) {
-        TaggedPtr val = arr[startingOffset + i];
-        int64_t len = lp->gArray.length;
-        PanicCode err = lp->desc->set(restArgArray, len, val);
+    for (int64_t i = 0; i < restArgCount; i++) {
+        uint64_t index = startingOffset + i;
+        TaggedPtr val = uniformArgArray[index];
+        PanicCode err = lp->desc->set(restArgArray, lp->gArray.length, val);
         if (err != 0) {
             _bal_panic_internal(err);
         }

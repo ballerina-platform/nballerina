@@ -20,6 +20,7 @@ final llvm:PointerType llTypeIdDescPtrType = llvm:pointerType(llTypeIdDescType);
 final llvm:FunctionType LLVM_UNIFORM_CALL_FUNC_TY = llvm:functionType("void", [llvm:pointerType(LLVM_TAGGED_PTR),
                                                                                "i64",
                                                                                llvm:pointerType(llvm:functionType("void", [])),
+                                                                               LLVM_BOOLEAN,
                                                                                llvm:pointerType(LLVM_TAGGED_PTR)]);
 final llvm:StructType LLVM_FUNCTION_SIGNATURE = llvm:structType([llvm:pointerType(LLVM_UNIFORM_CALL_FUNC_TY),
                                                                  LLVM_MEMBER_TYPE,
@@ -228,4 +229,19 @@ function buildUntagFloat(llvm:Builder builder, Scaffold|InitModuleContext scaffo
 
 function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
     return builder.trunc(buildTaggedPtrToInt(builder, tagged), LLVM_BOOLEAN);
+}
+
+function buildTaggedBoolean(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:Value value) returns llvm:Value {
+    return builder.getElementPtr(constNilTaggedPtr(context),
+                                     [builder.iBitwise("or",
+                                                       builder.zExt(value, LLVM_INT),
+                                                       constInt(context, TAG_BOOLEAN))]);
+}
+
+function buildTaggedInt(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:Value value) returns llvm:PointerValue {
+    return <llvm:PointerValue>buildRuntimeFunctionCall(builder, context, intToTaggedFunction, [value]);
+}
+
+function buildTaggedFloat(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:Value value) returns llvm:PointerValue {
+    return <llvm:PointerValue>buildRuntimeFunctionCall(builder, context, floatToTaggedFunction, [value]);
 }

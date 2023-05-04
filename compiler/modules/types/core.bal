@@ -1203,12 +1203,6 @@ public type ListAlternative record {|
     ListAtomicType[] neg;
 |};
 
-public type FunctionAlternative record {|
-    SemType semType;
-    FunctionAtomicType? pos;
-    FunctionAtomicType[] neg;
-|};
-
 public function listAlternatives(Context cx, SemType t) returns ListAlternative[] {
     if t is BasicTypeBitSet {
         if (t & LIST) == 0 {
