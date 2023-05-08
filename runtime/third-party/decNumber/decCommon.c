@@ -258,6 +258,7 @@ static decFloat * decFinalize(decFloat *df, bcdnum *num,
   // coefficient < DECPMAX
   length=(uInt)(ulsd-umsd+1);                // coefficient length
 
+  uByte buffer[ROUNDUP(DECPMAX+3, 4)]; // [+3 allows uInt padding]
   if (!NUMISSPECIAL(num)) {
     Int   drop;                              // digits to be dropped
     // skip leading insignificant zeros to calculate an exact length
@@ -414,7 +415,6 @@ static decFloat * decFinalize(decFloat *df, bcdnum *num,
     // decShowNum(num, "rounded");
 
     // if exponent is >=emax may have to clamp, overflow, or fold-down
-    uByte buffer[ROUNDUP(DECPMAX+3, 4)]; // [+3 allows uInt padding]
     if (num->exponent>DECEMAX-(DECPMAX-1)) { // is edge case
       // printf("overflow checks...\n");
       if (*ulsd==0 && ulsd==umsd) {     // have zero
