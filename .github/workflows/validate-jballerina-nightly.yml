@@ -18,6 +18,12 @@ jobs:
           echo 'LATEST_RUN_ID<<EOF' >> $GITHUB_ENV
           gh run list --workflow main.yml  --repo ballerina-platform/ballerina-distribution | grep success | head -n 1 | awk '{print $(NF-2)}' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
+      - name: Install LLVM 16
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+          sudo add-apt-repository deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
+          sudo apt-get update
+          sudo apt-get install -y clang-16 llvm-16
       - name: Download jBallerina
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
