@@ -191,7 +191,11 @@ function subtypeGenSingletonInt(PropositionGenContext cx, PropositionPath path) 
 
 function subtypeGenSingletonInt8(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
     int r = cx.random.nextRange(128);
-    return { left: cx.types.intConst(r), right: cx.types.intWidthSigned(8) };
+    int|TypeBuilderError right = cx.types.intWidthSigned(8);
+    if right is error {
+        panic error("failed to create byte type with seed: " + cx.seed.toString());
+    }
+    return { left: cx.types.intConst(r), right };
 }
 
 // "abc" <: string
@@ -427,7 +431,11 @@ function generateRecordFields(PropositionGenContext cx, PropositionPath path) re
 function nonEmptyFromAxiomaticSubtype(PropositionGenContext cx, PropositionPath path) returns NonEmptyProposition {
     while true {
         SubtypeProposition subtypeProp = generateSubtypeProposition(cx, { depth: 0, rands: [] });
-        if !t:isEmpty(cx.typeContext, cx.types.semtype(subtypeProp.left)) {
+        t:SemType|TypeBuilderError left = cx.types.semtype(subtypeProp.left);
+        if left is error {
+            panic error("error resolving type for seed: " + cx.seed.toString());
+        }
+        if !t:isEmpty(cx.typeContext, left) {
             match cx.random.nextRange(2) {
                 0 => {
                     return { left: subtypeProp.left, right: subtypeProp.right };
@@ -437,7 +445,11 @@ function nonEmptyFromAxiomaticSubtype(PropositionGenContext cx, PropositionPath 
                 }
             }
         }
-        if !t:isEmpty(cx.typeContext, cx.types.semtype(subtypeProp.right)) {
+        t:SemType|TypeBuilderError right = cx.types.semtype(subtypeProp.right);
+        if right is error {
+            panic error("error resolving type for seed: " + cx.seed.toString());
+        }
+        if !t:isEmpty(cx.typeContext, right) {
             match cx.random.nextRange(2) {
                 0 => {
                     return { left: subtypeProp.left, right: subtypeProp.right };
@@ -502,8 +514,11 @@ function generateNonEmptyProposition(PropositionGenContext cx, PropositionPath p
 }
 
 function evalProposition(PropositionGenContext cx, Proposition p) returns boolean {
-    t:SemType left = cx.types.semtype(p.left);
-    t:SemType right = cx.types.semtype(p.right);
+    t:SemType|TypeBuilderError left = cx.types.semtype(p.left);
+    t:SemType|TypeBuilderError right = cx.types.semtype(p.right);
+    if left is error || right is error {
+        panic error("failed to resolve type for seed: " + cx.seed.toString());
+    }
     boolean? result = ();
     match p.op {
         UNION => {
@@ -520,7 +535,7 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
                 && t:isEmpty(cx.typeContext, t:diff(right, left)) == p.isEmpty;
         }
         _ => {
-            panic error("Invalid OP: " + p.op.toString());
+            panic error("Invalid OP: " + p.op.toString() + " for seed: " + cx.seed.toString());
         }
     }
     if result == false {

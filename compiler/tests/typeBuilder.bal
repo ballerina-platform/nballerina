@@ -4,7 +4,7 @@ import wso2/nballerina.front as f;
 
 type TypeBuilderError error;
 type TypeBuilder object {
-    function semtype(int index) returns t:SemType;
+    function semtype(int index) returns t:SemType|TypeBuilderError;
 
     function typeToString(int index) returns string|TypeBuilderError;
 
@@ -24,7 +24,7 @@ type TypeBuilder object {
 
     function stringConst(string value) returns int;
 
-    function intWidthSigned(int bits) returns int;
+    function intWidthSigned(int bits) returns int|TypeBuilderError;
 
     function xmlType() returns int;
 
@@ -316,12 +316,12 @@ class AstBasedTypeDefBuilder {
         return self.defns[index];
     }
 
-    function semtype(int index) returns t:SemType {
+    function semtype(int index) returns t:SemType|TypeBuilderError {
         t:SemType? t = self.defns[index].semType;
         if t == () {
             error? ret = f:resolveModuleDefFromPart(self.cx, self.modulePart, self.getName(index));
             if ret != () {
-                panic error("Error resolving types", ret);
+                return error("Error resolving types", ret);
             }
             return self.semtype(index);
         }
@@ -366,14 +366,14 @@ class AstBasedTypeDefBuilder {
         return <int>self.intIndex;
     }
 
-    function intWidthSigned(int bits) returns int {
+    function intWidthSigned(int bits) returns int|TypeBuilderError {
         match bits {
             8 | 16 => {
                 string name = "Signed" + bits.toString();
                 return self.createTypeDef(self.createQualifiedTypeDescRef(name, prefix = "int"));
             }
         }
-        panic error("Unsupported int subtype: " + bits.toString());
+        return error("Unsupported int subtype: " + bits.toString());
     }
 
     function xmlSequenceType(int constituentType) returns int {
