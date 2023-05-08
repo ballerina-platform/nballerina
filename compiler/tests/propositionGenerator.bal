@@ -535,7 +535,7 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
                 && t:isEmpty(cx.typeContext, t:diff(right, left)) == p.isEmpty;
         }
         _ => {
-            panic error("Invalid OP: " + p.op.toString() + " for seed: " + cx.seed.toString());
+            panic error("invalid OP: " + p.op.toString() + " for seed: " + cx.seed.toString());
         }
     }
     if result == false {

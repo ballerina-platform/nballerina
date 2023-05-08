@@ -321,7 +321,7 @@ class AstBasedTypeDefBuilder {
         if t == () {
             error? ret = f:resolveModuleDefFromPart(self.cx, self.modulePart, self.getName(index));
             if ret != () {
-                return error("Error resolving types", ret);
+                return error("error resolving types", ret);
             }
             return self.semtype(index);
         }
@@ -373,7 +373,7 @@ class AstBasedTypeDefBuilder {
                 return self.createTypeDef(self.createQualifiedTypeDescRef(name, prefix = "int"));
             }
         }
-        return error("Unsupported int subtype: " + bits.toString());
+        return error("unsupported int subtype: " + bits.toString());
     }
 
     function xmlSequenceType(int constituentType) returns int {
