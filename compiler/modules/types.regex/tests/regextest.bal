@@ -38,9 +38,11 @@ const int MIN_CHUNK_LEN = 1;
 const int SEQUENCE_LEN = 5; // Increasing this value will give much deeply nested regular expressions
 const int SEED = 0;
 
+configurable boolean enablePrivateTests = false;
 @test:Config{
     dataProvider: randomRegexTests,
-    groups: ["longRunning", "random"]
+    groups: ["longRunning", "private"],
+    enable: enablePrivateTests
 }
 function testRandomRegexGeneration(f:SubtypeTestOp op, string lhs, string rhs) {
     test:assertEquals(typeRelation(lhs, rhs), op);
