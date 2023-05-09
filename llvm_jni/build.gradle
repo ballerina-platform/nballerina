@@ -16,8 +16,7 @@ repositories {
 
 dependencies {
         // This is a workaround for missing javacpp in the latest snapshot build
-        implementation 'org.bytedeco:javacpp:1.5.9-20230222.151859-137'
-        implementation 'org.bytedeco:llvm-platform:15.0.7-1.5.9-SNAPSHOT'
+        implementation 'org.bytedeco:llvm-platform:16.0.1-1.5.9-SNAPSHOT'
 }
 
 ext {

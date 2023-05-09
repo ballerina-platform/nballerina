@@ -186,7 +186,6 @@ public distinct class Module {
         jLLVMAddInstructionCombiningPass(modulePassesManager);
         jLLVMAddCFGSimplificationPass(modulePassesManager);
 
-        jLLVMAddPruneEHPass(modulePassesManager);
         jLLVMAddLowerConstantIntrinsicsPass(modulePassesManager);
         
         jLLVMAddStripDeadPrototypesPass(modulePassesManager);
@@ -582,12 +581,6 @@ function jLLVMAddDeadArgEliminationPass(handle passManagerRef) = @java:Method {
 
 function jLLVMAddInstructionCombiningPass(handle passManagerRef) = @java:Method {
     name: "LLVMAddInstructionCombiningPass",
-    'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
-} external;
-
-function jLLVMAddPruneEHPass(handle passManagerRef) = @java:Method {
-    name: "LLVMAddPruneEHPass",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassManagerRef"]
 } external;

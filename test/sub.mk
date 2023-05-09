@@ -29,7 +29,7 @@ else
 endif
 bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[vpo].bal)
 # These are usd in phase 3
-LLVM_SUFFIX ?=-15
+LLVM_SUFFIX ?=-16
 CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 CFLAGS ?= -O2

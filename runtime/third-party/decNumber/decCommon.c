@@ -258,6 +258,7 @@ static decFloat * decFinalize(decFloat *df, bcdnum *num,
   // coefficient < DECPMAX
   length=(uInt)(ulsd-umsd+1);                // coefficient length
 
+  uByte buffer[ROUNDUP(DECPMAX+3, 4)]; // [+3 allows uInt padding]
   if (!NUMISSPECIAL(num)) {
     Int   drop;                              // digits to be dropped
     // skip leading insignificant zeros to calculate an exact length
@@ -456,7 +457,6 @@ static decFloat * decFinalize(decFloat *df, bcdnum *num,
           // fold down needed; must copy to buffer in order to pad
           // with zeros safely; fortunately this is not the worst case
           // path because cannot have had a round
-          uByte buffer[ROUNDUP(DECPMAX+3, 4)]; // [+3 allows uInt padding]
           uByte *s=umsd;                // source
           uByte *t=buffer;              // safe target
           uByte *tlsd=buffer+(ulsd-umsd)+shift; // target LSD
