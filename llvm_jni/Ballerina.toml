@@ -9,7 +9,7 @@ observabilityIncluded = false
 path = "target/platform-libs/javacpp-platform-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-platform-16.0.1-1.5.9-SNAPSHOT.jar"
+path = "target/platform-libs/llvm-platform-16.0.3-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
 path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-linux-x86_64.jar"
@@ -30,19 +30,19 @@ path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT-windows-x86_64.jar"
 path = "target/platform-libs/javacpp-1.5.9-SNAPSHOT.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-16.0.1-1.5.9-SNAPSHOT-linux-arm64.jar"
+path = "target/platform-libs/llvm-16.0.3-1.5.9-SNAPSHOT-linux-arm64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-16.0.1-1.5.9-SNAPSHOT-linux-x86_64.jar"
+path = "target/platform-libs/llvm-16.0.3-1.5.9-SNAPSHOT-linux-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-16.0.1-1.5.9-SNAPSHOT-macosx-x86_64.jar"
+path = "target/platform-libs/llvm-16.0.3-1.5.9-SNAPSHOT-macosx-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-16.0.1-1.5.9-SNAPSHOT-macosx-arm64.jar"
+path = "target/platform-libs/llvm-16.0.3-1.5.9-SNAPSHOT-macosx-arm64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-16.0.1-1.5.9-SNAPSHOT-windows-x86_64.jar"
+path = "target/platform-libs/llvm-16.0.3-1.5.9-SNAPSHOT-windows-x86_64.jar"
 
 [[platform.java11.dependency]]
-path = "target/platform-libs/llvm-16.0.1-1.5.9-SNAPSHOT.jar"
+path = "target/platform-libs/llvm-16.0.3-1.5.9-SNAPSHOT.jar"

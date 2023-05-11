@@ -10,13 +10,13 @@ plugins {
 }
 
 repositories {
+        mavenLocal()
         mavenCentral()
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 }
 
 dependencies {
-        // This is a workaround for missing javacpp in the latest snapshot build
-        implementation 'org.bytedeco:llvm-platform:16.0.1-1.5.9-SNAPSHOT'
+        implementation 'org.bytedeco:llvm-platform:16.0.3-1.5.9-SNAPSHOT'
 }
 
 ext {

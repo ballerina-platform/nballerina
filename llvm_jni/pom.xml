@@ -1,0 +1,29 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.bytedeco.javacv</groupId>
+    <artifactId>demo</artifactId>
+    <version>1.5.9-SNAPSHOT</version>
+    <dependencies>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>llvm-platform</artifactId>
+            <version>16.0.3-1.5.9-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>sonatype-nexus-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <!-- ... -->
+
+</project>
