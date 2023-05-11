@@ -1,6 +1,6 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
-    <groupId>wso2</groupId>
+    <groupId>org.wso2</groupId>
     <artifactId>nBallerina</artifactId>
     <version>0.1</version>
     <dependencies>
