@@ -8,6 +8,7 @@ DEPENDENCIES_STAMP=$(COMBINED_SRC_DIR)/dependencies.stamp
 COMPILER_STAMP=$(COMBINED_SRC_DIR)/compiler.stamp
 JNI_STAMP=$(COMBINED_SRC_DIR)/jni.stamp
 RUNTIME_STAMP=$(COMBINED_SRC_DIR)/runtime.stamp
+NATIVE_STAMP=$(COMBINED_SRC_DIR)/native.stamp
 
 $(DEPENDENCIES_STAMP):pom.xml $(COMPILER_STAMP) $(JNI_STAMP)
 	-rm -rf $(DEPENDECIES_DIR)
@@ -25,7 +26,7 @@ $(COMPILER_STAMP):
 	rm $(COMBINED_SRC_DIR)/output.bal
 	@touch $@
 
-$(JNI_STAMP):
+$(JNI_STAMP): $(COMPILER_STAMP)
 	cp -r ./modules/jni.llvm $(COMBINED_SRC_DIR)/modules
 	cp output.bal $(COMBINED_SRC_DIR)
 	cp Ballerina.toml $(COMBINED_SRC_DIR)
@@ -40,12 +41,25 @@ $(RUNTIME_STAMP): $(INLINE_RUNTIME) $(COMPILER_JAR)
 	rm $(COMBINED_SRC_DIR)/target/bin/balrt_inline.bc
 	@touch $@
 
+$(NATIVE_STAMP): $(COMPILER_JAR) $(RUNTIME_STAMP)
+	cd $(COMBINED_SRC_DIR)/target/bin; zip -d nballerina.jar ./META-INF/native-image/*
+	find ./modules/jni.llvm -maxdepth 1 -name "*.bal"| xargs python3 jniConfigGen.py
+	cd $(COMBINED_SRC_DIR)/target/bin; native-image --no-fallback -H:MaxDuplicationFactor=100 -H:ResourceConfigurationFiles=../../../llvm_jni/resource_config.json -H:ReflectionConfigurationFiles=../../../llvm_jni/reflection_config.json -H:JNIConfigurationFiles=../../../llvm_jni/jni_config.json,../../../llvm_jni/jni_workaround.json -jar nballerina.jar
+	@touch $@
+
 $(COMPILER_JAR): $(DEPENDENCIES_STAMP) $(COMPILER_STAMP) $(JNI_STAMP)
 	cd $(COMBINED_SRC_DIR); bal build --offline
 
-build: $(COMPILER_JAR) $(RUNTIME_STAMP)
+test: $(DEPENDENCIES_STAMP) $(COMPILER_STAMP) $(JNI_STAMP)
+	cd $(COMBINED_SRC_DIR); bal test --offline --tests nballerina:testCompileVPO
 
-.PHONY: clean build
+build: $(COMPILER_JAR)
+
+buildWithRuntime: $(RUNTIME_STAMP)
+
+buildNative: $(NATIVE_STAMP)
+
+.PHONY: clean test build buildWithRuntime buildNative
 
 clean:
 	-rm -rf $(COMBINED_SRC_DIR)
