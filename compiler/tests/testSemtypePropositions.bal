@@ -1,18 +1,11 @@
 import ballerina/test;
 
-configurable boolean enablePrivateTests = false;
-@test:Config {
-    groups: ["longRunning", "private"],
-    enable: enablePrivateTests
-}
+@test:Config { groups: ["longRunning", "private"] }
 function testSubtyping() {
     testSemtypePropositions(generator = generateSubtypeProposition);
 }
 
-@test:Config {
-    groups: ["longRunning", "random"],
-    enable: enablePrivateTests
-}
+@test:Config { groups: ["longRunning", "private"] }
 function testNonEmptyTypes() {
     testSemtypePropositions(generator = generateNonEmptyProposition);
 }
