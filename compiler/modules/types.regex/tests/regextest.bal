@@ -40,7 +40,7 @@ const int SEED = 0;
 
 @test:Config{
     dataProvider: randomRegexTests,
-    groups: ["longRunning"]
+    groups: ["longRunning", "private"]
 }
 function testRandomRegexGeneration(f:SubtypeTestOp op, string lhs, string rhs) {
     test:assertEquals(typeRelation(lhs, rhs), op);
