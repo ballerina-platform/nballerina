@@ -55,8 +55,5 @@ testbuild
 # bal command seems to produce this
 heap-dump.hprof
 
-# Make an exception for gradle jar
-!llvm_jni/gradle/wrapper/gradle-wrapper.jar
-
 # nballerina is to use the latest versions of dependencies at this stage
 compiler/Dependencies.toml
