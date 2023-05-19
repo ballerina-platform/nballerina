@@ -355,8 +355,7 @@ typedef GC struct LargeString {
 } *LargeStringPtr;
 
 typedef void (*FunctionPtr)();
-// result type is an approximation
-typedef void (*UniformCallFunction)(TaggedPtr uniformArgs, int64_t nArgs, FunctionPtr funcPtr, bool expectTaggedResult, TaggedPtr *result);
+typedef TaggedPtr (*UniformCallFunction)(TaggedPtr uniformArgs, int64_t nArgs, FunctionPtr funcPtr);
 
 typedef struct FunctionSignature {
     UniformCallFunction uniformCallFunction;
