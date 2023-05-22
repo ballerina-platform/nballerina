@@ -100,48 +100,6 @@ public function functionSemType(Context cx, FunctionSignature signature) returns
     return semType;
 }
 
-public function semTypeFromSignature(Context cx, FunctionSignature signature) returns SemType {
-    FunctionTypeMemo? memo = cx.functionAtomicTypeMemo[signature];
-    if memo != () {
-        return memo.semType;
-    }
-    Env env = cx.env;
-    FunctionDefinition defn = new;
-    var { paramTypes, restParamType, returnType } = signature;
-    SemType[] requiredParams;
-    if restParamType != () {
-        requiredParams = paramTypes.slice(0, paramTypes.length() - 1);
-    }
-    else {
-        requiredParams = paramTypes;
-    }
-    SemType rest = restParamType is () ? NEVER : restParamType;
-    SemType semType = defn.define(env, defineListTypeWrapped(new(), env, requiredParams, rest=rest, mut=CELL_MUT_NONE), returnType);
-    cx.functionAtomicTypeMemo.add({ signature, semType });
-    return semType;
-}
-
-public function semTypeFromSignature(Context cx, FunctionSignature signature) returns SemType {
-    FunctionTypeMemo? memo = cx.functionAtomicTypeMemo[signature];
-    if memo != () {
-        return memo.semType;
-    }
-    Env env = cx.env;
-    FunctionDefinition defn = new;
-    var { paramTypes, restParamType, returnType } = signature;
-    SemType[] requiredParams;
-    if restParamType != () {
-        requiredParams = paramTypes.slice(0, paramTypes.length() - 1);
-    }
-    else {
-        requiredParams = paramTypes;
-    }
-    SemType rest = restParamType is () ? NEVER : restParamType;
-    SemType semType = defn.define(env, defineListTypeWrapped(new(), env, requiredParams, rest=rest, mut=CELL_MUT_NONE), returnType);
-    cx.functionAtomicTypeMemo.add({ signature, semType });
-    return semType;
-}
-
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return memoSubtypeIsEmpty(cx, cx.functionMemo, functionBddIsEmpty, <Bdd>t);
 }

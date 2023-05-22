@@ -250,7 +250,7 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     builder.positionAtEnd(ifExact);
     check buildExactCall(builder, scaffold, insn, afterCall, funcStructPtr, signature);
     builder.positionAtEnd(ifNotExact);
-    check buildNotExactCall(builder, scaffold, insn, afterCall, funcStructPtr, signature);
+    check buildInexactCall(builder, scaffold, insn, afterCall, funcStructPtr, signature);
     builder.positionAtEnd(afterCall);
 }
 
@@ -268,8 +268,8 @@ function buildExactCall(llvm:Builder builder, Scaffold scaffold, bir:CallIndirec
     builder.br(afterCall);
 }
 
-function buildNotExactCall(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn,
-                           llvm:BasicBlock afterCall, llvm:PointerValue funcStructPtr, t:FunctionSignature signature) returns BuildError? {
+function buildInexactCall(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn,
+                          llvm:BasicBlock afterCall, llvm:PointerValue funcStructPtr, t:FunctionSignature signature) returns BuildError? {
     var { returnType, paramTypes, restParamType } = signature;
     int requiredArgCount = restParamType == () ? paramTypes.length() : paramTypes.length() - 1;
     // converting to TaggedRepr always return a pointer value
