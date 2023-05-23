@@ -3,7 +3,7 @@ import wso2/nballerina.comm.err;
 import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
 
-public function buildModule(bir:Module birMod, *Options options) returns [llvm:Module, TypeUsage, FunctionSignatureUsage]|BuildError {
+public function buildModule(bir:Module birMod, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
     llvm:Context llContext = new;
     bir:ModuleId modId = birMod.getId();
     llvm:Module llMod = llContext.createModule();
@@ -60,12 +60,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
     }
     check birMod.finish();
-    return [llMod, createTypeUsage(mod.usedSemTypes), createFunctionSignatureUsage(mod.usedFunctionSignatures)];
-}
-
-function createFunctionSignatureUsage(table<UsedFunctionSignature> signatureUsage) returns FunctionSignatureUsage {
-   [t:FunctionSignature, int][] usage = from var each in signatureUsage select [each.signature, each.index];
-   return { usage };
+    return [llMod, createTypeUsage(mod.usedSemTypes)];
 }
 
 function calculateBuildOrder(bir:BasicBlock[] blocks) returns bir:Label[] {
@@ -123,6 +118,12 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
         }
         if used.exactify != () {
             use |= USED_EXACTIFY;
+        }
+        if used.functionSignatureValue != () {
+            use |= USED_FUNCTION_SIGNATURE_VALUE;
+        }
+        if used.functionSignatureCall != () {
+            use |= USED_FUNCTION_SIGNATURE_CALL;
         }
         uses.push(use);
     }

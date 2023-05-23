@@ -14,11 +14,6 @@ final llvm:StructType llIntRangeType = llvm:structType([LLVM_INT, LLVM_INT]);
 public type ProgramModule readonly & record {|
     bir:ModuleId id;
     TypeUsage typeUsage;
-    FunctionSignatureUsage functionUsage;
-|};
-
-public type FunctionSignatureUsage record {|
-    [t:FunctionSignature, int][] usage = [];
 |};
 
 type TypeDefnFields record {|
@@ -55,7 +50,8 @@ type FillerDescDefn record {|
 |};
 
 type FunctionSignatureDefn record {|
-    readonly t:FunctionSignature signature;
+    readonly t:SemType semType;
+    readonly llvm:Type llType;
     readonly llvm:ConstPointerValue llSignature;
 |};
 
@@ -91,7 +87,7 @@ class InitModuleContext {
     table<InherentTypeDefn> key(semType)[3] inherentTypeDefns = [table [], table[], table[]];
     table<ComplexTypeDefn> key(semType) complexTypeDefns = table [];
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
-    table<FunctionSignatureDefn> key(signature) functionSignatureDefns = table [];
+    table<FunctionSignatureDefn> key(semType) functionSignatureDefns = table [];
     InitTypes llTypes;
     map<llvm:FunctionDecl> typeTestFuncs = {};
     map<llvm:FunctionDecl> runtimeFuncs = {};
@@ -134,9 +130,8 @@ class InitModuleContext {
 public function buildInitModule(t:Env env, ProgramModule[] modules, map<t:FunctionSignature> publicFuncs) returns llvm:Module|BuildError {
     llvm:Context llContext = new;
     llvm:Module llMod = llContext.createModule();
-    InitModuleContext cx = buildInitTypes(llContext, llMod, env, modules);
     llvm:Builder builder = llContext.createBuilder();
-    buildFunctionSignatures(cx, modules, builder);
+    buildInitTypes(llContext, llMod, builder, env, modules);
     buildMain(modules[0].id, USER_MAIN_NAME, publicFuncs[USER_MAIN_NAME], llMod, builder);
     return llMod;
 }
@@ -156,40 +151,20 @@ function buildMain(bir:ModuleId entryModId, string userMainName, t:FunctionSigna
     builder.ret();
 }
 
-function buildInitTypes(llvm:Context llContext, llvm:Module llMod, t:Env env, ProgramModule[] modules) returns InitModuleContext {
+function buildInitTypes(llvm:Context llContext, llvm:Module llMod, llvm:Builder builder, t:Env env, ProgramModule[] modules) {
     InitTypes llTypes = createInitTypes(llContext);
     InitModuleContext cx = new(llContext, llMod, t:typeContext(env), llTypes, false);
-    buildInitTypesForUsage(cx, modules, USED_INHERENT_TYPE);
+    buildInitTypesForUsage(cx, modules, USED_INHERENT_TYPE, builder);
     cx.inherentTypesComplete = true;
     finishSubtypeDefns(cx);
-    buildInitTypesForUsage(cx, modules, USED_EXACTIFY);
-    buildInitTypesForUsage(cx, modules, USED_TYPE_TEST);
-    return cx;
+    buildInitTypesForUsage(cx, modules, USED_EXACTIFY, builder);
+    buildInitTypesForUsage(cx, modules, USED_TYPE_TEST, builder);
+    buildInitTypesForUsage(cx, modules, USED_FUNCTION_SIGNATURE_VALUE, builder);
+    buildInitTypesForUsage(cx, modules, USED_FUNCTION_SIGNATURE_CALL, builder);
 }
 
-function buildFunctionSignatures(InitModuleContext cx, ProgramModule[] modules, llvm:Builder builder) {
-    foreach var mod in modules {
-        foreach var usage in mod.functionUsage.usage {
-            var [signature, id] = usage;
-            buildFunctionSignatureDefn(cx, mangleFunctionSignatureSymbol(mod.id, id), signature, builder);
-        }
-    }
-}
-
-function buildFunctionSignatureDefn(InitModuleContext cx, string symbol, t:FunctionSignature signature,
-                                    llvm:Builder builder) {
-    FunctionSignatureDefn? existingSignature = cx.functionSignatureDefns[signature];
-    if existingSignature != () {
-        _ = cx.llMod.addAlias(createFunctionSignatureType(signature), existingSignature.llSignature, symbol);
-    }
-    else {
-        llvm:ConstPointerValue llSignature = createFunctionSignatureDefn(cx, symbol, signature, builder);
-        cx.functionSignatureDefns.add({ signature, llSignature });
-    }
-}
-
-function createFunctionSignatureDefn(InitModuleContext cx, string symbol, t:FunctionSignature signature,
-                                    llvm:Builder builder) returns llvm:ConstPointerValue {
+function createFunctionSignatureValDefn(InitModuleContext cx, string symbol, t:FunctionSignature signature,
+                                        llvm:Builder builder) returns [llvm:StructType, llvm:ConstPointerValue] {
     llvm:Function uniformCallFunc = buildUniformCallFunction(cx, signature, builder, symbol + "_uniform_call");
     llvm:ConstValue returnTy = getMemberType(cx, signature.returnType);
     t:SemType? restParamType = signature.restParamType;
@@ -198,7 +173,8 @@ function createFunctionSignatureDefn(InitModuleContext cx, string symbol, t:Func
     llvm:ConstValue paramTys = cx.llContext().constArray(LLVM_MEMBER_TYPE,
                                                          from int i in 0 ..< nRequiredParams select getMemberType(cx, signature.paramTypes[i]));
     llvm:ConstValue init = cx.llContext().constStruct([uniformCallFunc, returnTy, restParamTy, constInt(cx, nRequiredParams), paramTys]);
-    return cx.llMod.addGlobal(createFunctionSignatureType(signature), symbol, initializer=init);
+    llvm:StructType ty = createFunctionSignatureType(signature);
+    return [ty, cx.llMod.addGlobal(ty, symbol, initializer=init)];
 }
 
 function createFunctionSignatureType(t:FunctionSignature signature) returns llvm:StructType {
@@ -306,7 +282,7 @@ function createExactCallRestArgList(InitModuleContext cx, llvm:Builder builder, 
     return builder.getElementPtr(builder.bitCast(struct, LLVM_TAGGED_PTR), [constInt(cx, TAG_LIST|FLAG_EXACT)]);
 }
 
-function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, TypeHowUsed howUsed) {
+function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, TypeHowUsed howUsed, llvm:Builder builder) {
     foreach var mod in modules {
         var { types, uses } = mod.typeUsage;
         bir:ModuleId id = mod.id;
@@ -320,12 +296,46 @@ function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, T
                 else if howUsed == USED_EXACTIFY {
                     addExactifyTypeSymbol(cx, sym, ty);
                 }
+                else if howUsed is USED_FUNCTION_SIGNATURE_VALUE {
+                    addFunctionSignatureValueSymbol(cx, sym, ty, builder);
+                }
+                else if howUsed is USED_FUNCTION_SIGNATURE_CALL {
+                    addFunctionSignatureCallSymbol(cx, sym, ty, builder);
+                }
                 else {
                     addTypeTestTypeSymbol(cx, sym, <t:ComplexSemType>ty);
                 }
             }       
         }
     }    
+}
+
+function addFunctionSignatureValueSymbol(InitModuleContext cx, string symbol, t:SemType semType, llvm:Builder builder) {
+    FunctionSignatureDefn? existingSignature = cx.functionSignatureDefns[semType];
+    if existingSignature != () {
+        _ = cx.llMod.addAlias(existingSignature.llType, existingSignature.llSignature, symbol);
+        return;
+    }
+    t:Context tc = cx.tc;
+    // Function values will always be atomic
+    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(tc, semType);
+    t:FunctionSignature signature = t:functionSignature(tc, atomic);
+    var [llType, llSignature] = createFunctionSignatureValDefn(cx, symbol, signature, builder);
+    cx.functionSignatureDefns.add({ semType, llType, llSignature });
+}
+
+function addFunctionSignatureCallSymbol(InitModuleContext cx, string symbol, t:SemType semType, llvm:Builder builder) {
+    FunctionSignatureDefn? existingSignature = cx.functionSignatureDefns[semType];
+    if existingSignature != () {
+        _ = cx.llMod.addAlias(existingSignature.llType, existingSignature.llSignature, symbol);
+        return;
+    }
+    // Since we handle value usages before call usages this means we have a signature without an actual function value
+    // therefor all we need is a unique pointer to differentiate signatures
+    llvm:PointerType llType = llvm:pointerType(LLVM_FUNCTION_SIGNATURE);
+    llvm:ConstPointerValue llSignature = cx.llMod.addGlobal(llType, symbol,
+                                                            initializer=cx.llContext().constNull(llvm:pointerType(LLVM_FUNCTION_SIGNATURE)));
+    cx.functionSignatureDefns.add({ semType, llType: llType, llSignature });
 }
 
 function addInherentTypeSymbol(InitModuleContext cx, string symbol, t:SemType semType)  {

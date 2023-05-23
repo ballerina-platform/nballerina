@@ -123,14 +123,7 @@ type Module record {|
     bir:File[] partFiles;
     ModuleDI? di;
     table<UsedSemType> key(semType) usedSemTypes = table [];
-    table<UsedFunctionSignature> key(signature) usedFunctionSignatures = table [];
     InitTypes llInitTypes;
-|};
-
-type UsedFunctionSignature record {|
-    readonly t:FunctionSignature signature;
-    readonly llvm:ConstPointerValue llSignature;
-    int index;
 |};
 
 type UsedSemType record {|
@@ -139,6 +132,8 @@ type UsedSemType record {|
     llvm:ConstPointerValue? inherentType = ();
     llvm:ConstPointerValue? typeTest = ();
     llvm:ConstPointerValue? exactify = ();
+    llvm:ConstPointerValue? functionSignatureValue = ();
+    llvm:ConstPointerValue? functionSignatureCall = ();
 |};
 
 class Scaffold {
@@ -276,15 +271,31 @@ class Scaffold {
         return value;
     }
 
+    function getFunctionSignatureCall(t:FunctionSignature signature) returns llvm:ConstPointerValue {
+        return self.getFunctionSignature(signature, USED_FUNCTION_SIGNATURE_CALL);
+    }
+
     function getFunctionSignatureValue(t:FunctionSignature signature) returns llvm:ConstPointerValue {
-        UsedFunctionSignature? usedSig = self.mod.usedFunctionSignatures[signature];
-        if usedSig != () {
-            return usedSig.llSignature;
+        return self.getFunctionSignature(signature, USED_FUNCTION_SIGNATURE_VALUE);
+    }
+
+    function getFunctionSignature(t:FunctionSignature signature, USED_FUNCTION_SIGNATURE_CALL|USED_FUNCTION_SIGNATURE_VALUE usage) returns llvm:ConstPointerValue {
+        t:SemType signatureTy = t:functionSemType(self.typeContext(), signature);
+        UsedSemType used = self.getUsedSemType(signatureTy);
+        llvm:ConstPointerValue? llSignature = usage == USED_FUNCTION_SIGNATURE_VALUE ? used.functionSignatureValue :
+                                                                                       used.functionSignatureCall;
+        if llSignature != () {
+            return llSignature;
         }
-        int index = self.mod.usedFunctionSignatures.length();
-        llvm:ConstPointerValue llSignature = addFunctionSignature(self.mod, self.getModule(), index);
-        self.mod.usedFunctionSignatures.add({signature, index, llSignature});
-        return llSignature;
+        string symbol = mangleTypeSymbol(self.mod.modId, usage, used.index);
+        llvm:ConstPointerValue val = self.getModule().addGlobal(LLVM_FUNCTION_SIGNATURE, symbol, isConstant=true);
+        if usage == USED_FUNCTION_SIGNATURE_VALUE {
+            used.functionSignatureValue = val;
+        }
+        else {
+            used.functionSignatureCall = val;
+        }
+        return val;
     }
 
     function getDecimal(decimal val) returns DecimalDefn {
@@ -627,12 +638,6 @@ function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean
         return false;
     }
     return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
-}
-
-function addFunctionSignature(Module mod, llvm:Module llMod, int signatureIndex) returns llvm:ConstPointerValue {
-    string signatureSymbol = mangleFunctionSignatureSymbol(mod.modId, signatureIndex);
-    llvm:ConstPointerValue llSignature = llMod.addGlobal(LLVM_FUNCTION_SIGNATURE, signatureSymbol, isConstant=true);
-    return llSignature;
 }
 
 function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Function func, llvm:ConstPointerValue llSignature,

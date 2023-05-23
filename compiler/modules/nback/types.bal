@@ -8,6 +8,8 @@ import wso2/nballerina.print.llvm;
 const USED_INHERENT_TYPE = 0x1;
 const USED_EXACTIFY = 0x2;
 const USED_TYPE_TEST = 0x4;
+const USED_FUNCTION_SIGNATURE_VALUE = 0x8;
+const USED_FUNCTION_SIGNATURE_CALL = 0x10;
 
 const LLVM_BITSET = "i32";
 const LLVM_TID = "i32";
@@ -92,7 +94,8 @@ type Context object {
     function llContext() returns llvm:Context;
 };
 
-type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST;
+type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST|
+                 USED_FUNCTION_SIGNATURE_VALUE|USED_FUNCTION_SIGNATURE_CALL;
 
 public type TypeUsage readonly & record {|
     t:SemType[] types;
@@ -160,6 +163,12 @@ function mangleTypeSymbol(bir:ModuleId modId, TypeHowUsed howUsed, int index) re
     else if howUsed == USED_EXACTIFY {
         result += "e";
     }
+    else if howUsed == USED_FUNCTION_SIGNATURE_VALUE {
+        result += "f";
+    }
+    else if howUsed == USED_FUNCTION_SIGNATURE_CALL {
+        result += "c";
+    }
     else {
         result += "t";
     }    
@@ -167,14 +176,6 @@ function mangleTypeSymbol(bir:ModuleId modId, TypeHowUsed howUsed, int index) re
     result += mangleModuleNames(modId.names);
     result += index.toString();
     return result;    
-}
-
-function mangleFunctionSignatureSymbol(bir:ModuleId modId, int index) returns string {
-    string result = "_Bf";
-    result += mangleOrg(modId.org);
-    result += mangleModuleNames(modId.names);
-    result += index.toString();
-    return result;
 }
 
 function constNil(Context cx) returns llvm:ConstPointerValue => cx.llContext().constNull(LLVM_NIL_TYPE);
