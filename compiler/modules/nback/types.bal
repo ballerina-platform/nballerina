@@ -231,9 +231,9 @@ function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) retur
 
 function buildTaggedBoolean(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:Value value) returns llvm:Value {
     return builder.getElementPtr(constNilTaggedPtr(context),
-                                     [builder.iBitwise("or",
-                                                       builder.zExt(value, LLVM_INT),
-                                                       constInt(context, TAG_BOOLEAN))]);
+                                 [builder.iBitwise("or",
+                                                   builder.zExt(value, LLVM_INT),
+                                                   constInt(context, TAG_BOOLEAN))]);
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:Value value) returns llvm:PointerValue {

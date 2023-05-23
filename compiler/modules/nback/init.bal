@@ -163,6 +163,50 @@ function buildInitTypes(llvm:Context llContext, llvm:Module llMod, llvm:Builder 
     buildInitTypesForUsage(cx, modules, USED_FUNCTION_SIGNATURE_CALL, builder);
 }
 
+function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, TypeHowUsed howUsed, llvm:Builder builder) {
+    foreach var mod in modules {
+        var { types, uses } = mod.typeUsage;
+        bir:ModuleId id = mod.id;
+        foreach int i in 0 ..< types.length() {
+            if (uses[i] & howUsed) != 0 {
+                t:SemType ty = types[i];
+                string sym = mangleTypeSymbol(id, howUsed, i);
+                if howUsed == USED_INHERENT_TYPE {
+                    addInherentTypeSymbol(cx, sym, ty);
+                }
+                else if howUsed == USED_EXACTIFY {
+                    addExactifyTypeSymbol(cx, sym, ty);
+                }
+                else if howUsed == USED_FUNCTION_SIGNATURE_VALUE {
+                    addFunctionSignatureValueSymbol(cx, sym, ty, builder);
+                }
+                else if howUsed == USED_FUNCTION_SIGNATURE_CALL {
+                    addFunctionSignatureCallSymbol(cx, sym, ty, builder);
+                }
+                else {
+                    addTypeTestTypeSymbol(cx, sym, <t:ComplexSemType>ty);
+                }
+            }
+        }
+    }
+}
+
+function addFunctionSignatureValueSymbol(InitModuleContext cx, string symbol, t:SemType semType, llvm:Builder builder) {
+    FunctionSignatureDefn? existingSignature = cx.functionSignatureDefns[semType];
+    if existingSignature != () {
+        _ = cx.llMod.addAlias(existingSignature.llType, existingSignature.llSignature, symbol);
+        return;
+    }
+    t:Context tc = cx.tc;
+    t:FunctionAtomicType? atomic = t:functionAtomicType(tc, semType);
+    if atomic == () {
+        panic err:impossible("non atomic function value");
+    }
+    t:FunctionSignature signature = t:functionSignature(tc, atomic);
+    var [llType, llSignature] = createFunctionSignatureValDefn(cx, symbol, signature, builder);
+    cx.functionSignatureDefns.add({ semType, llType, llSignature });
+}
+
 function createFunctionSignatureValDefn(InitModuleContext cx, string symbol, t:FunctionSignature signature,
                                         llvm:Builder builder) returns [llvm:StructType, llvm:ConstPointerValue] {
     llvm:Function uniformCallFunc = buildUniformCallFunction(cx, signature, builder, symbol + "_uniform_call");
@@ -172,7 +216,8 @@ function createFunctionSignatureValDefn(InitModuleContext cx, string symbol, t:F
     int nRequiredParams = requiredParamCount(signature);
     llvm:ConstValue paramTys = cx.llContext().constArray(LLVM_MEMBER_TYPE,
                                                          from int i in 0 ..< nRequiredParams select getMemberType(cx, signature.paramTypes[i]));
-    llvm:ConstValue init = cx.llContext().constStruct([uniformCallFunc, returnTy, restParamTy, constInt(cx, nRequiredParams), paramTys]);
+    llvm:ConstValue init = cx.llContext().constStruct([uniformCallFunc, returnTy, restParamTy,
+                                                       constInt(cx, nRequiredParams), paramTys]);
     llvm:StructType ty = createFunctionSignatureType(signature);
     return [ty, cx.llMod.addGlobal(ty, symbol, initializer=init)];
 }
@@ -186,30 +231,28 @@ function createFunctionSignatureType(t:FunctionSignature signature) returns llvm
 }
 
 function buildUniformCallFunction(InitModuleContext cx, t:FunctionSignature signature,
-                                  llvm:Builder builder, string name) returns llvm:Function {
-    llvm:FunctionDefn func = cx.llMod.addFunctionDefn(name, LLVM_UNIFORM_CALL_FUNC_TY);
+                                  llvm:Builder builder, string symbol) returns llvm:Function {
+    llvm:FunctionDefn func = cx.llMod.addFunctionDefn(symbol, LLVM_UNIFORM_CALL_FUNC_TY);
     llvm:BasicBlock bb = func.appendBasicBlock();
     builder.positionAtEnd(bb);
-    llvm:PointerValue[] exactArgs = from t:SemType paramType in signature.paramTypes select
-                                        builder.alloca(exactArgType(paramType));
+    llvm:PointerValue[] exactArgs = from t:SemType paramType in signature.paramTypes
+                                     select builder.alloca(exactArgType(paramType));
     llvm:PointerValue uniformArgArray = <llvm:PointerValue>func.getParam(0);
     int nRequiredParams = requiredParamCount(signature);
     foreach int i in 0 ..< nRequiredParams {
-        llvm:PointerValue uniformArg = <llvm:PointerValue>builder.load(builder.getElementPtr(uniformArgArray,
-                                                                                             [constIndex(cx, i)]));
-        llvm:Value arg = convertToExactArg(builder, cx, uniformArg, signature.paramTypes[i]);
+        llvm:Value uniformArg = builder.load(builder.getElementPtr(uniformArgArray, [constIndex(cx, i)]));
+        // uniform args is a taggedPtr
+        llvm:Value arg = convertToExactArg(builder, cx, <llvm:PointerValue>uniformArg, signature.paramTypes[i]);
         builder.store(arg, exactArgs[i]);
     }
     if signature.restParamType != () {
         llvm:PointerValue restArgArrayPtr = exactArgs[nRequiredParams];
-        builder.store(createExactCallRestArgList(cx, builder, signature.paramTypes[nRequiredParams], name),
+        builder.store(createUniformCallRestArgList(cx, builder, signature.paramTypes[nRequiredParams], symbol),
                       restArgArrayPtr);
         llvm:Value startingOffset = constInt(cx, nRequiredParams);
         llvm:Value restArgCount = builder.iArithmeticWrap("sub", func.getParam(1), startingOffset);
-        buildVoidRuntimeFunctionCall(builder, cx, addUniformArgsToRestArgsFunction, [uniformArgArray,
-                                                                                     restArgCount,
-                                                                                     startingOffset,
-                                                                                     builder.load(restArgArrayPtr)]);
+        buildVoidRuntimeFunctionCall(builder, cx, addUniformArgsToRestArgsFunction,
+                                     [uniformArgArray, restArgCount, startingOffset, builder.load(restArgArrayPtr)]);
     }
     llvm:FunctionType fnTy = buildFunctionSignature(signature);
     llvm:Value? retValue = builder.call(builder.bitCast(<llvm:PointerValue>func.getParam(2), llvm:pointerType(fnTy)),
@@ -267,61 +310,24 @@ function requiredParamCount(t:FunctionSignature signature) returns int {
                                            signature.paramTypes.length() - 1;
 }
 
-function createExactCallRestArgList(InitModuleContext cx, llvm:Builder builder, t:SemType listTy, string name) returns llvm:PointerValue {
+function createUniformCallRestArgList(InitModuleContext cx, llvm:Builder builder, t:SemType listTy,
+                                      string signature) returns llvm:PointerValue {
     t:ListAtomicType atomic = <t:ListAtomicType>t:listAtomicType(cx.tc, listTy);
     ListRepr repr = listAtomicTypeToSpecializedListRepr(atomic) ?: GENERIC_LIST_REPR;
-    InherentTypeDefn? defn = cx.inherentTypeDefns[ID_LIST][listTy];
-    if defn == () {
-        string symbol = name + "_rest_inherent_type";
+    InherentTypeDefn? memo = cx.inherentTypeDefns[ID_LIST][listTy];
+    InherentTypeDefn defn;
+    if memo == () {
+        string symbol = signature + "_rest_inherent_type";
         addInherentTypeSymbol(cx, symbol, listTy);
         defn = cx.inherentTypeDefns[ID_LIST].get(listTy);
     }
-    llvm:ConstPointerValue inherentType = (<InherentTypeDefn>defn).ptr;
+    else {
+        defn = memo;
+    }
+    llvm:ConstPointerValue inherentType = defn.ptr;
     llvm:PointerValue struct = <llvm:PointerValue>buildRuntimeFunctionCall(builder, cx, repr.construct,
                                                                            [inherentType, constInt(cx, 0)]);
     return builder.getElementPtr(builder.bitCast(struct, LLVM_TAGGED_PTR), [constInt(cx, TAG_LIST|FLAG_EXACT)]);
-}
-
-function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, TypeHowUsed howUsed, llvm:Builder builder) {
-    foreach var mod in modules {
-        var { types, uses } = mod.typeUsage;
-        bir:ModuleId id = mod.id;
-        foreach int i in 0 ..< types.length() {
-            if (uses[i] & howUsed) != 0 {
-                t:SemType ty = types[i];
-                string sym = mangleTypeSymbol(id, howUsed, i);
-                if howUsed == USED_INHERENT_TYPE {
-                    addInherentTypeSymbol(cx, sym, ty);
-                }
-                else if howUsed == USED_EXACTIFY {
-                    addExactifyTypeSymbol(cx, sym, ty);
-                }
-                else if howUsed is USED_FUNCTION_SIGNATURE_VALUE {
-                    addFunctionSignatureValueSymbol(cx, sym, ty, builder);
-                }
-                else if howUsed is USED_FUNCTION_SIGNATURE_CALL {
-                    addFunctionSignatureCallSymbol(cx, sym, ty, builder);
-                }
-                else {
-                    addTypeTestTypeSymbol(cx, sym, <t:ComplexSemType>ty);
-                }
-            }       
-        }
-    }    
-}
-
-function addFunctionSignatureValueSymbol(InitModuleContext cx, string symbol, t:SemType semType, llvm:Builder builder) {
-    FunctionSignatureDefn? existingSignature = cx.functionSignatureDefns[semType];
-    if existingSignature != () {
-        _ = cx.llMod.addAlias(existingSignature.llType, existingSignature.llSignature, symbol);
-        return;
-    }
-    t:Context tc = cx.tc;
-    // Function values will always be atomic
-    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(tc, semType);
-    t:FunctionSignature signature = t:functionSignature(tc, atomic);
-    var [llType, llSignature] = createFunctionSignatureValDefn(cx, symbol, signature, builder);
-    cx.functionSignatureDefns.add({ semType, llType, llSignature });
 }
 
 function addFunctionSignatureCallSymbol(InitModuleContext cx, string symbol, t:SemType semType, llvm:Builder builder) {
@@ -701,32 +707,39 @@ function createSubtypeStruct(InitModuleContext cx, t:BasicTypeCode typeCode, t:C
 }
 
 function createFunctionSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    SubtypeStruct? sub = createFunctionSubtypeStructInner(cx, semType);
+    return sub ?: createPrecomputedSubtypeStruct(cx, ID_FUNCTION, semType);
+}
+
+function createFunctionSubtypeStructInner(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct? {
     t:FunctionAtomicType? atomic = t:functionAtomicType(cx.tc, semType);
-    if atomic != () {
-        t:FunctionSignature signature = t:functionSignature(cx.tc, atomic);
-        var { returnType, paramTypes, restParamType } = signature;
-        if returnType is t:BasicTypeBitSet  && restParamType is t:BasicTypeBitSet? {
-            int nRequiredParams = requiredParamCount(signature);
-            t:BasicTypeBitSet[] requiredParamBitSets = from var [index, paramTy] in paramTypes.enumerate()
-                                                           where (index < nRequiredParams && paramTy is t:BasicTypeBitSet)
-                                                           select paramTy;
-            if requiredParamBitSets.length() == nRequiredParams {
-                llvm:ConstValue paramBitSetArray = cx.llContext().constArray(LLVM_BITSET,
-                                                                             from t:BasicTypeBitSet b in requiredParamBitSets
-                                                                                select constBitset(cx, b));
-                return {
-                    types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET, LLVM_BITSET,
-                            LLVM_INT, llvm:arrayType(LLVM_BITSET, nRequiredParams)],
-                    values: [getSubtypeContainsFunc(cx, "function"),
-                            constBitset(cx, returnType),
-                            restParamType != () ? constBitset(cx, restParamType) : constBitset(cx, t:NEVER),
-                            constInt(cx, nRequiredParams),
-                            paramBitSetArray]
-                };
-            }
-        }
+    if atomic == () {
+        return ();
     }
-    return createPrecomputedSubtypeStruct(cx, ID_FUNCTION, semType);
+    t:FunctionSignature signature = t:functionSignature(cx.tc, atomic);
+    var { returnType, paramTypes, restParamType } = signature;
+    if returnType !is t:BasicTypeBitSet || restParamType !is t:BasicTypeBitSet? {
+        return ();
+    }
+    int nRequiredParams = requiredParamCount(signature);
+    t:BasicTypeBitSet[] requiredParamBitSets = from var [index, paramTy] in paramTypes.enumerate()
+                                                   where (index < nRequiredParams && paramTy is t:BasicTypeBitSet)
+                                                   select paramTy;
+    if requiredParamBitSets.length() != nRequiredParams {
+        return ();
+    }
+    llvm:ConstValue paramBitSetArray = cx.llContext().constArray(LLVM_BITSET,
+                                                                 from t:BasicTypeBitSet b in requiredParamBitSets
+                                                                     select constBitset(cx, b));
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET, LLVM_BITSET,
+                LLVM_INT, llvm:arrayType(LLVM_BITSET, nRequiredParams)],
+        values: [getSubtypeContainsFunc(cx, "function"),
+                 constBitset(cx, returnType),
+                 restParamType != () ? constBitset(cx, restParamType) : constBitset(cx, t:NEVER),
+                 constInt(cx, nRequiredParams),
+                 paramBitSetArray]
+    };
 }
 
 function createBooleanSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
