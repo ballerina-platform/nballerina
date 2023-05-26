@@ -132,7 +132,6 @@ type UsedSemType record {|
     llvm:ConstPointerValue? inherentType = ();
     llvm:ConstPointerValue? typeTest = ();
     llvm:ConstPointerValue? exactify = ();
-    llvm:ConstPointerValue? functionSignatureValue = ();
     llvm:ConstPointerValue? functionSignatureCall = ();
 |};
 
@@ -263,34 +262,30 @@ class Scaffold {
         if curDefn != () {
             return curDefn.value;
         }
-        llvm:ConstPointerValue llSignature = self.getFunctionSignatureValue(signature);
-        llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func, llSignature,
+        llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func,
                                                             self.getInherentType(t:functionSemType(self.typeContext(), signature)),
                                                             signature, self.mod.functionValueDefns.length());
         self.mod.functionValueDefns.add({value, symbol });
         return value;
     }
 
+    // TODO: combine getFunctionSignature into this
     function getFunctionSignatureCall(t:FunctionSignature signature) returns llvm:ConstPointerValue {
         return self.getFunctionSignature(signature, USED_FUNCTION_SIGNATURE_CALL);
     }
 
-    function getFunctionSignatureValue(t:FunctionSignature signature) returns llvm:ConstPointerValue {
-        return self.getFunctionSignature(signature, USED_FUNCTION_SIGNATURE_VALUE);
-    }
-
-    function getFunctionSignature(t:FunctionSignature signature, USED_FUNCTION_SIGNATURE_CALL|USED_FUNCTION_SIGNATURE_VALUE usage) returns llvm:ConstPointerValue {
+    function getFunctionSignature(t:FunctionSignature signature, USED_FUNCTION_SIGNATURE_CALL|USED_INHERENT_TYPE usage) returns llvm:ConstPointerValue {
         t:SemType signatureTy = t:functionSemType(self.typeContext(), signature);
         UsedSemType used = self.getUsedSemType(signatureTy);
-        llvm:ConstPointerValue? llSignature = usage == USED_FUNCTION_SIGNATURE_VALUE ? used.functionSignatureValue :
-                                                                                       used.functionSignatureCall;
+        llvm:ConstPointerValue? llSignature = usage == USED_INHERENT_TYPE ? used.inherentType :
+                                                                            used.functionSignatureCall;
         if llSignature != () {
             return llSignature;
         }
         string symbol = mangleTypeSymbol(self.mod.modId, usage, used.index);
-        llvm:ConstPointerValue val = self.getModule().addGlobal(LLVM_FUNCTION_SIGNATURE, symbol, isConstant=true);
-        if usage == USED_FUNCTION_SIGNATURE_VALUE {
-            used.functionSignatureValue = val;
+        llvm:ConstPointerValue val = self.getModule().addGlobal(llFunctionDescType, symbol, isConstant=true);
+        if usage == USED_INHERENT_TYPE {
+            used.inherentType = val;
         }
         else {
             used.functionSignatureCall = val;
@@ -640,9 +635,9 @@ function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean
     return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
 }
 
-function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Function func, llvm:ConstPointerValue llSignature,
-                              llvm:ConstPointerValue llDerivedDescPtr, t:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
-    llvm:ConstValue initValue = context.constStruct([llDerivedDescPtr, llSignature, func]);
+function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Function func, llvm:ConstPointerValue funcDesc,
+                              t:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
+    llvm:ConstValue initValue = context.constStruct([funcDesc, func]);
     llvm:ConstPointerValue ptr = llMod.addGlobal(functionValueType(signature),
                                                  functionDefnSymbol(defnIndex),
                                                  initializer = initValue,
@@ -656,7 +651,6 @@ function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Func
 
 
 function functionValueType(t:FunctionSignature signature) returns llvm:StructType {
-    return llvm:structType([llTypeIdDescPtrType,
-                            llvm:pointerType(LLVM_FUNCTION_SIGNATURE),
+    return llvm:structType([llvm:pointerType(llFunctionDescType),
                             llvm:pointerType(buildFunctionSignature(signature))]);
 }

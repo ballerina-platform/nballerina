@@ -232,7 +232,7 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     llvm:PointerValue unTaggedPtr = buildUntagPointer(builder, scaffold, scaffold.address(insn.operands[0]));
     llvm:ConstPointerValue llSignature = scaffold.getFunctionSignatureCall(signature);
     llvm:Value isExact = buildRuntimeFunctionCall(builder, scaffold, functionIsExactFunction,
-                                                  [llSignature, builder.bitCast(unTaggedPtr, LLVM_FUNCTION_PTR)]);
+                                                  [llSignature, builder.bitCast(unTaggedPtr, heapPointerType(llFunctionType))]);
     llvm:PointerValue funcStructPtr = builder.bitCast(builder.addrSpaceCast(unTaggedPtr,
                                                                             LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE),
                                                       fnStructPtrTy);
@@ -252,7 +252,7 @@ function finishBuildCallIndirectExact(llvm:Builder builder, Scaffold scaffold, b
                                       t:FunctionSignature signature) returns BuildError? {
     var { returnType, paramTypes } = signature;
     llvm:PointerValue fnPtr = builder.getElementPtr(funcStructPtr, [constIndex(scaffold, 0),
-                                                                    constIndex(scaffold, 2)],
+                                                                    constIndex(scaffold, 1)],
                                                     "inbounds");
     llvm:PointerValue funcPtr = <llvm:PointerValue>builder.load(fnPtr);
     check finishBuildCall(builder, scaffold, funcPtr, paramTypes, paramTypes, insn.operands.slice(1), returnType, insn.result);
@@ -305,14 +305,14 @@ function finishBuildCallIndirectInexact(llvm:Builder builder, Scaffold scaffold,
         }
     }
     llvm:PointerValue funcPtr = builder.getElementPtr(funcStructPtr, [constIndex(scaffold, 0),
-                                                                      constIndex(scaffold, 2)],
+                                                                      constIndex(scaffold, 1)],
                                                       "inbounds");
-    llvm:PointerValue fnSignaturePtr = builder.getElementPtr(funcStructPtr, [constIndex(scaffold, 0),
-                                                                             constIndex(scaffold, 1)],
+    llvm:PointerValue fnDescPtr = builder.getElementPtr(funcStructPtr, [constIndex(scaffold, 0),
+                                                                        constIndex(scaffold, 0)],
                                                              "inbounds");
-    llvm:PointerValue fnSignature = <llvm:PointerValue>builder.load(fnSignaturePtr);
-    llvm:PointerValue callUniformFuncPtr = builder.getElementPtr(fnSignature, [constIndex(scaffold, 0),
-                                                                               constIndex(scaffold, 0)],
+    llvm:PointerValue fnDesc = <llvm:PointerValue>builder.load(fnDescPtr);
+    llvm:PointerValue callUniformFuncPtr = builder.getElementPtr(fnDesc, [constIndex(scaffold, 0),
+                                                                          constIndex(scaffold, 1)],
                                                                  "inbounds");
     llvm:Value? returnVal = builder.call(<llvm:PointerValue>builder.load(callUniformFuncPtr),
                                          [uniformArgArray, nArgs, builder.load(funcPtr)]);

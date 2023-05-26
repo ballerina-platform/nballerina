@@ -124,7 +124,7 @@ typedef uint64_t MemberType;
 
 #define BITSET_MEMBER_TYPE(bitSet) (((uint64_t)(bitSet) << 1)|1)
 
-// All mapping, list and function descriptors start with this.
+// All mapping and list and function descriptors start with this.
 typedef struct {
     Tid tid;
 } TypeIdDesc, *TypeIdDescPtr;
@@ -357,22 +357,18 @@ typedef GC struct LargeString {
 typedef void (*FunctionPtr)();
 typedef TaggedPtr (*UniformCallFunction)(TaggedPtr uniformArgs, int64_t nArgs, FunctionPtr funcPtr);
 
-typedef struct FunctionSignature {
-    UniformCallFunction uniformCallFunction;
-    MemberType returnTy;
-    MemberType restTy;
-    int64_t nParams;
-    MemberType paramTys[];
-} *FunctionSignaturePtr;
-
 // This extends TypeIdDesc
 typedef struct {
-   Tid tid;
-} FunctionTypeDesc, *FunctionTypeDescPtr;
+    Tid tid;
+    UniformCallFunction uniformCallFunction;
+    MemberType returnType;
+    MemberType restType;
+    int64_t nParams;
+    MemberType paramTypes[];
+} FunctionDesc, *FunctionDescPtr;
 
 typedef GC struct FunctionValue {
-    FunctionTypeDescPtr functionTypeDesc;
-    FunctionSignaturePtr signature;
+    FunctionDescPtr desc;
     FunctionPtr funcPtr;
 } *FunctionValuePtr;
 

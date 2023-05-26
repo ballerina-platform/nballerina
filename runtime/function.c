@@ -4,16 +4,16 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     if ((getTag(p) & UT_MASK) != TAG_FUNCTION) {
         return false;
     }
-    FunctionValuePtr valPtr = taggedToPtr(p);
-    FunctionSignaturePtr signaturePtr = valPtr->signature;
-    MemberType actualReturnTy = signaturePtr->returnTy;
+    FunctionValuePtr fp = taggedToPtr(p);
+    FunctionDescPtr fdp = fp->desc;
+    MemberType actualReturnType = fdp->returnType;
     FunctionSubtypePtr fstp = (FunctionSubtypePtr)stp;
-    if (!memberTypeIsSubtypeSimple(actualReturnTy, fstp->returnBitSet)) {
+    if (!memberTypeIsSubtypeSimple(actualReturnType, fstp->returnBitSet)) {
         return false;
     }
-    int64_t nParams = signaturePtr->nParams;
+    int64_t nParams = fdp->nParams;
     for (int64_t i = 0; i < nParams; i++) {
-        MemberType paramTy = signaturePtr->paramTys[i];
+        MemberType paramType = fdp->paramTypes[i];
         uint32_t paramBitSet;
         if (i > fstp->nParams) {
             paramBitSet = fstp->restBitSet;
@@ -21,15 +21,15 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
         else {
             paramBitSet = fstp->paramBitSets[i];
         }
-        if (!memberTypeIsSubtypeSimple(paramTy, paramBitSet)) {
+        if (!memberTypeIsSubtypeSimple(paramType, paramBitSet)) {
             return false;
         }
     }
     return true;
 }
 
-bool _bal_function_is_exact(FunctionSignaturePtr signature, FunctionValuePtr value) {
-    return signature == value->signature;
+bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
+    return desc == value->desc;
 }
 
 // nArgs = requiredArgCount + restArgCount

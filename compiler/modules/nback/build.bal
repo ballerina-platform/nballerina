@@ -61,7 +61,7 @@ final RuntimeFunction functionIsExactFunction = {
     name: "function_is_exact",
     ty: {
         returnType: LLVM_BOOLEAN,
-        paramTypes: [llvm:pointerType(LLVM_FUNCTION_SIGNATURE), LLVM_FUNCTION_PTR]
+        paramTypes: [llvm:pointerType(llFunctionDescType), heapPointerType(llFunctionType)]
     },
     attrs: []
 };

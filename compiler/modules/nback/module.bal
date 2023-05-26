@@ -119,9 +119,6 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
         if used.exactify != () {
             use |= USED_EXACTIFY;
         }
-        if used.functionSignatureValue != () {
-            use |= USED_FUNCTION_SIGNATURE_VALUE;
-        }
         if used.functionSignatureCall != () {
             use |= USED_FUNCTION_SIGNATURE_CALL;
         }
