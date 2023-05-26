@@ -649,7 +649,6 @@ function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Func
                                       [context.constInt(LLVM_INT, TAG_FUNCTION)]);
 }
 
-
 function functionValueType(t:FunctionSignature signature) returns llvm:StructType {
     return llvm:structType([llvm:pointerType(llFunctionDescType),
                             llvm:pointerType(buildFunctionSignature(signature))]);

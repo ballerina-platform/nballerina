@@ -57,42 +57,6 @@ type RuntimeFunction readonly & record {|
     llvm:EnumAttribute[] attrs;
 |};
 
-final RuntimeFunction functionIsExactFunction = {
-    name: "function_is_exact",
-    ty: {
-        returnType: LLVM_BOOLEAN,
-        paramTypes: [llvm:pointerType(llFunctionDescType), heapPointerType(llFunctionType)]
-    },
-    attrs: []
-};
-
-final RuntimeFunction createUniformArgArrayFunction = {
-    name: "create_uniform_arg_array",
-    ty: {
-        returnType: llvm:pointerType(LLVM_TAGGED_PTR),
-        paramTypes: ["i64"]
-    },
-    attrs: []
-};
-
-final RuntimeFunction addRestArgsToUniformArgsFunction = {
-    name: "add_rest_args_to_uniform_args",
-    ty: {
-        returnType: LLVM_VOID,
-        paramTypes: [llvm:pointerType(LLVM_TAGGED_PTR), LLVM_INT, LLVM_TAGGED_PTR]
-    },
-    attrs: []
-};
-
-final RuntimeFunction addUniformArgsToRestArgsFunction = {
-    name: "add_uniform_args_to_rest_args",
-    ty: {
-        returnType: LLVM_VOID,
-        paramTypes: [llvm:pointerType(LLVM_TAGGED_PTR), LLVM_INT, LLVM_INT, LLVM_TAGGED_PTR]
-    },
-    attrs: []
-};
-
 final RuntimeFunction panicConstructFunction = {
     name: "panic_construct",
     ty: {
