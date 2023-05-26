@@ -5,10 +5,10 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.print.llvm;
 
-const USED_INHERENT_TYPE = 0x1;
+const USED_CONSTRUCT = 0x1;
 const USED_EXACTIFY = 0x2;
 const USED_TYPE_TEST = 0x4;
-const USED_FUNCTION_SIGNATURE_CALL = 0x8;
+const USED_CALLED = 0x8;
 
 const LLVM_BITSET = "i32";
 const LLVM_TID = "i32";
@@ -92,7 +92,7 @@ type Context object {
     function llContext() returns llvm:Context;
 };
 
-type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST|USED_FUNCTION_SIGNATURE_CALL;
+type TypeHowUsed USED_CONSTRUCT|USED_EXACTIFY|USED_TYPE_TEST|USED_CALLED;
 
 public type TypeUsage readonly & record {|
     t:SemType[] types;
@@ -154,13 +154,13 @@ function listAtomicTypeToListReprPrefix(t:ListAtomicType? atomic) returns ListRe
 
 function mangleTypeSymbol(bir:ModuleId modId, TypeHowUsed howUsed, int index) returns string {
     string result = "_B";
-    if howUsed == USED_INHERENT_TYPE {
+    if howUsed == USED_CONSTRUCT {
         result += "i";
     }
     else if howUsed == USED_EXACTIFY {
         result += "e";
     }
-    else if howUsed == USED_FUNCTION_SIGNATURE_CALL {
+    else if howUsed == USED_CALLED {
         result += "c";
     }
     else {

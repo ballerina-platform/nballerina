@@ -129,10 +129,10 @@ type Module record {|
 type UsedSemType record {|
     readonly t:SemType semType;
     readonly int index;
-    llvm:ConstPointerValue? inherentType = ();
+    llvm:ConstPointerValue? constructType = ();
     llvm:ConstPointerValue? typeTest = ();
     llvm:ConstPointerValue? exactify = ();
-    llvm:ConstPointerValue? functionSignatureCall = ();
+    llvm:ConstPointerValue? called = ();
 |};
 
 class Scaffold {
@@ -263,33 +263,22 @@ class Scaffold {
             return curDefn.value;
         }
         llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func,
-                                                            self.getInherentType(t:functionSemType(self.typeContext(), signature)),
+                                                            self.getConstructType(t:functionSemType(self.typeContext(), signature)),
                                                             signature, self.mod.functionValueDefns.length());
         self.mod.functionValueDefns.add({value, symbol });
         return value;
     }
 
-    // TODO: combine getFunctionSignature into this
-    function getFunctionSignatureCall(t:FunctionSignature signature) returns llvm:ConstPointerValue {
-        return self.getFunctionSignature(signature, USED_FUNCTION_SIGNATURE_CALL);
-    }
-
-    function getFunctionSignature(t:FunctionSignature signature, USED_FUNCTION_SIGNATURE_CALL|USED_INHERENT_TYPE usage) returns llvm:ConstPointerValue {
+    function getCalledType(t:FunctionSignature signature) returns llvm:ConstPointerValue {
         t:SemType signatureTy = t:functionSemType(self.typeContext(), signature);
         UsedSemType used = self.getUsedSemType(signatureTy);
-        llvm:ConstPointerValue? llSignature = usage == USED_INHERENT_TYPE ? used.inherentType :
-                                                                            used.functionSignatureCall;
+        llvm:ConstPointerValue? llSignature = used.called;
         if llSignature != () {
             return llSignature;
         }
-        string symbol = mangleTypeSymbol(self.mod.modId, usage, used.index);
+        string symbol = mangleTypeSymbol(self.mod.modId, USED_CALLED, used.index);
         llvm:ConstPointerValue val = self.getModule().addGlobal(llFunctionDescType, symbol, isConstant=true);
-        if usage == USED_INHERENT_TYPE {
-            used.inherentType = val;
-        }
-        else {
-            used.functionSignatureCall = val;
-        }
+        used.called = val;
         return val;
     }
 
@@ -377,14 +366,14 @@ class Scaffold {
         }
     }
 
-    function getInherentType(t:SemType ty) returns llvm:ConstPointerValue {
+    function getConstructType(t:SemType ty) returns llvm:ConstPointerValue {
         UsedSemType used = self.getUsedSemType(ty);
-        llvm:ConstPointerValue? value = used.inherentType;
+        llvm:ConstPointerValue? value = used.constructType;
         if value == () {
             Module m = self.mod;
-            string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
+            string symbol = mangleTypeSymbol(m.modId, USED_CONSTRUCT, used.index);
             llvm:ConstPointerValue v = m.llMod.addGlobal(llTypeIdDescType, symbol, isConstant = true);
-            used.inherentType = v;
+            used.constructType = v;
             return v;
         }
         else {

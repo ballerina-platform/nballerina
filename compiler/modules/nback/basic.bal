@@ -259,3 +259,8 @@ function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNot
                       builder.iBitwise("xor", constBoolean(scaffold, true), builder.load(scaffold.address(insn.operand))),
                       insn.result);
 }
+
+function buildUntagPointer(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue taggedPtr) returns llvm:PointerValue {
+    return <llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1.i64"),
+                                           [builder.load(taggedPtr), constInt(scaffold, POINTER_MASK)]);
+}

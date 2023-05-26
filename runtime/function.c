@@ -35,12 +35,12 @@ bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
 // nArgs = requiredArgCount + restArgCount
 // We are using uint64_t to avoid overflow in case of restArgCount close to INT64_MAX. This means indexing uniform arg array
 // must also be done using uint64_t
-GC TaggedPtr *_bal_create_uniform_arg_array(uint64_t nArgs) {
+GC TaggedPtr *_bal_construct_uniform_arg_array(uint64_t nArgs) {
     GC TaggedPtr *arr = _bal_alloc(sizeof(TaggedPtr) * nArgs);
     return arr;
 }
 
-void _bal_add_rest_args_to_uniform_args(TaggedPtr *uniformArgArray, int64_t startingOffset, TaggedPtr restArgArray) {
+void _bal_add_rest_args_to_uniform_args(TaggedPtr *uniformArgArray, TaggedPtr restArgArray, int64_t startingOffset) {
     ListPtr lp = taggedToPtr(restArgArray);
     int64_t len = lp->tpArray.length;
     for (int64_t i = 0; i < len; i++) {
@@ -49,7 +49,7 @@ void _bal_add_rest_args_to_uniform_args(TaggedPtr *uniformArgArray, int64_t star
     }
 }
 
-void _bal_add_uniform_args_to_rest_args(TaggedPtr *uniformArgArray, int64_t restArgCount, int64_t startingOffset, TaggedPtr restArgArray) {
+void _bal_add_uniform_args_to_rest_args(TaggedPtr restArgArray, TaggedPtr *uniformArgArray, int64_t restArgCount, int64_t startingOffset) {
     ListPtr lp = taggedToPtr(restArgArray);
     for (int64_t i = 0; i < restArgCount; i++) {
         uint64_t index = startingOffset + i;

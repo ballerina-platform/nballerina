@@ -1401,7 +1401,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
             if atom == () {
                 if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) {
                     if t:isSubtype(cx.mod.tc, t:FUNCTION, semType) {
-                        return cx.semanticErr("only values of proper subtype of function can be called", expr.qNamePos);
+                        return cx.semanticErr("only a value of proper subtype of function can be called", expr.qNamePos);
                     }
                     return cx.unimplementedErr("can't call function values that don't belong to single explicit type", expr.qNamePos);
                 }

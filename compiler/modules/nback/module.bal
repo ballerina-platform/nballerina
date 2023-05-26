@@ -110,8 +110,8 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
     foreach var used in usedSemTy {
         types.push(used.semType);
         byte use = 0;
-        if used.inherentType != () {
-            use = USED_INHERENT_TYPE;
+        if used.constructType != () {
+            use = USED_CONSTRUCT;
         }
         if used.typeTest != () {
             use |= USED_TYPE_TEST;
@@ -119,8 +119,8 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
         if used.exactify != () {
             use |= USED_EXACTIFY;
         }
-        if used.functionSignatureCall != () {
-            use |= USED_FUNCTION_SIGNATURE_CALL;
+        if used.called != () {
+            use |= USED_CALLED;
         }
         uses.push(use);
     }
