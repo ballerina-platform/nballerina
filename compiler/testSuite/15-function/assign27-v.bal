@@ -20,7 +20,6 @@ public function main() {
     }
 }
 
-
 function foo(int i) {
     io:println(i);
 }

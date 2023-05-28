@@ -6,26 +6,18 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     }
     FunctionValuePtr fp = taggedToPtr(p);
     FunctionDescPtr fdp = fp->desc;
-    MemberType actualReturnType = fdp->returnType;
     FunctionSubtypePtr fstp = (FunctionSubtypePtr)stp;
-    if (!memberTypeIsSubtypeSimple(actualReturnType, fstp->returnBitSet)) {
+    if (!memberTypeIsSubtypeSimple(fdp->returnType, fstp->returnBitSet)) {
         return false;
     }
-    int64_t nParams = fdp->nParams;
-    for (int64_t i = 0; i < nParams; i++) {
-        MemberType paramType = fdp->paramTypes[i];
-        uint32_t paramBitSet;
-        if (i > fstp->nParams) {
-            paramBitSet = fstp->restBitSet;
-        }
-        else {
-            paramBitSet = fstp->paramBitSets[i];
-        }
-        if (!memberTypeIsSubtypeSimple(paramType, paramBitSet)) {
+    for (int64_t i = 0; i < fstp->nRequiredParams; i++) {
+        MemberType paramType = (i < fdp->nRequiredParams) ? fdp->paramTypes[i] : fdp->restType;
+        uint32_t paramBitSet = fstp->paramBitSets[i];
+        if (!memberTypeIsSupertypeSimple(paramType, paramBitSet)) {
             return false;
         }
     }
-    return true;
+    return memberTypeIsNever(fdp->restType) || memberTypeIsSupertypeSimple(fdp->restType, fstp->restBitSet);
 }
 
 bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
@@ -40,7 +32,7 @@ GC TaggedPtr *_bal_construct_uniform_arg_array(uint64_t nArgs) {
     return arr;
 }
 
-void _bal_add_rest_args_to_uniform_args(TaggedPtr *uniformArgArray, TaggedPtr restArgArray, int64_t startingOffset) {
+void _bal_add_rest_args_to_uniform_args(TaggedPtr *uniformArgArray, const TaggedPtr restArgArray, int64_t startingOffset) {
     ListPtr lp = taggedToPtr(restArgArray);
     int64_t len = lp->tpArray.length;
     for (int64_t i = 0; i < len; i++) {
@@ -49,7 +41,7 @@ void _bal_add_rest_args_to_uniform_args(TaggedPtr *uniformArgArray, TaggedPtr re
     }
 }
 
-void _bal_add_uniform_args_to_rest_args(TaggedPtr restArgArray, TaggedPtr *uniformArgArray, int64_t restArgCount, int64_t startingOffset) {
+void _bal_add_uniform_args_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uniformArgArray, int64_t startingOffset, int64_t restArgCount) {
     ListPtr lp = taggedToPtr(restArgArray);
     for (int64_t i = 0; i < restArgCount; i++) {
         uint64_t index = startingOffset + i;

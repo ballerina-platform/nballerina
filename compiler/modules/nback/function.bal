@@ -107,7 +107,6 @@ function finishBuildCallIndirectInexact(llvm:Builder builder, Scaffold scaffold,
                                     select check buildRepr(builder, scaffold, insn.operands[i],
                                                            uniformRepr(insn.operands[i].semType));
     llvm:Value nArgs;
-    llvm:PointerValue uniformArgArray;
     llvm:PointerValue? restArgs;
     if restParamType !is () {
         // rest is represented as a temporary array
@@ -126,8 +125,8 @@ function finishBuildCallIndirectInexact(llvm:Builder builder, Scaffold scaffold,
         nArgs = constInt(scaffold, requiredArgCount);
         restArgs = ();
     }
-    uniformArgArray = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,
-                                                                  constructUniformArgArrayFunction, [nArgs]);
+    llvm:PointerValue uniformArgArray = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,
+                                                                                    constructUniformArgArrayFunction, [nArgs]);
     foreach int i in 0 ..< uniformArgs.length() {
         builder.store(uniformArgs[i], builder.getElementPtr(uniformArgArray, [constInt(scaffold, i)], "inbounds"));
     }

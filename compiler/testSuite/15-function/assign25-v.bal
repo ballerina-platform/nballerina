@@ -10,7 +10,7 @@ type R1 record {|
 type F function(R1 a, R1 b) returns int;
 
 public function main() {
-    F f = foo; 
+    F f = foo;
     io:println(f({ x: 1 }, { x: 2 })); // @output 3
 }
 

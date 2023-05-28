@@ -1,4 +1,3 @@
-
 import ballerina/io;
 type F function(int) returns int;
 type F2 function(int, int) returns int;
@@ -22,9 +21,9 @@ public function main() {
 }
 
 function f1(int i) returns int {
-  return i;
+    return i;
 }
 
 function f2(int i, int j) returns int {
-  return i + j;
+    return i + j;
 }

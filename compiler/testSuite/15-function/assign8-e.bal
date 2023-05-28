@@ -8,7 +8,6 @@ public function main() {
     }
 }
 
-
 function foo(int x) {
     io:println("unexpected");
 }

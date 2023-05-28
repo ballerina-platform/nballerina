@@ -25,7 +25,6 @@ function exec(BinaryOperation op) returns int {
     return f(op.left, op.right);
 }
 
-
 function add(int left, int right) returns int {
     return left + right;
 }
@@ -33,7 +32,6 @@ function add(int left, int right) returns int {
 function mul(int left, int right) returns int {
     return left * right;
 }
-
 
 function addAny(int init, int... rest) returns int {
     int sum = init;

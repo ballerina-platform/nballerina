@@ -272,14 +272,14 @@ class Scaffold {
     function getCalledType(t:FunctionSignature signature) returns llvm:ConstPointerValue {
         t:SemType signatureTy = t:functionSemType(self.typeContext(), signature);
         UsedSemType used = self.getUsedSemType(signatureTy);
-        llvm:ConstPointerValue? llSignature = used.called;
-        if llSignature != () {
-            return llSignature;
+        llvm:ConstPointerValue? value = used.called;
+        if value != () {
+            return value;
         }
         string symbol = mangleTypeSymbol(self.mod.modId, USED_CALLED, used.index);
-        llvm:ConstPointerValue val = self.getModule().addGlobal(llFunctionDescType, symbol, isConstant=true);
-        used.called = val;
-        return val;
+        llvm:ConstPointerValue v = self.getModule().addGlobal(llFunctionDescType, symbol, isConstant=true);
+        used.called = v;
+        return v;
     }
 
     function getDecimal(decimal val) returns DecimalDefn {

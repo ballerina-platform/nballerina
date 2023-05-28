@@ -124,7 +124,7 @@ typedef uint64_t MemberType;
 
 #define BITSET_MEMBER_TYPE(bitSet) (((uint64_t)(bitSet) << 1)|1)
 
-// All mapping and list and function descriptors start with this.
+// All mapping, list and function descriptors start with this.
 typedef struct {
     Tid tid;
 } TypeIdDesc, *TypeIdDescPtr;
@@ -315,7 +315,7 @@ typedef struct {
     UniformSubtype uniform;
     uint32_t returnBitSet;
     uint32_t restBitSet;
-    int64_t nParams;
+    int64_t nRequiredParams;
     uint32_t paramBitSets[];
 } *FunctionSubtypePtr;
 
@@ -363,7 +363,7 @@ typedef struct {
     UniformCallFunction uniformCallFunction;
     MemberType returnType;
     MemberType restType;
-    int64_t nParams;
+    int64_t nRequiredParams;
     MemberType paramTypes[];
 } FunctionDesc, *FunctionDescPtr;
 
@@ -566,16 +566,26 @@ static READNONE inline UntypedPtr taggedToPtrExact(TaggedPtr p) {
     return _bal_ptr_mask(p, (POINTER_MASK & ALIGN_MASK)|EXACT_FLAG);
 }
 
-static READONLY inline bool memberTypeIsSubtypeSimple(MemberType memberType, uint32_t bitSet) {
-    uint32_t memberBitSet;
+static READONLY inline uint32_t memberBitSet(MemberType memberType) {
     if (memberType & 1) {
-        memberBitSet = (uint32_t)(memberType >> 1);
+        return (uint32_t)(memberType >> 1);
     }
     else {
         ComplexTypePtr ctp = (ComplexTypePtr)memberType;
-        memberBitSet = ctp->all | ctp->some; 
+        return ctp->all | ctp->some;
     }
-    return (memberBitSet & ~(uint64_t)bitSet) == 0;
+}
+
+static READONLY inline bool memberTypeIsSubtypeSimple(MemberType memberType, uint32_t bitSet) {
+    return (memberBitSet(memberType) & ~(uint64_t)bitSet) == 0;
+}
+
+static READONLY inline bool memberTypeIsSupertypeSimple(MemberType memberType, uint32_t bitSet) {
+    return (bitSet & ~(uint64_t)memberBitSet(memberType)) == 0;
+}
+
+static READONLY inline bool memberTypeIsNever(MemberType memberType) {
+    return memberBitSet(memberType) == 0;
 }
 
 static READONLY inline bool complexTypeContainsTagged(ComplexTypePtr ctp, TaggedPtr p) {

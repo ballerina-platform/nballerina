@@ -9,5 +9,5 @@ public function main() {
 }
 
 function f1(int i) returns int {
-  return i;
+    return i;
 }

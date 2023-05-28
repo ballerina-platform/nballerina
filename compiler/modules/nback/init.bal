@@ -293,7 +293,7 @@ function createFunctionDescType(t:Context tc, t:SemType semType) returns llvm:St
 function createFunctionDescInit(InitModuleContext cx, llvm:Builder builder, string symbol, int tid, t:SemType semType) returns llvm:ConstValue {
     t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(cx.tc, semType);
     t:FunctionSignature signature = t:functionSignature(cx.tc, atomic);
-    llvm:Function uniformCallFunc = buildUniformCallFunction(cx, signature, builder, symbol + "_uniform_call");
+    llvm:Function uniformCallFunc = createUniformCallFunction(cx, signature, builder, symbol + "_uniform_call");
     llvm:ConstValue returnTy = getMemberType(cx, signature.returnType);
     t:SemType? restParamType = signature.restParamType;
     llvm:ConstValue restParamTy = restParamType == () ? getMemberType(cx, t:NEVER) : getMemberType(cx, restParamType);
@@ -304,13 +304,13 @@ function createFunctionDescInit(InitModuleContext cx, llvm:Builder builder, stri
                                        constInt(cx, nRequiredParams), paramTys]);
 }
 
-function buildUniformCallFunction(InitModuleContext cx, t:FunctionSignature signature,
+function createUniformCallFunction(InitModuleContext cx, t:FunctionSignature signature,
                                   llvm:Builder builder, string symbol) returns llvm:Function {
     llvm:FunctionDefn func = cx.llMod.addFunctionDefn(symbol, llUniformCallFuncTy);
     llvm:BasicBlock bb = func.appendBasicBlock();
     builder.positionAtEnd(bb);
     llvm:PointerValue[] exactArgs = from t:SemType paramType in signature.paramTypes
-                                     select builder.alloca(exactArgType(paramType));
+                                      select builder.alloca(exactArgType(paramType));
     llvm:PointerValue uniformArgArray = <llvm:PointerValue>func.getParam(0);
     int nRequiredParams = requiredParamCount(signature);
     foreach int i in 0 ..< nRequiredParams {
@@ -324,9 +324,9 @@ function buildUniformCallFunction(InitModuleContext cx, t:FunctionSignature sign
         builder.store(createUniformCallRestArgList(cx, builder, signature.paramTypes[nRequiredParams], symbol),
                       restArgArrayPtr);
         llvm:Value startingOffset = constInt(cx, nRequiredParams);
-        llvm:Value restArgCount = builder.iArithmeticWrap("sub", func.getParam(1), startingOffset);
+        llvm:Value restArgCount = builder.iArithmeticNoWrap("sub", func.getParam(1), startingOffset);
         buildVoidRuntimeFunctionCall(builder, cx, addUniformArgsToRestArgsFunction,
-                                     [builder.load(restArgArrayPtr), uniformArgArray, restArgCount, startingOffset]);
+                                     [builder.load(restArgArrayPtr), uniformArgArray, startingOffset, restArgCount]);
     }
     llvm:FunctionType funcTy = buildFunctionSignature(signature);
     llvm:Value? retValue = builder.call(builder.bitCast(<llvm:PointerValue>func.getParam(2), llvm:pointerType(funcTy)),
@@ -456,7 +456,7 @@ function addListFillerDesc(InitModuleContext cx, llvm:Builder builder, t:ListFil
     t:SemType listTy = filler.semType;
     table<ConstructTypeDefn> key(semType) defns = cx.constructTypeDefns[ID_LIST];
     llvm:ConstPointerValue defn = defns.hasKey(listTy) ? defns.get(listTy).ptr : addConstructTypeDefn(cx, builder, memberListDescSymbol(defns.length()),
-                                                                                                     listTy, ID_LIST, "external");
+                                                                                                      listTy, ID_LIST, "external");
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llTypeIdDescPtrType);
     return filler.atomic.members.fixedLength == 0 ? addFillerDesc(cx, structDescPtr, "list") :
                                                     finishFixedLengthListFillerDesc(cx, builder, structDescPtr, filler);
@@ -489,7 +489,7 @@ function addMappingFillerDesc(InitModuleContext cx, llvm:Builder builder, t:Mapp
     t:SemType mappingTy = filler.semType;
     table<ConstructTypeDefn> key(semType) defns = cx.constructTypeDefns[ID_MAPPING];
     llvm:ConstPointerValue defn = defns.hasKey(mappingTy) ? defns.get(mappingTy).ptr : addConstructTypeDefn(cx, builder, memberMappingDescSymbol(defns.length()),
-                                                                                                           mappingTy, ID_MAPPING, "external");
+                                                                                                            mappingTy, ID_MAPPING, "external");
     llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llTypeIdDescPtrType);
     return addFillerDesc(cx, structDescPtr, "mapping");
 }
@@ -687,8 +687,8 @@ function createFunctionSubtypeStruct(InitModuleContext cx, t:ComplexSemType semT
         var { returnType, paramTypes, restParamType } = signature;
         if returnType is t:BasicTypeBitSet && restParamType is t:BasicTypeBitSet? {
             int nRequiredParams = requiredParamCount(signature);
-            t:BasicTypeBitSet[] requiredParamBitSets = from var [index, paramTy] in paramTypes.enumerate()
-                                                         where (index < nRequiredParams && paramTy is t:BasicTypeBitSet)
+            t:BasicTypeBitSet[] requiredParamBitSets = from var paramTy in paramTypes.slice(0, nRequiredParams)
+                                                         where paramTy is t:BasicTypeBitSet
                                                          select paramTy;
             if requiredParamBitSets.length() == nRequiredParams {
                 llvm:ConstValue paramBitSetArray = cx.llContext().constArray(LLVM_BITSET,

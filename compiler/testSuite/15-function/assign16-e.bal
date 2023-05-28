@@ -1,4 +1,3 @@
-
 import ballerina/io;
 type F1 function(int);
 type F2 function(int|float);

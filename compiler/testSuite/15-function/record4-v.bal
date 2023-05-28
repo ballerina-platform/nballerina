@@ -27,11 +27,17 @@ function executeOp(Op op) returns int {
     }
 }
 
-function add(int lhs, int rhs) returns int {
+function add(int|string lhs, int|string rhs) returns int {
+    if lhs is string || rhs is string {
+        return 0;
+    }
     return lhs + rhs;
 }
 
-function nAdd(int init, int... rest) returns int {
+function nAdd(int|string init, int|string... rest) returns int {
+    if init is string || rest is string[] {
+        return -1;
+    }
     int result = init;
     foreach int i in 0..< rest.length() {
         result = add(result, rest[i]);
@@ -39,6 +45,9 @@ function nAdd(int init, int... rest) returns int {
     return result;
 }
 
-function increment(int lhs) returns int {
+function increment(int|string lhs) returns int {
+    if lhs is string {
+        return 0;
+    }
     return lhs + 1;
 }

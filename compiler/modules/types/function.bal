@@ -88,7 +88,9 @@ public function functionSemType(Context cx, FunctionSignature signature) returns
         requiredParams = paramTypes;
     }
     SemType rest = restParamType is () ? NEVER : restParamType;
-    return defn.define(env, defineListTypeWrapped(new (), env, requiredParams, rest = rest, mut = CELL_MUT_NONE), returnType);
+    SemType semType = defn.define(env, defineListTypeWrapped(new(), env, requiredParams, rest=rest, mut=CELL_MUT_NONE), returnType);
+    cx.functionAtomicTypeMemo.add({ signature, semType });
+    return semType;
 }
 
 function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
