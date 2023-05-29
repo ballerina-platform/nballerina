@@ -170,7 +170,7 @@ function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, T
                     addExactifyTypeSymbol(cx, sym, ty);
                 }
                 else if howUsed == USED_CALLED {
-                    addCalledTypeSymbol(cx, sym, ty, builder);
+                    addCalledTypeSymbol(cx, builder, sym, ty);
                 }
                 else {
                     addTypeTestTypeSymbol(cx, sym, <t:ComplexSemType>ty);
@@ -180,7 +180,7 @@ function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, T
     }
 }
 
-function addCalledTypeSymbol(InitModuleContext cx, string symbol, t:SemType semType, llvm:Builder builder) {
+function addCalledTypeSymbol(InitModuleContext cx, llvm:Builder builder, string symbol, t:SemType semType) {
     ConstructTypeDefn? existingDefn = cx.constructTypeDefns[ID_FUNCTION][semType];
     if existingDefn != () {
         _ = cx.llMod.addAlias(existingDefn.llType, existingDefn.ptr, symbol);
@@ -229,7 +229,7 @@ function addConstructTypeDefn(InitModuleContext cx, llvm:Builder builder, string
         initValue = createMappingDescInit(cx, builder, tid, semType);
     }
     else {
-        initValue = createFunctionDescInit(cx, builder, symbol, tid, semType);
+        initValue = createFunctionDescInit(cx, builder, tid, semType, symbol);
     }
     cx.llMod.setInitializer(ptr, initValue);
     return ptr;
@@ -290,7 +290,7 @@ function createFunctionDescType(t:Context tc, t:SemType semType) returns llvm:St
                             llvm:arrayType(LLVM_MEMBER_TYPE, requiredParamCount(signature))]);
 }
 
-function createFunctionDescInit(InitModuleContext cx, llvm:Builder builder, string symbol, int tid, t:SemType semType) returns llvm:ConstValue {
+function createFunctionDescInit(InitModuleContext cx, llvm:Builder builder, int tid, t:SemType semType, string symbol) returns llvm:ConstValue {
     t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(cx.tc, semType);
     t:FunctionSignature signature = t:functionSignature(cx.tc, atomic);
     llvm:Function uniformCallFunc = createUniformCallFunction(cx, signature, builder, symbol + "_uniform_call");
