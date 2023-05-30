@@ -586,10 +586,6 @@ static READONLY inline bool memberTypeIsSupertypeSimple(MemberType memberType, u
     return (bitSet & ~(uint64_t)memberBitSet(memberType)) == 0;
 }
 
-static READONLY inline bool memberTypeIsNever(MemberType memberType) {
-    return memberBitSet(memberType) == 0;
-}
-
 static READONLY inline bool complexTypeContainsTagged(ComplexTypePtr ctp, TaggedPtr p) {
     int flag = 1 << ((getTag(p) & UT_MASK));
     if (ctp->all & flag) {

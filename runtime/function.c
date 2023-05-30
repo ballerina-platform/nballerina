@@ -10,14 +10,15 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     if (!memberTypeIsSubtypeSimple(fdp->returnType, fstp->returnBitSet)) {
         return false;
     }
-    for (uint32_t i = 0; i < fstp->nRequiredParams; i++) {
+    int maxRequiredParams = (fstp->nRequiredParams > fdp->nRequiredParams) ? fstp->nRequiredParams : fdp->nRequiredParams;
+    for (int64_t i = 0; i < maxRequiredParams; i++) {
         MemberType paramType = (i < fdp->nRequiredParams) ? fdp->paramTypes[i] : fdp->restType;
-        uint32_t paramBitSet = fstp->paramBitSets[i];
+        uint32_t paramBitSet = (i < fstp->nRequiredParams) ? fstp->paramBitSets[i] : fstp->restBitSet;
         if (!memberTypeIsSupertypeSimple(paramType, paramBitSet)) {
             return false;
         }
     }
-    return memberTypeIsNever(fdp->restType) || memberTypeIsSupertypeSimple(fdp->restType, fstp->restBitSet);
+    return memberTypeIsSupertypeSimple(fdp->restType, fstp->restBitSet);
 }
 
 bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
