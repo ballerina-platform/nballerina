@@ -602,6 +602,8 @@ public type CallInsn readonly & record {|
 
 # Call a function using a function value.
 # This behaves similar to CallInsn.
+# XXX: In addition this can also panic due to memory allocation for uniform function call
+# which is not handled gracefully
 public type CallIndirectInsn readonly & record {|
     *ResultInsnBase;
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;

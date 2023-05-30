@@ -1391,28 +1391,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     bir:FunctionRef func;
     bir:Register? funcRegister = ();
     if prefix == () {
-        var ref = cx.lookupLocalVarRef(expr.funcName, expr.qNamePos);
-        if ref is bir:FunctionRef {
-            func = ref;
-        }
-        else if ref is Binding {
-            t:SemType semType = ref.reg.semType;
-            t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
-            if atom == () {
-                if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) {
-                    if t:isSubtype(cx.mod.tc, t:FUNCTION, semType) {
-                        return cx.semanticErr("only a value of proper subtype of function can be called", expr.qNamePos);
-                    }
-                    return cx.unimplementedErr("can't call function values that don't belong to single explicit type", expr.qNamePos);
-                }
-                return cx.semanticErr("only a value of function type can be called", expr.qNamePos);
-            }
-            funcRegister = ref.reg;
-            func = functionRefFromAtom(cx, atom, registerName(ref.reg));
-        }
-        else {
-            return cx.semanticErr("only a value of function type can be called", expr.qNamePos);
-        }
+        [func, funcRegister] = check genLocalFunctionRef(cx, expr.funcName, expr.qNamePos);
     }
     else {
         func = check genImportedFunctionRef(cx, prefix, expr.funcName, expr.qNamePos);
@@ -1450,6 +1429,22 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         return codeGenCallIndirect(cx, curBlock, funcRegister, func, func.signature.returnType, args, expr.qNamePos);
     }
     return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.qNamePos);
+}
+
+function genLocalFunctionRef(ExprContext cx, string funcName, Position pos) returns [bir:FunctionRef, bir:Register?]|CodeGenError {
+    var ref = cx.lookupLocalVarRef(funcName, pos);
+    if ref is bir:FunctionRef {
+        return [ref, ()];
+    }
+    else if ref is Binding {
+        t:SemType semType = ref.reg.semType;
+        t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
+        if atom != () {
+            return [functionRefFromAtom(cx, atom, registerName(ref.reg)), ref.reg];
+        }
+        return cx.unimplementedErr("return type projection not implemented", pos);
+    }
+    return cx.semanticErr("only a value of function type can be called", pos);
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {

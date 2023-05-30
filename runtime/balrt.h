@@ -311,13 +311,15 @@ typedef struct {
     TaggedPtr strs[];
 } *StringSubtypePtr;
 
+// This only handles cases where function is both atomic and all parameter and return types are unions of basic types
+// For others we are using PrecomputedSubtypePtr
 typedef struct {
     UniformSubtype uniform;
     uint32_t returnBitSet;
     uint32_t restBitSet;
-    int64_t nRequiredParams;
+    uint32_t nRequiredParams;
     uint32_t paramBitSets[];
-} *FunctionSubtypePtr;
+} *AtomicFunctionSubtypePtr;
 
 typedef struct {
    uint32_t all;
@@ -355,12 +357,12 @@ typedef GC struct LargeString {
 } *LargeStringPtr;
 
 typedef void (*FunctionPtr)();
-typedef TaggedPtr (*UniformCallFunction)(TaggedPtr uniformArgs, int64_t nArgs, FunctionPtr funcPtr);
+typedef TaggedPtr (*UniformFunctionPtr)(FunctionPtr func, uint64_t nArgs, TaggedPtr uniformArgs);
 
 // This extends TypeIdDesc
 typedef struct {
     Tid tid;
-    UniformCallFunction uniformCallFunction;
+    UniformFunctionPtr uniformFunctionPtr;
     MemberType returnType;
     MemberType restType;
     int64_t nRequiredParams;
@@ -369,7 +371,7 @@ typedef struct {
 
 typedef GC struct FunctionValue {
     FunctionDescPtr desc;
-    FunctionPtr funcPtr;
+    FunctionPtr func;
 } *FunctionValuePtr;
 
 // Roundup to multiple of 8

@@ -15,7 +15,7 @@ final RuntimeFunction functionIsExactFunction = {
 };
 
 final RuntimeFunction constructUniformArgArrayFunction = {
-    name: "construct_uniform_arg_array",
+    name: "function_construct_uniform_arg_array",
     ty: {
         returnType: llvm:pointerType(LLVM_TAGGED_PTR),
         paramTypes: ["i64"]
@@ -24,7 +24,7 @@ final RuntimeFunction constructUniformArgArrayFunction = {
 };
 
 final RuntimeFunction addRestArgsToUniformArgsFunction = {
-    name: "add_rest_args_to_uniform_args",
+    name: "function_add_rest_args_to_uniform_args",
     ty: {
         returnType: LLVM_VOID,
         paramTypes: [llUniformArgArrayType, heapPointerType(llListType), LLVM_INT]
@@ -33,7 +33,7 @@ final RuntimeFunction addRestArgsToUniformArgsFunction = {
 };
 
 final RuntimeFunction addUniformArgsToRestArgsFunction = {
-    name: "add_uniform_args_to_rest_args",
+    name: "function_add_uniform_args_to_rest_args",
     ty: {
         returnType: LLVM_VOID,
         paramTypes: [heapPointerType(llListType), llUniformArgArrayType, LLVM_INT, LLVM_INT]
@@ -55,7 +55,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
 }
 
 function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns BuildError? {
-    // XXX: Once we properly support function types (ability to call unions), semType will no longer guaranteed to be a function atom
+    // XXX: Once we properly support function types (return type projection), semType will no longer guaranteed to be a function atom
     // But in cases where semType is not atomic we don't need a signature since they will always be "inexact"
     t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(scaffold.typeContext(), insn.operands[0].semType);
     t:FunctionSignature signature = t:functionSignature(scaffold.typeContext(), atomic);
@@ -141,11 +141,11 @@ function finishBuildCallIndirectInexact(llvm:Builder builder, Scaffold scaffold,
                                                                                        [constIndex(scaffold, 0),
                                                                                         constIndex(scaffold, 0)],
                                                                                        "inbounds"));
-    llvm:PointerValue callUniformFuncPtr = builder.getElementPtr(funcDesc, [constIndex(scaffold, 0),
-                                                                            constIndex(scaffold, 1)],
-                                                                 "inbounds");
-    llvm:Value? returnVal = builder.call(<llvm:PointerValue>builder.load(callUniformFuncPtr),
-                                         [uniformArgArray, nArgs, builder.load(funcPtr)]);
+    llvm:PointerValue uniformFuncPtr = builder.getElementPtr(funcDesc, [constIndex(scaffold, 0),
+                                                                        constIndex(scaffold, 1)],
+                                                             "inbounds");
+    llvm:Value? returnVal = builder.call(<llvm:PointerValue>builder.load(uniformFuncPtr),
+                                         [builder.load(funcPtr), uniformArgArray, nArgs]);
     if returnVal !is llvm:PointerValue {
         panic err:impossible("uniform call must return a tagged pointer");
     }

@@ -20,17 +20,16 @@ final llvm:PointerType llTypeIdDescPtrType = llvm:pointerType(llTypeIdDescType);
 
 // Function pointer type is an approximation
 final llvm:PointerType llFunctionPtrType = llvm:pointerType(llvm:functionType("void", []));
-final llvm:FunctionType llUniformCallFuncTy = llvm:functionType(LLVM_TAGGED_PTR,
-                                                                [llvm:pointerType(LLVM_TAGGED_PTR),
-                                                                 "i64",
-                                                                 llFunctionPtrType]);
+final llvm:FunctionType llUniformFunctionType = llvm:functionType(LLVM_TAGGED_PTR,
+                                                                  [llFunctionPtrType,
+                                                                   llvm:pointerType(LLVM_TAGGED_PTR),
+                                                                   "i64"]);
 final llvm:StructType llFunctionDescType = llvm:structType([LLVM_TID,
-                                                            llvm:pointerType(llUniformCallFuncTy),
+                                                            llvm:pointerType(llUniformFunctionType),
                                                             LLVM_MEMBER_TYPE,
                                                             LLVM_MEMBER_TYPE,
                                                             LLVM_INT,
                                                             llvm:pointerType(LLVM_MEMBER_TYPE)]);
-
 final llvm:StructType llFunctionType = llvm:structType([llvm:pointerType(llFunctionDescType),
                                                         llFunctionPtrType]);
 

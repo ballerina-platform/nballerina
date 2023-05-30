@@ -283,7 +283,7 @@ function createFunctionDescType(t:Context tc, t:SemType semType) returns llvm:St
     t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(tc, semType);
     t:FunctionSignature signature = t:functionSignature(tc, atomic);
     return llvm:structType([LLVM_TID,
-                            llvm:pointerType(llUniformCallFuncTy),
+                            llvm:pointerType(llUniformFunctionType),
                             LLVM_MEMBER_TYPE,
                             LLVM_MEMBER_TYPE,
                             LLVM_INT,
@@ -293,25 +293,24 @@ function createFunctionDescType(t:Context tc, t:SemType semType) returns llvm:St
 function createFunctionDescInit(InitModuleContext cx, llvm:Builder builder, int tid, t:SemType semType, string symbol) returns llvm:ConstValue {
     t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(cx.tc, semType);
     t:FunctionSignature signature = t:functionSignature(cx.tc, atomic);
-    llvm:Function uniformCallFunc = createUniformCallFunction(cx, signature, builder, symbol + "_uniform_call");
+    llvm:Function uniformFunc = createUniformFunction(cx, signature, builder, symbol + "_uniform");
     llvm:ConstValue returnTy = getMemberType(cx, signature.returnType);
     t:SemType? restParamType = signature.restParamType;
     llvm:ConstValue restParamTy = restParamType == () ? getMemberType(cx, t:NEVER) : getMemberType(cx, restParamType);
     int nRequiredParams = requiredParamCount(signature);
     llvm:ConstValue paramTys = cx.llContext().constArray(LLVM_MEMBER_TYPE,
                                                          from int i in 0 ..< nRequiredParams select getMemberType(cx, signature.paramTypes[i]));
-    return cx.llContext().constStruct([constTid(cx, tid), uniformCallFunc, returnTy, restParamTy,
+    return cx.llContext().constStruct([constTid(cx, tid), uniformFunc, returnTy, restParamTy,
                                        constInt(cx, nRequiredParams), paramTys]);
 }
 
-function createUniformCallFunction(InitModuleContext cx, t:FunctionSignature signature,
-                                  llvm:Builder builder, string symbol) returns llvm:Function {
-    llvm:FunctionDefn func = cx.llMod.addFunctionDefn(symbol, llUniformCallFuncTy);
+function createUniformFunction(InitModuleContext cx, t:FunctionSignature signature, llvm:Builder builder, string symbol) returns llvm:Function {
+    llvm:FunctionDefn func = cx.llMod.addFunctionDefn(symbol, llUniformFunctionType);
     llvm:BasicBlock bb = func.appendBasicBlock();
     builder.positionAtEnd(bb);
     llvm:PointerValue[] exactArgs = from t:SemType paramType in signature.paramTypes
                                       select builder.alloca(exactArgType(paramType));
-    llvm:PointerValue uniformArgArray = <llvm:PointerValue>func.getParam(0);
+    llvm:PointerValue uniformArgArray = <llvm:PointerValue>func.getParam(1);
     int nRequiredParams = requiredParamCount(signature);
     foreach int i in 0 ..< nRequiredParams {
         llvm:Value uniformArg = builder.load(builder.getElementPtr(uniformArgArray, [constIndex(cx, i)]));
@@ -320,16 +319,17 @@ function createUniformCallFunction(InitModuleContext cx, t:FunctionSignature sig
         builder.store(arg, exactArgs[i]);
     }
     if signature.restParamType != () {
-        llvm:PointerValue restArgArrayPtr = exactArgs[nRequiredParams];
-        builder.store(createUniformCallRestArgList(cx, builder, signature.paramTypes[nRequiredParams], symbol),
-                      restArgArrayPtr);
         llvm:Value startingOffset = constInt(cx, nRequiredParams);
-        llvm:Value restArgCount = builder.iArithmeticNoWrap("sub", func.getParam(1), startingOffset);
+        llvm:Value nRestArgs = builder.iArithmeticNoWrap("sub", func.getParam(2), startingOffset);
+        llvm:PointerValue restArgArrayPtr = exactArgs[nRequiredParams];
+        builder.store(createUniformCallRestArgList(cx, builder, signature.paramTypes[nRequiredParams],
+                                                   nRestArgs, symbol),
+                      restArgArrayPtr);
         buildVoidRuntimeFunctionCall(builder, cx, addUniformArgsToRestArgsFunction,
-                                     [builder.load(restArgArrayPtr), uniformArgArray, startingOffset, restArgCount]);
+                                     [builder.load(restArgArrayPtr), uniformArgArray, startingOffset, nRestArgs]);
     }
     llvm:FunctionType funcTy = buildFunctionSignature(signature);
-    llvm:Value? retValue = builder.call(builder.bitCast(<llvm:PointerValue>func.getParam(2), llvm:pointerType(funcTy)),
+    llvm:Value? retValue = builder.call(builder.bitCast(<llvm:PointerValue>func.getParam(0), llvm:pointerType(funcTy)),
                                         from var each in exactArgs select builder.load(each));
     builder.ret(retValue == () ? constNilTaggedPtr(cx) :
                                  convertToTaggedValue(builder, cx, retValue, signature.returnType));
@@ -385,7 +385,7 @@ function requiredParamCount(t:FunctionSignature signature) returns int {
 }
 
 function createUniformCallRestArgList(InitModuleContext cx, llvm:Builder builder, t:SemType listTy,
-                                      string signature) returns llvm:PointerValue {
+                                      llvm:Value nRestArgs, string signature) returns llvm:PointerValue {
     t:ListAtomicType atomic = <t:ListAtomicType>t:listAtomicType(cx.tc, listTy);
     ConstructTypeDefn? memo = cx.constructTypeDefns[ID_LIST][listTy];
     ConstructTypeDefn defn;
@@ -400,7 +400,7 @@ function createUniformCallRestArgList(InitModuleContext cx, llvm:Builder builder
     ListRepr repr = listAtomicTypeToSpecializedListRepr(atomic) ?: GENERIC_LIST_REPR;
     llvm:ConstPointerValue typeDefn = defn.ptr;
     llvm:PointerValue struct = <llvm:PointerValue>buildRuntimeFunctionCall(builder, cx, repr.construct,
-                                                                           [typeDefn, constInt(cx, 0)]);
+                                                                           [typeDefn, nRestArgs]);
     return builder.getElementPtr(builder.bitCast(struct, LLVM_TAGGED_PTR), [constInt(cx, TAG_LIST|FLAG_EXACT)]);
 }
 
@@ -687,22 +687,24 @@ function createFunctionSubtypeStruct(InitModuleContext cx, t:ComplexSemType semT
         var { returnType, paramTypes, restParamType } = signature;
         if returnType is t:BasicTypeBitSet && restParamType is t:BasicTypeBitSet? {
             int nRequiredParams = requiredParamCount(signature);
-            t:BasicTypeBitSet[] requiredParamBitSets = from var paramTy in paramTypes.slice(0, nRequiredParams)
-                                                         where paramTy is t:BasicTypeBitSet
-                                                         select paramTy;
-            if requiredParamBitSets.length() == nRequiredParams {
-                llvm:ConstValue paramBitSetArray = cx.llContext().constArray(LLVM_BITSET,
-                                                                             from t:BasicTypeBitSet b in requiredParamBitSets
-                                                                               select constBitset(cx, b));
-                return {
-                    types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET, LLVM_BITSET,
-                            LLVM_INT, llvm:arrayType(LLVM_BITSET, nRequiredParams)],
-                    values: [getSubtypeContainsFunc(cx, "function"),
-                             constBitset(cx, returnType),
-                             restParamType != () ? constBitset(cx, restParamType) : constBitset(cx, t:NEVER),
-                             constInt(cx, nRequiredParams),
-                             paramBitSetArray]
-                };
+            if nRequiredParams < int:UNSIGNED32_MAX_VALUE {
+                t:BasicTypeBitSet[] requiredParamBitSets = from var paramTy in paramTypes.slice(0, nRequiredParams)
+                                                             where paramTy is t:BasicTypeBitSet
+                                                             select paramTy;
+                if requiredParamBitSets.length() == nRequiredParams {
+                    llvm:ConstValue paramBitSetArray = cx.llContext().constArray(LLVM_BITSET,
+                                                                                 from t:BasicTypeBitSet b in requiredParamBitSets
+                                                                                   select constBitset(cx, b));
+                    return {
+                        types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET, LLVM_BITSET,
+                                "i32", llvm:arrayType(LLVM_BITSET, nRequiredParams)],
+                        values: [getSubtypeContainsFunc(cx, "function"),
+                                constBitset(cx, returnType),
+                                restParamType != () ? constBitset(cx, restParamType) : constBitset(cx, t:NEVER),
+                                constI32(cx, nRequiredParams),
+                                paramBitSetArray]
+                    };
+                }
             }
         }
     }
