@@ -316,7 +316,6 @@ typedef struct {
 typedef struct {
     UniformSubtype uniform;
     uint32_t returnBitSet;
-    uint32_t restBitSet;
     uint32_t nRequiredParams;
     uint32_t paramBitSets[];
 } *AtomicFunctionSubtypePtr;
@@ -362,7 +361,7 @@ typedef TaggedPtr (*UniformFunctionPtr)(FunctionPtr func, uint64_t nArgs, Tagged
 // This extends TypeIdDesc
 typedef struct {
     Tid tid;
-    UniformFunctionPtr uniformFunctionPtr;
+    UniformFunctionPtr uniformFunction;
     MemberType returnType;
     MemberType restType;
     int64_t nRequiredParams;

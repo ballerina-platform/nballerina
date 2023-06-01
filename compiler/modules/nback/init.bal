@@ -685,7 +685,7 @@ function createFunctionSubtypeStruct(InitModuleContext cx, t:ComplexSemType semT
     if atomic != () {
         t:FunctionSignature signature = t:functionSignature(cx.tc, atomic);
         var { returnType, paramTypes, restParamType } = signature;
-        if returnType is t:BasicTypeBitSet && restParamType is t:BasicTypeBitSet {
+        if returnType is t:BasicTypeBitSet && restParamType == () {
             int nRequiredParams = requiredParamCount(signature);
             if nRequiredParams < int:UNSIGNED32_MAX_VALUE {
                 t:BasicTypeBitSet[] requiredParamBitSets = from var paramTy in paramTypes.slice(0, nRequiredParams)
@@ -696,11 +696,10 @@ function createFunctionSubtypeStruct(InitModuleContext cx, t:ComplexSemType semT
                                                                                  from t:BasicTypeBitSet b in requiredParamBitSets
                                                                                    select constBitset(cx, b));
                     return {
-                        types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET, LLVM_BITSET,
+                        types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET,
                                 "i32", llvm:arrayType(LLVM_BITSET, nRequiredParams)],
                         values: [getSubtypeContainsFunc(cx, "function"),
                                 constBitset(cx, returnType),
-                                constBitset(cx, restParamType),
                                 constI32(cx, nRequiredParams),
                                 paramBitSetArray]
                     };

@@ -144,8 +144,8 @@ function finishBuildCallIndirectInexact(llvm:Builder builder, Scaffold scaffold,
     llvm:PointerValue uniformFuncPtr = builder.getElementPtr(funcDesc, [constIndex(scaffold, 0),
                                                                         constIndex(scaffold, 1)],
                                                              "inbounds");
-    llvm:Value? returnVal = builder.call(<llvm:PointerValue>builder.load(uniformFuncPtr),
-                                         [builder.load(funcPtr), uniformArgArray, nArgs]);
+    llvm:Value? returnVal = buildFunctionCall(builder, scaffold, <llvm:PointerValue>builder.load(uniformFuncPtr),
+                                              [builder.load(funcPtr), uniformArgArray, nArgs]);
     if returnVal !is llvm:PointerValue {
         panic err:impossible("uniform call must return a tagged pointer");
     }

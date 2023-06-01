@@ -7,18 +7,19 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     FunctionValuePtr fp = taggedToPtr(p);
     FunctionDescPtr fdp = fp->desc;
     AtomicFunctionSubtypePtr fstp = (AtomicFunctionSubtypePtr)stp;
-    if (!memberTypeIsSubtypeSimple(fdp->returnType, fstp->returnBitSet)) {
+    int64_t maxRequiredParams = (fstp->nRequiredParams > fdp->nRequiredParams) ? fstp->nRequiredParams : fdp->nRequiredParams;
+    if (!memberTypeIsSubtypeSimple(fdp->returnType, fstp->returnBitSet) ||
+        (maxRequiredParams > (int64_t)fstp->nRequiredParams)) {
         return false;
     }
-    int maxRequiredParams = (fstp->nRequiredParams > fdp->nRequiredParams) ? fstp->nRequiredParams : fdp->nRequiredParams;
     for (int64_t i = 0; i < maxRequiredParams; i++) {
         MemberType paramType = (i < fdp->nRequiredParams) ? fdp->paramTypes[i] : fdp->restType;
-        uint32_t paramBitSet = (i < fstp->nRequiredParams) ? fstp->paramBitSets[i] : fstp->restBitSet;
+        uint32_t paramBitSet = fstp->paramBitSets[i];
         if (!memberTypeIsSupertypeSimple(paramType, paramBitSet)) {
             return false;
         }
     }
-    return memberTypeIsSupertypeSimple(fdp->restType, fstp->restBitSet);
+    return true;
 }
 
 bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
