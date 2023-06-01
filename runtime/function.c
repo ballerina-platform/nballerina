@@ -6,7 +6,7 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     }
     FunctionValuePtr fp = taggedToPtr(p);
     FunctionDescPtr fdp = fp->desc;
-    AtomicFunctionSubtypePtr fstp = (AtomicFunctionSubtypePtr)stp;
+    EasyFunctionSubtypePtr fstp = (EasyFunctionSubtypePtr)stp;
     int64_t maxRequiredParams = (fstp->nRequiredParams > fdp->nRequiredParams) ? fstp->nRequiredParams : fdp->nRequiredParams;
     if (!memberTypeIsSubtypeSimple(fdp->returnType, fstp->returnBitSet) ||
         (maxRequiredParams > (int64_t)fstp->nRequiredParams)) {
@@ -29,12 +29,12 @@ bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
 // nArgs = requiredArgCount + restArgCount
 // We are using uint64_t to avoid overflow in case of restArgCount close to INT64_MAX. This means indexing uniform arg array
 // must also be done using uint64_t
-GC TaggedPtr *_bal_function_construct_uniform_arg_array(uint64_t nArgs) {
+GC TaggedPtr *_bal_function_alloc_uniform_args(uint64_t nArgs) {
     GC TaggedPtr *arr = _bal_alloc(sizeof(TaggedPtr) * nArgs);
     return arr;
 }
 
-void _bal_function_add_rest_args_to_uniform_args(TaggedPtr *uniformArgArray, const TaggedPtr restArgArray, int64_t startingOffset) {
+void _bal_function_add_to_uniform_args(TaggedPtr *uniformArgArray, const TaggedPtr restArgArray, int64_t startingOffset) {
     ListPtr lp = taggedToPtr(restArgArray);
     int64_t len = lp->tpArray.length;
     for (int64_t i = 0; i < len; i++) {
@@ -43,14 +43,14 @@ void _bal_function_add_rest_args_to_uniform_args(TaggedPtr *uniformArgArray, con
     }
 }
 
-void _bal_function_add_uniform_args_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uniformArgArray, int64_t startingOffset, int64_t restArgCount) {
+void _bal_function_add_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uniformArgArray, int64_t startingOffset, int64_t restArgCount) {
     ListPtr lp = taggedToPtr(restArgArray);
     for (int64_t i = 0; i < restArgCount; i++) {
         uint64_t index = startingOffset + i;
         TaggedPtr val = uniformArgArray[index];
         PanicCode err = lp->desc->set(restArgArray, lp->gArray.length, val);
         if (err != 0) {
-            // This should never happen since we preallocate the array.
+            // This should never happen since we preallocate the array and the values are of the expected type
             _bal_panic_internal(err);
         }
     }

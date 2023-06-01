@@ -318,7 +318,7 @@ typedef struct {
     uint32_t returnBitSet;
     uint32_t nRequiredParams;
     uint32_t paramBitSets[];
-} *AtomicFunctionSubtypePtr;
+} *EasyFunctionSubtypePtr;
 
 typedef struct {
    uint32_t all;

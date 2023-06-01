@@ -91,6 +91,9 @@ final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType), 
 
 type Context object {
     function llContext() returns llvm:Context;
+    function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl;
+    function useDebugLocation(llvm:Builder builder, DebugLocationUsage usage);
+    function clearDebugLocation(llvm:Builder builder);
 };
 
 type TypeHowUsed USED_CONSTRUCT|USED_EXACTIFY|USED_TYPE_TEST|USED_CALLED;
@@ -197,26 +200,11 @@ function constI16(Context cx, int val) returns llvm:ConstValue => cx.llContext()
 
 function constFloat(Context cx, float val) returns llvm:ConstValue => cx.llContext().constFloat(LLVM_FLOAT, val);
 
-
-function buildRuntimeFunctionCall(llvm:Builder builder, Scaffold|InitModuleContext context, RuntimeFunction rf, llvm:Value[] args) returns llvm:Value {
-    if context is Scaffold {
-        return <llvm:Value>buildFunctionCall(builder, context, context.getRuntimeFunctionDecl(rf), args);
-    }
-    return <llvm:Value>buildInitRuntimeFunctionCall(builder, <InitModuleContext>context, rf, args);
-}
-
-function buildVoidRuntimeFunctionCall(llvm:Builder builder, Scaffold|InitModuleContext context, RuntimeFunction rf, llvm:Value[] args) {
-    if context is Scaffold {
-        return <()>buildFunctionCall(builder, context, context.getRuntimeFunctionDecl(rf), args);
-    }
-    return <()>buildInitRuntimeFunctionCall(builder, <InitModuleContext>context, rf, args);
-}
-
-function buildUntagInt(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:PointerValue tagged) returns llvm:Value {
+function buildUntagInt(llvm:Builder builder, Context context, llvm:PointerValue tagged) returns llvm:Value {
     return buildRuntimeFunctionCall(builder, context, taggedToIntFunction, [tagged]);
 }
 
-function buildUntagFloat(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:PointerValue tagged) returns llvm:Value {
+function buildUntagFloat(llvm:Builder builder, Context context, llvm:PointerValue tagged) returns llvm:Value {
     return buildRuntimeFunctionCall(builder, context, taggedToFloatFunction, [tagged]);
 }
 
@@ -224,17 +212,32 @@ function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) retur
     return builder.trunc(buildTaggedPtrToInt(builder, tagged), LLVM_BOOLEAN);
 }
 
-function buildTaggedBoolean(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:Value value) returns llvm:Value {
+function buildTaggedBoolean(llvm:Builder builder, Context context, llvm:Value value) returns llvm:Value {
     return builder.getElementPtr(constNilTaggedPtr(context),
                                  [builder.iBitwise("or",
                                                    builder.zExt(value, LLVM_INT),
                                                    constInt(context, TAG_BOOLEAN))]);
 }
 
-function buildTaggedInt(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:Value value) returns llvm:PointerValue {
+function buildTaggedInt(llvm:Builder builder, Context context, llvm:Value value) returns llvm:PointerValue {
     return <llvm:PointerValue>buildRuntimeFunctionCall(builder, context, intToTaggedFunction, [value]);
 }
 
-function buildTaggedFloat(llvm:Builder builder, Scaffold|InitModuleContext context, llvm:Value value) returns llvm:PointerValue {
+function buildTaggedFloat(llvm:Builder builder, Context context, llvm:Value value) returns llvm:PointerValue {
     return <llvm:PointerValue>buildRuntimeFunctionCall(builder, context, floatToTaggedFunction, [value]);
+}
+
+function buildRuntimeFunctionCall(llvm:Builder builder, Context context, RuntimeFunction rf, llvm:Value[] args) returns llvm:Value {
+    return <llvm:Value>buildFunctionCall(builder, context, context.getRuntimeFunctionDecl(rf), args);
+}
+
+function buildVoidRuntimeFunctionCall(llvm:Builder builder, Context context, RuntimeFunction rf, llvm:Value[] args) {
+    return <()>buildFunctionCall(builder, context, context.getRuntimeFunctionDecl(rf), args);
+}
+
+function buildFunctionCall(llvm:Builder builder, Context context, llvm:Function|llvm:PointerValue fn, llvm:Value[] args) returns llvm:Value? {
+    context.useDebugLocation(builder, DEBUG_USAGE_CALL);
+    llvm:Value? result = builder.call(fn, args);
+    context.clearDebugLocation(builder);
+    return result;
 }

@@ -14,8 +14,8 @@ final RuntimeFunction functionIsExactFunction = {
     attrs: []
 };
 
-final RuntimeFunction constructUniformArgArrayFunction = {
-    name: "function_construct_uniform_arg_array",
+final RuntimeFunction allocUniformArgArrayFunction = {
+    name: "function_alloc_uniform_args",
     ty: {
         returnType: llvm:pointerType(LLVM_TAGGED_PTR),
         paramTypes: ["i64"]
@@ -23,8 +23,8 @@ final RuntimeFunction constructUniformArgArrayFunction = {
     attrs: []
 };
 
-final RuntimeFunction addRestArgsToUniformArgsFunction = {
-    name: "function_add_rest_args_to_uniform_args",
+final RuntimeFunction addToUniformArgsFunction = {
+    name: "function_add_to_uniform_args",
     ty: {
         returnType: LLVM_VOID,
         paramTypes: [llUniformArgArrayType, heapPointerType(llListType), LLVM_INT]
@@ -32,8 +32,8 @@ final RuntimeFunction addRestArgsToUniformArgsFunction = {
     attrs: []
 };
 
-final RuntimeFunction addUniformArgsToRestArgsFunction = {
-    name: "function_add_uniform_args_to_rest_args",
+final RuntimeFunction addToRestArgsFunction = {
+    name: "function_add_to_rest_args",
     ty: {
         returnType: LLVM_VOID,
         paramTypes: [heapPointerType(llListType), llUniformArgArrayType, LLVM_INT, LLVM_INT]
@@ -98,6 +98,11 @@ function finishBuildCall(llvm:Builder builder, Scaffold scaffold, llvm:Function|
     buildStoreRet(builder, scaffold, semTypeRetRepr(returnTy), retValue, result);
 }
 
+// This is using the calling scheme defined in https://github.com/ballerina-platform/nballerina/issues/907#issuecomment-1041053503 (for inexact calls).
+// This function converts direct representation of call site type to uniform representation and call the uniformFunction
+// `createUniformFunction` defined in `init.bal` converts the uniform representation to direct representation of function definition,
+// call the function pointer and return the result in uniform representation.
+// Then this function convert that result to direct representation of call site type.
 function finishBuildCallIndirectInexact(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn,
                                         llvm:BasicBlock afterCall, llvm:PointerValue funcValuePtr,
                                         t:FunctionSignature signature) returns BuildError? {
@@ -105,7 +110,7 @@ function finishBuildCallIndirectInexact(llvm:Builder builder, Scaffold scaffold,
     int requiredArgCount = restParamType == () ? paramTypes.length() : paramTypes.length() - 1;
     llvm:Value[] uniformArgs = from int i in 1 ..< requiredArgCount + 1
                                     select check buildRepr(builder, scaffold, insn.operands[i],
-                                                           uniformRepr(insn.operands[i].semType));
+                                                           REPR_ANY);
     llvm:Value nArgs;
     llvm:PointerValue? restArgs;
     if restParamType !is () {
@@ -126,12 +131,12 @@ function finishBuildCallIndirectInexact(llvm:Builder builder, Scaffold scaffold,
         restArgs = ();
     }
     llvm:PointerValue uniformArgArray = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,
-                                                                                    constructUniformArgArrayFunction, [nArgs]);
+                                                                                    allocUniformArgArrayFunction, [nArgs]);
     foreach int i in 0 ..< uniformArgs.length() {
         builder.store(uniformArgs[i], builder.getElementPtr(uniformArgArray, [constInt(scaffold, i)], "inbounds"));
     }
     if restArgs != () {
-        buildVoidRuntimeFunctionCall(builder, scaffold, addRestArgsToUniformArgsFunction,
+        buildVoidRuntimeFunctionCall(builder, scaffold, addToUniformArgsFunction,
                                      [uniformArgArray, restArgs, constInt(scaffold, uniformArgs.length())]);
     }
     llvm:PointerValue funcPtr = builder.getElementPtr(funcValuePtr, [constIndex(scaffold, 0),
@@ -167,20 +172,8 @@ function exactReturnValue(llvm:Builder builder, Scaffold scaffold, RetRepr retRe
     return returnVal;
 }
 
-function uniformRepr(t:SemType ty) returns TaggedRepr {
-    t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
-    return { subtype: w, alwaysImmediate: isSemTypeAlwaysImmediate(ty, w) };
-}
-
 function buildFunctionCallArgs(llvm:Builder builder, Scaffold scaffold, t:SemType[] paramTypes,
                                t:SemType[] instantiatedParamTypes, bir:Operand[] args) returns llvm:Value[]|BuildError {
     return from int i in 0 ..< args.length()
            select check buildWideRepr(builder, scaffold, args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]);
-}
-
-function buildFunctionCall(llvm:Builder builder, Scaffold scaffold, llvm:Function|llvm:PointerValue fn, llvm:Value[] args) returns llvm:Value? {
-    scaffold.useDebugLocation(builder, DEBUG_USAGE_CALL);
-    llvm:Value? result = builder.call(fn, args);
-    scaffold.clearDebugLocation(builder);
-    return result;
 }

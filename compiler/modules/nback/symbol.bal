@@ -85,6 +85,10 @@ function memberMappingDescSymbol(int n) returns string {
     return ".mapping" + n.toString();
 }
 
+function uniformFunctionSymbol(int n) returns string {
+    return ".uniformFunction" + n.toString();
+}
+
 function subtypeTypeDefnSymbol(int n) returns string {
     return "Type" + n.toString();
 }
