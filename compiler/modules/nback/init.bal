@@ -386,18 +386,18 @@ function convertToExactArg(llvm:Builder builder, InitModuleContext context,
     return arg;
 }
 
-function convertToTaggedValue(llvm:Builder builder, InitModuleContext context, llvm:Value arg, t:SemType ty) returns llvm:Value {
+function convertToTaggedValue(llvm:Builder builder, InitModuleContext context, llvm:Value val, t:SemType ty) returns llvm:Value {
     t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
     if t:isSubtypeSimple(w, t:INT) {
-        return buildTaggedInt(builder, context, arg);
+        return buildTaggedInt(builder, context, val);
     }
     else if t:isSubtypeSimple(ty, t:FLOAT) {
-        return buildTaggedFloat(builder, context, arg);
+        return buildTaggedFloat(builder, context, val);
     }
     else if t:isSubtypeSimple(ty, t:BOOLEAN) {
-        return buildTaggedBoolean(builder, context, arg);
+        return buildTaggedBoolean(builder, context, val);
     }
-    return arg;
+    return val;
 }
 
 function exactArgType(t:SemType ty) returns llvm:SingleValueType {

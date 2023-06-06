@@ -109,8 +109,9 @@ function finishBuildCallIndirectInexact(llvm:Builder builder, Scaffold scaffold,
     var { returnType, paramTypes, restParamType } = signature;
     int requiredArgCount = restParamType == () ? paramTypes.length() : paramTypes.length() - 1;
     llvm:Value[] uniformArgs = from int i in 1 ..< requiredArgCount + 1
-                                    select check buildRepr(builder, scaffold, insn.operands[i],
-                                                           REPR_ANY);
+                                    select buildClearExact(builder, scaffold,
+                                                           (check buildRepr(builder, scaffold, insn.operands[i], REPR_ANY)),
+                                                           insn.operands[i].semType);
     llvm:Value nArgs;
     llvm:PointerValue? restArgs;
     if restParamType !is () {
