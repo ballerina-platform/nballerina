@@ -1,5 +1,4 @@
 // Implementation specific to basic type function.
-import wso2/nballerina.comm.err;
 
 // Function subtype is [args, ret]
 // Represents args as tuple type
@@ -73,85 +72,53 @@ public function functionSignature(Context cx, FunctionAtomicType atomic) returns
     return signature;
 }
 
+// Corresponds to dom^? in AMK tutorial.
 public function functionParamListType(Context cx, SemType func) returns SemType? {
-    FunctionAtomicType? atomic = functionAtomicType(cx, func);
-    if atomic != () {
-        return atomic[0];
-    }
-    SemType functionTy = intersect(func, FUNCTION);
-    if isEmpty(cx, functionTy) {
+    if !isSubtype(cx, func, FUNCTION) {
         return ();
     }
-    if functionTy is BasicTypeBitSet {
-        // intersection of all list types
+    if func is BasicTypeBitSet {
+        // Intersection of all list types
         return NEVER;
     }
-    SemType paramTy = VAL;
-    foreach var { pos } in positiveFunctionPaths(cx, functionTy) {
-        SemType[] intersectionParamTypes = from var atom in pos select cx.functionAtomType(atom)[0];
-        paramTy = intersect(paramTy, intersectionParamTypes.reduce(union, intersectionParamTypes[0]));
-    }
-    return paramTy;
+    return functionParamListTypeInner(cx, NEVER, <Bdd>getComplexSubtypeData(func, BT_FUNCTION));
 }
 
+function functionParamListTypeInner(Context cx, SemType accumTy, Bdd b) returns SemType {
+    if b is boolean {
+        return b ? accumTy : ANY;
+    }
+    SemType atomArgListTy = cx.env.functionAtomType(b.atom)[0];
+    return intersect(functionParamListTypeInner(cx, union(accumTy, atomArgListTy), b.left),
+                     intersect(functionParamListTypeInner(cx, accumTy, b.middle),
+                               functionParamListTypeInner(cx, accumTy, b.right)));
+}
+
+// Corresponds to apply^? in AMK tutorial.
 public function functionReturnType(Context cx, SemType func, SemType argList) returns SemType? {
-    SemType functionTy = intersect(func, FUNCTION);
-    // Since we care only about well type function calls, it is safe to ignore base type
-    if isEmpty(cx, functionTy) || functionTy is BasicTypeBitSet {
+    SemType? domain = functionParamListType(cx, func);
+    if domain == () || !isSubtype(cx, argList, domain) || !isSubtype(cx, func, FUNCTION) {
         return ();
     }
-    SemType[] selectedReturnTypes = [];
-    foreach var { pos } in positiveFunctionPaths(cx, functionTy) {
-        SemType[] returnTypes = [];
-        SemType currentlyCoveredParamTy = NEVER;
-        // Not sure if the order of intersections matters, reverse starts with the tightest intersection
-        foreach var [intersectionParamTy, intersectionReturnTy] in allPossibleFunctionAtomIntersections(cx, pos).reverse() {
-            SemType overlappingParamTy = intersect(argList, intersectionParamTy);
-            if isEmpty(cx, overlappingParamTy) {
-                continue;
-            }
-            if !isEmpty(cx, diff(overlappingParamTy, currentlyCoveredParamTy)) {
-                currentlyCoveredParamTy = union(overlappingParamTy, currentlyCoveredParamTy);
-                returnTypes.push(intersectionReturnTy);
-            }
-        }
-        if returnTypes.length() > 0 {
-            selectedReturnTypes.push(returnTypes.reduce(intersect, returnTypes[0]));
-        }
+    if func is BasicTypeBitSet {
+        // Union of all types
+        return ANY;
     }
-    if selectedReturnTypes.length() == 0 {
-        // This shouldn't happen if the function call is well typed
-        return ();
-    }
-    return selectedReturnTypes.reduce(union, selectedReturnTypes[0]);
+    return functionReturnTypeInner(cx, argList, ANY, <Bdd>getComplexSubtypeData(func, BT_FUNCTION));
 }
 
-function positiveFunctionPaths(Context cx, ComplexSemType funcTy) returns BddPath[] {
-    BddPath[] paths = [];
-    bddPaths(<Bdd>getComplexSubtypeData(funcTy, BT_FUNCTION), paths, {});
-    paths = paths.filter((each) => each.pos.length() > 0);
-    if paths.length() == 0 {
-        panic err:impossible("expect at least a single positive atom");
+function functionReturnTypeInner(Context cx, SemType accumArgList, SemType accumReturn, Bdd b) returns SemType {
+    if isEmpty(cx, accumArgList) || isEmpty(cx, accumReturn) {
+        return NEVER;
     }
-    return paths;
-}
-
-function allPossibleFunctionAtomIntersections(Context cx, Atom[] atoms) returns [SemType, SemType][] {
-    return allPossibleFunctionAtomIntersectionsInner(cx, atoms, atoms.length());
-}
-function allPossibleFunctionAtomIntersectionsInner(Context cx, Atom[] atoms, int n) returns [SemType, SemType][] {
-    if n == 1 {
-        // cloneWithType to remove the readonly part from functionAtomType
-        return from var atom in atoms select checkpanic cx.functionAtomType(atom).cloneWithType([SemType, SemType]);
+    if b is boolean {
+        return b ? accumReturn : NEVER;
     }
-    [SemType, SemType][] result = allPossibleFunctionAtomIntersectionsInner(cx, atoms, n - 1);
-    foreach var [paramTy, returnTy] in result {
-        foreach Atom atom in atoms {
-            var [atomParamTy, atomReturnTy] = cx.functionAtomType(atom);
-            result.push([intersect(paramTy, atomParamTy), intersect(returnTy, atomReturnTy)]);
-        }
-    }
-    return result;
+    var [atomArgListTy, atomReturnTy] = cx.env.functionAtomType(b.atom);
+    return union(functionReturnTypeInner(cx, accumArgList, intersect(accumReturn, atomReturnTy), b.left),
+                 union(functionReturnTypeInner(cx, diff(accumArgList, atomArgListTy), accumReturn, b.left),
+                       union(functionReturnTypeInner(cx, accumArgList, accumReturn, b.middle),
+                             functionReturnTypeInner(cx, accumArgList, accumReturn, b.right))));
 }
 
 public function functionSemType(Context cx, FunctionSignature signature) returns SemType {

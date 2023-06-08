@@ -1397,10 +1397,10 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     }
     match funcRef {
         var [func, funcRegister] if func is bir:FunctionRef => {
-            return finishCodeGenFunctionCallExpr(cx, bb, expr, func, funcRegister);
+            return finishCodeGenFunctionCall(cx, bb, expr, func, funcRegister);
         }
         var [_, funcRegister] => {
-            return finishCodeGenFunctionCallApplication(cx, bb, expr, <bir:Register>funcRegister);
+            return finishCodeGenApplication(cx, bb, expr, <bir:Register>funcRegister);
         }
     }
 }
@@ -1423,11 +1423,13 @@ function genLocalFunctionRef(ExprContext cx, string funcName, Position pos) retu
     return cx.semanticErr("only a value of function type can be called", pos);
 }
 
-function finishCodeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr, bir:FunctionRef func, bir:Register? funcRegister) returns CodeGenError|ExprEffect {
+function finishCodeGenFunctionCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr,
+                                   bir:FunctionRef func, bir:Register? funcRegister) returns CodeGenError|ExprEffect {
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
     t:SemType? restParamType = func.signature.restParamType;
-    int regularArgCount = restParamType == () ? expr.args.length() : func.signature.paramTypes.length() - 1;
+    int regularArgCount = restParamType == () ? expr.args.length() :
+                                                func.signature.paramTypes.length() - 1;
     foreach int i in 0 ..< regularArgCount {
         var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
         curBlock = nextBlock;
@@ -1462,19 +1464,22 @@ function finishCodeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:Func
 function finishCodeGenFunctionInexactCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr,
                                           bir:Register func) returns CodeGenError|ExprEffect {
     t:Context tc = cx.mod.tc;
-    t:SemType funcTy = funcRegister.semType;
+    t:SemType funcTy = func.semType;
     bir:Operand[] args = [];
+    t:SemType[] argTypes = [];
     bir:BasicBlock curBlock = bb;
     foreach s:Expr argExpr in expr.args {
         var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, (), argExpr);
         args.push(arg);
+        argTypes.push(arg.semType);
         curBlock = nextBlock;
     }
-    t:SemType argListType = t:tupleTypeWrappedRo(tc.env, ...from var arg in args select arg.semType);
     t:SemType? paramListType = t:functionParamListType(tc, funcTy);
     if paramListType == () {
+        // This should never happen since we checked value to be a function in gen*FunctionRef
         panic err:impossible("function type must have a parameter type");
     }
+    t:SemType argListType = t:tupleTypeWrappedRo(tc.env, ...argTypes);
     if !t:isSubtype(tc, argListType, paramListType) {
         return cx.semanticErr("incorrect type for arguments", s:range(expr));
     }
