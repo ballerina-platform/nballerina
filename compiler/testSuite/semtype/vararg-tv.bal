@@ -93,3 +93,11 @@ type FT8Ret function(float, int[]) returns float;
 type FT7RetSub1 function(float) returns float;
 type FT7RetSub2 function(float, int) returns float;
 type FT7RetSub3 function(float, int, int) returns float;
+
+//@type FT9Ret > FT9Sub
+type FT9Ret function(int, int, int...) returns int;
+type FT9Sub function(int, int) returns int;
+
+//@type F > G
+type F function(int, int);
+type G function(byte, byte);

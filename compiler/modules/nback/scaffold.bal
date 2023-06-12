@@ -129,9 +129,10 @@ type Module record {|
 type UsedSemType record {|
     readonly t:SemType semType;
     readonly int index;
-    llvm:ConstPointerValue? inherentType = ();
+    llvm:ConstPointerValue? constructType = ();
     llvm:ConstPointerValue? typeTest = ();
     llvm:ConstPointerValue? exactify = ();
+    llvm:ConstPointerValue? called = ();
 |};
 
 class Scaffold {
@@ -261,9 +262,24 @@ class Scaffold {
         if curDefn != () {
             return curDefn.value;
         }
-        llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func, signature, self.mod.functionValueDefns.length());
+        llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func,
+                                                            self.getConstructType(t:functionSemType(self.typeContext(), signature)),
+                                                            signature, self.mod.functionValueDefns.length());
         self.mod.functionValueDefns.add({value, symbol });
         return value;
+    }
+
+    function getCalledType(t:FunctionSignature signature) returns llvm:ConstPointerValue {
+        t:SemType signatureTy = t:functionSemType(self.typeContext(), signature);
+        UsedSemType used = self.getUsedSemType(signatureTy);
+        llvm:ConstPointerValue? value = used.called;
+        if value != () {
+            return value;
+        }
+        string symbol = mangleTypeSymbol(self.mod.modId, USED_CALLED, used.index);
+        llvm:ConstPointerValue v = self.getModule().addGlobal(llFunctionDescType, symbol, isConstant=true);
+        used.called = v;
+        return v;
     }
 
     function getDecimal(decimal val) returns DecimalDefn {
@@ -350,14 +366,14 @@ class Scaffold {
         }
     }
 
-    function getInherentType(t:SemType ty) returns llvm:ConstPointerValue {
+    function getConstructType(t:SemType ty) returns llvm:ConstPointerValue {
         UsedSemType used = self.getUsedSemType(ty);
-        llvm:ConstPointerValue? value = used.inherentType;
+        llvm:ConstPointerValue? value = used.constructType;
         if value == () {
             Module m = self.mod;
-            string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(llStructureDescType, symbol, isConstant = true);
-            used.inherentType = v;
+            string symbol = mangleTypeSymbol(m.modId, USED_CONSTRUCT, used.index);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llTypeIdDescType, symbol, isConstant = true);
+            used.constructType = v;
             return v;
         }
         else {
@@ -608,16 +624,21 @@ function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean
     return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
 }
 
-function addFunctionValueDefn(llvm:Context context, llvm:Module mod, llvm:Function func, t:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
-    llvm:StructType ty = llvm:structType([llvm:pointerType(buildFunctionSignature(signature))]);
-    llvm:ConstValue initValue = context.constStruct([func]);
-    llvm:ConstPointerValue ptr = mod.addGlobal(ty,
-                                               functionDefnSymbol(defnIndex),
-                                               initializer = initValue,
-                                               align = 8,
-                                               isConstant=true,
-                                               unnamedAddr=true,
-                                               linkage= "internal");
+function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Function func, llvm:ConstPointerValue funcDesc,
+                              t:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
+    llvm:ConstValue initValue = context.constStruct([funcDesc, func]);
+    llvm:ConstPointerValue ptr = llMod.addGlobal(functionValueType(signature),
+                                                 functionDefnSymbol(defnIndex),
+                                                 initializer = initValue,
+                                                 align = 8,
+                                                 isConstant=true,
+                                                 unnamedAddr=true,
+                                                 linkage= "internal");
     return context.constGetElementPtr(context.constAddrSpaceCast(ptr, LLVM_TAGGED_PTR),
                                       [context.constInt(LLVM_INT, TAG_FUNCTION)]);
+}
+
+function functionValueType(t:FunctionSignature signature) returns llvm:StructType {
+    return llvm:structType([llvm:pointerType(llFunctionDescType),
+                            llvm:pointerType(buildFunctionSignature(signature))]);
 }

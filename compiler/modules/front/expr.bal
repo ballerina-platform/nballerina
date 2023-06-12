@@ -1194,9 +1194,6 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
 
 function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
     t:SemType toType = check cx.resolveTypeDesc(tcExpr.td);
-    if t:isSubtype(cx.mod.tc, toType, t:FUNCTION) && !t:isSameType(cx.mod.tc, toType, t:FUNCTION) {
-        return cx.semanticErr("type cast for proper subtypes of function type not supported", tcExpr.opPos);
-    }
     t:SemType operandExpectedType = expected == () ? toType : t:intersect(toType, expected);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, operandExpectedType, tcExpr.operand);
     t:SemType fromType = operandSemType(cx.mod.tc, operand);
@@ -1270,9 +1267,6 @@ function codeGenNumericConvert(ExprContext cx, bir:BasicBlock nextBlock, bir:Ope
 }
 
 function codeGenTypeTestForCond(ExprContext cx, bir:BasicBlock nextBlock, t:SemType semType, Binding opBinding, boolean negated, Position pos, PrevTypeMergers? prevs) returns CodeGenError|CondExprEffect {
-    if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) && !t:isSameType(cx.mod.tc, semType, t:FUNCTION) {
-        return cx.semanticErr("type test for proper subtypes of function type not supported", pos);
-    }
     bir:Register reg = opBinding.reg;
     t:Context tc = cx.mod.tc;
     t:SemType curSemType = reg.semType;
@@ -1333,9 +1327,6 @@ function createMerger(ExprContext cx, bir:Label originLabel, TypeMerger? merger)
 
 function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeDesc td, s:Expr left, boolean negated, Position pos) returns CodeGenError|ExprEffect {
     t:SemType semType = check cx.resolveTypeDesc(td);
-    if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) && !t:isSameType(cx.mod.tc, semType, t:FUNCTION) {
-        return cx.semanticErr("type test for proper subtypes of function type not supported", pos);
-    }
     var { result, block: nextBlock } = check codeGenExpr(cx, bb, expected, left);
     return finishCodeGenTypeTest(cx, semType, result, nextBlock, negated, pos);
 }
@@ -1400,17 +1391,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     bir:FunctionRef func;
     bir:Register? funcRegister = ();
     if prefix == () {
-        var ref = cx.lookupLocalVarRef(expr.funcName, expr.qNamePos);
-        if ref is bir:FunctionRef {
-            func = ref;
-        }
-        else if ref is Binding {
-            func = check functionRefFromRegister(cx, ref.reg, expr.qNamePos);
-            funcRegister = ref.reg;
-        }
-        else {
-            return cx.semanticErr("only a value of function type can be called", expr.qNamePos);
-        }
+        [func, funcRegister] = check genLocalFunctionRef(cx, expr.funcName, expr.qNamePos);
     }
     else {
         func = check genImportedFunctionRef(cx, prefix, expr.funcName, expr.qNamePos);
@@ -1450,6 +1431,22 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.qNamePos);
 }
 
+function genLocalFunctionRef(ExprContext cx, string funcName, Position pos) returns [bir:FunctionRef, bir:Register?]|CodeGenError {
+    var ref = cx.lookupLocalVarRef(funcName, pos);
+    if ref is bir:FunctionRef {
+        return [ref, ()];
+    }
+    else if ref is Binding {
+        t:SemType semType = ref.reg.semType;
+        t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
+        if atom != () {
+            return [functionRefFromAtom(cx, atom, registerName(ref.reg)), ref.reg];
+        }
+        return cx.unimplementedErr("return type projection not implemented", pos);
+    }
+    return cx.semanticErr("only a value of function type can be called", pos);
+}
+
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, (), expr.target);
     bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
@@ -1463,14 +1460,9 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
     return codeGenCall(cx, curBlock, func, func.signature.returnType, args, expr.namePos);
 }
 
-function functionRefFromRegister(ExprContext cx, bir:Register register, bir:Position pos) returns CodeGenError|bir:FunctionRef {
-    t:Context tc = cx.mod.tc;
-    t:FunctionAtomicType? atomic = t:functionAtomicType(tc, register.semType);
-    if atomic == () {
-        return cx.semanticErr("only a value of proper subtype function type can be called", pos);
-    }
-    t:FunctionSignature signature = t:functionSignature(tc, atomic);
-    bir:InternalSymbol symbol = { isPublic: false, identifier: registerName(register) };
+function functionRefFromAtom(ExprContext cx, t:FunctionAtomicType atom, string identifier) returns bir:FunctionRef {
+    t:FunctionSignature signature = t:functionSignature(cx.mod.tc, atom);
+    bir:InternalSymbol symbol = { isPublic: false, identifier };
     return { symbol, signature, erasedSignature: signature };
 }
 
@@ -1823,7 +1815,7 @@ function singletonBooleanOperand(t:Context tc, boolean value) returns bir:Boolea
 }
 
 function functionValOperand(t:Context tc, bir:FunctionRef value) returns bir:FunctionConstOperand {
-    return { value, semType: t:functionSemType(tc, value.signature) };
+    return { value, semType: t:functionSemType(tc, value.erasedSignature) };
 }
 
 function constifyRegister(bir:Register reg) returns bir:Operand {

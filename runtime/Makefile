@@ -13,7 +13,7 @@ DN_OBJS=$(addprefix third-party/decNumber/, decQuad.o decContext.o)
 DN_DEFINES=-DHAVE_STDBOOL_H -DHAVE_STDINT_H -DDECPRINT=0
 DTOA_OBJS=third-party/dtoa/emyg_dtoa.o
 THIRD_PARTY_OBJS=$(DTOA_OBJS) $(BT_OBJS) $(DN_OBJS)
-RT_OBJS=alloc.o error.o list.o main.o mapping.o structure.o panic.o print.o string.o int.o decimal.o float.o boolean.o convert.o
+RT_OBJS=alloc.o error.o list.o main.o mapping.o structure.o panic.o print.o string.o int.o decimal.o float.o boolean.o convert.o function.o
 OBJS=$(RT_OBJS) $(THIRD_PARTY_OBJS)
 DEFINES=$(DN_DEFINES)
 C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc \

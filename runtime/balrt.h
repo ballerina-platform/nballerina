@@ -124,10 +124,10 @@ typedef uint64_t MemberType;
 
 #define BITSET_MEMBER_TYPE(bitSet) (((uint64_t)(bitSet) << 1)|1)
 
-// All mapping and list descriptors start with this.
+// All mapping, list and function descriptors start with this.
 typedef struct {
     Tid tid;
-} StructureDesc, *StructureDescPtr;
+} TypeIdDesc, *TypeIdDescPtr;
 
 // This is the abstract version of filler descriptor. Each type must
 // implement there own version (or reuse a common version such as GenericFillerDesc)
@@ -142,10 +142,10 @@ typedef struct GenericFillerDesc {
 
 // All mapping and list values start with this
 typedef GC struct {
-    StructureDescPtr desc;
+    TypeIdDescPtr desc;
 } Structure, *StructurePtr;
 
-// This extends StructureDesc
+// This extends TypeIdDesc
 // i.e must start with tid
 typedef struct {
     Tid tid;
@@ -199,7 +199,7 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
-// This extends StructureDesc
+// This extends TypeIdDesc
 // i.e must start with tid
 typedef struct {
     Tid tid;
@@ -311,6 +311,15 @@ typedef struct {
     TaggedPtr strs[];
 } *StringSubtypePtr;
 
+// This only handles cases where function is both atomic and all parameter and return types are unions of basic types
+// For others we are using PrecomputedSubtypePtr
+typedef struct {
+    UniformSubtype uniform;
+    uint32_t returnBitSet;
+    uint32_t nRequiredParams;
+    uint32_t paramBitSets[];
+} *EasyFunctionSubtypePtr;
+
 typedef struct {
    uint32_t all;
    uint32_t some;
@@ -347,8 +356,21 @@ typedef GC struct LargeString {
 } *LargeStringPtr;
 
 typedef void (*FunctionPtr)();
+typedef TaggedPtr (*UniformFunctionPtr)(FunctionPtr func, uint64_t nArgs, TaggedPtr uniformArgs);
+
+// This extends TypeIdDesc
+typedef struct {
+    Tid tid;
+    UniformFunctionPtr uniformFunction;
+    MemberType returnType;
+    MemberType restType;
+    int64_t nRequiredParams;
+    MemberType paramTypes[];
+} FunctionDesc, *FunctionDescPtr;
+
 typedef GC struct FunctionValue {
-    FunctionPtr funcPtr;
+    FunctionDescPtr desc;
+    FunctionPtr func;
 } *FunctionValuePtr;
 
 // Roundup to multiple of 8
@@ -545,16 +567,22 @@ static READNONE inline UntypedPtr taggedToPtrExact(TaggedPtr p) {
     return _bal_ptr_mask(p, (POINTER_MASK & ALIGN_MASK)|EXACT_FLAG);
 }
 
-static READONLY inline bool memberTypeIsSubtypeSimple(MemberType memberType, uint32_t bitSet) {
-    uint32_t memberBitSet;
+static READONLY inline uint32_t memberBitSet(MemberType memberType) {
     if (memberType & 1) {
-        memberBitSet = (uint32_t)(memberType >> 1);
+        return (uint32_t)(memberType >> 1);
     }
     else {
         ComplexTypePtr ctp = (ComplexTypePtr)memberType;
-        memberBitSet = ctp->all | ctp->some; 
+        return ctp->all | ctp->some;
     }
-    return (memberBitSet & ~(uint64_t)bitSet) == 0;
+}
+
+static READONLY inline bool memberTypeIsSubtypeSimple(MemberType memberType, uint32_t bitSet) {
+    return (memberBitSet(memberType) & ~(uint64_t)bitSet) == 0;
+}
+
+static READONLY inline bool memberTypeIsSupertypeSimple(MemberType memberType, uint32_t bitSet) {
+    return (bitSet & ~(uint64_t)memberBitSet(memberType)) == 0;
 }
 
 static READONLY inline bool complexTypeContainsTagged(ComplexTypePtr ctp, TaggedPtr p) {

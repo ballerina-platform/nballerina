@@ -5,17 +5,33 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.print.llvm;
 
-const USED_INHERENT_TYPE = 0x1;
+const USED_CONSTRUCT = 0x1;
 const USED_EXACTIFY = 0x2;
 const USED_TYPE_TEST = 0x4;
+const USED_CALLED = 0x8;
 
 const LLVM_BITSET = "i32";
 const LLVM_TID = "i32";
 const LLVM_MEMBER_TYPE = "i64";
 const LLVM_PANIC_CODE = "i64";
 
-final llvm:StructType llStructureDescType = llvm:structType([LLVM_TID]);
-final llvm:PointerType llStructureDescPtrType = llvm:pointerType(llStructureDescType);
+final llvm:StructType llTypeIdDescType = llvm:structType([LLVM_TID]);
+final llvm:PointerType llTypeIdDescPtrType = llvm:pointerType(llTypeIdDescType);
+
+// Function pointer type is an approximation
+final llvm:PointerType llFunctionPtrType = llvm:pointerType(llvm:functionType("void", []));
+final llvm:FunctionType llUniformFunctionType = llvm:functionType(LLVM_TAGGED_PTR,
+                                                                  [llFunctionPtrType,
+                                                                   llvm:pointerType(LLVM_TAGGED_PTR),
+                                                                   "i64"]);
+final llvm:StructType llFunctionDescType = llvm:structType([LLVM_TID,
+                                                            llvm:pointerType(llUniformFunctionType),
+                                                            LLVM_MEMBER_TYPE,
+                                                            LLVM_MEMBER_TYPE,
+                                                            LLVM_INT,
+                                                            llvm:pointerType(LLVM_MEMBER_TYPE)]);
+final llvm:StructType llFunctionType = llvm:structType([llvm:pointerType(llFunctionDescType),
+                                                        llFunctionPtrType]);
 
 // This is an approximation, to share type between init.bal and types.bal
 final llvm:PointerType fillerDescPtrType = llvm:pointerType(llvm:structType(
@@ -75,9 +91,12 @@ final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType), 
 
 type Context object {
     function llContext() returns llvm:Context;
+    function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl;
+    function useDebugLocation(llvm:Builder builder, DebugLocationUsage usage);
+    function clearDebugLocation(llvm:Builder builder);
 };
 
-type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST;
+type TypeHowUsed USED_CONSTRUCT|USED_EXACTIFY|USED_TYPE_TEST|USED_CALLED;
 
 public type TypeUsage readonly & record {|
     t:SemType[] types;
@@ -139,11 +158,14 @@ function listAtomicTypeToListReprPrefix(t:ListAtomicType? atomic) returns ListRe
 
 function mangleTypeSymbol(bir:ModuleId modId, TypeHowUsed howUsed, int index) returns string {
     string result = "_B";
-    if howUsed == USED_INHERENT_TYPE {
+    if howUsed == USED_CONSTRUCT {
         result += "i";
     }
     else if howUsed == USED_EXACTIFY {
         result += "e";
+    }
+    else if howUsed == USED_CALLED {
+        result += "c";
     }
     else {
         result += "t";
@@ -178,3 +200,44 @@ function constI16(Context cx, int val) returns llvm:ConstValue => cx.llContext()
 
 function constFloat(Context cx, float val) returns llvm:ConstValue => cx.llContext().constFloat(LLVM_FLOAT, val);
 
+function buildUntagInt(llvm:Builder builder, Context context, llvm:PointerValue tagged) returns llvm:Value {
+    return buildRuntimeFunctionCall(builder, context, taggedToIntFunction, [tagged]);
+}
+
+function buildUntagFloat(llvm:Builder builder, Context context, llvm:PointerValue tagged) returns llvm:Value {
+    return buildRuntimeFunctionCall(builder, context, taggedToFloatFunction, [tagged]);
+}
+
+function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
+    return builder.trunc(buildTaggedPtrToInt(builder, tagged), LLVM_BOOLEAN);
+}
+
+function buildTaggedBoolean(llvm:Builder builder, Context context, llvm:Value value) returns llvm:Value {
+    return builder.getElementPtr(constNilTaggedPtr(context),
+                                 [builder.iBitwise("or",
+                                                   builder.zExt(value, LLVM_INT),
+                                                   constInt(context, TAG_BOOLEAN))]);
+}
+
+function buildTaggedInt(llvm:Builder builder, Context context, llvm:Value value) returns llvm:PointerValue {
+    return <llvm:PointerValue>buildRuntimeFunctionCall(builder, context, intToTaggedFunction, [value]);
+}
+
+function buildTaggedFloat(llvm:Builder builder, Context context, llvm:Value value) returns llvm:PointerValue {
+    return <llvm:PointerValue>buildRuntimeFunctionCall(builder, context, floatToTaggedFunction, [value]);
+}
+
+function buildRuntimeFunctionCall(llvm:Builder builder, Context context, RuntimeFunction rf, llvm:Value[] args) returns llvm:Value {
+    return <llvm:Value>buildFunctionCall(builder, context, context.getRuntimeFunctionDecl(rf), args);
+}
+
+function buildVoidRuntimeFunctionCall(llvm:Builder builder, Context context, RuntimeFunction rf, llvm:Value[] args) {
+    return <()>buildFunctionCall(builder, context, context.getRuntimeFunctionDecl(rf), args);
+}
+
+function buildFunctionCall(llvm:Builder builder, Context context, llvm:Function|llvm:PointerValue fn, llvm:Value[] args) returns llvm:Value? {
+    context.useDebugLocation(builder, DEBUG_USAGE_CALL);
+    llvm:Value? result = builder.call(fn, args);
+    context.clearDebugLocation(builder);
+    return result;
+}

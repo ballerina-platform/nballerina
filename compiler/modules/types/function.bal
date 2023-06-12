@@ -54,6 +54,10 @@ public type FunctionSignature readonly & record {|
 |};
 
 public function functionSignature(Context cx, FunctionAtomicType atomic) returns FunctionSignature {
+    FunctionSignatureMemo? memo = cx.functionSignatureMemo[atomic];
+    if memo != () {
+        return memo.signature;
+    }
     var [argList, returnType] = atomic;
     ListAtomicType listAtom = <ListAtomicType>listAtomicType(cx, argList);
     SemType[] paramTypes = from int i in 0 ..< listAtom.members.fixedLength select listAtomicTypeMemberAtInnerVal(listAtom, i);
@@ -64,6 +68,7 @@ public function functionSignature(Context cx, FunctionAtomicType atomic) returns
         paramTypes.push(defineListTypeWrapped(listDefn, cx.env, rest=restInnerVal));
     }
     FunctionSignature signature = { returnType, paramTypes: paramTypes.cloneReadOnly(), restParamType };
+    cx.functionSignatureMemo.add({ atomic, signature });
     return signature;
 }
 

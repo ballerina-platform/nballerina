@@ -34,7 +34,7 @@ final RuntimeFunction listConstruct8Function = {
     name: "list_construct_8",
     ty: {
         returnType: heapPointerType(llListType),
-        paramTypes: [llvm:pointerType(llStructureDescType), LLVM_INT]
+        paramTypes: [llvm:pointerType(llTypeIdDescType), LLVM_INT]
     },
     attrs: []
 };
@@ -43,7 +43,7 @@ final RuntimeFunction listConstruct1Function = {
     name: "list_construct_1",
     ty: {
         returnType: heapPointerType(llListType),
-        paramTypes: [llvm:pointerType(llStructureDescType), LLVM_INT]
+        paramTypes: [llvm:pointerType(llTypeIdDescType), LLVM_INT]
     },
     attrs: []
 };
@@ -97,7 +97,7 @@ final RuntimeFunction mappingConstructFunction = {
     name: "mapping_construct",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: [llvm:pointerType(llStructureDescType), "i64"]
+        paramTypes: [llvm:pointerType(llTypeIdDescType), "i64"]
     },
     attrs: []
 };
@@ -184,7 +184,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     t:SemType listType = insn.result.semType;
     var atomic = <t:ListAtomicType>t:listAtomicType(scaffold.typeContext(), listType);
     ListRepr repr = listAtomicTypeToSpecializedListRepr(atomic) ?: GENERIC_LIST_REPR;
-    llvm:ConstPointerValue inherentType = scaffold.getInherentType(listType);
+    llvm:ConstPointerValue inherentType = scaffold.getConstructType(listType);
     llvm:PointerValue struct = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, repr.construct,
                                                                            [inherentType, constInt(scaffold, length)]);
 
@@ -361,7 +361,7 @@ function convertValue(llvm:Builder builder, llvm:Value value, llvm:Type fromTy, 
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     t:SemType mappingType = insn.result.semType;
-    llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
+    llvm:ConstPointerValue inherentType = scaffold.getConstructType(mappingType);
     llvm:PointerValue m = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, mappingConstructFunction,
                                                                       [inherentType, constInt(scaffold, insn.operands.length())]);
     t:Context tc = scaffold.typeContext();

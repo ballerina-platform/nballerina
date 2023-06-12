@@ -32,7 +32,7 @@ type ComplexTypeDefn record {|
     readonly t:ComplexSemType semType;
 |};
 
-type InherentTypeDefn record {|
+type ConstructTypeDefn record {|
     *TypeDefnFields;
     int tid;
 |};
@@ -59,15 +59,17 @@ const TYPE_KIND_INT = "int";
 const TYPE_KIND_FLOAT = "float";
 const TYPE_KIND_DECIMAL = "decimal";
 const TYPE_KIND_STRING = "string";
+const TYPE_KIND_FUNCTION = "function";
 
-const STRUCTURE_LIST = 0;
-const STRUCTURE_MAPPING = 1;
+const ID_LIST = 0;
+const ID_MAPPING = 1;
+const ID_FUNCTION = 2;
 
-type StructureBasicType STRUCTURE_LIST|STRUCTURE_MAPPING;
+type TypeIdBasicType ID_LIST|ID_MAPPING|ID_FUNCTION;
 
 type TypeKindArrayOrMap TYPE_KIND_ARRAY|TYPE_KIND_MAP;
 type TypeKindSimple TYPE_KIND_TRUE|TYPE_KIND_FALSE|TYPE_KIND_INT|TYPE_KIND_FLOAT|TYPE_KIND_DECIMAL;
-type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED|TYPE_KIND_STRING|TypeKindSimple;
+type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED|TYPE_KIND_STRING|TYPE_KIND_FUNCTION|TypeKindSimple;
 
 type FunctionRef llvm:FunctionDecl|llvm:ConstPointerValue;
 
@@ -76,7 +78,7 @@ class InitModuleContext {
     private llvm:Context llvmContext;
     llvm:Module llMod;
     t:Context tc;
-    table<InherentTypeDefn> key(semType)[2] inherentTypeDefns = [table [], table[]];
+    table<ConstructTypeDefn> key(semType)[3] constructTypeDefns = [table [], table[], table[]];
     table<ComplexTypeDefn> key(semType) complexTypeDefns = table [];
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
     InitTypes llTypes;
@@ -85,22 +87,39 @@ class InitModuleContext {
     map<llvm:ConstPointerValue> stringDefns = {};
     map<llvm:ConstPointerValue> predefinedFillerDesc = {};
     int decimalCount = 0;
-    // subtype definitions cannot be completed before inherent types are complete,
-    // because precomputed subtypes need to know all inherent types
-    boolean inherentTypesComplete;
+    // subtype definitions cannot be completed before construct types are complete,
+    // because precomputed subtypes need to know all construct types
+    boolean constructTypesComplete;
     table<FillerDescDefn> key(semType) fillerDescDefns = table [];
     int fillerDescCount = 0;
+    TypeSymbolConstructor? symbolConstructor = ();
     llvm:StructType? fillerDescTy = ();
 
-    function init(llvm:Context llContext, llvm:Module llMod, t:Context tc, InitTypes llTypes, boolean inherentTypesComplete) {
+    function init(llvm:Context llContext, llvm:Module llMod, t:Context tc, InitTypes llTypes, boolean constructTypesComplete) {
         self.llvmContext = llContext;
         self.llMod = llMod;
         self.tc = tc;
         self.llTypes = llTypes;
-        self.inherentTypesComplete = inherentTypesComplete;
+        self.constructTypesComplete = constructTypesComplete;
     }
     
     function llContext() returns llvm:Context => self.llvmContext;
+
+    function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl {
+        var { name, ty } = rf;
+        string symbol = "_bal_" + name;
+        llvm:FunctionDecl? existingDecl = self.runtimeFuncs[symbol];
+        if existingDecl != () {
+            return existingDecl;
+        }
+        llvm:FunctionDecl decl = self.llMod.addFunctionDecl(symbol, ty);
+        self.runtimeFuncs[symbol] = decl;
+        return decl;
+    }
+
+    // These are no-ops in init module, since we don't want to add function calls in init module to the stack trace
+    function useDebugLocation(llvm:Builder builder, DebugLocationUsage usage) {}
+    function clearDebugLocation(llvm:Builder builder) {}
 
     function getLlFillerDescTy() returns llvm:StructType {
         if self.fillerDescTy == () {
@@ -118,11 +137,28 @@ class InitModuleContext {
 
 };
 
+// This encapsulate states needed to create new types symbols in init module without having to pass them as arguments to functions
+class TypeSymbolConstructor {
+    private bir:ModuleId id;
+    private int typeUsageCount;
+
+    function init(bir:ModuleId id, int typeUsageCount) {
+        self.id = id;
+        self.typeUsageCount = typeUsageCount;
+    }
+
+    function construct() returns string {
+        int typeUsageCount = self.typeUsageCount;
+        self.typeUsageCount += 1;
+        return mangleTypeSymbol(self.id, USED_CONSTRUCT, typeUsageCount);
+    }
+};
+
 public function buildInitModule(t:Env env, ProgramModule[] modules, map<t:FunctionSignature> publicFuncs) returns llvm:Module|BuildError {
     llvm:Context llContext = new;
     llvm:Module llMod = llContext.createModule();
-    buildInitTypes(llContext, llMod, env, modules);
     llvm:Builder builder = llContext.createBuilder();
+    buildInitTypes(llContext, llMod, builder, env, modules);
     buildMain(modules[0].id, USER_MAIN_NAME, publicFuncs[USER_MAIN_NAME], llMod, builder);
     return llMod;
 }
@@ -142,81 +178,104 @@ function buildMain(bir:ModuleId entryModId, string userMainName, t:FunctionSigna
     builder.ret();
 }
 
-function buildInitTypes(llvm:Context llContext, llvm:Module llMod, t:Env env, ProgramModule[] modules) {
+function buildInitTypes(llvm:Context llContext, llvm:Module llMod, llvm:Builder builder, t:Env env, ProgramModule[] modules) {
     InitTypes llTypes = createInitTypes(llContext);
     InitModuleContext cx = new(llContext, llMod, t:typeContext(env), llTypes, false);
-    buildInitTypesForUsage(cx, modules, USED_INHERENT_TYPE);
-    cx.inherentTypesComplete = true;
+    buildInitTypesForUsage(builder, cx, modules, USED_CONSTRUCT);
+    cx.constructTypesComplete = true;
     finishSubtypeDefns(cx);
-    buildInitTypesForUsage(cx, modules, USED_EXACTIFY);
-    buildInitTypesForUsage(cx, modules, USED_TYPE_TEST);
+    buildInitTypesForUsage(builder, cx, modules, USED_EXACTIFY);
+    buildInitTypesForUsage(builder, cx, modules, USED_TYPE_TEST);
+    buildInitTypesForUsage(builder, cx, modules, USED_CALLED);
 }
 
-function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, TypeHowUsed howUsed) {
+function buildInitTypesForUsage(llvm:Builder builder, InitModuleContext cx, ProgramModule[] modules, TypeHowUsed howUsed) {
     foreach var mod in modules {
         var { types, uses } = mod.typeUsage;
         bir:ModuleId id = mod.id;
+        cx.symbolConstructor = new(id, types.length());
         foreach int i in 0 ..< types.length() {
             if (uses[i] & howUsed) != 0 {
                 t:SemType ty = types[i];
                 string sym = mangleTypeSymbol(id, howUsed, i);
-                if howUsed == USED_INHERENT_TYPE {
-                    addInherentTypeSymbol(cx, sym, ty);
+                if howUsed == USED_CONSTRUCT {
+                    addConstructTypeSymbol(builder, cx, sym, ty);
                 }
                 else if howUsed == USED_EXACTIFY {
                     addExactifyTypeSymbol(cx, sym, ty);
                 }
+                else if howUsed == USED_CALLED {
+                    addCalledTypeSymbol(builder, cx, sym, ty);
+                }
                 else {
                     addTypeTestTypeSymbol(cx, sym, <t:ComplexSemType>ty);
                 }
-            }       
+            }
         }
-    }    
+    }
 }
 
-function addInherentTypeSymbol(InitModuleContext cx, string symbol, t:SemType semType)  {
-    StructureBasicType basic = <StructureBasicType>structureBasicType(semType);
-    InherentTypeDefn? existingDefn = cx.inherentTypeDefns[basic][semType];
+function addCalledTypeSymbol(llvm:Builder builder, InitModuleContext cx, string symbol, t:SemType semType) {
+    ConstructTypeDefn? existingDefn = cx.constructTypeDefns[ID_FUNCTION][semType];
+    if existingDefn != () {
+        _ = cx.llMod.addAlias(existingDefn.llType, existingDefn.ptr, symbol);
+        return;
+    }
+    // Since we handle construct usages before call usages this means we have a signature without an actual function value
+    // therefor all we need is a unique pointer to differentiate signatures
+    llvm:PointerType llType = llvm:pointerType(llFunctionDescType);
+    _ = cx.llMod.addGlobal(llType, symbol, initializer=cx.llContext().constNull(llvm:pointerType(llFunctionDescType)));
+}
+
+function addConstructTypeSymbol(llvm:Builder builder, InitModuleContext cx, string symbol, t:SemType semType)  {
+    TypeIdBasicType basic = <TypeIdBasicType>typeIdBasicType(semType);
+    ConstructTypeDefn? existingDefn = cx.constructTypeDefns[basic][semType];
     if existingDefn != () {
         addTypeAlias(cx, symbol, existingDefn);
     }
     else {
-        _ = addInherentTypeDefn(cx, symbol, semType, basic, "external");
+        _ = addConstructTypeDefn(builder, cx, symbol, semType, basic, "external");
     }
 }
 
-function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semType, StructureBasicType basic, llvm:Linkage linkage) returns llvm:ConstPointerValue {
-    table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[basic];
+function addConstructTypeDefn(llvm:Builder builder, InitModuleContext cx, string symbol, t:SemType semType,
+                              TypeIdBasicType basic, llvm:Linkage linkage) returns llvm:ConstPointerValue {
+    table<ConstructTypeDefn> key(semType) defns = cx.constructTypeDefns[basic];
     int tid = defns.length();
     llvm:StructType llType;
-    if basic == STRUCTURE_LIST {
+    if basic == ID_LIST {
         llType = createListDescType(cx.tc, semType);        
     }
-    else {
+    else if basic == ID_MAPPING {
         llType = createMappingDescType(cx.tc, semType);        
+    }
+    else {
+        llType = createFunctionDescType(cx.tc, semType);
     }
     // The initializer is set later, because of the possibility of
     // recursion via `getFillerDesc`.
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, isConstant=true, linkage=linkage);
     defns.add({ llType, ptr, semType, tid });
     llvm:ConstValue initValue;
-    if basic == STRUCTURE_LIST {
-        initValue = createListDescInit(cx, tid, semType);
+    if basic == ID_LIST {
+        initValue = createListDescInit(builder, cx, tid, semType);
+    }
+    else if basic == ID_MAPPING {
+        initValue = createMappingDescInit(builder, cx, tid, semType);
     }
     else {
-        initValue = createMappingDescInit(cx, tid, semType);
+        initValue = createFunctionDescInit(builder, cx, tid, semType);
     }
     cx.llMod.setInitializer(ptr, initValue);
     return ptr;
 }
-
 
 function createListDescType(t:Context tc, t:SemType semType) returns llvm:StructType {
     t:ListAtomicType lat = <t:ListAtomicType>t:listAtomicType(tc, semType);
     return createLlListDescType(lat.members.initial.length());
 }
 
-function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
+function createListDescInit(llvm:Builder builder, InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
     t:Context tc = cx.tc;
     t:ListAtomicType atomic = <t:ListAtomicType>t:listAtomicType(tc, semType);
     FunctionRef[] functionRefs = getListDescFunctionRefs(cx, atomic);
@@ -230,7 +289,7 @@ function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) re
     }
     t:SemType restType = t:cellInnerVal(atomic.rest);
     initStructValues.push(getMemberType(cx, restType));
-    initStructValues.push(getFillerDesc(cx, restType));
+    initStructValues.push(getFillerDesc(builder, cx, restType));
     llvm:ConstValue[] llMembers = from var ty in atomic.members.initial let var tyInner = t:cellInner(ty) select getMemberType(cx, tyInner);
     initStructValues.push(cx.llContext().constArray(LLVM_MEMBER_TYPE, llMembers));
     return cx.llContext().constStruct(initStructValues);    
@@ -242,7 +301,7 @@ function createMappingDescType(t:Context tc, t:SemType semType) returns llvm:Str
     return llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, fillerDescPtrType, llvm:arrayType(LLVM_MEMBER_TYPE, mat.names.length())]);
 }
 
-function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
+function createMappingDescInit(llvm:Builder builder, InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
     t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicType(cx.tc, semType);
     llvm:ConstValue[] llFields = from var ty in mat.types let var tyInner = t:cellInner(ty) select getMemberType(cx, tyInner);
     t:SemType rest = t:cellInnerVal(mat.rest);
@@ -250,13 +309,138 @@ function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType)
         constTid(cx, tid),
         constI32(cx, llFields.length()),
         getMemberType(cx, rest),
-        getFillerDesc(cx, rest),
+        getFillerDesc(builder, cx, rest),
         cx.llContext().constArray(LLVM_MEMBER_TYPE, llFields)
     ]);
 }
 
+function createFunctionDescType(t:Context tc, t:SemType semType) returns llvm:StructType {
+    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(tc, semType);
+    t:FunctionSignature signature = t:functionSignature(tc, atomic);
+    return llvm:structType([LLVM_TID,
+                            llvm:pointerType(llUniformFunctionType),
+                            LLVM_MEMBER_TYPE,
+                            LLVM_MEMBER_TYPE,
+                            LLVM_INT,
+                            llvm:arrayType(LLVM_MEMBER_TYPE, requiredParamCount(signature))]);
+}
+
+function createFunctionDescInit(llvm:Builder builder, InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
+    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(cx.tc, semType);
+    t:FunctionSignature signature = t:functionSignature(cx.tc, atomic);
+    llvm:Function uniformFunc = createUniformFunction(builder, cx, signature);
+    llvm:ConstValue returnTy = getMemberType(cx, signature.returnType);
+    t:SemType? restParamType = signature.restParamType;
+    llvm:ConstValue restParamTy = restParamType == () ? getMemberType(cx, t:NEVER) : getMemberType(cx, restParamType);
+    int nRequiredParams = requiredParamCount(signature);
+    llvm:ConstValue paramTys = cx.llContext().constArray(LLVM_MEMBER_TYPE,
+                                                         from int i in 0 ..< nRequiredParams select getMemberType(cx, signature.paramTypes[i]));
+    return cx.llContext().constStruct([constTid(cx, tid), uniformFunc, returnTy, restParamTy,
+                                       constInt(cx, nRequiredParams), paramTys]);
+}
+
+function createUniformFunction(llvm:Builder builder, InitModuleContext cx, t:FunctionSignature signature) returns llvm:Function {
+    llvm:FunctionDefn func = cx.llMod.addFunctionDefn(uniformFunctionSymbol(cx.constructTypeDefns[ID_FUNCTION].length()),
+                                                      llUniformFunctionType);
+    llvm:BasicBlock bb = func.appendBasicBlock();
+    builder.positionAtEnd(bb);
+    llvm:PointerValue[] exactArgs = from t:SemType paramType in signature.paramTypes
+                                      select builder.alloca(exactArgType(paramType));
+    llvm:PointerValue uniformArgArray = <llvm:PointerValue>func.getParam(1);
+    int nRequiredParams = requiredParamCount(signature);
+    foreach int i in 0 ..< nRequiredParams {
+        llvm:Value uniformArg = builder.load(builder.getElementPtr(uniformArgArray, [constIndex(cx, i)]));
+        // uniform args is a taggedPtr
+        llvm:Value arg = convertToExactArg(builder, cx, <llvm:PointerValue>uniformArg, signature.paramTypes[i]);
+        builder.store(arg, exactArgs[i]);
+    }
+    if signature.restParamType != () {
+        llvm:Value startingOffset = constInt(cx, nRequiredParams);
+        llvm:Value nRestArgs = builder.iArithmeticNoWrap("sub", func.getParam(2), startingOffset);
+        llvm:PointerValue restArgArrayPtr = exactArgs[nRequiredParams];
+        builder.store(createUniformCallRestArgList(builder, cx, signature.paramTypes[nRequiredParams], nRestArgs),
+                      restArgArrayPtr);
+        buildVoidRuntimeFunctionCall(builder, cx, addToRestArgsFunction,
+                                     [builder.load(restArgArrayPtr), uniformArgArray, startingOffset, nRestArgs]);
+    }
+    llvm:FunctionType funcTy = buildFunctionSignature(signature);
+    llvm:Value? retValue = builder.call(builder.bitCast(<llvm:PointerValue>func.getParam(0), llvm:pointerType(funcTy)),
+                                        from var each in exactArgs select builder.load(each));
+    builder.ret(retValue == () ? constNilTaggedPtr(cx) :
+                                 convertToTaggedValue(builder, cx, retValue, signature.returnType));
+    return func;
+}
+
+function convertToExactArg(llvm:Builder builder, InitModuleContext context,
+                           llvm:PointerValue arg, t:SemType ty) returns llvm:Value {
+    t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
+    if t:isSubtypeSimple(w, t:INT) {
+        return buildUntagInt(builder, context, arg);
+    }
+    else if t:isSubtypeSimple(ty, t:FLOAT) {
+        return buildUntagFloat(builder, context, arg);
+    }
+    else if t:isSubtypeSimple(ty, t:BOOLEAN) {
+        return buildUntagBoolean(builder, arg);
+    }
+    return arg;
+}
+
+function convertToTaggedValue(llvm:Builder builder, InitModuleContext context, llvm:Value val, t:SemType ty) returns llvm:Value {
+    t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
+    if t:isSubtypeSimple(w, t:INT) {
+        return buildTaggedInt(builder, context, val);
+    }
+    else if t:isSubtypeSimple(ty, t:FLOAT) {
+        return buildTaggedFloat(builder, context, val);
+    }
+    else if t:isSubtypeSimple(ty, t:BOOLEAN) {
+        return buildTaggedBoolean(builder, context, val);
+    }
+    return val;
+}
+
+function exactArgType(t:SemType ty) returns llvm:SingleValueType {
+    t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
+    if t:isSubtypeSimple(w, t:INT) {
+        return LLVM_INT;
+    }
+    else if t:isSubtypeSimple(ty, t:FLOAT) {
+        return LLVM_FLOAT;
+    }
+    else if t:isSubtypeSimple(ty, t:BOOLEAN) {
+        return LLVM_BOOLEAN;
+    }
+    return LLVM_TAGGED_PTR;
+}
+
+function requiredParamCount(t:FunctionSignature signature) returns int {
+    return signature.restParamType == () ? signature.paramTypes.length() :
+                                           signature.paramTypes.length() - 1;
+}
+
+function createUniformCallRestArgList(llvm:Builder builder, InitModuleContext cx, t:SemType listTy,
+                                      llvm:Value nRestArgs) returns llvm:PointerValue {
+    t:ListAtomicType atomic = <t:ListAtomicType>t:listAtomicType(cx.tc, listTy);
+    ConstructTypeDefn? memo = cx.constructTypeDefns[ID_LIST][listTy];
+    ConstructTypeDefn defn;
+    if memo == () {
+        TypeSymbolConstructor symbolConstructor = <TypeSymbolConstructor>cx.symbolConstructor;
+        addConstructTypeSymbol(builder, cx, symbolConstructor.construct(), listTy);
+        defn = cx.constructTypeDefns[ID_LIST].get(listTy);
+    }
+    else {
+        defn = memo;
+    }
+    ListRepr repr = listAtomicTypeToSpecializedListRepr(atomic) ?: GENERIC_LIST_REPR;
+    llvm:ConstPointerValue typeDefn = defn.ptr;
+    llvm:PointerValue struct = <llvm:PointerValue>buildRuntimeFunctionCall(builder, cx, repr.construct,
+                                                                           [typeDefn, nRestArgs]);
+    return builder.getElementPtr(builder.bitCast(struct, LLVM_TAGGED_PTR), [constInt(cx, TAG_LIST|FLAG_EXACT)]);
+}
+
 // Type of the value should be fillerDescPtrType
-function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:ConstPointerValue {
+function getFillerDesc(llvm:Builder builder, InitModuleContext cx, t:SemType memberType) returns llvm:ConstPointerValue {
     FillerDescDefn? memo = cx.fillerDescDefns[memberType];
     if memo != () {
         return memo.defn;
@@ -265,7 +449,7 @@ function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:
     if fillerValue == () {
         return cx.llContext().constNull(fillerDescPtrType);
     }
-    llvm:ConstPointerValue defn = getFillerDescValue(cx, fillerValue);
+    llvm:ConstPointerValue defn = getFillerDescValue(builder, cx, fillerValue);
     // This is to deal with recursive case
     if !cx.fillerDescDefns.hasKey(memberType) {
         cx.fillerDescDefns.add({ semType: memberType, defn });
@@ -273,7 +457,7 @@ function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:
     return defn;
 }
 
-function getFillerDescValue(InitModuleContext cx, t:Filler fillerValue) returns llvm:ConstPointerValue {
+function getFillerDescValue(llvm:Builder builder, InitModuleContext cx, t:Filler fillerValue) returns llvm:ConstPointerValue {
     if fillerValue is t:WrappedSingleValue {
         t:SingleValue val = fillerValue.value;
         if val is int {
@@ -296,31 +480,32 @@ function getFillerDescValue(InitModuleContext cx, t:Filler fillerValue) returns 
         }
     }
     else if fillerValue is t:ListFiller {
-        return addListFillerDesc(cx, fillerValue);
+        return addListFillerDesc(builder, cx, fillerValue);
     }
     else {
-        return addMappingFillerDesc(cx, fillerValue);
+        return addMappingFillerDesc(builder, cx, fillerValue);
     }
 }
 
-function addListFillerDesc(InitModuleContext cx, t:ListFiller filler) returns llvm:ConstPointerValue {
+function addListFillerDesc(llvm:Builder builder, InitModuleContext cx, t:ListFiller filler) returns llvm:ConstPointerValue {
     t:SemType listTy = filler.semType;
-    table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_LIST];
-    llvm:ConstPointerValue defn = defns.hasKey(listTy) ? defns.get(listTy).ptr : addInherentTypeDefn(cx, memberListDescSymbol(defns.length()),
-                                                                                                     listTy, STRUCTURE_LIST, "external");
-    llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llStructureDescPtrType);
+    table<ConstructTypeDefn> key(semType) defns = cx.constructTypeDefns[ID_LIST];
+    llvm:ConstPointerValue defn = defns.hasKey(listTy) ? defns.get(listTy).ptr : addConstructTypeDefn(builder, cx, memberListDescSymbol(defns.length()),
+                                                                                                      listTy, ID_LIST, "external");
+    llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llTypeIdDescPtrType);
     return filler.atomic.members.fixedLength == 0 ? addFillerDesc(cx, structDescPtr, "list") :
-                                                    finishFixedLengthListFillerDesc(cx, structDescPtr, filler);
+                                                    finishFixedLengthListFillerDesc(builder, cx, structDescPtr, filler);
 }
 
 // We are special casing lists wit fixed length > 0 since their filler descriptors consists of other (for members) filler descriptors
-function finishFixedLengthListFillerDesc(InitModuleContext cx, llvm:ConstPointerValue structDescPtr, t:ListFiller filler) returns llvm:ConstPointerValue {
+function finishFixedLengthListFillerDesc(llvm:Builder builder, InitModuleContext cx, llvm:ConstPointerValue structDescPtr, t:ListFiller filler) returns llvm:ConstPointerValue {
     llvm:StructType fillerTy = createFixedLengthListFillerDescTy(cx, filler.memberFillers.length());
     cx.fillerDescCount += 1;
     string name = fillerDescSymbol(cx.fillerDescCount);
-    llvm:FunctionDecl decl = getInitRuntimeFunction(cx, "_bal_fixed_length_list_filler_create", cx.getLlFillerCreateFuncTy());
-
-    llvm:ConstPointerValue[] memberFillers = from t:Filler each in filler.memberFillers select getFillerDescValue(cx, each);
+    RuntimeFunction listFillerCreateFunc = { name: "fixed_length_list_filler_create",
+                                             ty: cx.getLlFillerCreateFuncTy(), attrs: [] };
+    llvm:FunctionDecl decl = cx.getRuntimeFunctionDecl(listFillerCreateFunc);
+    llvm:ConstPointerValue[] memberFillers = from t:Filler each in filler.memberFillers select getFillerDescValue(builder, cx, each);
     llvm:ConstValue fillers = cx.llContext().constArray(fillerDescPtrType, memberFillers);
     llvm:ConstValue fillerCount = constInt(cx, memberFillers.length());
     llvm:ConstValue initializer = cx.llContext().constStruct([decl, structDescPtr, fillerCount, fillers]);
@@ -331,17 +516,17 @@ function finishFixedLengthListFillerDesc(InitModuleContext cx, llvm:ConstPointer
 
 function createFixedLengthListFillerDescTy(InitModuleContext cx, int fixedLength) returns llvm:StructType {
     return llvm:structType([llvm:pointerType(cx.getLlFillerCreateFuncTy()),
-                            llStructureDescPtrType,
+                            llTypeIdDescPtrType,
                             "i64",
                             llvm:arrayType(fillerDescPtrType, fixedLength)]);
 }
 
-function addMappingFillerDesc(InitModuleContext cx, t:MappingFiller filler) returns llvm:ConstPointerValue {
+function addMappingFillerDesc(llvm:Builder builder, InitModuleContext cx, t:MappingFiller filler) returns llvm:ConstPointerValue {
     t:SemType mappingTy = filler.semType;
-    table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[STRUCTURE_MAPPING];
-    llvm:ConstPointerValue defn = defns.hasKey(mappingTy) ? defns.get(mappingTy).ptr : addInherentTypeDefn(cx, memberMappingDescSymbol(defns.length()),
-                                                                                                           mappingTy, STRUCTURE_MAPPING, "external");
-    llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llStructureDescPtrType);
+    table<ConstructTypeDefn> key(semType) defns = cx.constructTypeDefns[ID_MAPPING];
+    llvm:ConstPointerValue defn = defns.hasKey(mappingTy) ? defns.get(mappingTy).ptr : addConstructTypeDefn(builder, cx, memberMappingDescSymbol(defns.length()),
+                                                                                                            mappingTy, ID_MAPPING, "external");
+    llvm:ConstPointerValue structDescPtr = cx.llContext().constBitCast(defn, llTypeIdDescPtrType);
     return addFillerDesc(cx, structDescPtr, "mapping");
 }
 
@@ -380,14 +565,14 @@ function createFillerDescTy(InitModuleContext cx, FillerKind kind) returns llvm:
         "int"     => { valType = LLVM_INT; }
         "decimal" => { valType = LLVM_DECIMAL_CONST; }
         "string"  => { valType = LLVM_TAGGED_PTR; }
-        _         => { valType = llStructureDescPtrType; }
+        _         => { valType = llTypeIdDescPtrType; }
     }
     return llvm:structType([llvm:pointerType(cx.getLlFillerCreateFuncTy()), valType]);
 }
 
 function getFillerCreateFunc(InitModuleContext cx, FillerKind kind) returns llvm:FunctionDecl {
-    string funcName = kind == "string" ? "_bal_generic_filler_create" : string `_bal_${kind}_filler_create`;
-    return getInitRuntimeFunction(cx, funcName, cx.getLlFillerCreateFuncTy());
+    string name = kind == "string" ? "generic_filler_create" : string `${kind}_filler_create`;
+    return cx.getRuntimeFunctionDecl({ name, ty: cx.getLlFillerCreateFuncTy(), attrs: [] });
 }
 
 type PredefinedFillerDescName "int_zero"|"boolean_true"|"boolean_false"|"float_zero"|"decimal_zero"|"string_empty"|"nil";
@@ -424,8 +609,8 @@ function getMemberType(InitModuleContext cx, t:SemType memberType) returns llvm:
 }
 
 function addExactifyTypeSymbol(InitModuleContext cx, string symbol, t:SemType semType) {
-    StructureBasicType basic = <StructureBasicType>structureBasicType(semType);
-    InherentTypeDefn? existingDefn = cx.inherentTypeDefns[basic][semType];
+    TypeIdBasicType basic = <TypeIdBasicType>typeIdBasicType(semType);
+    ConstructTypeDefn? existingDefn = cx.constructTypeDefns[basic][semType];
     llvm:ConstValue initValue = constTid(cx, existingDefn == () ? -1 : existingDefn.tid);
     _ = cx.llMod.addGlobal(LLVM_TID, symbol, initializer=initValue, isConstant=true);
 }
@@ -475,7 +660,7 @@ function getBasicSubtype(InitModuleContext cx, t:BasicTypeCode typeCode, t:Compl
         string symbol = subtypeDefnSymbol(cx.subtypeDefns.length());
         llvm:ConstValue? init = ();
         llvm:StructType llStructTy;
-        if cx.inherentTypesComplete {
+        if cx.constructTypesComplete {
             SubtypeStruct sub = createSubtypeStruct(cx, typeCode, semType);
             llStructTy = llvm:structType(sub.types);
             init = cx.llContext().constStruct(sub.values);
@@ -484,7 +669,7 @@ function getBasicSubtype(InitModuleContext cx, t:BasicTypeCode typeCode, t:Compl
             llStructTy = cx.llContext().structCreateNamed(subtypeTypeDefnSymbol(cx.subtypeDefns.length()));
         }
         ptr = cx.llMod.addGlobal(llStructTy, symbol, initializer=init, align=SUBTYPE_ALIGN, isConstant=true, linkage="internal");
-        SubtypeDefn newDefn = { typeCode, semType, ptr, structType: cx.inherentTypesComplete ? () : llStructTy };
+        SubtypeDefn newDefn = { typeCode, semType, ptr, structType: cx.constructTypesComplete ? () : llStructTy };
         cx.subtypeDefns.add(newDefn);
     }
     return cx.llContext().constBitCast(ptr, cx.llTypes.basicSubtypePtr); 
@@ -524,8 +709,46 @@ function createSubtypeStruct(InitModuleContext cx, t:BasicTypeCode typeCode, t:C
         t:BT_MAPPING => {
             return createMappingSubtypeStruct(cx, semType); 
         }
+        t:BT_FUNCTION => {
+            return createFunctionSubtypeStruct(cx, semType);
+        }
     }
     panic err:impossible(`subtypes of uniform type ${typeCode} are not implemented`);    
+}
+
+function createFunctionSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    return createFunctionSubtypeStructInner(cx, semType) ?:
+           createPrecomputedSubtypeStruct(cx, ID_FUNCTION, semType);
+}
+
+function createFunctionSubtypeStructInner(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct? {
+    t:FunctionAtomicType? atomic = t:functionAtomicType(cx.tc, semType);
+    if atomic == () {
+        return ();
+    }
+    t:FunctionSignature signature = t:functionSignature(cx.tc, atomic);
+    var { returnType, paramTypes, restParamType } = signature;
+    int nRequiredParams = requiredParamCount(signature);
+    if returnType !is t:BasicTypeBitSet || restParamType != () || nRequiredParams > int:UNSIGNED32_MAX_VALUE {
+        return ();
+    }
+    t:BasicTypeBitSet[] requiredParamBitSets = from var paramTy in paramTypes.slice(0, nRequiredParams)
+                                                 where paramTy is t:BasicTypeBitSet
+                                                 select paramTy;
+    if requiredParamBitSets.length() != nRequiredParams {
+        return ();
+    }
+    llvm:ConstValue paramBitSetArray = cx.llContext().constArray(LLVM_BITSET,
+                                                                 from t:BasicTypeBitSet b in requiredParamBitSets
+                                                                   select constBitset(cx, b));
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET,
+                "i32", llvm:arrayType(LLVM_BITSET, nRequiredParams)],
+        values: [getSubtypeContainsFunc(cx, "function"),
+                 constBitset(cx, returnType),
+                 constI32(cx, nRequiredParams),
+                 paramBitSetArray]
+    };
 }
 
 function createBooleanSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
@@ -617,7 +840,7 @@ function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType)
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_ARRAY);
         }
     }
-    return createPrecomputedSubtypeStruct(cx, STRUCTURE_LIST, semType);
+    return createPrecomputedSubtypeStruct(cx, ID_LIST, semType);
 }
 
 function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
@@ -644,11 +867,11 @@ function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semTy
             return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_MAP);
         }
     }
-    return createPrecomputedSubtypeStruct(cx, STRUCTURE_MAPPING, semType);
+    return createPrecomputedSubtypeStruct(cx, ID_MAPPING, semType);
 }
 
-function createPrecomputedSubtypeStruct(InitModuleContext cx, StructureBasicType basic, t:ComplexSemType ty) returns SubtypeStruct {
-    llvm:ConstValue[] tids = from var itd in cx.inherentTypeDefns[basic] where t:isSubtype(cx.tc, itd.semType, ty) select constTid(cx, itd.tid);
+function createPrecomputedSubtypeStruct(InitModuleContext cx, TypeIdBasicType basic, t:ComplexSemType ty) returns SubtypeStruct {
+    llvm:ConstValue[] tids = from var itd in cx.constructTypeDefns[basic] where t:isSubtype(cx.tc, itd.semType, ty) select constTid(cx, itd.tid);
     return {
         types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", llvm:arrayType(LLVM_TID, tids.length())],
         values: [getSubtypeContainsFunc(cx, TYPE_KIND_PRECOMPUTED), constI32(cx, tids.length()), cx.llContext().constArray(LLVM_TID, tids)]
@@ -689,7 +912,7 @@ function getListDescFunctionRefs(InitModuleContext cx, t:ListAtomicType atomic) 
             name = listDescFuncOverrides[tentativeName];
         }
         if name != () {
-            ref = getInitRuntimeFunction(cx, mangleRuntimeSymbol("list_" + name), llType);
+            ref = cx.getRuntimeFunctionDecl({ name: "list_" + name, ty: llType, attrs: [] });
         }
         else {
             ref = cx.llContext().constNull(llvm:pointerType(llType));
@@ -715,26 +938,17 @@ function addTypeAlias(InitModuleContext cx, string sym, TypeDefn defn) {
     _ = cx.llMod.addAlias(defn.llType, defn.ptr, sym);
 }
 
-function structureBasicType(t:SemType semType) returns StructureBasicType? {
+function typeIdBasicType(t:SemType semType) returns TypeIdBasicType? {
     if t:isSubtypeSimple(semType, t:LIST) {
-        return STRUCTURE_LIST;
+        return ID_LIST;
     }
     if t:isSubtypeSimple(semType, t:MAPPING) {
-        return STRUCTURE_MAPPING;
+        return ID_MAPPING;
+    }
+    if t:isSubtypeSimple(semType, t:FUNCTION) {
+        return ID_FUNCTION;
     }
     return ();
-}
-
-function getInitRuntimeFunction(InitModuleContext cx, string symbol, llvm:FunctionType llType) returns llvm:FunctionDecl {
-    llvm:FunctionDecl? existingDecl = cx.runtimeFuncs[symbol];
-    if existingDecl != () {
-        return existingDecl;
-    }
-    else {
-        llvm:FunctionDecl newDecl = cx.llMod.addFunctionDecl(symbol, llType);
-        cx.runtimeFuncs[symbol] = newDecl;
-        return newDecl;
-    }
 }
 
 // XXX this duplicates code in Scaffold
