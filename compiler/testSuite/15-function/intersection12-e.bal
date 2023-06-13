@@ -25,4 +25,3 @@ public function main() {
 function foo(S1|S2|S3 s1, S1|S2|S3 s2) returns T1&T2&T3 {
     return 13;
 }
-

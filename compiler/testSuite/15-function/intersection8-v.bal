@@ -1,3 +1,4 @@
+// Venn diagram https://github.com/ballerina-platform/nballerina/issues/907#issuecomment-1588623742
 import ballerina/io;
 type F1 function(1|2|3|4) returns "a"|"b"|"c";
 type F2 function(2|3|4|5) returns "b"|"c"|"d";
@@ -19,4 +20,3 @@ public function main() {
 function foo(1|2|3|4|5|6 a) returns "c" {
     return "c";
 }
-
