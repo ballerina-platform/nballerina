@@ -37,6 +37,7 @@ type NonEmptyPropositionGenerator function (PropositionGenContext cx, Propositio
 
 type PropositionGenBounds readonly & record {|
     readonly int maxMemberCount = 6;
+    readonly int maxParamCount = 20;
     readonly int maxStringConstLen = 20;
     readonly int duplicationFactor = 6;
 |};
@@ -138,6 +139,10 @@ function init() {
                                         subtypeGenMap,
                                         subtypeGenMapUnion,
                                         subtypeGenClosedRecord,
+                                        subtypeGenFunction,
+                                        subtypeGenFunctionExtraVarArg,
+                                        subtypeGenFunctionVarArg,
+                                        subtypeGenFunctionUnequalArgumentCount,
                                         subtypeGenRecord);
     NONEMPTY_PROPOSITION_GENERATORS.push(nonEmptyGenUnion,
                                          nonEmptyGenTuple,
@@ -252,6 +257,65 @@ function subtypeGenUnion(PropositionGenContext cx, PropositionPath path) returns
     return { left: cx.types.union(p1.left, p2.left), right: cx.types.union(p1.right, p2.right) };
 }
 
+// T1 <: S1, T2 <: S2, ..., Tn <: Sn [and Sret <: Tret] -> function(S1, S2, ..., Sn) [returns Sret] <: function(T1, T2, ..., Tn) [returns Tret]
+function subtypeGenFunction(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    var [[leftParamTypes, leftReturnType], [rightParamTypes, rightReturnType]] = functionPropositionComponents(cx, path);
+    int left = cx.types.functionType(leftParamTypes, returnType = leftReturnType);
+    int right = cx.types.functionType(rightParamTypes, returnType = rightReturnType);
+    return { left, right };
+}
+
+// T1 <: S1, T2 <: S2, ..., Tn <: Sn [and Sret <: Tret] -> function(S1, S2, ..., Sn, Sr...) [returns Sret] <: function(T1, T2, ..., Tn) [returns Tret]
+function subtypeGenFunctionExtraVarArg(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    var [[leftParamTypes, leftReturnType], [rightParamTypes, rightReturnType]] = functionPropositionComponents(cx, path);
+    int left = cx.types.functionType(leftParamTypes, restType = generateRandomType(cx, path),
+                                     returnType = leftReturnType);
+    int right = cx.types.functionType(rightParamTypes, returnType = rightReturnType);
+    return { left, right };
+}
+
+// T1 <: S1, T2 <: S2, ..., Tn <: Sn and m < n [and Sret <: Tret] -> function(S1, S2, ..., (Sm|Tm|Tm+1|...|Tn)...) [returns Sret] <: function(T1, T2, ..., Tn|Sm...) [returns Tret]
+function subtypeGenFunctionVarArg(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    var [[leftParamTypes, leftReturnType], [rightParamTypes, rightReturnType]] = functionPropositionComponents(cx, path);
+    var { left: rightRest, right: leftRest } = generateSubtypeProposition(cx, propositionBranch(path));
+    int sliceIndex = cx.random.nextRange(leftParamTypes.length());
+    int[] leftParamTypeSlice = leftParamTypes.slice(0, sliceIndex);
+    foreach int i in sliceIndex ..< rightParamTypes.length() {
+        leftRest = cx.types.union(leftRest, rightParamTypes[i]);
+    }
+    int left = cx.types.functionType(leftParamTypeSlice, restType = leftRest, returnType = leftReturnType);
+    int right = cx.types.functionType(rightParamTypes, restType = rightRest, returnType = rightReturnType);
+    return { left, right };
+}
+
+// T1 <: S1, T2 <: S2, ..., Tn <: Sn and m < n [and Sret <: Tret] -> function(S1, S2, ..., (Sm|Tm|Tm+1|...|Tn)) [returns Sret] <: function(T1, T2, ..., Tn|Sm...) [returns Tret]
+function subtypeGenFunctionUnequalArgumentCount(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
+    var [[leftParamTypes, leftReturnType], [rightParamTypes, rightReturnType]] = functionPropositionComponents(cx, path);
+    int leftRest = generateRandomType(cx, path);
+    int sliceIndex = cx.random.nextRange(leftParamTypes.length());
+    int[] leftParamTypeSlice = leftParamTypes.slice(0, sliceIndex);
+    foreach int i in sliceIndex ..< rightParamTypes.length() {
+        leftRest = cx.types.union(leftRest, rightParamTypes[i]);
+    }
+    int left = cx.types.functionType(leftParamTypeSlice, restType = leftRest, returnType = leftReturnType);
+    int right = cx.types.functionType(rightParamTypes, returnType = rightReturnType);
+    return { left, right };
+}
+
+function functionPropositionComponents(PropositionGenContext cx, PropositionPath path) returns [int[], int][2] {
+    int paramCount = cx.random.nextRange(cx.bounds.maxParamCount);
+    var [subtypes, superTypes] = generateNSubtypePropositions(cx, paramCount, propositionBranch(path));
+    match cx.random.nextRange(2) {
+        0 => {
+            return [[superTypes, -1], [subtypes, -1]];
+        }
+        _ => {
+            var { left: subtypeRet, right: superTypeRet } = generateSubtypeProposition(cx, propositionBranch(path));
+            return [[superTypes, subtypeRet], [subtypes, superTypeRet]];
+        }
+    }
+}
+
 // T[N] <: T[]
 function subtypeGenFixedLengthArray(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
     int r = cx.random.next();
@@ -361,6 +425,10 @@ function generateSubtypeProposition(PropositionGenContext cx, PropositionPath pa
     SubtypeProposition prop = generator(cx, path);
     cx.storeSubtypeProposition(path.depth, prop);
     return prop;
+}
+
+function generateRandomType(PropositionGenContext cx, PropositionPath path) returns int {
+    return generateSubtypeProposition(cx, path).left;
 }
 
 function generateNSubtypePropositions(PropositionGenContext cx, int n, PropositionPath path) returns [int[], int[]] {

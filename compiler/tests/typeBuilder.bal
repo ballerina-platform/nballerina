@@ -148,11 +148,13 @@ class SemtypeBuilder {
 
     function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int {
         t:SemType rest = restType == -1 ? t:NEVER : self.defns[restType];
-        t:SemType[] p = from var index in parameterTypes select self.defns[index];
+        t:SemType[] params = from var index in parameterTypes select self.defns[index];
         t:SemType returnTy = returnType == -1 ? t:NIL : self.defns[returnType];
         t:Env env = self.cx.env;
         t:FunctionDefinition d = new;
-        t:SemType t = d.define(env, t:defineListTypeWrapped(new(), env, p, p.length(), rest), returnTy);
+        t:SemType t = d.define(env, t:defineListTypeWrapped(new(), env, params,
+                                                            params.length(), rest, mut = t:CELL_MUT_NONE),
+                               returnTy);
         return self.push(t);
     }
 
@@ -233,8 +235,8 @@ class AstBasedTypeDefBuilder {
             tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         }
         else if typeDesc is s:FunctionTypeDesc {
-            dependencies.push(...self.findIndices(...from s:FunctionTypeParam param 
-                                                        in typeDesc.params 
+            dependencies.push(...self.findIndices(...from s:FunctionTypeParam param
+                                                        in typeDesc.params
                                                         select param.td));
             s:TypeDesc? returnTd = typeDesc.ret;
             if returnTd != () {
