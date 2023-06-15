@@ -296,7 +296,7 @@ public enum InsnName {
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
-    INSN_CALL_INDIRECT,
+    INSN_CALL_INEXACT,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -333,7 +333,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallInexactInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -592,21 +592,22 @@ public type EqualityInsn readonly & record {|
 # any function call could result in a stack overflow panic.
 # XXX This does not handle functions that don't return
 # (i.e. with return type of never)
+# XXX: This can also panic due to memory allocation for uniform function call
+# which is not handled gracefully
 public type CallInsn readonly & record {|
     *ResultInsnBase;
     # Position in the source that resulted in the instruction
     INSN_CALL name = INSN_CALL;
-    FunctionRef func;
+    FunctionConstOperand|Register func;
+    // When there are rest arguments, last argument in the array is a list containing rest arguments
     Operand[] args;
 |};
 
-# Call a function using a function value.
-# This behaves similar to CallInsn.
-# XXX: In addition this can also panic due to memory allocation for uniform function call
-# which is not handled gracefully
-public type CallIndirectInsn readonly & record {|
+# Call a function value by passing arguments directly from the call site, without conforming to convention
+# in CallInsn. This is always a uniform function call. Otherwise this behave like CallInsn.
+public type CallInexactInsn readonly & record {|
     *ResultInsnBase;
-    INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
+    INSN_CALL_INEXACT name = INSN_CALL_INEXACT;
     [Register, Operand...] operands;
 |};
 

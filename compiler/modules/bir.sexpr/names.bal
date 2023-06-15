@@ -23,7 +23,7 @@ final readonly & InsnNameMapping[] INSN_NAMES = [
     // hand picked
     { sexpr:"set"                  , bir:"INSN_ASSIGN",                         op: () },
     { sexpr:"boolean!"             , bir:"INSN_BOOLEAN_NOT",                    op: () },
-    { sexpr:"call-indirect"        , bir:"INSN_CALL_INDIRECT",                  op: () },
+    { sexpr:"call-inexact"         , bir:"INSN_CALL_INEXACT",                   op: () },
     { sexpr:"less-than"            , bir:"INSN_COMPARE",                        op: "<" },
     { sexpr:"less-than-or-equal"   , bir:"INSN_COMPARE",                        op: "<=" },
     { sexpr:"greater-than"         , bir:"INSN_COMPARE",                        op: ">" },

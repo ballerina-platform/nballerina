@@ -364,8 +364,8 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is CallInsn {
         check verifyCall(vc, insn);
     }
-    else if insn is CallIndirectInsn {
-        check verifyCallIndirect(vc, insn);
+    else if insn is CallInexactInsn {
+        check verifyCallInexact(vc, insn);
     }
     else if insn is TypeCastInsn {
         check verifyTypeCast(vc, insn);
@@ -440,25 +440,29 @@ function verifyTypeCondBranch(VerifyContext vc, TypeCondBranchInsn insn) returns
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     // XXX verify insn.semType
-    return verifyFunctionCallArgs(vc, insn.func.signature.paramTypes, insn);
+    FunctionConstOperand|Register func = insn.func;
+    if func is FunctionConstOperand {
+        return verifyFunctionCallArgs(vc, func.value.signature.paramTypes, insn);
+    }
+    t:SemType funcTy = func.semType;
+    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(vc.typeContext(), funcTy);
+    t:FunctionSignature signature = t:functionSignature(vc.typeContext(), atomic);
+    return verifyFunctionCallArgs(vc, signature.paramTypes, insn);
 }
 
-function verifyCallIndirect(VerifyContext vc, CallIndirectInsn insn) returns err:Internal? {
-    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(vc.typeContext(), insn.operands[0].semType);
-    return verifyFunctionCallArgs(vc, t:functionSignature(vc.typeContext(), atomic).paramTypes, insn);
+function verifyCallInexact(VerifyContext vc, CallInexactInsn insn) returns err:Internal? {
+    t:SemType funcTy = insn.operands[0].semType;
+    t:FunctionAtomicType? atomic = t:functionAtomicType(vc.typeContext(), funcTy);
+    if atomic != () {
+        return vc.invalidErr("calling atomic function value using CallInexactInsn", insn.pos);
+    }
+    // TODO: when we have proper function application verify the argument types
 }
 
-function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallIndirectInsn|CallInsn insn) returns err:Internal? {
+function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallInsn insn) returns err:Internal? {
     // JBUG: can't do
     // Operand[] args = insn is CallInsn ? insn.args : from int i in 1 ..< insn.operands.length() select insn.operands[i];
-    Operand[] args;
-    if insn is CallInsn {
-        args = insn.args;
-    }
-    else {
-        args = from int i in 1 ..< insn.operands.length() select insn.operands[i];
-    }
-    int nSuppliedArgs = args.length();
+    int nSuppliedArgs = insn.args.length();
     int nExpectedArgs = paramTypes.length();
     if nSuppliedArgs != nExpectedArgs {
         if nSuppliedArgs < nExpectedArgs {
@@ -469,7 +473,7 @@ function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallIndi
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check validOperandType(vc, args[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, insn.pos);
+        check validOperandType(vc, insn.args[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, insn.pos);
     }
 }
 

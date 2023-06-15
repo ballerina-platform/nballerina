@@ -97,9 +97,13 @@ function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File 
 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
     if insn is bir:CallInsn {
-        bir:FunctionRef func =  insn.func;
-        FunctionRef ref = fromFunctionRefAccum(sc, func);
+        bir:FunctionConstOperand|bir:Register operand = insn.func;
         (Operand & readonly)[] args = from var arg in insn.args select fromOperand(sc, arg);
+        if operand is bir:Register {
+            return ["call", fromRegister(sc, operand), fromRegister(sc, insn.result), ...args];
+        }
+        bir:FunctionRef func = operand.value;
+        FunctionRef ref = fromFunctionRefAccum(sc, func);
         if func.erasedSignature != func.signature {
             return ["call-generic", ref, fromSignature(sc, func.signature), fromRegister(sc, insn.result), ...args];
         }

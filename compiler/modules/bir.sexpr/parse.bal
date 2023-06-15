@@ -251,7 +251,8 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
             panic error("unimplemented instruction: " + sexpr:prettyPrint(data));
         }
         ["call", var symbolSexpr, var resultSexpr, ...var argsSexpr] => {
-            bir:Symbol symbol = symbolFromSexpr(<FunctionRef>symbolSexpr);
+            bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(<FunctionRef>symbolSexpr) : 
+                                                                          lookupRegister(pc, <RegisterName>symbolSexpr);
             return toCallInsn(pc, symbol, checkpanic argsSexpr.cloneWithType(), <sexpr:Symbol>resultSexpr); // JBUG: remove cloneWithType
         }
         ["call-generic", var symbolSexpr, var signature, var resultSexpr, ...var argsSexpr] => {
@@ -358,7 +359,7 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
     BirInsnBase? insn = ();
     if insnSexpr is ResultInsn {
         match insnSexpr {
-            ["call-indirect", var result, var operand] => { // need to special case this since it's only case operands arrays can have a single operand.
+            ["call-inexact", var result, var operand] => { // need to special case this since it's only case operands arrays can have a single operand.
                 insn = { name, op, pos, result: lookupRegister(pc, checkpanic result.ensureType()),
                          operands: [toOperand(pc, operand)] };
             }
@@ -393,9 +394,12 @@ type BirInsnBase readonly & record {|
     bir:Register result?;
 |};
 
-function toCallInsn(FuncParseContext pc, bir:Symbol symbol, Operand[] argsSexpr, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallInsn {
+function toCallInsn(FuncParseContext pc, bir:Symbol|bir:Register symbol, Operand[] argsSexpr, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallInsn {
     readonly & bir:Operand[] args = from var arg in argsSexpr select toOperand(pc, arg);
     var result = toResultRegister(pc, resultSexpr);
+    if symbol is bir:Register {
+        return <bir:CallInsn>{ func: symbol, args, pos: 0, result };
+    }
     t:FunctionSignature erasedSignature = lookupSignature(pc, symbol);
 
     t:FunctionSignature signature;
@@ -405,7 +409,9 @@ function toCallInsn(FuncParseContext pc, bir:Symbol symbol, Operand[] argsSexpr,
     else {
         signature = erasedSignature;
     }
-    return <bir:CallInsn>{ func: { symbol, signature, erasedSignature }, args, pos: 0, result };
+    bir:FunctionConstOperand func = { value: { symbol, signature, erasedSignature },
+                                      semType: t:functionSemType(pc.tc, signature) };
+    return <bir:CallInsn>{ func, args, pos: 0, result };
 }
 
 function lookupLabel(FuncParseContext pc, string name) returns bir:Label {
