@@ -152,7 +152,7 @@ class SemtypeBuilder {
         t:SemType returnTy = returnType == -1 ? t:NIL : self.defns[returnType];
         t:Env env = self.cx.env;
         t:FunctionDefinition d = new;
-        t:SemType t = d.define(env, t:defineListTypeWrapped(new(), env, params,
+        t:SemType t = d.define(env, t:defineListTypeWrapped(new(), env, params, 
                                                             params.length(), rest, mut = t:CELL_MUT_NONE),
                                returnTy);
         return self.push(t);
