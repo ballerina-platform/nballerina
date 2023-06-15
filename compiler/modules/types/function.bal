@@ -97,7 +97,7 @@ function functionParamListTypeInner(Context cx, SemType accumTy, Bdd b) returns 
 // Corresponds to apply^? in AMK tutorial.
 public function functionReturnType(Context cx, SemType func, SemType argList) returns SemType? {
     SemType? domain = functionParamListType(cx, func);
-    if domain == () || !isSubtype(cx, argList, domain) || !isSubtype(cx, func, FUNCTION) {
+    if domain == () || !isSubtype(cx, argList, domain) {
         return ();
     }
     if func is BasicTypeBitSet {

@@ -1388,39 +1388,21 @@ function codeGenCheckingTerminator(bir:BasicBlock bb, s:CheckingKeyword checking
 
 function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr) returns CodeGenError|ExprEffect {
     string? prefix = expr.prefix;
-    [bir:FunctionRef, bir:Register?]|[(), bir:Register] funcRef;
+    [bir:FunctionRef, bir:Register?]|[(), bir:Register] func;
     if prefix == () {
-        funcRef = check genLocalFunctionRef(cx, expr.funcName, expr.qNamePos);
+        func = check genLocalFunction(cx, expr.funcName, expr.qNamePos);
     }
     else {
-        funcRef = check genImportedFunctionRef(cx, prefix, expr.funcName, expr.qNamePos);
+        func = check genImportedFunction(cx, prefix, expr.funcName, expr.qNamePos);
     }
-    match funcRef {
-        var [func, funcRegister] if func is bir:FunctionRef => {
-            return finishCodeGenFunctionCall(cx, bb, expr, func, funcRegister);
+    match func {
+        var [funcRef, funcRegister] if funcRef is bir:FunctionRef => {
+            return finishCodeGenFunctionCall(cx, bb, expr, funcRef, funcRegister);
         }
         var [_, funcRegister] => {
-            return finishCodeGenApplication(cx, bb, expr, <bir:Register>funcRegister);
+            return finishCodeGenFunctionInexactCall(cx, bb, expr, <bir:Register>funcRegister);
         }
     }
-}
-
-function genLocalFunctionRef(ExprContext cx, string funcName, Position pos) returns [bir:FunctionRef, bir:Register?]|[(), bir:Register]|CodeGenError {
-    var ref = cx.lookupLocalVarRef(funcName, pos);
-    if ref is bir:FunctionRef {
-        return [ref, ()];
-    }
-    else if ref is Binding {
-        t:SemType semType = ref.reg.semType;
-        t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
-        if atom != () {
-            return [functionRefFromAtom(cx, atom, registerName(ref.reg)), ref.reg];
-        }
-        if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) {
-            return [(), ref.reg];
-        }
-    }
-    return cx.semanticErr("only a value of function type can be called", pos);
 }
 
 function finishCodeGenFunctionCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr,
@@ -1474,18 +1456,12 @@ function finishCodeGenFunctionInexactCall(ExprContext cx, bir:BasicBlock bb, s:F
         argTypes.push(arg.semType);
         curBlock = nextBlock;
     }
-    t:SemType? paramListType = t:functionParamListType(tc, funcTy);
-    if paramListType == () {
-        // This should never happen since we checked value to be a function in gen*FunctionRef
-        panic err:impossible("function type must have a parameter type");
-    }
     t:SemType argListType = t:tupleTypeWrappedRo(tc.env, ...argTypes);
-    if !t:isSubtype(tc, argListType, paramListType) {
-        return cx.semanticErr("incorrect type for arguments", s:range(expr));
-    }
     t:SemType? returnType = t:functionReturnType(tc, funcTy, argListType);
     if returnType == () {
-        panic err:impossible("well typed function application must have a return type");
+        // This can only happen when application is not well-typed and since we
+        // ensure funcTy is a function subtype (in gen*Function), this can only be caused by invalid args
+        return cx.semanticErr("incorrect type for arguments", s:range(expr));
     }
     return codeGenCall(cx, curBlock, func, returnType, args, false, expr.qNamePos);
 }
@@ -1640,7 +1616,7 @@ function groupOriginsByUnnarrowed(BindingChain? bindingLimit, TypeMergerOrigin? 
     return [numOrigins, originGroups];
 }
 
-function genImportedFunctionRef(ExprContext cx, string prefix, string identifier, Position pos) returns [bir:FunctionRef, ()]|CodeGenError {
+function genImportedFunction(ExprContext cx, string prefix, string identifier, Position pos) returns [bir:FunctionRef, ()]|CodeGenError {
     var defn = lookupImportedVarRef(cx, prefix, identifier, pos);
     if defn is bir:FunctionRef {
         return [defn, ()];
