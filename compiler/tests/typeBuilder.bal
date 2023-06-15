@@ -39,6 +39,7 @@ type TypeBuilder object {
     function xmlSequenceType(int constituentType) returns int;
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
+    function tuple(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
 
     function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int;
 
@@ -143,6 +144,12 @@ class SemtypeBuilder {
             r = self.defns[rest];
         }
         t:SemType t = t:defineListTypeWrapped(new t:ListDefinition(), self.cx.env, m, fixedLen, r);
+        return self.push(t); 
+    }
+
+    function tuple(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int {
+        t:SemType[] m = from var index in members select self.defns[index];
+        t:SemType t = t:tupleTypeWrappedRo(self.cx.env, ...m);
         return self.push(t); 
     }
 
@@ -453,6 +460,14 @@ class AstBasedTypeDefBuilder {
             self.xmlTextIndex = self.createTypeDef(pi);
         }
         return <int>self.xmlTextIndex;
+    }
+
+    function tuple(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int {
+        // TODO: return a tuple type desc
+        s:TypeDescRef[] m = from var index in members select self.createTypeDescRef(index);
+        var [startPos, endPos] = self.calculatePosition();
+        s:TupleTypeDesc td = { startPos, endPos, members: m, rest: () };
+        return self.createTypeDef(td);
     }
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int {

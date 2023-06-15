@@ -9,3 +9,8 @@ function testSubtyping() {
 function testNonEmptyTypes() {
     testSemtypePropositions(generator = generateNonEmptyProposition);
 }
+
+@test:Config { groups: ["longRunning", "private"] }
+function testApplication() {
+    testSemtypePropositions(generator = generateApplicationPropositions);
+}

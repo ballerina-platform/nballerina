@@ -7,15 +7,15 @@ import wso2/nballerina.comm.lib;
 
 // diff-2 stand for isEmpty(diff(a, b)) and isEmpty(diff(b, a))
 enum PropositionOp {
-    UNION, INTERSECT, DIFF, DIFF2
+    UNION, INTERSECT, DIFF, DIFF2, APPLY
 }
 
-type Proposition record {|
+type Proposition record {
     PropositionOp op;
     boolean isEmpty;
     int left;
     int right;
-|};
+};
 
 type SubtypeProposition record {|
     *Proposition;
@@ -29,11 +29,24 @@ type NonEmptyProposition record {|
     false isEmpty = false;
 |};
 
+// TODO: if we want this to be a subtype of Proposition, we can perhaps
+// make left = returnType and right = functionType * argListType
+// we can use listAtomicType to get the list atomic type right then use listAtomicTypeMemberAtInnerVal with i={0,1}
+// to get function Type an arglist respectively
+// We can keep the 
+type ApplicationProposition record {|
+    *Proposition;
+    APPLY op = APPLY;
+    true isEmpty = true;
+|};
+
 type PropositionGenerator function (PropositionGenContext cx, PropositionPath path) returns Proposition;
 
 type SubtypePropositionGenerator function (PropositionGenContext cx, PropositionPath path) returns SubtypeProposition;
 
 type NonEmptyPropositionGenerator function (PropositionGenContext cx, PropositionPath path) returns NonEmptyProposition; 
+
+type ApplicationPropositionGenerator function(PropositionGenContext cx, PropositionPath path) returns ApplicationProposition;
 
 type PropositionGenBounds readonly & record {|
     readonly int maxMemberCount = 6;
@@ -48,18 +61,19 @@ class PropositionGenContext {
     final t:Context typeContext;
     final SubtypeProposition[][] subtypePropositions = [];
     final NonEmptyProposition[][] nonEmptyPropositions = [];
+    final ApplicationProposition[][] applicationPropositions = [];
     final PropositionGenBounds bounds;
     final int seed;
     final lib:Random random;
     final TypeBuilder types;
     final Proposition[] failedPropositions = [];
 
-    function init(t:Context cx, int seed, PropositionGenBounds bounds = {}) {
+    function init(t:Context cx, int seed, TypeBuilder types, PropositionGenBounds bounds = {}) {
         self.typeContext = cx;
         self.bounds = bounds;
         self.seed = seed;
+        self.types = types;
         self.random = new(seed);
-        self.types = new AstBasedTypeDefBuilder(cx);
     }
 
     function takeSubtypeProposition() returns SubtypeProposition {
@@ -68,6 +82,10 @@ class PropositionGenContext {
 
     function takeNonEmptyProposition() returns NonEmptyProposition {
         return <NonEmptyProposition>self.takeFromList(self.nonEmptyPropositions);
+    }
+
+    function takeApplicationProposition() returns ApplicationProposition {
+        return <ApplicationProposition>self.takeFromList(self.applicationPropositions);
     }
 
     private function takeFromList(Proposition[][] list) returns Proposition {
@@ -83,6 +101,10 @@ class PropositionGenContext {
 
     function storeNonEmptyProposition(int depth, NonEmptyProposition proposition) {
         self.storeInList(self.nonEmptyPropositions, () => <NonEmptyProposition[]>[], depth, proposition);
+    }
+
+    function storeApplicationProposition(int depth, ApplicationProposition proposition) {
+        self.storeInList(self.applicationPropositions, () => <ApplicationProposition[]>[], depth, proposition);
     }
 
     private function storeInList(Proposition[][] list, PropositionListCtor ctor, int depth, Proposition proposition) {
@@ -119,10 +141,15 @@ final readonly & NonEmptyPropositionGenerator[] AXIOMATIC_NONEMPTY_PROPOSITION_G
     nonEmptyFromAxiomaticSubtype
 ];
 
+final readonly & ApplicationPropositionGenerator[] AXIOMATIC_APPLICATION_PROPOSITION_GENERATORS = [
+    simpleFunctionApplication
+];
+
 int AXIOMATIC_GENERATOR_COUNT = AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS.length();
 
 final SubtypePropositionGenerator[] SUBTYPE_PROPOSITION_GENERATORS = from var gen in AXIOMATIC_SUBTYPE_PROPOSITION_GENERATORS select gen;
 final NonEmptyPropositionGenerator[] NONEMPTY_PROPOSITION_GENERATORS = from var gen in AXIOMATIC_NONEMPTY_PROPOSITION_GENERATORS select gen;
+final ApplicationPropositionGenerator[] APPLICATION_PROPOSITION_GENERATORS = from var gen in AXIOMATIC_APPLICATION_PROPOSITION_GENERATORS select gen;
 
 function init() {
     // JBUG #35902 this list should be initialized in the list constructor.
@@ -181,6 +208,21 @@ final TypeGeneratorFunction[] TYPES_GENERATOR_LIST = [
     XML_TYPES_GENERATOR_LIST[3],
     XML_TYPES_GENERATOR_LIST[4]
 ];
+
+function simpleFunctionApplication(PropositionGenContext cx, PropositionPath path) returns ApplicationProposition {
+    int argCount = cx.random.nextRange(cx.bounds.maxParamCount);
+    int[] args = [];
+    foreach int i in 0 ..< argCount {
+        TypeGeneratorFunction argGen = TYPES_GENERATOR_LIST[cx.random.nextRange(TYPES_GENERATOR_LIST.length())];
+        args.push(argGen(cx.types));
+    }
+    TypeGeneratorFunction retGen = TYPES_GENERATOR_LIST[cx.random.nextRange(TYPES_GENERATOR_LIST.length())];
+    int ret = retGen(cx.types);
+    int functionType = cx.types.functionType(parameterTypes=args, returnType=ret);
+    int argListType = cx.types.tuple(args);
+    int right = cx.types.tuple([functionType, argListType]);
+    return { left: ret, right };
+}
 
 function subtypeSameSimpleType(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
     int r = cx.random.nextRange(TYPES_GENERATOR_LIST.length());
@@ -427,6 +469,25 @@ function generateSubtypeProposition(PropositionGenContext cx, PropositionPath pa
     return prop;
 }
 
+function generateApplicationPropositions(PropositionGenContext cx, PropositionPath path) returns ApplicationProposition {
+    if path.depth <= 0 {
+        // we currently have only one but we can add multiple?
+        ApplicationPropositionGenerator generator = AXIOMATIC_APPLICATION_PROPOSITION_GENERATORS[cx.random.nextRange(AXIOMATIC_APPLICATION_PROPOSITION_GENERATORS.length())];
+        ApplicationProposition prop = generator(cx, path);
+        // pick one and call it
+        cx.storeApplicationProposition(0, prop);
+        return prop;
+    }
+    if cx.applicationPropositions.length() > path.depth + 1 {
+        return cx.takeApplicationProposition();
+    }
+    int r = cx.random.nextRange(APPLICATION_PROPOSITION_GENERATORS.length());
+    ApplicationPropositionGenerator generator = APPLICATION_PROPOSITION_GENERATORS[r];
+    ApplicationProposition prop = generator(cx, path);
+    cx.storeApplicationProposition(path.depth, prop);
+    return prop;
+}
+
 function generateRandomType(PropositionGenContext cx, PropositionPath path) returns int {
     return generateSubtypeProposition(cx, path).left;
 }
@@ -602,6 +663,18 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
             result = t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty
                 && t:isEmpty(cx.typeContext, t:diff(right, left)) == p.isEmpty;
         }
+        APPLY => {
+            t:ListAtomicType applicationTuple = <t:ListAtomicType>t:listAtomicType(cx.typeContext, right);
+            t:SemType functionType = t:listAtomicTypeMemberAtInner(applicationTuple, 0);
+            t:SemType argListType = t:listAtomicTypeMemberAtInner(applicationTuple, 1);
+            t:SemType? returnType = t:functionReturnType(cx.typeContext, functionType, argListType);
+            if returnType == () {
+                t:FunctionAtomicType atom = <t:FunctionAtomicType>t:functionAtomicType(cx.typeContext, functionType);
+                boolean test = t:isSameType(cx.typeContext, atom[0], argListType);
+                panic error("invalid function application for seed: " + cx.seed.toString());
+            }
+            result = t:isEmpty(cx.typeContext, t:diff(returnType, left)) == p.isEmpty;
+        }
         _ => {
             panic error("invalid OP: " + p.op.toString() + " for seed: " + cx.seed.toString());
         }
@@ -659,7 +732,11 @@ function printPropositionTestFailures(PropositionGenContext cx) {
 function testSemtypePropositions(*PropositionTestConfig config) {
     foreach int i in 0 ..< config.totalTestRuns {
         time:Utc seed = time:utcNow();
-        PropositionGenContext cx = new PropositionGenContext(t:typeContext(new), seed[0]);
+        t:Context tc = t:typeContext(new);
+        // We can' create readonly types with AstBasedTypeDefBuilder but we need them to represent arg type
+        TypeBuilder builder = config.generator is ApplicationPropositionGenerator ? new SemtypeBuilder(tc) : 
+                                                                                    new AstBasedTypeDefBuilder(tc);
+        PropositionGenContext cx = new PropositionGenContext(tc , seed[0], builder);
         foreach int depth in 0 ... config.depthLimit {
             io:print(string `${"\r"}Iteration: ${i}, level: ${depth}/${config.depthLimit}`);
             foreach int j in 0 ... config.widthLimit {
