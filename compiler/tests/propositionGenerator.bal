@@ -34,10 +34,13 @@ type NonEmptyProposition record {|
 // we can use listAtomicType to get the list atomic type right then use listAtomicTypeMemberAtInnerVal with i={0,1}
 // to get function Type an arglist respectively
 // We can keep the 
+// TODO: add a comment explaining the what is left and what is right
 type ApplicationProposition record {|
     *Proposition;
     APPLY op = APPLY;
     true isEmpty = true;
+    int functionType;
+    int argListType;
 |};
 
 type PropositionGenerator function (PropositionGenContext cx, PropositionPath path) returns Proposition;
@@ -68,11 +71,11 @@ class PropositionGenContext {
     final TypeBuilder types;
     final Proposition[] failedPropositions = [];
 
-    function init(t:Context cx, int seed, TypeBuilder types, PropositionGenBounds bounds = {}) {
+    function init(t:Context cx, int seed, PropositionGenBounds bounds = {}) {
         self.typeContext = cx;
         self.bounds = bounds;
         self.seed = seed;
-        self.types = types;
+        self.types = new AstBasedTypeDefBuilder(cx);
         self.random = new(seed);
     }
 
@@ -219,9 +222,9 @@ function simpleFunctionApplication(PropositionGenContext cx, PropositionPath pat
     TypeGeneratorFunction retGen = TYPES_GENERATOR_LIST[cx.random.nextRange(TYPES_GENERATOR_LIST.length())];
     int ret = retGen(cx.types);
     int functionType = cx.types.functionType(parameterTypes=args, returnType=ret);
-    int argListType = cx.types.tuple(args);
-    int right = cx.types.tuple([functionType, argListType]);
-    return { left: ret, right };
+    int argListType = cx.types.functionArgumentType(args);
+    int right = cx.types.list([functionType, argListType]);
+    return { left: ret, right, functionType, argListType };
 }
 
 function subtypeSameSimpleType(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
@@ -664,13 +667,13 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
                 && t:isEmpty(cx.typeContext, t:diff(right, left)) == p.isEmpty;
         }
         APPLY => {
+            // TODO: may be it is a cleaner to cast the proposition to proper type and resolve each type seperatly?
+            // however this means doulbe resolving
             t:ListAtomicType applicationTuple = <t:ListAtomicType>t:listAtomicType(cx.typeContext, right);
             t:SemType functionType = t:listAtomicTypeMemberAtInner(applicationTuple, 0);
             t:SemType argListType = t:listAtomicTypeMemberAtInner(applicationTuple, 1);
             t:SemType? returnType = t:functionReturnType(cx.typeContext, functionType, argListType);
             if returnType == () {
-                t:FunctionAtomicType atom = <t:FunctionAtomicType>t:functionAtomicType(cx.typeContext, functionType);
-                boolean test = t:isSameType(cx.typeContext, atom[0], argListType);
                 panic error("invalid function application for seed: " + cx.seed.toString());
             }
             result = t:isEmpty(cx.typeContext, t:diff(returnType, left)) == p.isEmpty;
@@ -734,9 +737,7 @@ function testSemtypePropositions(*PropositionTestConfig config) {
         time:Utc seed = time:utcNow();
         t:Context tc = t:typeContext(new);
         // We can' create readonly types with AstBasedTypeDefBuilder but we need them to represent arg type
-        TypeBuilder builder = config.generator is ApplicationPropositionGenerator ? new SemtypeBuilder(tc) : 
-                                                                                    new AstBasedTypeDefBuilder(tc);
-        PropositionGenContext cx = new PropositionGenContext(tc , seed[0], builder);
+        PropositionGenContext cx = new PropositionGenContext(tc , seed[0]);
         foreach int depth in 0 ... config.depthLimit {
             io:print(string `${"\r"}Iteration: ${i}, level: ${depth}/${config.depthLimit}`);
             foreach int j in 0 ... config.widthLimit {

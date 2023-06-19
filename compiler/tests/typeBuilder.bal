@@ -39,7 +39,8 @@ type TypeBuilder object {
     function xmlSequenceType(int constituentType) returns int;
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
-    function tuple(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
+
+    function functionArgumentType(int[] requiredArguments = [], int rest = -1) returns int;
 
     function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int;
 
@@ -147,10 +148,11 @@ class SemtypeBuilder {
         return self.push(t); 
     }
 
-    function tuple(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int {
-        t:SemType[] m = from var index in members select self.defns[index];
-        t:SemType t = t:tupleTypeWrappedRo(self.cx.env, ...m);
-        return self.push(t); 
+    function functionArgumentType(int[] requiredArguments = [], int rest = -1) returns int {
+        t:SemType[] args = from var index in requiredArguments select self.defns[index];
+        t:SemType r = rest == -1 ? t:NEVER : self.defns[rest];
+        t:SemType t = t:defineListTypeWrapped(new (), self.cx.env, args, rest=r, mut = t:CELL_MUT_NONE);
+        return self.push(t);
     }
 
     function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int {
@@ -210,7 +212,6 @@ class AstBasedTypeDefBuilder {
     private int? xmlCommentIndex = ();
     private int? xmlPiIndex = ();
     private int? xmlTextIndex = ();
-
 
     function init(t:Context cx) {
         self.cx = cx;
@@ -462,14 +463,6 @@ class AstBasedTypeDefBuilder {
         return <int>self.xmlTextIndex;
     }
 
-    function tuple(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int {
-        // TODO: return a tuple type desc
-        s:TypeDescRef[] m = from var index in members select self.createTypeDescRef(index);
-        var [startPos, endPos] = self.calculatePosition();
-        s:TupleTypeDesc td = { startPos, endPos, members: m, rest: () };
-        return self.createTypeDef(td);
-    }
-
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int {
         s:TypeDescRef[] m = from var index in members select self.createTypeDescRef(index);
         s:TypeDescRef? restDesc = rest == -1 ? () : self.createTypeDescRef(rest);
@@ -489,6 +482,16 @@ class AstBasedTypeDefBuilder {
             td = { startPos, endPos, member: <s:TypeDescRef>restDesc , dimensions: [size] };
         }
         return self.createTypeDef(td);
+    }
+
+    function functionArgumentType(int[] requiredArguments = [], int rest = -1) returns int {
+        int index = self.functionType(requiredArguments, rest);
+        t:SemType functionSemType = checkpanic self.semtype(index);
+        t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(self.cx, functionSemType);
+        // FIXME: this is a hack to update the semtype correctly but it should be done in a better way (to show the argument types in case of error)
+        s:TypeDefn td = self.defns[index];
+        td.semType = atomic[0];
+        return index;
     }
 
     function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int {
