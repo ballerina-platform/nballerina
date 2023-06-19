@@ -47,6 +47,8 @@ type TypeBuilder object {
     function mapping(Field[] fields = [], int rest = -1) returns int;
 
     function union(int i1, int i2) returns int;
+
+    function intersection(int i1, int i2) returns int;
 };
 
 class SemtypeBuilder {
@@ -179,6 +181,10 @@ class SemtypeBuilder {
 
     function union(int i1, int i2) returns int {
         return self.push(t:union(self.defns[i1], self.defns[i2]));
+    }
+
+    function intersection(int i1, int i2) returns int {
+        return self.push(t:intersect(self.defns[i1], self.defns[i2]));
     }
 
     function typeToString(int index) returns string|TypeBuilderError {
@@ -485,12 +491,19 @@ class AstBasedTypeDefBuilder {
     }
 
     function functionArgumentType(int[] requiredArguments = [], int rest = -1) returns int {
+        // This is a hack to create the argument list type since we can represent that
+        // in the ast (due to mutability). Instead we will create a function type with
+        // parameters equal to the arguments and use its parameter list type.
         int index = self.functionType(requiredArguments, rest);
         t:SemType functionSemType = checkpanic self.semtype(index);
         t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(self.cx, functionSemType);
-        // FIXME: this is a hack to update the semtype correctly but it should be done in a better way (to show the argument types in case of error)
-        s:TypeDefn td = self.defns[index];
-        td.semType = atomic[0];
+        s:TypeDefn defn = self.defns[index];
+        defn.semType = atomic[0];
+        // We will also change the type descriptor to a tuple so that when showing
+        // errors we will get a tuple, instead of a function type desc
+        s:TypeDescRef[] members = from var arg in requiredArguments select self.createTypeDescRef(arg);
+        s:TypeDescRef? restDesc = rest == -1 ? () : self.createTypeDescRef(rest);
+        defn.td = { startPos: defn.td.startPos, endPos: defn.td.endPos, members: members, rest: restDesc };
         return index;
     }
 
@@ -560,5 +573,12 @@ class AstBasedTypeDefBuilder {
         s:TypeDesc[] tds = [self.createTypeDescRef(i1), self.createTypeDescRef(i2)];
         s:BinaryTypeDesc union = { startPos, endPos, opPos: [startPos], op: "|", tds };
         return self.createTypeDef(union);
+    }
+
+    function intersection(int i1, int i2) returns int {
+        var [startPos, endPos] = self.calculatePosition();
+        s:TypeDesc[] tds = [self.createTypeDescRef(i1), self.createTypeDescRef(i2)];
+        s:BinaryTypeDesc intersection = { startPos, endPos, opPos: [startPos], op: "&", tds };
+        return self.createTypeDef(intersection);
     }
 }
