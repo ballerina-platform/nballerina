@@ -1395,18 +1395,14 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     else {
         func = check genImportedFunction(cx, prefix, expr.funcName, expr.qNamePos);
     }
-    match func {
-        var [funcRef, funcRegister] if funcRef is bir:FunctionRef => {
-            return finishCodeGenFunctionCall(cx, bb, expr, funcRef, funcRegister);
-        }
-        var [_, funcRegister] => {
-            return finishCodeGenFunctionInexactCall(cx, bb, expr, <bir:Register>funcRegister);
-        }
+    if func is [bir:FunctionRef, bir:Register?] {
+        return finishCodeGenAtomicFunctionCall(cx, bb, expr, func[0], func[1]);
     }
+    return finishCodeGenFunctionCall(cx, bb, expr, <bir:Register>func[1]);
 }
 
-function finishCodeGenFunctionCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr,
-                                   bir:FunctionRef func, bir:Register? funcRegister) returns CodeGenError|ExprEffect {
+function finishCodeGenAtomicFunctionCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr,
+                                         bir:FunctionRef func, bir:Register? funcRegister) returns CodeGenError|ExprEffect {
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
     t:SemType? restParamType = func.signature.restParamType;
@@ -1442,16 +1438,22 @@ function finishCodeGenFunctionCall(ExprContext cx, bir:BasicBlock bb, s:Function
     return codeGenCall(cx, curBlock, funcValue, func.signature.returnType, args, restParamIsList, expr.qNamePos);
 }
 
-
-function finishCodeGenFunctionInexactCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr,
-                                          bir:Register func) returns CodeGenError|ExprEffect {
+function finishCodeGenFunctionCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr,
+                                   bir:Register funcRegister) returns CodeGenError|ExprEffect {
     t:Context tc = cx.mod.tc;
-    t:SemType funcTy = func.semType;
+    t:SemType funcTy = funcRegister.semType;
+    t:SemType? paramListType = t:functionParamListType(tc, funcTy);
+    if paramListType == () {
+        // This should never happen since we have ensured funcTy is a function subtype (in gen*Function)
+        panic err:impossible("valid function type must have a param type");
+    }
     bir:Operand[] args = [];
     t:SemType[] argTypes = [];
     bir:BasicBlock curBlock = bb;
-    foreach s:Expr argExpr in expr.args {
-        var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, (), argExpr);
+    foreach var [i, argExpr] in expr.args.enumerate() {
+        t:SemType expectedType = t:listMemberTypeInnerVal(tc, paramListType, t:intConst(i));
+        var { result: arg, block: nextBlock } = check codeGenExprForType(cx, curBlock, expectedType, argExpr,
+                                                                         "incorrect type for argument");
         args.push(arg);
         argTypes.push(arg.semType);
         curBlock = nextBlock;
@@ -1460,10 +1462,10 @@ function finishCodeGenFunctionInexactCall(ExprContext cx, bir:BasicBlock bb, s:F
     t:SemType? returnType = t:functionReturnType(tc, funcTy, argListType);
     if returnType == () {
         // This can only happen when application is not well-typed and since we
-        // ensure funcTy is a function subtype (in gen*Function), this can only be caused by invalid args
+        // ensure funcTy is a function subtype, this can only be caused by invalid args
         return cx.semanticErr("incorrect type for arguments", s:range(expr));
     }
-    return codeGenCall(cx, curBlock, func, returnType, args, false, expr.qNamePos);
+    return codeGenCall(cx, curBlock, funcRegister, returnType, args, false, expr.qNamePos);
 }
 
 function genLocalFunction(ExprContext cx, string funcName, Position pos) returns [bir:FunctionRef, bir:Register?]|[(), bir:Register]|CodeGenError {
