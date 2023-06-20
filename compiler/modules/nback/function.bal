@@ -133,7 +133,6 @@ function buildDirectFunctionValue(Scaffold scaffold, bir:FunctionConstOperand op
 function functionValuePtrType(Scaffold scaffold, t:SemType funcType) returns llvm:PointerType {
     t:FunctionAtomicType? atomic = t:functionAtomicType(scaffold.typeContext(), funcType);
     if atomic == () {
-        // This is an approximation, which is sufficient for making the uniform call
         return llvm:pointerType(llFunctionType);
     }
     t:FunctionSignature signature = t:functionSignature(scaffold.typeContext(), atomic);
