@@ -97,18 +97,20 @@ function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File 
 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
     if insn is bir:CallInsn {
-        bir:FunctionConstOperand|bir:Register operand = insn.func;
-        (Operand & readonly)[] args = from var arg in insn.args select fromOperand(sc, arg);
-        if operand is bir:Register {
-            return ["call", fromRegister(sc, operand), fromRegister(sc, insn.result), ...args];
+        bir:FunctionOperand funcOperand = insn.operands[0];
+        boolean restArgIsList = insn.restArgIsList;
+        (Operand & readonly)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
+        if funcOperand is bir:Register {
+            return ["call", fromRegister(sc, funcOperand), fromRegister(sc, insn.result), restArgIsList, ...args];
         }
-        bir:FunctionRef func = operand.value;
+        bir:FunctionRef func = funcOperand.value;
         FunctionRef ref = fromFunctionRefAccum(sc, func);
         if func.erasedSignature != func.signature {
-            return ["call-generic", ref, fromSignature(sc, func.signature), fromRegister(sc, insn.result), ...args];
+            return ["call-generic", ref, fromSignature(sc, func.signature), 
+                    fromRegister(sc, insn.result), restArgIsList, ...args];
         }
         else {
-            return ["call", ref, fromRegister(sc, insn.result), ...args];
+            return ["call", ref, fromRegister(sc, insn.result), restArgIsList, ...args];
         }
     }
     else if insn is bir:BranchInsn {

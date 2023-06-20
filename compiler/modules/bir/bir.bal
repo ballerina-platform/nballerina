@@ -296,7 +296,6 @@ public enum InsnName {
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
-    INSN_CALL_INEXACT,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -333,7 +332,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallInexactInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -584,6 +583,7 @@ public type EqualityInsn readonly & record {|
     Operand[2] operands;
 |};
 
+public type FunctionOperand FunctionConstOperand|Register;
 # Call a function.
 # This is a not a terminator.
 # This is a PPI. A panic in the called function
@@ -598,17 +598,11 @@ public type CallInsn readonly & record {|
     *ResultInsnBase;
     # Position in the source that resulted in the instruction
     INSN_CALL name = INSN_CALL;
-    FunctionConstOperand|Register func;
-    // When there are rest arguments, last argument in the array is a list containing rest arguments
-    Operand[] args;
-|};
-
-# Call a function value by passing arguments directly from the call site, without conforming to convention
-# in CallInsn. This is always a uniform function call. Otherwise this behave like CallInsn.
-public type CallInexactInsn readonly & record {|
-    *ResultInsnBase;
-    INSN_CALL_INEXACT name = INSN_CALL_INEXACT;
-    [Register, Operand...] operands;
+    [FunctionOperand, Operand...] operands;
+    # This indicates whether var args have been accumulated into a single list.
+    # If so the last operand is expected to be that list. This is possible only
+    # when we are calling a function with atomic type.
+    boolean restArgIsList;
 |};
 
 # Assign a value to a register.

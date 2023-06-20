@@ -1406,7 +1406,8 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         args.push(arg);
     }
     s:Expr[] restArgs = from int i in regularArgCount ..< expr.args.length() select expr.args[i];
-    if restParamType != () {
+    boolean restArgIsList = restParamType != ();
+    if restArgIsList {
         Position startPos;
         Position endPos;
         int restArgCount = restArgs.length();
@@ -1425,9 +1426,9 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    bir:FunctionConstOperand|bir:Register funcValue = funcRegister != () ? funcRegister : 
+    bir:FunctionOperand funcValue = funcRegister != () ? funcRegister : 
                                                          { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) };
-    return codeGenCall(cx, curBlock, funcValue, func.signature.returnType, args, expr.qNamePos);
+    return codeGenCall(cx, curBlock, funcValue, func.signature.returnType, args, restArgIsList, expr.qNamePos);
 }
 
 function genLocalFunctionRef(ExprContext cx, string funcName, Position pos) returns [bir:FunctionRef, bir:Register?]|CodeGenError {
@@ -1457,7 +1458,7 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
     }
     check sufficientArguments(cx, func, expr);
     return codeGenCall(cx, curBlock, { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) }, 
-                       func.signature.returnType, args, expr.namePos);
+                       func.signature.returnType, args, false, expr.namePos);
 }
 
 function functionRefFromAtom(ExprContext cx, t:FunctionAtomicType atom, string identifier) returns bir:FunctionRef {
@@ -1476,13 +1477,13 @@ function registerName(bir:Register register) returns string {
     return <string>register.name;
 }
 
-function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionConstOperand|bir:Register func, 
-                     t:SemType returnType, bir:Operand[] args, Position pos) returns ExprEffect {
+function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func, 
+                     t:SemType returnType, bir:Operand[] args, boolean restArgIsList, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
     bir:CallInsn call = {
-        func,
         result: reg,
-        args: args.cloneReadOnly(),
+        operands: [func, ...args],
+        restArgIsList,
         pos
     };
     curBlock.insns.push(call);

@@ -364,9 +364,6 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is CallInsn {
         check verifyCall(vc, insn);
     }
-    else if insn is CallInexactInsn {
-        check verifyCallInexact(vc, insn);
-    }
     else if insn is TypeCastInsn {
         check verifyTypeCast(vc, insn);
     }
@@ -440,7 +437,7 @@ function verifyTypeCondBranch(VerifyContext vc, TypeCondBranchInsn insn) returns
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     // XXX verify insn.semType
-    FunctionConstOperand|Register func = insn.func;
+    FunctionOperand func = insn.operands[0];
     if func is FunctionConstOperand {
         return verifyFunctionCallArgs(vc, func.value.signature.paramTypes, insn);
     }
@@ -450,19 +447,9 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     return verifyFunctionCallArgs(vc, signature.paramTypes, insn);
 }
 
-function verifyCallInexact(VerifyContext vc, CallInexactInsn insn) returns err:Internal? {
-    t:SemType funcTy = insn.operands[0].semType;
-    t:FunctionAtomicType? atomic = t:functionAtomicType(vc.typeContext(), funcTy);
-    if atomic != () {
-        return vc.invalidErr("calling atomic function value using CallInexactInsn", insn.pos);
-    }
-    // TODO: when we have proper function application verify the argument types
-}
-
 function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallInsn insn) returns err:Internal? {
-    // JBUG: can't do
-    // Operand[] args = insn is CallInsn ? insn.args : from int i in 1 ..< insn.operands.length() select insn.operands[i];
-    int nSuppliedArgs = insn.args.length();
+    Operand[] suppliedArgs = insn.operands.slice(1);
+    int nSuppliedArgs = suppliedArgs.length();
     int nExpectedArgs = paramTypes.length();
     if nSuppliedArgs != nExpectedArgs {
         if nSuppliedArgs < nExpectedArgs {
@@ -473,7 +460,7 @@ function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallInsn
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check validOperandType(vc, insn.args[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, insn.pos);
+        check validOperandType(vc, suppliedArgs[i], paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function`, insn.pos);
     }
 }
 

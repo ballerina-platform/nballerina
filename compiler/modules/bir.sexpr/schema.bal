@@ -38,8 +38,8 @@ public type TypeMergePred readonly & [Label, Operand];
 
 public type Insn ResultInsn|OperandInsn|Unimpl|
                  CallInsn|CallGenericInsn|TypeCondBranchInsn|BranchInsn|TypeCastInsn|TypeTestInsn|CondBranchInsn|MappingConstructInsn|ListConstructInsn|TypeMergeInsn|ListGetInsn;
-public type CallInsn readonly & ["call", FunctionRef|RegisterName, Result, Operand...];
-public type CallGenericInsn readonly & ["call-generic", FunctionRef, Signature, Result, Operand...];
+public type CallInsn readonly & ["call", FunctionRef|RegisterName, Result, boolean, Operand...];
+public type CallGenericInsn readonly & ["call-generic", FunctionRef, Signature, Result, boolean, Operand...];
 public type TypeCondBranchInsn readonly & ["type-cond-branch", Operand, ts:Type, Label, Label, RegisterName, RegisterName];
 public type TypeCastInsn readonly & ["type-cast", Result, ts:Type, Operand];
 public type TypeTestInsn readonly & ["type-test", Result, ts:Type, Operand, boolean];
@@ -50,7 +50,7 @@ public type TypeMergeInsn readonly & ["type-merge", Result, [Label, Operand]...]
 public type BranchInsn readonly & ["branch"|"branch-back", Label];
 
 type ResultInsn EqualityInsn|AssignInsn|IntBinaryInsn|IntNoPanicArithmeticBinaryInsn|DecimalArithmeticBinaryInsn|ConvertToIntInsn|ListGetInsn|BooleanNotInsn|CatchInsn|CompareInsn|MappingGetInsn|
-                StringConcatInsn|FloatArithmeticBinaryInsn|ConvertToFloatInsn|MappingFillingGetInsn|ConvertToDecimalInsn|FloatNegateInsn|ErrorConstructInsn|DecimalNegateInsn|CallInexactInsn;
+                StringConcatInsn|FloatArithmeticBinaryInsn|ConvertToFloatInsn|MappingFillingGetInsn|ConvertToDecimalInsn|FloatNegateInsn|ErrorConstructInsn|DecimalNegateInsn;
 public type EqualityInsn readonly & ["equal"|"not-equal"|"exact-equal"|"not-exact-equal", Result, Operand, Operand];
 public type AssignInsn readonly & ["set", Result, Operand];
 public type IntBinaryInsn readonly & ["int+"|"int/"|"int-"|"int*"|"int%"|"int^"|"int&"|"int|"|"int<<"|"int>>"|"int>>>", Result, Operand, Operand];
@@ -70,7 +70,6 @@ public type MappingGetInsn readonly & ["mapping-get", Result, RegisterName, Oper
 public type MappingFillingGetInsn readonly & ["mapping-filling-get", Result, RegisterName, Operand];
 public type ErrorConstructInsn readonly & ["error-construct", Result, Operand];
 public type ListGetInsn readonly & ["list-get"|"list-filling-get", Result, Operand, Operand];
-public type CallInexactInsn readonly & ["call-inexact", Result, RegisterName, Operand...];
 
 type OperandInsn RetInsn|AbnormalRetInsn|MappingSetInsn|PanicInsn|ListSetInsn;
 public type RetInsn readonly & ["ret", Operand];
