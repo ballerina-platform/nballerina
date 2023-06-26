@@ -40,6 +40,8 @@ type TypeBuilder object {
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
 
+    function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int;
+
     function mapping(Field[] fields = [], int rest = -1) returns int;
 
     function union(int i1, int i2) returns int;
@@ -144,6 +146,18 @@ class SemtypeBuilder {
         return self.push(t); 
     }
 
+    function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int {
+        t:SemType rest = restType == -1 ? t:NEVER : self.defns[restType];
+        t:SemType[] params = from var index in parameterTypes select self.defns[index];
+        t:SemType returnTy = returnType == -1 ? t:NIL : self.defns[returnType];
+        t:Env env = self.cx.env;
+        t:FunctionDefinition d = new;
+        t:SemType t = d.define(env, t:defineListTypeWrapped(new(), env, params, 
+                                                            params.length(), rest, mut = t:CELL_MUT_NONE),
+                               returnTy);
+        return self.push(t);
+    }
+
     function mapping(Field[] fields = [], int rest = -1) returns int {
         t:Field[] fs = from var { name, index, ro } in fields select { name, ty: self.defns[index], ro };
         t:SemType r = t:NEVER;
@@ -218,6 +232,16 @@ class AstBasedTypeDefBuilder {
         }
         else if typeDesc is s:ArrayTypeDesc {
             dependencies.push(...self.findIndices(typeDesc.member));
+            tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
+        }
+        else if typeDesc is s:FunctionTypeDesc {
+            dependencies.push(...self.findIndices(...from s:FunctionTypeParam param
+                                                        in typeDesc.params
+                                                        select param.td));
+            s:TypeDesc? returnTd = typeDesc.ret;
+            if returnTd != () {
+                dependencies.push(...self.findIndices(returnTd));
+            }
             tab.put({ name: defn.name, defn: s:typeDefnToString(defn) });
         }
         else if typeDesc is s:BinaryTypeDesc {
@@ -302,6 +326,12 @@ class AstBasedTypeDefBuilder {
         var [startPos, endPos] = self.calculatePosition();
         s:Position qNamePos = startPos;
         return  { startPos, endPos, prefix, typeName, qNamePos };
+    }
+
+    private function createFunctionTypeParam(int index, boolean isRest) returns s:FunctionTypeParam {
+        var [startPos, endPos] = self.calculatePosition();
+        s:TypeDesc td = self.createTypeDescRef(index);
+        return { startPos, endPos, namePos:(), name:(), td, isRest };
     }
 
     private function createTypeDescRef(int index) returns s:TypeDescRef {
@@ -443,6 +473,17 @@ class AstBasedTypeDefBuilder {
             s:ExtendedLiteralExpr size = { startPos, endPos, base: 10, digits: fixedLen.toString() };
             td = { startPos, endPos, member: <s:TypeDescRef>restDesc , dimensions: [size] };
         }
+        return self.createTypeDef(td);
+    }
+
+    function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int {
+        var [startPos, endPos] = self.calculatePosition();
+        s:FunctionTypeParam[] params = from var index in parameterTypes select self.createFunctionTypeParam(index, false);
+        if restType != -1 {
+            params.push(self.createFunctionTypeParam(restType, true));
+        }
+        s:TypeDesc? ret = returnType == -1 ? () : self.createTypeDescRef(returnType); 
+        s:FunctionTypeDesc td = { startPos, endPos, params: params, ret };
         return self.createTypeDef(td);
     }
 
