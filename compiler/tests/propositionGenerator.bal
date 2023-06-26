@@ -29,18 +29,12 @@ type NonEmptyProposition record {|
     false isEmpty = false;
 |};
 
-// TODO: if we want this to be a subtype of Proposition, we can perhaps
-// make left = returnType and right = functionType * argListType
-// we can use listAtomicType to get the list atomic type right then use listAtomicTypeMemberAtInnerVal with i={0,1}
-// to get function Type an arglist respectively
-// We can keep the 
-// TODO: add a comment explaining the what is left and what is right
 type ApplicationProposition record {|
-    // left is the return type, right is [functiontype, arglisttype]
+    // In the proposition left is the return type, right is [functiontype, arglisttype]
     *Proposition;
     APPLY op = APPLY;
     true isEmpty = true;
-    // We keep the fields as seperate to make it easy to generate the proposition
+    // We keep the destructured fields of right to make it easy when generating new propositions
     int functionType;
     int argListType;
 |};
@@ -232,7 +226,7 @@ function applicationSimpleFunction(PropositionGenContext cx, PropositionPath pat
     int functionType = cx.types.functionType(parameterTypes = args, returnType = ret);
     int argListType = cx.types.functionArgumentType(args);
     int right = cx.types.list([functionType, argListType]);
-    return {left: ret, right, functionType, argListType};
+    return { left: ret, right, functionType, argListType };
 }
 
 function applicationVarArgFunction(PropositionGenContext cx, PropositionPath path) returns ApplicationProposition {
@@ -252,7 +246,7 @@ function applicationVarArgFunction(PropositionGenContext cx, PropositionPath pat
     int functionType = cx.types.functionType(args, rest, ret);
     int argListType = cx.types.functionArgumentType(args);
     int right = cx.types.list([functionType, argListType]);
-    return {left: ret, right, functionType, argListType};
+    return { left: ret, right, functionType, argListType };
 }
 
 function applicationIntersection(PropositionGenContext cx, PropositionPath path) returns ApplicationProposition {
@@ -261,18 +255,16 @@ function applicationIntersection(PropositionGenContext cx, PropositionPath path)
     int functionType = cx.types.intersection(a1.functionType, a2.functionType);
     int ret;
     int argListType;
-    match cx.random.nextRange(2) {
-        1 => {
-            ret = a1.left;
-            argListType = a1.argListType;
-        }
-        _ => {
-            ret = a2.left;
-            argListType = a2.argListType;
-        }
+    boolean intersectionValid = intersectionPossible(cx, a1.argListType, a2.argListType) &&
+                                intersectionPossible(cx, a1.left, a2.left);
+    if intersectionValid {
+        ret = cx.types.intersection(a1.left, a2.left);
+        argListType = cx.types.intersection(a1.argListType, a2.argListType);
+    } else {
+        [ret, argListType] = applicationComponents(cx, a1, a2);
     }
     int right = cx.types.list([functionType, argListType]);
-    return {left: ret, right, functionType, argListType};
+    return { left: ret, right, functionType, argListType };
 }
 
 function applicationUnion(PropositionGenContext cx, PropositionPath path) returns ApplicationProposition {
@@ -281,22 +273,36 @@ function applicationUnion(PropositionGenContext cx, PropositionPath path) return
     int functionType = cx.types.union(a1.functionType, a2.functionType);
     int ret;
     int argListType;
-    match cx.random.nextRange(3) {
-        0 => {
-            ret = a1.left;
-            argListType = a1.argListType;
-        }
-        1 => {
-            ret = a2.left;
-            argListType = a2.argListType;
-        }
-        _ => {
-            ret = cx.types.union(a1.left, a2.left);
-            argListType = cx.types.intersection(a1.argListType, a2.argListType);
-        }
+    if intersectionPossible(cx, a1.argListType, a2.argListType) {
+        ret = cx.types.union(a1.left, a2.left);
+        argListType = cx.types.intersection(a1.argListType, a2.argListType);
+    }
+    else {
+        [ret, argListType] = applicationComponents(cx, a1, a2);
     }
     int right = cx.types.list([functionType, argListType]);
     return {left: ret, right, functionType, argListType};
+}
+
+function applicationComponents(PropositionGenContext cx, ApplicationProposition a1, ApplicationProposition a2) returns [int, int] {
+    match cx.random.nextRange(2) {
+        0 => {
+            return [a1.left, a1.argListType];
+        }
+        _ => {
+            return [a2.left, a2.argListType];
+        }
+    }
+}
+
+
+function intersectionPossible(PropositionGenContext cx, int lhs, int rhs) returns boolean {
+    t:SemType|TypeBuilderError lhsType = cx.types.semtype(lhs);
+    t:SemType|TypeBuilderError rhsType = cx.types.semtype(rhs);
+    if lhsType is TypeBuilderError || rhsType is TypeBuilderError {
+        panic error("failed to resolve type with seed: " + cx.seed.toString());
+    }
+    return !t:isEmpty(cx.typeContext, t:intersect(lhsType, rhsType));
 }
 
 function subtypeSameSimpleType(PropositionGenContext cx, PropositionPath path) returns SubtypeProposition {
@@ -740,8 +746,6 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
                 && t:isEmpty(cx.typeContext, t:diff(right, left)) == p.isEmpty;
         }
         APPLY => {
-            // TODO: may be it is a cleaner to cast the proposition to proper type and resolve each type seperatly?
-            // however this means doulbe resolving
             t:ListAtomicType applicationTuple = <t:ListAtomicType>t:listAtomicType(cx.typeContext, right);
             t:SemType functionType = t:listAtomicTypeMemberAtInner(applicationTuple, 0);
             t:SemType argListType = t:listAtomicTypeMemberAtInner(applicationTuple, 1);
