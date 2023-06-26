@@ -98,20 +98,21 @@ function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
     if insn is bir:CallInsn {
         bir:FunctionOperand funcOperand = insn.operands[0];
-        boolean restArgIsList = insn.restArgIsList;
         (Operand & readonly)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
         if funcOperand is bir:Register {
-            return ["call", fromRegister(sc, funcOperand), fromRegister(sc, insn.result), restArgIsList, ...args];
+            // JBUG: can't do
+            // "call"|"call-rest-list" insn_name = insn.resultArgIsList ? "call-rest-list" : "call";
+            // return [insn_name, fromRegister(sc, funcOperand), fromRegister(sc, insn.result), ...args];
+            return callInsn(insn.restArgIsList, fromRegister(sc, funcOperand), fromRegister(sc, insn.result), args);
         }
         bir:FunctionRef func = funcOperand.value;
         FunctionRef ref = fromFunctionRefAccum(sc, func);
         if func.erasedSignature != func.signature {
             return ["call-generic", ref, fromSignature(sc, func.signature), 
-                    fromRegister(sc, insn.result), restArgIsList, ...args];
+                    fromRegister(sc, insn.result), ...args];
         }
-        else {
-            return ["call", ref, fromRegister(sc, insn.result), restArgIsList, ...args];
-        }
+        // NOTE: is this always correct
+        return callInsn(true, ref, fromRegister(sc, insn.result), args);
     }
     else if insn is bir:BranchInsn {
         return [insn.backward ? "branch-back" : "branch", formLabel(sc, insn.dest)];
@@ -167,6 +168,12 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
         }
     }
     return checkpanic insnSexpr.cloneWithType();
+}
+
+function callInsn(boolean restArgIsList, FunctionRef|RegisterName func, Result result, 
+                  (Operand&readonly)[] args) returns CallInsn|CallRestListInsn {
+    return restArgIsList ? ["call-rest-list", func, result, ...args] :
+                           ["call", func, result, ...args];
 }
 
 function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & readonly {

@@ -250,15 +250,21 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
         ["unimpl", ...var data] => {
             panic error("unimplemented instruction: " + sexpr:prettyPrint(data));
         }
-        ["call", var symbolSexpr, var resultSexpr, var restArgIsList, ...var argsSexpr] => {
-            bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(<FunctionRef>symbolSexpr) : 
+        ["call", var symbolSexpr, var resultSexpr, ...var argsSexpr] => {
+            bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(<FunctionRef>symbolSexpr):
                                                                           lookupRegister(pc, <RegisterName>symbolSexpr);
-            return toCallInsn(pc, symbol, checkpanic argsSexpr.cloneWithType(), <boolean>restArgIsList, 
+            return toCallInsn(pc, symbol, checkpanic argsSexpr.cloneWithType(), false, 
                               <sexpr:Symbol>resultSexpr); // JBUG: remove cloneWithType
         }
-        ["call-generic", var symbolSexpr, var signature, var resultSexpr, var restArgIsList, ...var argsSexpr] => {
+        ["call-rest-list", var symbolSexpr, var resultSexpr, ...var argsSexpr] => {
+            bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(<FunctionRef>symbolSexpr):
+                                                                          lookupRegister(pc, <RegisterName>symbolSexpr);
+            return toCallInsn(pc, symbol, checkpanic argsSexpr.cloneWithType(), true, 
+                              <sexpr:Symbol>resultSexpr); // JBUG: remove cloneWithType
+        }
+        ["call-generic", var symbolSexpr, var signature, var resultSexpr, ...var argsSexpr] => {
             bir:Symbol symbol = symbolFromSexpr(<FunctionRef>symbolSexpr);
-            return toCallInsn(pc, symbol, checkpanic argsSexpr.cloneWithType(), <boolean>restArgIsList, <sexpr:Symbol>resultSexpr, <Signature>signature); // JBUG: remove cloneWithType
+            return toCallInsn(pc, symbol, checkpanic argsSexpr.cloneWithType(), false, <sexpr:Symbol>resultSexpr, <Signature>signature); // JBUG: remove cloneWithType
         }
         ["cond-branch", var operand, var ifTrue, var ifFalse] => {
             return <bir:CondBranchInsn>{

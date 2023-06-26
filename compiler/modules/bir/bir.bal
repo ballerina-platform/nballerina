@@ -599,9 +599,12 @@ public type CallInsn readonly & record {|
     # Position in the source that resulted in the instruction
     INSN_CALL name = INSN_CALL;
     [FunctionOperand, Operand...] operands;
-    # This indicates whether var args have been accumulated into a single list.
-    # If so the last operand is expected to be that list. This is possible only
-    # when we are calling a function with atomic type.
+    // TODO: after factoring the insn refactor this comment to say,
+    // 1. Call const always expect this form
+    // 2. Indirect call it is optional therefore must explicitly indicate
+    # If the function type is atomic we represent the parameters as a tuple type.
+    # This indicates whether the arguments corresponding to the rest type of that tuple
+    # is given as a single list value in operands.
     boolean restArgIsList;
 |};
 
