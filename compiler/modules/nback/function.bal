@@ -42,12 +42,12 @@ final RuntimeFunction addToRestArgsFunction = {
 };
 
 type FunctionReferenceValue record {|
-    bir:FunctionRef ref;
     llvm:Function func;
+    t:FunctionSignature signature;
+    t:FunctionSignature erasedSignature;
 |};
 
 type FunctionPointerValue record {|
-    bir:Register reg;
     llvm:PointerValue funcValuePtr;
     llvm:PointerValue funcDescPtr;
     llvm:PointerValue funcPtr;
@@ -57,14 +57,21 @@ type FunctionPointerValue record {|
 type FunctionValue FunctionReferenceValue|FunctionPointerValue;
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
-    FunctionValue func = check buildFunctionValue(builder, scaffold, insn.operands[0]);
-    if func is FunctionReferenceValue {
-        return buildDirectCall(builder, scaffold, func.func, insn, func.ref.erasedSignature.returnType);
+    bir:Operand[] args = insn.operands.slice(1);
+    bir:Register result = insn.result;
+    bir:FunctionOperand funcOperand = insn.operands[0];
+    FunctionValue funcVal = check buildFunctionValue(builder, scaffold, funcOperand);
+    if funcVal is FunctionReferenceValue {
+        return buildDirectCall(builder, scaffold, funcVal.func, funcVal.erasedSignature, 
+                               funcVal.signature, funcOperand, args, result, funcVal.erasedSignature.returnType);
     }
-    var { reg, funcValuePtr, funcDescPtr, funcPtr, uniformFuncPtr } = func;
-    // FIXME: remove cast
-    var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, <bir:CallIndirectInsn>insn);
-    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(scaffold.typeContext(), reg.semType);
+    if insn !is bir:CallIndirectInsn {
+        panic err:impossible("unexpected combination of call instruction and function value");
+    }
+    var { funcValuePtr, funcDescPtr, funcPtr, uniformFuncPtr } = funcVal;
+    var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
+    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(scaffold.typeContext(), 
+                                                                             funcOperand.semType);
     // TODO: handle the case where this is not atomic (directly buildUniformCall)
     t:FunctionSignature signature = t:functionSignature(scaffold.typeContext(), atomic);
     llvm:ConstPointerValue signatureDescPtr = scaffold.getCalledType(signature);
@@ -75,10 +82,11 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     llvm:BasicBlock afterCall = scaffold.addBasicBlock();
     builder.condBr(isExact, ifExact, ifNotExact);
     builder.positionAtEnd(ifExact);
-    check buildDirectCall(builder, scaffold, funcPtr, insn, signature.returnType);
+    check buildDirectCall(builder, scaffold, funcPtr, signature, signature, funcOperand, 
+                          args, result, signature.returnType);
     builder.br(afterCall);
     builder.positionAtEnd(ifNotExact);
-    check buildUniformCall(builder, scaffold, insn.result, funcDescPtr, funcPtr, uniformFuncPtr,
+    check buildUniformCall(builder, scaffold, result, funcDescPtr, funcPtr, uniformFuncPtr,
                            uniformArgArray, nArgs, signature.returnType);
     builder.br(afterCall);
     builder.positionAtEnd(afterCall);
@@ -99,13 +107,13 @@ function buildFunctionValue(llvm:Builder builder, Scaffold scaffold, bir:Functio
         llvm:PointerValue uniformFuncPtr = builder.getElementPtr(funcDescPtr, [constIndex(scaffold, 0),
                                                                                constIndex(scaffold, 1)],
                                                                  "inbounds");
-        return { reg: operand, funcValuePtr, funcDescPtr, funcPtr, uniformFuncPtr };
+        return { funcValuePtr, funcDescPtr, funcPtr, uniformFuncPtr };
     }
-    var { symbol: funcSymbol, erasedSignature } = operand.value;
+    var { symbol: funcSymbol, erasedSignature, signature } = operand.value;
     if funcSymbol is bir:InternalSymbol {
-        return { ref: operand.value, func: scaffold.getFunctionDefn(funcSymbol.identifier) };
+        return { signature, erasedSignature, func: scaffold.getFunctionDefn(funcSymbol.identifier) };
     }
-    return { ref: operand.value, func: check buildFunctionDecl(scaffold, funcSymbol, erasedSignature) };
+    return { signature, erasedSignature, func: check buildFunctionDecl(scaffold, funcSymbol, erasedSignature) };
 }
 
 function functionValuePtrType(Scaffold scaffold, t:SemType funcType) returns llvm:PointerType {
@@ -119,28 +127,12 @@ function functionValuePtrType(Scaffold scaffold, t:SemType funcType) returns llv
 }
 
 function buildDirectCall(llvm:Builder builder, Scaffold scaffold, llvm:Function|llvm:PointerValue func,
-                         bir:CallInsn insn, t:SemType returnTy) returns BuildError? {
-    llvm:Value[] args = check buildDirectCallArgs(builder, scaffold, insn);
-    llvm:Value? retValue = buildFunctionCall(builder, scaffold, func, args);
-    buildStoreRet(builder, scaffold, semTypeRetRepr(returnTy), retValue, insn.result);
-}
-
-function buildDirectCallArgs(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns llvm:Value[]|BuildError {
-    t:FunctionSignature erasedSignature;
-    t:FunctionSignature signature;
-    bir:FunctionOperand func = insn.operands[0];
-    if func is bir:FunctionConstOperand {
-        erasedSignature = func.value.erasedSignature;
-        signature = func.value.signature;
-    }
-    else {
-        t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(scaffold.typeContext(), func.semType);
-        erasedSignature = t:functionSignature(scaffold.typeContext(), atomic);
-        signature = erasedSignature;
-    }
-    bir:Operand[] args = insn.operands.slice(1);
-    return check buildFunctionCallArgs(builder, scaffold, erasedSignature.paramTypes, 
-                                       signature.paramTypes, args);
+                         t:FunctionSignature erasedSignature, t:FunctionSignature signature, bir:FunctionOperand funcOperand,
+                         bir:Operand[] args, bir:Register result, t:SemType returnTy) returns BuildError? {
+    llvm:Value[] argValues =  check buildFunctionCallArgs(builder, scaffold, erasedSignature.paramTypes, 
+                                                          signature.paramTypes, args);
+    llvm:Value? retValue = buildFunctionCall(builder, scaffold, func, argValues);
+    buildStoreRet(builder, scaffold, semTypeRetRepr(returnTy), retValue, result);
 }
 
 // This converts arguments to uniform arguments as described in https://github.com/ballerina-platform/nballerina/issues/907#issuecomment-1041053503 (for inexact calls).
