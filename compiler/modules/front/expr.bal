@@ -1406,8 +1406,8 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         args.push(arg);
     }
     s:Expr[] restArgs = from int i in regularArgCount ..< expr.args.length() select expr.args[i];
-    boolean restArgIsList = restParamType != ();
-    if restArgIsList {
+    boolean restParamIsList = restParamType != ();
+    if restParamIsList {
         Position startPos;
         Position endPos;
         int restArgCount = restArgs.length();
@@ -1428,7 +1428,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     check sufficientArguments(cx, func, expr);
     bir:FunctionOperand funcValue = funcRegister != () ? funcRegister : 
                                                          { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) };
-    return codeGenCall(cx, curBlock, funcValue, func.signature.returnType, args, restArgIsList, expr.qNamePos);
+    return codeGenCall(cx, curBlock, funcValue, func.signature.returnType, args, restParamIsList, expr.qNamePos);
 }
 
 function genLocalFunctionRef(ExprContext cx, string funcName, Position pos) returns [bir:FunctionRef, bir:Register?]|CodeGenError {
@@ -1478,16 +1478,18 @@ function registerName(bir:Register register) returns string {
 }
 
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func, 
-                     t:SemType returnType, bir:Operand[] args, boolean restArgIsList, Position pos) returns ExprEffect {
+                     t:SemType returnType, bir:Operand[] args, boolean restParamIsList, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
-    bir:CallInsn call = {
-        result: reg,
-        operands: [func, ...args],
-        restArgIsList,
-        pos
-    };
+    bir:CallIndirectInsn|bir:CallConstInsn call = func is bir:FunctionConstOperand ?
+                                                    { result: reg,
+                                                      operands: [func, ...args],
+                                                      pos } :
+                                                    { result: reg,
+                                                      operands: [func, ...args],
+                                                      restParamIsList,
+                                                      pos };
     curBlock.insns.push(call);
-    return { result: constifyRegister(reg), block: curBlock };    
+    return { result: constifyRegister(reg), block: curBlock };
 }
 
 function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {

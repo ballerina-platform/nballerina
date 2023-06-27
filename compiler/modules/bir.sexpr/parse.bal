@@ -397,11 +397,11 @@ type BirInsnBase readonly & record {|
     bir:Register result?;
 |};
 
-function toCallInsn(FuncParseContext pc, bir:Symbol|bir:Register symbol, Operand[] argsSexpr, boolean restArgIsList, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallInsn {
+function toCallInsn(FuncParseContext pc, bir:Symbol|bir:Register symbol, Operand[] argsSexpr, boolean restParamIsList, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallInsn {
     readonly & bir:Operand[] args = from var arg in argsSexpr select toOperand(pc, arg);
     var result = toResultRegister(pc, resultSexpr);
     if symbol is bir:Register {
-        return <bir:CallInsn>{ operands: [symbol, ...args], restArgIsList, pos: 0, result };
+        return <bir:CallIndirectInsn>{ operands: [symbol, ...args], restParamIsList, pos: 0, result };
     }
     t:FunctionSignature erasedSignature = lookupSignature(pc, symbol);
 
@@ -414,7 +414,7 @@ function toCallInsn(FuncParseContext pc, bir:Symbol|bir:Register symbol, Operand
     }
     bir:FunctionConstOperand func = { value: { symbol, signature, erasedSignature },
                                       semType: t:functionSemType(pc.tc, signature) };
-    return <bir:CallInsn>{ operands: [func, ...args], restArgIsList, pos: 0, result };
+    return <bir:CallConstInsn>{ operands: [func, ...args], pos: 0, result };
 }
 
 function lookupLabel(FuncParseContext pc, string name) returns bir:Label {

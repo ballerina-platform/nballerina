@@ -97,21 +97,19 @@ function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File 
 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
     if insn is bir:CallInsn {
-        bir:FunctionOperand funcOperand = insn.operands[0];
-        (Operand & readonly)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
-        if funcOperand is bir:Register {
+        (readonly & Operand)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
+        if insn is bir:CallIndirectInsn {
             // JBUG: can't do
             // "call"|"call-rest-list" insn_name = insn.resultArgIsList ? "call-rest-list" : "call";
             // return [insn_name, fromRegister(sc, funcOperand), fromRegister(sc, insn.result), ...args];
-            return callInsn(insn.restArgIsList, fromRegister(sc, funcOperand), fromRegister(sc, insn.result), args);
+            return callInsn(insn.restParamIsList, fromRegister(sc, insn.operands[0]), fromRegister(sc, insn.result), args);
         }
-        bir:FunctionRef func = funcOperand.value;
+        bir:FunctionRef func = (<bir:FunctionConstOperand>insn.operands[0]).value;
         FunctionRef ref = fromFunctionRefAccum(sc, func);
         if func.erasedSignature != func.signature {
             return ["call-generic", ref, fromSignature(sc, func.signature), 
                     fromRegister(sc, insn.result), ...args];
         }
-        // NOTE: is this always correct
         return callInsn(true, ref, fromRegister(sc, insn.result), args);
     }
     else if insn is bir:BranchInsn {

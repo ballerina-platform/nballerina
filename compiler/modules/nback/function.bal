@@ -62,7 +62,8 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
         return buildDirectCall(builder, scaffold, func.func, insn, func.ref.erasedSignature.returnType);
     }
     var { reg, funcValuePtr, funcDescPtr, funcPtr, uniformFuncPtr } = func;
-    var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
+    // FIXME: remove cast
+    var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, <bir:CallIndirectInsn>insn);
     t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(scaffold.typeContext(), reg.semType);
     // TODO: handle the case where this is not atomic (directly buildUniformCall)
     t:FunctionSignature signature = t:functionSignature(scaffold.typeContext(), atomic);
@@ -143,16 +144,16 @@ function buildDirectCallArgs(llvm:Builder builder, Scaffold scaffold, bir:CallIn
 }
 
 // This converts arguments to uniform arguments as described in https://github.com/ballerina-platform/nballerina/issues/907#issuecomment-1041053503 (for inexact calls).
-function buildUniformArgArray(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns [llvm:Value, llvm:PointerValue]|BuildError {
+function buildUniformArgArray(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns [llvm:Value, llvm:PointerValue]|BuildError {
     bir:Operand[] args = insn.operands.slice(1);
-    int requiredArgCount = insn.restArgIsList ? args.length() - 1 : args.length();
+    int requiredArgCount = insn.restParamIsList ? args.length() - 1 : args.length();
     llvm:Value[] uniformArgs = from int i in 0 ..< requiredArgCount 
                                     select buildClearExact(builder, scaffold,
                                                            (check buildRepr(builder, scaffold, args[i], REPR_ANY)),
                                                            args[i].semType);
     llvm:Value nArgs;
     llvm:PointerValue? restArgs;
-    if insn.restArgIsList {
+    if insn.restParamIsList {
         // rest is represented as a temporary array
         llvm:PointerValue restArrayPtr = buildUntagPointer(builder, scaffold,
                                                            scaffold.address(<bir:TmpRegister>args[requiredArgCount]));
