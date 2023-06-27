@@ -295,7 +295,7 @@ public enum InsnName {
     INSN_ERROR_CONSTRUCT,
     INSN_RET,
     INSN_ABNORMAL_RET,
-    INSN_CALL_CONST,
+    INSN_CALL,
     INSN_CALL_INDIRECT,
     INSN_INVOKE,
     INSN_ASSIGN,
@@ -333,7 +333,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -599,16 +599,16 @@ public type FunctionOperand FunctionConstOperand|Register;
 # specified by the restParamIsList.
 # XXX These do not handle functions that don't return
 # (i.e. with return type of never)
-public type CallInsn readonly & record {
+public type CallInsnBase readonly & record {
     *ResultInsnBase;
-    INSN_CALL_CONST|INSN_CALL_INDIRECT name;
+    INSN_CALL|INSN_CALL_INDIRECT name;
     [FunctionOperand, Operand...] operands;
 };
 
 # Call a constant function value.
-public type CallConstInsn readonly & record {|
+public type CallInsn readonly & record {|
     *ResultInsnBase;
-    INSN_CALL_CONST name = INSN_CALL_CONST;
+    INSN_CALL name = INSN_CALL;
     [FunctionConstOperand, Operand...] operands;
 |};
 

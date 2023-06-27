@@ -1426,8 +1426,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    bir:FunctionOperand funcValue = funcRegister != () ? funcRegister : 
-                                                         { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) };
+    bir:FunctionOperand funcValue = funcRegister ?: { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) };
     return codeGenCall(cx, curBlock, funcValue, func.signature.returnType, args, restParamIsList, expr.qNamePos);
 }
 
@@ -1457,7 +1456,7 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
         args.push(arg);
     }
     check sufficientArguments(cx, func, expr);
-    return codeGenCall(cx, curBlock, { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) }, 
+    return codeGenCall(cx, curBlock, { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) },
                        func.signature.returnType, args, false, expr.namePos);
 }
 
@@ -1480,15 +1479,14 @@ function registerName(bir:Register register) returns string {
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func, 
                      t:SemType returnType, bir:Operand[] args, boolean restParamIsList, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
-    bir:CallIndirectInsn|bir:CallConstInsn call = func is bir:FunctionConstOperand ?
-                                                    { result: reg,
-                                                      operands: [func, ...args],
-                                                      pos } :
-                                                    { result: reg,
-                                                      operands: [func, ...args],
-                                                      restParamIsList,
-                                                      pos };
-    curBlock.insns.push(call);
+    bir:CallIndirectInsn|bir:CallInsn insn;
+    if func is bir:FunctionConstOperand {
+        insn = { result: reg, operands: [func, ...args], pos };
+    }
+    else {
+        insn = { result: reg, operands: [func, ...args], restParamIsList, pos };
+    }
+    curBlock.insns.push(insn);
     return { result: constifyRegister(reg), block: curBlock };
 }
 

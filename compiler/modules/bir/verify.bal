@@ -361,7 +361,7 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is PanicInsn {
         check validOperandError(vc, name, insn.operand, insn.pos);
     }
-    else if insn is CallInsn {
+    else if insn is CallInsnBase {
         check verifyCall(vc, insn);
     }
     else if insn is TypeCastInsn {
@@ -435,7 +435,7 @@ function verifyTypeCondBranch(VerifyContext vc, TypeCondBranchInsn insn) returns
     }
 }
 
-function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
+function verifyCall(VerifyContext vc, CallInsnBase insn) returns err:Internal? {
     // XXX verify insn.semType
     FunctionOperand func = insn.operands[0];
     if func is FunctionConstOperand {
@@ -447,7 +447,7 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Internal? {
     return verifyFunctionCallArgs(vc, signature.paramTypes, insn);
 }
 
-function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallInsn insn) returns err:Internal? {
+function verifyFunctionCallArgs(VerifyContext vc, SemType[] paramTypes, CallInsnBase insn) returns err:Internal? {
     Operand[] suppliedArgs = insn.operands.slice(1);
     int nSuppliedArgs = suppliedArgs.length();
     int nExpectedArgs = paramTypes.length();

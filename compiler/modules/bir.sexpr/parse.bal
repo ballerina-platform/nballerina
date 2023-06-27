@@ -251,20 +251,19 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
             panic error("unimplemented instruction: " + sexpr:prettyPrint(data));
         }
         ["call", var symbolSexpr, var resultSexpr, ...var argsSexpr] => {
-            bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(<FunctionRef>symbolSexpr):
-                                                                          lookupRegister(pc, <RegisterName>symbolSexpr);
-            return toCallInsn(pc, symbol, checkpanic argsSexpr.cloneWithType(), false, 
-                              <sexpr:Symbol>resultSexpr); // JBUG: remove cloneWithType
+            // JBUG: remove cloneWithType, cast
+            return toCallInsn(pc, <FunctionRef|RegisterName>symbolSexpr, checkpanic argsSexpr.cloneWithType(),
+                              false, <sexpr:Symbol>resultSexpr);
         }
         ["call-rest-list", var symbolSexpr, var resultSexpr, ...var argsSexpr] => {
-            bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(<FunctionRef>symbolSexpr):
-                                                                          lookupRegister(pc, <RegisterName>symbolSexpr);
-            return toCallInsn(pc, symbol, checkpanic argsSexpr.cloneWithType(), true, 
-                              <sexpr:Symbol>resultSexpr); // JBUG: remove cloneWithType
+            // JBUG: remove cloneWithType, cast
+            return toCallInsn(pc, <FunctionRef|RegisterName>symbolSexpr, checkpanic argsSexpr.cloneWithType(),
+                              true, <sexpr:Symbol>resultSexpr);
         }
         ["call-generic", var symbolSexpr, var signature, var resultSexpr, ...var argsSexpr] => {
-            bir:Symbol symbol = symbolFromSexpr(<FunctionRef>symbolSexpr);
-            return toCallInsn(pc, symbol, checkpanic argsSexpr.cloneWithType(), false, <sexpr:Symbol>resultSexpr, <Signature>signature); // JBUG: remove cloneWithType
+            // JBUG: remove cloneWithType, cast
+            return toCallInsn(pc, <FunctionRef>symbolSexpr, checkpanic argsSexpr.cloneWithType(),
+                              false, <sexpr:Symbol>resultSexpr, <Signature>signature);
         }
         ["cond-branch", var operand, var ifTrue, var ifFalse] => {
             return <bir:CondBranchInsn>{
@@ -397,11 +396,14 @@ type BirInsnBase readonly & record {|
     bir:Register result?;
 |};
 
-function toCallInsn(FuncParseContext pc, bir:Symbol|bir:Register symbol, Operand[] argsSexpr, boolean restParamIsList, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallInsn {
+function toCallInsn(FuncParseContext pc, FunctionRef|RegisterName symbolSexpr, Operand[] argsSexpr,
+                    boolean restParamIsList, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallInsn|bir:CallIndirectInsn {
+    bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(symbolSexpr):
+                                                                  lookupRegister(pc, symbolSexpr);
     readonly & bir:Operand[] args = from var arg in argsSexpr select toOperand(pc, arg);
     var result = toResultRegister(pc, resultSexpr);
     if symbol is bir:Register {
-        return <bir:CallIndirectInsn>{ operands: [symbol, ...args], restParamIsList, pos: 0, result };
+        return { operands: [symbol, ...args], restParamIsList, pos: 0, result };
     }
     t:FunctionSignature erasedSignature = lookupSignature(pc, symbol);
 
@@ -414,7 +416,7 @@ function toCallInsn(FuncParseContext pc, bir:Symbol|bir:Register symbol, Operand
     }
     bir:FunctionConstOperand func = { value: { symbol, signature, erasedSignature },
                                       semType: t:functionSemType(pc.tc, signature) };
-    return <bir:CallConstInsn>{ operands: [func, ...args], pos: 0, result };
+    return { operands: [func, ...args], pos: 0, result };
 }
 
 function lookupLabel(FuncParseContext pc, string name) returns bir:Label {
