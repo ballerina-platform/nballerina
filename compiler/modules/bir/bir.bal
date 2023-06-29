@@ -585,21 +585,21 @@ public type EqualityInsn readonly & record {|
 |};
 
 public type FunctionOperand FunctionConstOperand|Register;
-# Call a function. In most cases we don't need to worry about the specific call
-# instruction we have used and instead treat it as this common type.
-# Call instructions are not terminators.
-# Call instructions are PPI. A panic in the called function
-# goes to the onPanic label in the basic block.
-# Regardless of where the function itself panics,
-# any function call could result in a stack overflow panic.
-# If the function type is atomic we represent the parameters as a tuple type.
-# In the case of CallConstInsn, arguments corresponding to the rest type of that tuple
-# are expected to be given as a single list value. In the case of CallIndirectInsn,
-# fallowing this convention for arguments is optional and must be explicitly
-# specified by the restParamIsList.
-# XXX These do not handle functions that don't return
-# (i.e. with return type of never)
-public type CallInsnBase readonly & record {
+// Call a function. In most cases we don't need to worry about the specific call
+// instruction we have used and instead treat it as this common type.
+// Call instructions are not terminators.
+// Call instructions are PPI. A panic in the called function
+// goes to the onPanic label in the basic block.
+// Regardless of where the function itself panics,
+// any function call could result in a stack overflow panic.
+// If the function type is atomic we represent the parameters as a tuple type.
+// In the case of CallConstInsn, arguments corresponding to the rest type of that tuple
+// are expected to be given as a single list value. In the case of CallIndirectInsn,
+// fallowing this convention for arguments is optional and must be explicitly
+// specified by the restParamIsList.
+// XXX These do not handle functions that don't return
+// (i.e. with return type of never)
+public type CallInsnBase record {
     *ResultInsnBase;
     INSN_CALL|INSN_CALL_INDIRECT name;
     [FunctionOperand, Operand...] operands;
@@ -607,7 +607,7 @@ public type CallInsnBase readonly & record {
 
 # Call a constant function value.
 public type CallInsn readonly & record {|
-    *ResultInsnBase;
+    *CallInsnBase;
     INSN_CALL name = INSN_CALL;
     [FunctionConstOperand, Operand...] operands;
 |};
@@ -616,7 +616,7 @@ public type CallInsn readonly & record {|
 # XXX: This can also panic due to memory allocation for uniform function call
 # which is not handled gracefully
 public type CallIndirectInsn readonly & record {|
-    *ResultInsnBase;
+    *CallInsnBase;
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
     [Register, Operand...] operands;
     boolean restParamIsList;
