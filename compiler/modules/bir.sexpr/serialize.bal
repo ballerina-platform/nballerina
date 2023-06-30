@@ -100,7 +100,7 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
         (readonly & Operand)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
         return callInsn(insn.restParamIsList, fromRegister(sc, insn.operands[0]), fromRegister(sc, insn.result), args);
     }
-    if insn is bir:CallInsn {
+    if insn is bir:CallDirectInsn {
         (readonly & Operand)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
         bir:FunctionRef func = (<bir:FunctionConstOperand>insn.operands[0]).value;
         FunctionRef ref = fromFunctionRefAccum(sc, func);

@@ -443,6 +443,7 @@ function verifyCall(VerifyContext vc, CallInsnBase insn) returns err:Internal? {
     }
     t:SemType funcTy = func.semType;
     t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(vc.typeContext(), funcTy);
+    // TODO: in the non-atomic case verify restParamIsList is not set
     t:FunctionSignature signature = t:functionSignature(vc.typeContext(), atomic);
     return verifyFunctionCallArgs(vc, signature.paramTypes, insn);
 }

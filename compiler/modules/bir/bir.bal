@@ -295,7 +295,7 @@ public enum InsnName {
     INSN_ERROR_CONSTRUCT,
     INSN_RET,
     INSN_ABNORMAL_RET,
-    INSN_CALL,
+    INSN_CALL_DIRECT,
     INSN_CALL_INDIRECT,
     INSN_INVOKE,
     INSN_ASSIGN,
@@ -333,7 +333,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -585,36 +585,49 @@ public type EqualityInsn readonly & record {|
 |};
 
 public type FunctionOperand FunctionConstOperand|Register;
-// Call a function. In most cases we don't need to worry about the specific call
-// instruction we have used and instead treat it as this common type.
-// Call instructions are not terminators.
-// Call instructions are PPI. A panic in the called function
-// goes to the onPanic label in the basic block.
-// Regardless of where the function itself panics,
-// any function call could result in a stack overflow panic.
-// If the function type is atomic we represent the parameters as a tuple type.
-// In the case of CallConstInsn, arguments corresponding to the rest type of that tuple
-// are expected to be given as a single list value. In the case of CallIndirectInsn,
-// fallowing this convention for arguments is optional and must be explicitly
-// specified by the restParamIsList.
-// XXX These do not handle functions that don't return
-// (i.e. with return type of never)
+
+# Common type for all call instructions.
 public type CallInsnBase record {
     *ResultInsnBase;
-    INSN_CALL|INSN_CALL_INDIRECT name;
+    # All call instructions
+    INSN_CALL_DIRECT|INSN_CALL_INDIRECT name;
+    # Caller must always spread rest arguments (not to be confused with rest parameters)
+    # to individual arguments.
     [FunctionOperand, Operand...] operands;
 };
 
-# Call a constant function value.
-public type CallInsn readonly & record {|
+# Call a constant function value. 
+# This is not a terminator.
+# This is a PPI. A panic in the called function
+# goes to the onPanic label in the basic block.
+# Regardless of where the function itself panics,
+# any function call could result in a stack overflow panic.
+# SemType of a constant function value is always an atomic function type (enforced 
+# by requiring a function signature). For atomic function types, we represent
+# the parameters as tuple type and arguments corresponding to the rest type of that
+# tuple are expected to be given as a single list value.
+# XXX This does not handle functions that don't return
+# (i.e. with return type of never)
+public type CallDirectInsn readonly & record {|
     *CallInsnBase;
-    INSN_CALL name = INSN_CALL;
+    INSN_CALL_DIRECT name = INSN_CALL_DIRECT;
     [FunctionConstOperand, Operand...] operands;
 |};
 
 # Call a function value.
-# XXX: This can also panic due to memory allocation for uniform function call
-# which is not handled gracefully
+# This is not a terminator.
+# This is a PPI. A panic in the called function
+# goes to the onPanic label in the basic block.
+# Regardless of where the function itself panics,
+# any function call could result in a stack overflow panic.
+# This can also panic due to memory allocation for uniform function call
+# (Panics due to memory allocation are not handled gracefully)
+# SemType of the function value could be either atomic or non-atomic function type.
+# If it is atomic the same convention for rest arguments as the CallConstInsn
+# must be followed, in which case restParamIsList must be true. Otherwise
+# (ie. no paramters corresponding to rest paramter or non-atomic function type)
+# restParamIsList must be false. In this case, each argument must be given as
+# a separate operand.
 public type CallIndirectInsn readonly & record {|
     *CallInsnBase;
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;

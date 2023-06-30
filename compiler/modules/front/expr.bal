@@ -1479,7 +1479,7 @@ function registerName(bir:Register register) returns string {
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func, 
                      t:SemType returnType, bir:Operand[] args, boolean restParamIsList, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
-    bir:CallIndirectInsn|bir:CallInsn insn;
+    bir:CallIndirectInsn|bir:CallDirectInsn insn;
     if func is bir:FunctionConstOperand {
         insn = { result: reg, operands: [func, ...args], pos };
     }

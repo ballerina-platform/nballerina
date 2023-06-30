@@ -397,7 +397,7 @@ type BirInsnBase readonly & record {|
 |};
 
 function toCallInsn(FuncParseContext pc, FunctionRef|RegisterName symbolSexpr, Operand[] argsSexpr,
-                    boolean restParamIsList, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallInsn|bir:CallIndirectInsn {
+                    boolean restParamIsList, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallDirectInsn|bir:CallIndirectInsn {
     bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(symbolSexpr):
                                                                   lookupRegister(pc, symbolSexpr);
     readonly & bir:Operand[] args = from var arg in argsSexpr select toOperand(pc, arg);
