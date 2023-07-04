@@ -131,7 +131,7 @@ function buildCallExact(llvm:Builder builder, Scaffold scaffold, llvm:Function|l
     buildStoreRet(builder, scaffold, semTypeRetRepr(returnTy), retValue, result);
 }
 
-// This builds each arugment in the call instruction as a tagged pointer and store them in an array. We call this array the uniform argument array.
+// This builds each argument in the call instruction as a tagged pointer and store them in an array. We call this array the uniform argument array.
 // In cases where there are rest parameters as a single list (see bir:CallIndirectInsn for more details), this will spread
 // that list into individual arguments in the uniform argument array.
 function buildUniformArgArray(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns [llvm:Value, llvm:PointerValue]|BuildError {

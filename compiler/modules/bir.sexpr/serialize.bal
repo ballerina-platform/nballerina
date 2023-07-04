@@ -102,7 +102,7 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
     }
     if insn is bir:CallDirectInsn {
         (readonly & Operand)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
-        bir:FunctionRef func = (<bir:FunctionConstOperand>insn.operands[0]).value;
+        bir:FunctionRef func = insn.operands[0].value;
         FunctionRef ref = fromFunctionRefAccum(sc, func);
         if func.erasedSignature != func.signature {
             return ["call-generic", ref, fromSignature(sc, func.signature), 
