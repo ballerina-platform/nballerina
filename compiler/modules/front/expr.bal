@@ -1461,7 +1461,7 @@ function finishCodeGenFunctionCall(ExprContext cx, bir:BasicBlock bb, s:Function
     t:SemType argListType = t:tupleTypeWrappedRo(tc.env, ...argTypes);
     t:SemType? returnType = t:functionReturnType(tc, funcTy, argListType);
     if returnType == () {
-        // This can only happen when application is not well-typed and since we
+        // This can only happen when function call is not well-typed and since we
         // ensure funcTy is a function subtype, this can only be caused by invalid args
         return cx.semanticErr("incorrect type for arguments", s:range(expr));
     }
