@@ -96,16 +96,19 @@ function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File 
 }
 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
-    if insn is bir:CallInsn {
-        bir:FunctionRef func =  insn.func;
+    if insn is bir:CallIndirectInsn {
+        (readonly & Operand)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
+        return callInsn(insn.restParamIsList, fromRegister(sc, insn.operands[0]), fromRegister(sc, insn.result), args);
+    }
+    if insn is bir:CallDirectInsn {
+        (readonly & Operand)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
+        bir:FunctionRef func = insn.operands[0].value;
         FunctionRef ref = fromFunctionRefAccum(sc, func);
-        (Operand & readonly)[] args = from var arg in insn.args select fromOperand(sc, arg);
         if func.erasedSignature != func.signature {
-            return ["call-generic", ref, fromSignature(sc, func.signature), fromRegister(sc, insn.result), ...args];
+            return ["call-generic", ref, fromSignature(sc, func.signature), 
+                    fromRegister(sc, insn.result), ...args];
         }
-        else {
-            return ["call", ref, fromRegister(sc, insn.result), ...args];
-        }
+        return callInsn(true, ref, fromRegister(sc, insn.result), args);
     }
     else if insn is bir:BranchInsn {
         return [insn.backward ? "branch-back" : "branch", formLabel(sc, insn.dest)];
@@ -161,6 +164,12 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
         }
     }
     return checkpanic insnSexpr.cloneWithType();
+}
+
+function callInsn(boolean restArgIsList, FunctionRef|RegisterName func, Result result, 
+                  (Operand&readonly)[] args) returns CallInsn|CallRestListInsn {
+    return restArgIsList ? ["call-rest-list", func, result, ...args] :
+                           ["call", func, result, ...args];
 }
 
 function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & readonly {

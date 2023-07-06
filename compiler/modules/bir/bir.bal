@@ -295,7 +295,7 @@ public enum InsnName {
     INSN_ERROR_CONSTRUCT,
     INSN_RET,
     INSN_ABNORMAL_RET,
-    INSN_CALL,
+    INSN_CALL_DIRECT,
     INSN_CALL_INDIRECT,
     INSN_INVOKE,
     INSN_ASSIGN,
@@ -333,7 +333,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn|CallIndirectInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -584,30 +584,81 @@ public type EqualityInsn readonly & record {|
     Operand[2] operands;
 |};
 
-# Call a function.
-# This is a not a terminator.
-# This is a PPI. A panic in the called function
+public type FunctionOperand FunctionConstOperand|Register;
+
+# The common supertype of the two call instructions.
+# The following applies to both instructions.
+# It is not a terminator.
+# It will be a PPI. A panic in the called function
 # goes to the onPanic label in the basic block.
+# (This isn't implemented yet, since we haven't implemented `trap`.)
 # Regardless of where the function itself panics,
 # any function call could result in a stack overflow panic.
-# XXX This does not handle functions that don't return
-# (i.e. with return type of never)
-public type CallInsn readonly & record {|
+# It can also panic due to memory allocation for uniform function call
+# (Panics due to memory allocation are not handled gracefully)
+#
+# The first operand is the function value to be called;
+# this operand must be a subtype of the function basic type.
+# The remaining operands are the arguments.
+# A function value has an inherent type, which is determined
+# by the declared parameter types and return type; these types are
+# called atomic types. In an atomic function type, the type of the parameters
+# of the function is represented as a tuple type; when the function is declared
+# with a rest parameter, the last member descriptor in the tuple type
+# will be a rest descriptor.
+# In general, function types can be unions and intersections of atomic function types.
+# The semantics of function call in Ballerina are that the arguments
+# are a list. Static type checking of a call ensures that the list of arguments passed to
+# a function value belongs to the tuple type for the parameters of the inherent type
+# of the function value.
+# In all cases, it is the responsibility of the caller to deal with rest arguments
+# in the call expression, by splicing the rest argument into the list of all the arguments;
+# the call instructions assume this splicing has already taken place.
+# In the normal case, it is similarly the responsibility of the callee to handle
+# rest parameters in the function definition, by constructing a list from the corresponding
+# trailing part of the list of all the arguments, before binding this list to the rest parameter.
+# However, in some cases it is possible to shortcut the callee's handling of the rest
+# parameter, by having the caller construct the list to be bound to the rest parameter;
+# we call this shortcut `restParamIsList`.
+# The two instructions differ in how they distinguish the case `restParamIsList` is in effect.
+# SUBSET We do not yet support functions with a return type of never
+public type CallInsnBase record {
     *ResultInsnBase;
-    # Position in the source that resulted in the instruction
-    INSN_CALL name = INSN_CALL;
-    FunctionRef func;
-    Operand[] args;
+    # The name of call instruction.
+    INSN_CALL_DIRECT|INSN_CALL_INDIRECT name;
+    # The operands of the instruction.
+    # The first member of the list is the function to be called;
+    # the remaining members are the arguments.
+    [FunctionOperand, Operand...] operands;
+};
+
+# Call a function, when the function value is constant.
+# This means that the function to be called is known at compile-time.
+# At the machine code level, it can potentially be implemented by
+# a branch to a known address.
+# It also implies that the type of the function is atomic and so there
+# is a single tuple type known at compile time for the arguments.
+# With this instruction, we therefore do not need additional information to
+# determine whether `restParamIsList` is in effect:
+# it is in effect if and only if this tuple type ends with a rest descriptor.
+public type CallDirectInsn readonly & record {|
+    *CallInsnBase;
+    INSN_CALL_DIRECT name = INSN_CALL_DIRECT;
+    [FunctionConstOperand, Operand...] operands;
 |};
 
-# Call a function using a function value.
-# This behaves similar to CallInsn.
-# XXX: In addition this can also panic due to memory allocation for uniform function call
-# which is not handled gracefully
+# Call a function value, when the function value is not constant.
+# At the machine code level, this will typically be implemented by
+# an indirect branch.
+# The `restParamIsList` field determines whether `restParamIsList`
+# is in effect (as described above in `CallInsnBase`).
+# If `restParamIsList` is true, then the type of the first operand,
+# which is a function type, must be atomic.
 public type CallIndirectInsn readonly & record {|
-    *ResultInsnBase;
+    *CallInsnBase;
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
     [Register, Operand...] operands;
+    boolean restParamIsList;
 |};
 
 # Assign a value to a register.
@@ -753,7 +804,8 @@ final readonly & map<true> PPI_INSNS = {
     // panicking but for now we don't
     // If we allow this, we need to be careful about not generating
     // code from the catch block if the only PPIs in the basic block are calls.
-    // [INSN_CALL]: true,
+    // [INSN_CALL_DIRECT]: true,
+    // [INSN_CALL_INDIRECT]: true,
     [INSN_PANIC]: true,
     [INSN_INT_ARITHMETIC_BINARY]: true,
     [INSN_DECIMAL_ARITHMETIC_BINARY]: true,
