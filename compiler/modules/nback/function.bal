@@ -138,8 +138,8 @@ function functionValuePtrType(Scaffold scaffold, t:SemType funcType) returns llv
 }
 
 function buildCallExact(llvm:Builder builder, Scaffold scaffold, llvm:Function|llvm:PointerValue func,
-                         t:FunctionSignature erasedSignature, t:FunctionSignature signature,
-                         bir:Operand[] args, bir:Register result, t:SemType returnTy) returns BuildError? {
+                        t:FunctionSignature erasedSignature, t:FunctionSignature signature,
+                        bir:Operand[] args, bir:Register result, t:SemType returnTy) returns BuildError? {
     llvm:Value[] argValues = check buildFunctionCallArgs(builder, scaffold, erasedSignature.paramTypes,
                                                          signature.paramTypes, args);
     llvm:Value? retValue = buildFunctionCall(builder, scaffold, func, argValues);
