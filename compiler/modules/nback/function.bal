@@ -90,9 +90,9 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     llvm:ConstPointerValue signatureDescPtr = scaffold.getCalledType(signature);
     llvm:Value isExact = buildRuntimeFunctionCall(builder, scaffold, functionIsExactFunction,
                                                   [signatureDescPtr, builder.addrSpaceCast(funcValuePtr, heapPointerType(llFunctionType))]);
-    llvm:BasicBlock afterCall = scaffold.addBasicBlock();
     llvm:BasicBlock ifExact = scaffold.addBasicBlock();
     llvm:BasicBlock ifNotExact = scaffold.addBasicBlock();
+    llvm:BasicBlock afterCall = scaffold.addBasicBlock();
     builder.condBr(isExact, ifExact, ifNotExact);
     builder.positionAtEnd(ifExact);
     check buildCallExact(builder, scaffold, funcPtr, signature, signature,

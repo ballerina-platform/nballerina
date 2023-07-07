@@ -11,6 +11,6 @@ function testNonEmptyTypes() {
 }
 
 @test:Config { groups: ["longRunning", "private"] }
-function testApplication() {
-    testSemtypePropositions(generator = generateApplicationPropositions);
+function testReturnTypes() {
+    testSemtypePropositions(generator = generateReturnTypePropositions);
 }
