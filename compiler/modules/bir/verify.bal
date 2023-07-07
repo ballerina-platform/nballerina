@@ -361,8 +361,11 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is PanicInsn {
         check validOperandError(vc, name, insn.operand, insn.pos);
     }
-    else if insn is CallInsnBase {
-        check verifyCall(vc, insn);
+    else if insn is CallDirectInsn {
+        check verifyCallDirect(vc, insn);
+    }
+    else if insn is CallIndirectInsn {
+        check verifyCallIndirect(vc, insn);
     }
     else if insn is TypeCastInsn {
         check verifyTypeCast(vc, insn);
@@ -435,32 +438,40 @@ function verifyTypeCondBranch(VerifyContext vc, TypeCondBranchInsn insn) returns
     }
 }
 
-function verifyCall(VerifyContext vc, CallInsnBase insn) returns err:Internal? {
-    // XXX verify insn.semType
-    FunctionOperand func = insn.operands[0];
-    if func is FunctionConstOperand {
-        return verifyFunctionCallArgs(vc, func.value.signature.paramTypes, insn);
+function verifyCallDirect(VerifyContext vc, CallDirectInsn insn) returns err:Internal? {
+    t:FunctionSignature signature = insn.operands[0].value.signature;
+    if !vc.isSubtype(signature.returnType, insn.result.semType) {
+        return vc.invalidErr("result type of CallDirectInsn is not a subtype of the function return type", insn.pos);
     }
-    t:SemType funcTy = func.semType;
-    t:FunctionAtomicType? atomic = t:functionAtomicType(vc.typeContext(), funcTy);
-    if atomic != () {
-        t:FunctionSignature signature = t:functionSignature(vc.typeContext(), atomic);
-        return verifyFunctionCallArgs(vc, signature.paramTypes, insn);
-    }
-    if insn !is CallIndirectInsn {
-        return vc.invalidErr("calling a non atomic function using CallDirectInsn", insn.pos);
-    }
-    if insn.restParamIsList {
-        return vc.invalidErr("calling a non atomic function value with restParamIsList = true", insn.pos);
-    }
+    return verifyFunctionCallArgs(vc, signature.paramTypes, insn);
+}
+
+function verifyCallIndirect(VerifyContext vc, CallIndirectInsn insn) returns err:Internal? {
+    t:SemType funcTy = insn.operands[0].semType;
     if !vc.isSubtype(funcTy, t:FUNCTION) {
         return vc.invalidErr("calling a non-function value", insn.pos);
     }
-    t:SemType paramListType = <t:SemType>t:functionParamListType(vc.typeContext(), funcTy);
-    t:SemType[] operandTypes = from var operand in insn.operands.slice(1) select operand.semType;
-    t:SemType argListType = t:tupleTypeWrappedRo(vc.typeContext().env, ...operandTypes);
-    if !vc.isSubtype(argListType, paramListType) {
-        return vc.invalidErr("incorrect type for arguments", insn.pos);
+    t:FunctionAtomicType? atomic = t:functionAtomicType(vc.typeContext(), funcTy);
+    t:SemType returnType;
+    if atomic != () {
+        t:FunctionSignature signature = t:functionSignature(vc.typeContext(), atomic);
+        returnType = signature.returnType;
+        check verifyFunctionCallArgs(vc, signature.paramTypes, insn);
+    }
+    else {
+        if insn.restParamIsList {
+            return vc.invalidErr("calling a non atomic function value with restParamIsList = true", insn.pos);
+        }
+        t:SemType paramListType = <t:SemType>t:functionParamListType(vc.typeContext(), funcTy);
+        t:SemType[] operandTypes = from var operand in insn.operands.slice(1) select operand.semType;
+        t:SemType argListType = t:tupleTypeWrappedRo(vc.typeContext().env, ...operandTypes);
+        if !vc.isSubtype(argListType, paramListType) {
+            return vc.invalidErr("incorrect type for arguments", insn.pos);
+        }
+        returnType = <t:SemType>t:functionReturnType(vc.typeContext(), funcTy, argListType);
+    }
+    if !vc.isSubtype(returnType, insn.result.semType) {
+        return vc.invalidErr("result type of CallIndirectInsn is not a subtype of the function return type", insn.pos);
     }
 }
 
