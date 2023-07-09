@@ -10,33 +10,37 @@ enum PropositionOp {
     UNION, INTERSECT, DIFF, DIFF2, RETURN
 }
 
-type Proposition record {
+type Proposition BinaryProposition|ReturnTypeProposition;
+
+type PropositionBase record {
     PropositionOp op;
-    boolean isEmpty;
-    int left;
-    int right;
 };
 
+type BinaryProposition record {|
+    *PropositionBase;
+    int left;
+    int right;
+    boolean isEmpty;
+|};
+
 type SubtypeProposition record {|
-    *Proposition;
+    *BinaryProposition;
     DIFF op = DIFF;
     true isEmpty = true;
 |};
 
 type NonEmptyProposition record {|
-    *Proposition;
+    *BinaryProposition;
     UNION op = UNION;
     false isEmpty = false;
 |};
 
 type ReturnTypeProposition record {|
-    // In the proposition left is the return type, right is [functiontype, arglisttype]
-    *Proposition;
+    *PropositionBase;
     RETURN op = RETURN;
-    true isEmpty = true;
-    // We keep the destructured fields of right to make it easy when generating new propositions
     int functionType;
     int argListType;
+    int returnType;
 |};
 
 type PropositionGenerator function (PropositionGenContext cx, PropositionPath path) returns Proposition;
@@ -211,7 +215,7 @@ final TypeGeneratorFunction[] TYPES_GENERATOR_LIST = [
     XML_TYPES_GENERATOR_LIST[4]
 ];
 
-// f: T -> R
+// f: T -> R where T = [T1, T2, ..., Tn]
 // g: T
 // then f(g) < R
 function returnTypeSimpleFunction(PropositionGenContext cx, PropositionPath path) returns ReturnTypeProposition {
@@ -222,15 +226,14 @@ function returnTypeSimpleFunction(PropositionGenContext cx, PropositionPath path
         args.push(argGen(cx.types));
     }
     TypeGeneratorFunction retGen = TYPES_GENERATOR_LIST[cx.random.nextRange(TYPES_GENERATOR_LIST.length())];
-    int ret = retGen(cx.types);
-    int functionType = cx.types.functionType(parameterTypes = args, returnType = ret);
+    int returnType = retGen(cx.types);
+    int functionType = cx.types.functionType(parameterTypes = args, returnType = returnType);
     int argListType = cx.types.functionArgumentType(args);
-    int right = cx.types.list([functionType, argListType]);
-    return { left: ret, right, functionType, argListType };
+    return { returnType, functionType, argListType };
 }
 
 // f: T -> R where T = [T1, T2, ..., Tn, Tx...]
-// g: T_bar where T_bar = [T1, T2, ..., Tn]
+// g: T_bar where T_bar = [T1, T2, ..., Tn] or [T1, T2, ..., Tn, Tx] (picked randomly)
 // then f(g) < R
 function returnTypeVarArgFunction(PropositionGenContext cx, PropositionPath path) returns ReturnTypeProposition {
     int argCount = cx.random.nextRange(cx.bounds.maxParamCount);
@@ -245,61 +248,58 @@ function returnTypeVarArgFunction(PropositionGenContext cx, PropositionPath path
         args.push(rest);
     }
     TypeGeneratorFunction retGen = TYPES_GENERATOR_LIST[cx.random.nextRange(TYPES_GENERATOR_LIST.length())];
-    int ret = retGen(cx.types);
-    int functionType = cx.types.functionType(args, rest, ret);
+    int returnType = retGen(cx.types);
+    int functionType = cx.types.functionType(args, rest, returnType);
     int argListType = cx.types.functionArgumentType(args);
-    int right = cx.types.list([functionType, argListType]);
-    return { left: ret, right, functionType, argListType };
+    return { returnType, functionType, argListType };
 }
 
 // f: T_1 -> R_1 & T_2 -> R_2
 // g1: T_1 , g2: T_2
-// then f(g1) < R_1, f(g2) < R_2, f(g1&g2) < R_1 & R_2
+// then (if T_1 & T_2 and R_1 & R_2 are not empty) f(g1 & g2) < R_1 & R_2 (else picked randomly) f(g1) < R_1 or f(g2) < R_2
 function returnTypeIntersection(PropositionGenContext cx, PropositionPath path) returns ReturnTypeProposition {
     ReturnTypeProposition a1 = generateReturnTypePropositions(cx, path);
     ReturnTypeProposition a2 = generateReturnTypePropositions(cx, path);
     int functionType = cx.types.intersection(a1.functionType, a2.functionType);
-    int ret;
+    int returnType;
     int argListType;
     boolean intersectionValid = intersectionPossible(cx, a1.argListType, a2.argListType) &&
-                                intersectionPossible(cx, a1.left, a2.left);
+                                intersectionPossible(cx, a1.returnType, a2.returnType);
     if intersectionValid {
-        ret = cx.types.intersection(a1.left, a2.left);
+        returnType = cx.types.intersection(a1.returnType, a2.returnType);
         argListType = cx.types.intersection(a1.argListType, a2.argListType);
     } else {
-        [ret, argListType] = returnTypeComponents(cx, a1, a2);
+        [returnType, argListType] = returnTypeComponents(cx, a1, a2);
     }
-    int right = cx.types.list([functionType, argListType]);
-    return { left: ret, right, functionType, argListType };
+    return { returnType, functionType, argListType };
 }
 
 // f: T_1 -> R_1 | T_2 -> R_2
 // g1: T_1 , g2: T_2
-// then f(g1) <: R_1, f(g2) <: R_2, f(g1&g2) <: R_1 | R_2
+// then (if T_1 & T_2 is not empty) f(g1&g2) <: R_1 | R_2 (else picked randomly) f(g1) <: R_1 or f(g2) <: R_2
 function returnTypeUnion(PropositionGenContext cx, PropositionPath path) returns ReturnTypeProposition {
     ReturnTypeProposition a1 = generateReturnTypePropositions(cx, path);
     ReturnTypeProposition a2 = generateReturnTypePropositions(cx, path);
     int functionType = cx.types.union(a1.functionType, a2.functionType);
-    int ret;
+    int returnType;
     int argListType;
     if intersectionPossible(cx, a1.argListType, a2.argListType) {
-        ret = cx.types.union(a1.left, a2.left);
+        returnType = cx.types.union(a1.returnType, a2.returnType);
         argListType = cx.types.intersection(a1.argListType, a2.argListType);
     }
     else {
-        [ret, argListType] = returnTypeComponents(cx, a1, a2);
+        [returnType, argListType] = returnTypeComponents(cx, a1, a2);
     }
-    int right = cx.types.list([functionType, argListType]);
-    return { left: ret, right, functionType, argListType };
+    return { returnType, functionType, argListType };
 }
 
 function returnTypeComponents(PropositionGenContext cx, ReturnTypeProposition a1, ReturnTypeProposition a2) returns [int, int] {
     match cx.random.nextRange(2) {
         0 => {
-            return [a1.left, a1.argListType];
+            return [a1.returnType, a1.argListType];
         }
         _ => {
-            return [a2.left, a2.argListType];
+            return [a2.returnType, a2.argListType];
         }
     }
 }
@@ -561,10 +561,8 @@ function generateSubtypeProposition(PropositionGenContext cx, PropositionPath pa
 
 function generateReturnTypePropositions(PropositionGenContext cx, PropositionPath path) returns ReturnTypeProposition {
     if path.depth <= 0 {
-        // we currently have only one but we can add multiple?
         ReturnTypePropositionGenerator generator = AXIOMATIC_RETURN_TYPE_PROPOSITION_GENERATORS[cx.random.nextRange(AXIOMATIC_RETURN_TYPE_PROPOSITION_GENERATORS.length())];
         ReturnTypeProposition prop = generator(cx, path);
-        // pick one and call it
         cx.storeReturnTypeProposition(0, prop);
         return prop;
     }
@@ -734,6 +732,14 @@ function generateNonEmptyProposition(PropositionGenContext cx, PropositionPath p
 }
 
 function evalProposition(PropositionGenContext cx, Proposition p) returns boolean {
+    if p is BinaryProposition {
+        return evalBinaryProposition(cx, p);
+    }
+    // JBUG: cast
+    return evalReturnTypeProposition(cx, <ReturnTypeProposition>p);
+}
+
+function evalBinaryProposition(PropositionGenContext cx, BinaryProposition p) returns boolean {
     t:SemType|TypeBuilderError left = cx.types.semtype(p.left);
     t:SemType|TypeBuilderError right = cx.types.semtype(p.right);
     if left is error || right is error {
@@ -754,16 +760,6 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
             result = t:isEmpty(cx.typeContext, t:diff(left, right)) == p.isEmpty
                 && t:isEmpty(cx.typeContext, t:diff(right, left)) == p.isEmpty;
         }
-        RETURN => {
-            t:ListAtomicType applicationTuple = <t:ListAtomicType>t:listAtomicType(cx.typeContext, right);
-            t:SemType functionType = t:listAtomicTypeMemberAtInner(applicationTuple, 0);
-            t:SemType argListType = t:listAtomicTypeMemberAtInner(applicationTuple, 1);
-            t:SemType? returnType = t:functionReturnType(cx.typeContext, functionType, argListType);
-            if returnType == () {
-                panic error("invalid function return type for seed: " + cx.seed.toString());
-            }
-            result = t:isEmpty(cx.typeContext, t:diff(returnType, left)) == p.isEmpty;
-        }
         _ => {
             panic error("invalid OP: " + p.op.toString() + " for seed: " + cx.seed.toString());
         }
@@ -772,6 +768,24 @@ function evalProposition(PropositionGenContext cx, Proposition p) returns boolea
         cx.failed(p);
     }
     return <boolean>result;
+}
+
+function evalReturnTypeProposition(PropositionGenContext cx, ReturnTypeProposition p) returns boolean {
+    t:SemType|TypeBuilderError expectedReturnType = cx.types.semtype(p.returnType);
+    t:SemType|TypeBuilderError argListType = cx.types.semtype(p.argListType);
+    t:SemType|TypeBuilderError functionType = cx.types.semtype(p.functionType);
+    if expectedReturnType is error || argListType is error || functionType is error {
+        panic error("failed to resolve return type proposition's type for seed: " + cx.seed.toString());
+    }
+    t:SemType? returnType = t:functionReturnType(cx.typeContext, functionType, argListType);
+    if returnType == () {
+        panic error("invalid function return type for seed: " + cx.seed.toString());
+    }
+    boolean result = t:isEmpty(cx.typeContext, t:diff(returnType, expectedReturnType));
+    if result == false {
+        cx.failed(p);
+    }
+    return result;
 }
 
 type PropositionTestOnFail function(PropositionGenContext cx, Proposition failedProp);
@@ -793,6 +807,32 @@ function printFailureMessage(PropositionGenContext cx, Proposition proposition) 
 }
 
 function propositionToString(PropositionGenContext cx, Proposition proposition) returns string {
+    if proposition is BinaryProposition {
+        return binaryPropositionToString(cx, proposition);
+    }
+    // JBUG: cast
+    return returnTypePropositionToString(cx, <ReturnTypeProposition>proposition);
+}
+
+function returnTypePropositionToString(PropositionGenContext cx, ReturnTypeProposition proposition) returns string {
+    string|TypeBuilderError expectedReturnType = cx.types.typeToString(proposition.returnType);
+    string|TypeBuilderError argListType = cx.types.typeToString(proposition.argListType);
+    string|TypeBuilderError functionType = cx.types.typeToString(proposition.functionType);
+    if expectedReturnType !is string || argListType !is string || functionType !is string {
+        panic error("failed to convert proposition to string for seed: " + cx.seed.toString());
+    }
+    return "\\Failed for seed value: " + cx.seed.toString() + "\n"
+            + "\\\\" + proposition.toString()
+            + "\n\\\\-------------expected return type---------------------\n"
+            + expectedReturnType
+            + "\n\\\\-------------argument list type---------------------\n"
+            + argListType
+            + "\n\\\\-------------function type---------------------\n"
+            + functionType
+            + "\n\\\\--------------------------------------\n";
+}
+
+function binaryPropositionToString(PropositionGenContext cx, BinaryProposition proposition) returns string {
     string|TypeBuilderError left = cx.types.typeToString(proposition.left);
     string|TypeBuilderError right = cx.types.typeToString(proposition.right);
     if left !is string || right !is string {

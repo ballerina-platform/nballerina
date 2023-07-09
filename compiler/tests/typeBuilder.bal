@@ -491,7 +491,7 @@ class AstBasedTypeDefBuilder {
     }
 
     function functionArgumentType(int[] requiredArguments = [], int rest = -1) returns int {
-        // This is a hack to create the argument list type since we can represent that
+        // This is a hack to create the argument list type since we can't represent that
         // in the ast (due to mutability). Instead we will create a function type with
         // parameters equal to the arguments and use its parameter list type.
         int index = self.functionType(requiredArguments, rest);
