@@ -99,12 +99,10 @@ type RegExprEffect record {|
     bir:Register result;
 |};
 
-type AtomicFunctionInfo record {|
-    t:FunctionSignature signature;
-    bir:FunctionRef|bir:Register func;
+type CalledFunctionInfo record {|
+    t:FunctionSignature? signature;
+    bir:FunctionOperand operand;
 |};
-
-type CalledFunctionInfo AtomicFunctionInfo|bir:Register;
 
 class ExprContext {
     *err:SemanticContext;
@@ -1395,22 +1393,23 @@ function codeGenCheckingTerminator(bir:BasicBlock bb, s:CheckingKeyword checking
 
 function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr) returns CodeGenError|ExprEffect {
     string? prefix = expr.prefix;
-    CalledFunctionInfo functionInfo;
+    bir:FunctionOperand operand;
+    t:FunctionSignature? signature;
     if prefix == () {
-        functionInfo = check genLocalFunction(cx, expr.funcName, expr.qNamePos);
+        { operand, signature } = check genLocalFunction(cx, expr.funcName, expr.qNamePos);
     }
     else {
-        functionInfo = check genImportedFunction(cx, prefix, expr.funcName, expr.qNamePos);
+        { operand, signature } = check genImportedFunction(cx, prefix, expr.funcName, expr.qNamePos);
     }
-    if functionInfo is AtomicFunctionInfo {
-        var { func, signature } = functionInfo;
-        return finishCodeGenAtomicFunctionCall(cx, bb, expr, signature, func);
+    if signature != () {
+        return finishCodeGenAtomicFunctionCall(cx, bb, expr, signature, operand);
     }
-    return finishCodeGenFunctionCall(cx, bb, expr, functionInfo);
+    // If the function is not atomic, then it must be a function pointer
+    return finishCodeGenFunctionCall(cx, bb, expr, <bir:Register>operand);
 }
 
 function finishCodeGenAtomicFunctionCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr, t:FunctionSignature signature,
-                                         bir:FunctionRef|bir:Register func) returns CodeGenError|ExprEffect {
+                                         bir:FunctionOperand operand) returns CodeGenError|ExprEffect {
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
     t:SemType? restParamType = signature.restParamType;
@@ -1442,8 +1441,7 @@ function finishCodeGenAtomicFunctionCall(ExprContext cx, bir:BasicBlock bb, s:Fu
         args.push(arg);
     }
     check sufficientArguments(cx, signature, expr);
-    bir:FunctionOperand funcValue = func is bir:Register ? func : { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) };
-    return codeGenCall(cx, curBlock, funcValue, signature.returnType, args, restParamIsList, expr.qNamePos);
+    return codeGenCall(cx, curBlock, operand, signature.returnType, args, restParamIsList, expr.qNamePos);
 }
 
 function finishCodeGenFunctionCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr,
@@ -1479,20 +1477,24 @@ function finishCodeGenFunctionCall(ExprContext cx, bir:BasicBlock bb, s:Function
 function genLocalFunction(ExprContext cx, string funcName, Position pos) returns CalledFunctionInfo|CodeGenError {
     var ref = cx.lookupLocalVarRef(funcName, pos);
     if ref is bir:FunctionRef {
-        return { func: ref, signature: ref.signature };
+        return { operand: functionConstOperand(cx, ref), signature: ref.signature };
     }
     else if ref is Binding {
         t:SemType semType = ref.reg.semType;
         t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
         if atom != () {
             t:FunctionSignature signature = t:functionSignature(cx.mod.tc, atom);
-            return { func: ref.reg, signature };
+            return { operand: ref.reg, signature };
         }
         if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) {
-            return ref.reg;
+            return { operand: ref.reg, signature: () };
         }
     }
     return cx.semanticErr("only a value of function type can be called", pos);
+}
+
+function functionConstOperand(ExprContext cx, bir:FunctionRef func) returns bir:FunctionConstOperand {
+    return { value: func, semType: t:functionSemType(cx.mod.tc, func.signature) };
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
@@ -1612,10 +1614,10 @@ function groupOriginsByUnnarrowed(BindingChain? bindingLimit, TypeMergerOrigin? 
     return [numOrigins, originGroups];
 }
 
-function genImportedFunction(ExprContext cx, string prefix, string identifier, Position pos) returns AtomicFunctionInfo|CodeGenError {
+function genImportedFunction(ExprContext cx, string prefix, string identifier, Position pos) returns CalledFunctionInfo|CodeGenError {
     var defn = lookupImportedVarRef(cx, prefix, identifier, pos);
     if defn is bir:FunctionRef {
-        return { func: defn, signature: defn.signature };
+        return { operand: functionConstOperand(cx, defn), signature: defn.signature };
     }
     else {
         Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
