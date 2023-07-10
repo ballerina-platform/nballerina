@@ -216,8 +216,8 @@ final TypeGeneratorFunction[] TYPES_GENERATOR_LIST = [
 ];
 
 // f: T -> R where T = [T1, T2, ..., Tn]
-// g: T
-// then f(g) < R
+// x: T
+// then apply(f, x) < R
 function returnTypeSimpleFunction(PropositionGenContext cx, PropositionPath path) returns ReturnTypeProposition {
     int argCount = cx.random.nextRange(cx.bounds.maxParamCount);
     int[] args = [];
@@ -233,8 +233,8 @@ function returnTypeSimpleFunction(PropositionGenContext cx, PropositionPath path
 }
 
 // f: T -> R where T = [T1, T2, ..., Tn, Tx...]
-// g: T_bar where T_bar = [T1, T2, ..., Tn] or [T1, T2, ..., Tn, Tx] (picked randomly)
-// then f(g) < R
+// x: T_bar where T_bar = [T1, T2, ..., Tn] or [T1, T2, ..., Tn, Tx] (picked randomly)
+// then apply(f, x) < R
 function returnTypeVarArgFunction(PropositionGenContext cx, PropositionPath path) returns ReturnTypeProposition {
     int argCount = cx.random.nextRange(cx.bounds.maxParamCount);
     int[] args = [];
@@ -255,8 +255,8 @@ function returnTypeVarArgFunction(PropositionGenContext cx, PropositionPath path
 }
 
 // f: T_1 -> R_1 & T_2 -> R_2
-// g1: T_1 , g2: T_2
-// then (if T_1 & T_2 and R_1 & R_2 are not empty) f(g1 & g2) < R_1 & R_2 (else picked randomly) f(g1) < R_1 or f(g2) < R_2
+// x_1: T_1 , x_2: T_2
+// then (if T_1 & T_2 and R_1 & R_2 are not empty) apply(f, (x_1 & x_2)) < R_1 & R_2 (else picked randomly) apply(f, x_1) < R_1 or apply(f, x_2) < R_2
 function returnTypeIntersection(PropositionGenContext cx, PropositionPath path) returns ReturnTypeProposition {
     ReturnTypeProposition a1 = generateReturnTypePropositions(cx, path);
     ReturnTypeProposition a2 = generateReturnTypePropositions(cx, path);
@@ -275,8 +275,8 @@ function returnTypeIntersection(PropositionGenContext cx, PropositionPath path) 
 }
 
 // f: T_1 -> R_1 | T_2 -> R_2
-// g1: T_1 , g2: T_2
-// then (if T_1 & T_2 is not empty) f(g1&g2) <: R_1 | R_2 (else picked randomly) f(g1) <: R_1 or f(g2) <: R_2
+// x_1: T_1 , x_2: T_2
+// then (if T_1 & T_2 is not empty) apply(f, x_1 & x_2) <: R_1 | R_2 (else picked randomly) apply(f, x_1) <: R_1 or apply(f, x_2) <: R_2
 function returnTypeUnion(PropositionGenContext cx, PropositionPath path) returns ReturnTypeProposition {
     ReturnTypeProposition a1 = generateReturnTypePropositions(cx, path);
     ReturnTypeProposition a2 = generateReturnTypePropositions(cx, path);
