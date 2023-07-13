@@ -76,7 +76,7 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     // site types of arguments/parameters and return value.
     if atomic == () {
         // The inherent type of a function value is always atomic, therefore if the
-        // static type is not atomic, the call is always inexact.
+        // compile time type is not atomic, the call is always inexact.
         t:SemType[] argTypes = from var arg in args select arg.semType;
         t:Context tc = scaffold.typeContext();
         t:SemType returnType = <t:SemType>t:functionReturnType(scaffold.typeContext(), funcTy,
