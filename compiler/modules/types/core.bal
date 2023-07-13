@@ -277,7 +277,6 @@ public class Context {
 
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
-    SemType? readOnlyMemo = ();
 
     function init(Env env) {
         self.env = env;
