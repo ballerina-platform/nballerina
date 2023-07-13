@@ -11,14 +11,14 @@ public const BT_HANDLE     = 0x08;
 public const BT_FUNCTION   = 0x09;
 
 // Inherently mutable
-public const BT_FUTURE     = 0xA;
-public const BT_STREAM     = 0xB;
+public const BT_FUTURE     = 0x0A;
+public const BT_STREAM     = 0x0B;
 
 // Selectively immutable
-public const BT_LIST    = 0xC;
-public const BT_MAPPING = 0xD;
-public const BT_TABLE   = 0xE;
-public const BT_XML     = 0xF;
+public const BT_LIST    = 0x0C;
+public const BT_MAPPING = 0x0D;
+public const BT_TABLE   = 0x0E;
+public const BT_XML     = 0x0F;
 public const BT_OBJECT  = 0x10;
 
 // Non-val
