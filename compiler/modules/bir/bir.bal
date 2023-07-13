@@ -621,6 +621,8 @@ public type FunctionOperand FunctionConstOperand|Register;
 # parameter, by having the caller construct the list to be bound to the rest parameter;
 # we call this shortcut `restParamIsList`.
 # The two instructions differ in how they distinguish the case `restParamIsList` is in effect.
+# A t:FunctionSignature represents the parameter types after the list has been
+# constructed for the rest parameter.
 # SUBSET We do not yet support functions with a return type of never
 public type CallInsnBase record {
     *ResultInsnBase;

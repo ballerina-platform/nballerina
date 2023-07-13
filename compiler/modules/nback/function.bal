@@ -66,9 +66,26 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     bir:Register funcOperand = insn.operands[0];
     var { funcValuePtr, funcDescPtr, funcPtr, uniformFuncPtr } = check buildIndirectFunctionValue(builder, scaffold, funcOperand);
     var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
-    t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(scaffold.typeContext(),
-                                                                             funcOperand.semType);
-    // TODO: handle the case where this is not atomic (directly buildUniformCall)
+    t:SemType funcTy = funcOperand.semType;
+    t:FunctionAtomicType? atomic = t:functionAtomicType(scaffold.typeContext(), funcTy);
+    // We say a function call is exact if the compile time type of the function variable
+    // is the same as the inherent type (type of the function declaration) of the
+    // function value. If so we can just make an indirect branch via the function
+    // pointer (exact call). Otherwise, we have to call it through the uniform
+    // function pointer (inexact call), which handles bridging call site and declaration
+    // site types of arguments/parameters and return value.
+    if atomic == () {
+        // The inherent type of a function value is always atomic, therefore if the
+        // compile time type is not atomic, the call is always inexact.
+        t:SemType[] argTypes = from var arg in args select arg.semType;
+        t:Context tc = scaffold.typeContext();
+        t:SemType returnType = <t:SemType>t:functionReturnType(scaffold.typeContext(), funcTy,
+                                                               t:tupleTypeWrappedRo(tc.env, ...argTypes));
+        return buildCallInexact(builder, scaffold, result, funcDescPtr, funcPtr, uniformFuncPtr,
+                                uniformArgArray, nArgs, returnType);
+    }
+    // If the function type is atomic, we have to check for the exactness at runtime
+    // and decide whether to use exact call or inexact call.
     t:FunctionSignature signature = t:functionSignature(scaffold.typeContext(), atomic);
     llvm:ConstPointerValue signatureDescPtr = scaffold.getCalledType(signature);
     llvm:Value isExact = buildRuntimeFunctionCall(builder, scaffold, functionIsExactFunction,
@@ -123,8 +140,8 @@ function functionValuePtrType(Scaffold scaffold, t:SemType funcType) returns llv
 }
 
 function buildCallExact(llvm:Builder builder, Scaffold scaffold, llvm:Function|llvm:PointerValue func,
-                         t:FunctionSignature erasedSignature, t:FunctionSignature signature,
-                         bir:Operand[] args, bir:Register result, t:SemType returnTy) returns BuildError? {
+                        t:FunctionSignature erasedSignature, t:FunctionSignature signature,
+                        bir:Operand[] args, bir:Register result, t:SemType returnTy) returns BuildError? {
     llvm:Value[] argValues = check buildFunctionCallArgs(builder, scaffold, erasedSignature.paramTypes,
                                                          signature.paramTypes, args);
     llvm:Value? retValue = buildFunctionCall(builder, scaffold, func, argValues);

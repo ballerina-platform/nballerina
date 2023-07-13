@@ -72,6 +72,55 @@ public function functionSignature(Context cx, FunctionAtomicType atomic) returns
     return signature;
 }
 
+// Corresponds to dom^? in AMK tutorial.
+public function functionParamListType(Context cx, SemType func) returns SemType? {
+    if !isSubtype(cx, func, FUNCTION) {
+        return ();
+    }
+    if func is BasicTypeBitSet {
+        // Intersection of all list types
+        return NEVER;
+    }
+    return functionParamListTypeInner(cx, NEVER, <Bdd>getComplexSubtypeData(func, BT_FUNCTION));
+}
+
+function functionParamListTypeInner(Context cx, SemType accumTy, Bdd b) returns SemType {
+    if b is boolean {
+        return b ? accumTy : ANY;
+    }
+    SemType atomArgListTy = cx.env.functionAtomType(b.atom)[0];
+    return intersect(functionParamListTypeInner(cx, union(accumTy, atomArgListTy), b.left),
+                     intersect(functionParamListTypeInner(cx, accumTy, b.middle),
+                               functionParamListTypeInner(cx, accumTy, b.right)));
+}
+
+// Corresponds to apply^? in AMK tutorial.
+public function functionReturnType(Context cx, SemType func, SemType argList) returns SemType? {
+    SemType? domain = functionParamListType(cx, func);
+    if domain == () || !isSubtype(cx, argList, domain) {
+        return ();
+    }
+    if func is BasicTypeBitSet {
+        // Union of all types
+        return ANY;
+    }
+    return functionReturnTypeInner(cx, argList, ANY, <Bdd>getComplexSubtypeData(func, BT_FUNCTION));
+}
+
+function functionReturnTypeInner(Context cx, SemType accumArgList, SemType accumReturn, Bdd b) returns SemType {
+    if isEmpty(cx, accumArgList) || isEmpty(cx, accumReturn) {
+        return NEVER;
+    }
+    if b is boolean {
+        return b ? accumReturn : NEVER;
+    }
+    var [atomArgListTy, atomReturnTy] = cx.env.functionAtomType(b.atom);
+    return union(functionReturnTypeInner(cx, accumArgList, intersect(accumReturn, atomReturnTy), b.left),
+                 union(functionReturnTypeInner(cx, diff(accumArgList, atomArgListTy), accumReturn, b.left),
+                       union(functionReturnTypeInner(cx, accumArgList, accumReturn, b.middle),
+                             functionReturnTypeInner(cx, accumArgList, accumReturn, b.right))));
+}
+
 public function functionSemType(Context cx, FunctionSignature signature) returns SemType {
     FunctionTypeMemo? memo = cx.functionAtomicTypeMemo[signature];
     if memo != () {

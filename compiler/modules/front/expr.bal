@@ -99,6 +99,11 @@ type RegExprEffect record {|
     bir:Register result;
 |};
 
+type CalledFunctionInfo record {|
+    t:FunctionSignature? signature;
+    bir:FunctionOperand operand;
+|};
+
 class ExprContext {
     *err:SemanticContext;
     final StmtContext? sc;
@@ -205,13 +210,13 @@ function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) re
     return cx.semanticErr("expected string operand", s:range(expr));
 }
 
-function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:FunctionCallExpr callExpr, bir:FunctionRef func, int i) returns ExprEffect|CodeGenError {
+function codeGenArgument(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr|s:FunctionCallExpr callExpr, t:FunctionSignature signature, int i) returns ExprEffect|CodeGenError {
     s:Expr arg = callExpr.args[i];
     int n = callExpr is s:FunctionCallExpr ? i : i + 1;
-    if n >= func.signature.paramTypes.length() {
+    if n >= signature.paramTypes.length() {
         return cx.semanticErr("too many arguments for call to function", s:range(arg)); 
     }
-    return codeGenExprForType(cx, bb, func.signature.paramTypes[n], arg, "incorrect type for argument");
+    return codeGenExprForType(cx, bb, signature.paramTypes[n], arg, "incorrect type for argument");
 }
 
 function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, t:SemType requiredType, s:Expr expr, string msg) returns CodeGenError|ExprEffect {
@@ -1388,20 +1393,30 @@ function codeGenCheckingTerminator(bir:BasicBlock bb, s:CheckingKeyword checking
 
 function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr) returns CodeGenError|ExprEffect {
     string? prefix = expr.prefix;
-    bir:FunctionRef func;
-    bir:Register? funcRegister = ();
+    bir:FunctionOperand operand;
+    t:FunctionSignature? signature;
     if prefix == () {
-        [func, funcRegister] = check genLocalFunctionRef(cx, expr.funcName, expr.qNamePos);
+        { operand, signature } = check genLocalFunction(cx, expr.funcName, expr.qNamePos);
     }
     else {
-        func = check genImportedFunctionRef(cx, prefix, expr.funcName, expr.qNamePos);
+        { operand, signature } = check genImportedFunction(cx, prefix, expr.funcName, expr.qNamePos);
     }
+    if signature != () {
+        return finishCodeGenAtomicFunctionCall(cx, bb, expr, signature, operand);
+    }
+    // If the function is not atomic, then it must be a function pointer
+    return finishCodeGenFunctionCall(cx, bb, expr, <bir:Register>operand);
+}
+
+function finishCodeGenAtomicFunctionCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr, t:FunctionSignature signature,
+                                         bir:FunctionOperand operand) returns CodeGenError|ExprEffect {
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
-    t:SemType? restParamType = func.signature.restParamType;
-    int regularArgCount = restParamType == () ? expr.args.length() : func.signature.paramTypes.length() - 1;
+    t:SemType? restParamType = signature.restParamType;
+    int regularArgCount = restParamType == () ? expr.args.length() :
+                                                signature.paramTypes.length() - 1;
     foreach int i in 0 ..< regularArgCount {
-        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
+        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, signature, i);
         curBlock = nextBlock;
         args.push(arg);
     }
@@ -1420,60 +1435,81 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
             endPos = expr.closeParenPos;
         }
         s:ListConstructorExpr varArgList = { startPos, endPos, opPos: startPos, members: restArgs};
-        t:SemType restListTy = func.signature.paramTypes[func.signature.paramTypes.length() - 1];
+        t:SemType restListTy = signature.paramTypes[signature.paramTypes.length() - 1];
         var { result: arg, block: nextBlock } = check codeGenListConstructor(cx, curBlock, restListTy, varArgList);
         curBlock = nextBlock;
         args.push(arg);
     }
-    check sufficientArguments(cx, func, expr);
-    bir:FunctionOperand funcValue = funcRegister ?: { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) };
-    return codeGenCall(cx, curBlock, funcValue, func.signature.returnType, args, restParamIsList, expr.qNamePos);
+    check sufficientArguments(cx, signature, expr);
+    return codeGenCall(cx, curBlock, operand, signature.returnType, args, restParamIsList, expr.qNamePos);
 }
 
-function genLocalFunctionRef(ExprContext cx, string funcName, Position pos) returns [bir:FunctionRef, bir:Register?]|CodeGenError {
+function finishCodeGenFunctionCall(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr,
+                                   bir:Register funcRegister) returns CodeGenError|ExprEffect {
+    t:Context tc = cx.mod.tc;
+    t:SemType funcTy = funcRegister.semType;
+    t:SemType? paramListType = t:functionParamListType(tc, funcTy);
+    if paramListType == () {
+        // This should never happen since we have ensured funcTy is a function subtype (in gen*Function)
+        panic err:impossible("valid function type must have a param type");
+    }
+    bir:Operand[] args = [];
+    t:SemType[] argTypes = [];
+    bir:BasicBlock curBlock = bb;
+    foreach var [i, argExpr] in expr.args.enumerate() {
+        t:SemType expectedType = t:listMemberTypeInnerVal(tc, paramListType, t:intConst(i));
+        var { result: arg, block: nextBlock } = check codeGenExprForType(cx, curBlock, expectedType, argExpr,
+                                                                         "incorrect type for argument");
+        args.push(arg);
+        argTypes.push(arg.semType);
+        curBlock = nextBlock;
+    }
+    t:SemType argListType = t:tupleTypeWrappedRo(tc.env, ...argTypes);
+    t:SemType? returnType = t:functionReturnType(tc, funcTy, argListType);
+    if returnType == () {
+        // This can only happen when function call is not well-typed and since we
+        // ensure funcTy is a function subtype, this can only be caused by invalid args
+        return cx.semanticErr("incorrect type for arguments", s:range(expr));
+    }
+    return codeGenCall(cx, curBlock, funcRegister, returnType, args, false, expr.qNamePos);
+}
+
+function genLocalFunction(ExprContext cx, string funcName, Position pos) returns CalledFunctionInfo|CodeGenError {
     var ref = cx.lookupLocalVarRef(funcName, pos);
     if ref is bir:FunctionRef {
-        return [ref, ()];
+        return { operand: functionConstOperand(cx, ref), signature: ref.signature };
     }
     else if ref is Binding {
         t:SemType semType = ref.reg.semType;
         t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
         if atom != () {
-            return [functionRefFromAtom(cx, atom, registerName(ref.reg)), ref.reg];
+            t:FunctionSignature signature = t:functionSignature(cx.mod.tc, atom);
+            return { operand: ref.reg, signature };
         }
-        return cx.unimplementedErr("return type projection not implemented", pos);
+        if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) {
+            return { operand: ref.reg, signature: () };
+        }
     }
     return cx.semanticErr("only a value of function type can be called", pos);
+}
+
+function functionConstOperand(ExprContext cx, bir:FunctionRef func) returns bir:FunctionConstOperand {
+    return { value: func, semType: t:functionSemType(cx.mod.tc, func.signature) };
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, (), expr.target);
     bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
+    t:FunctionSignature signature = func.signature;
     bir:Operand[] args = [target];
     foreach int i in 0 ..< expr.args.length() {
-        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, func, i);
+        var { result: arg, block: nextBlock } = check codeGenArgument(cx, curBlock, expr, signature, i);
         curBlock = nextBlock;
         args.push(arg);
     }
-    check sufficientArguments(cx, func, expr);
+    check sufficientArguments(cx, signature, expr);
     return codeGenCall(cx, curBlock, { value: func, semType: t:functionSemType(cx.mod.tc, func.erasedSignature) },
                        func.signature.returnType, args, false, expr.namePos);
-}
-
-function functionRefFromAtom(ExprContext cx, t:FunctionAtomicType atom, string identifier) returns bir:FunctionRef {
-    t:FunctionSignature signature = t:functionSignature(cx.mod.tc, atom);
-    bir:InternalSymbol symbol = { isPublic: false, identifier };
-    return { symbol, signature, erasedSignature: signature };
-}
-
-function registerName(bir:Register register) returns string {
-    if register is bir:DeclRegister {
-        return register.name;
-    }
-    else if register is bir:NarrowRegister {
-        return registerName(register.underlying);
-    }
-    return <string>register.name;
 }
 
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func, 
@@ -1490,9 +1526,9 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperan
     return { result: constifyRegister(reg), block: curBlock };
 }
 
-function sufficientArguments(ExprContext cx, bir:FunctionRef func, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
+function sufficientArguments(ExprContext cx, t:FunctionSignature signature, s:MethodCallExpr|s:FunctionCallExpr call) returns CodeGenError? {
     int nSuppliedArgs = call is s:FunctionCallExpr ? call.args.length() : call.args.length() + 1;
-    int nExpectedArgs = func.signature.paramTypes.length() - (func.signature.restParamType != () ? 1 : 0);
+    int nExpectedArgs = signature.paramTypes.length() - (signature.restParamType != () ? 1 : 0);
     if nSuppliedArgs < nExpectedArgs {
         return cx.semanticErr("too few arguments for call to function", call.closeParenPos);
     }
@@ -1578,10 +1614,10 @@ function groupOriginsByUnnarrowed(BindingChain? bindingLimit, TypeMergerOrigin? 
     return [numOrigins, originGroups];
 }
 
-function genImportedFunctionRef(ExprContext cx, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
+function genImportedFunction(ExprContext cx, string prefix, string identifier, Position pos) returns CalledFunctionInfo|CodeGenError {
     var defn = lookupImportedVarRef(cx, prefix, identifier, pos);
     if defn is bir:FunctionRef {
-        return defn;
+        return { operand: functionConstOperand(cx, defn), signature: defn.signature };
     }
     else {
         Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);

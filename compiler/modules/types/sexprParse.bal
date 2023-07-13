@@ -248,15 +248,7 @@ function fromFunctionSexpr(SexprAtomParseContext pc, string name, ts:Type ret, t
     pc.started[name] = d;
     SemType[] paramTypes = from var param in params select fromSexprInternal(pc, param);
     SemType returnType = fromSexprInternal(pc, ret);
-    SemType? restParamType;
-    if rest != () {
-        restParamType = fromSexprInternal(pc, rest);
-        paramTypes.push(defineListTypeWrapped(new, pc.env, rest=<SemType>restParamType));
-    }
-    else {
-        restParamType = ();
-    }
-    FunctionSignature sig = { paramTypes: paramTypes.cloneReadOnly(), restParamType, returnType };
-    Context cx = contextFromEnv(pc.env);
-    return functionSemType(cx, sig);
+    SemType restParamType = rest != () ? fromSexprInternal(pc, rest) : NEVER;
+    Env env = pc.env;
+    return d.define(env, defineListTypeWrapped(new(), env, paramTypes, rest=restParamType, mut=CELL_MUT_NONE), returnType);
 }

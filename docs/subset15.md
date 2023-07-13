@@ -406,12 +406,10 @@ Two kinds of `import` are supported.
 
 * `list-constructor-expr` and `mapping-constructor-expr` are not allowed within a `const-expr`.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
-* Function typing is not yet fully implemented
-   * Can not call a function value without a single explicit type such a union or else branch in a type test
 
 ## Additions from subset 14
 
-* Add support for `function` values with restrictions on calling
+* Add support for `function` values
 
 ## Implemented spec changes since 2022R1
 
