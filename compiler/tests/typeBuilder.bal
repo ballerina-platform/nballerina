@@ -40,11 +40,15 @@ type TypeBuilder object {
 
     function list(int[] members = [], int fixedLen = members.length(), int rest = -1) returns int;
 
+    function functionArgumentType(int[] requiredArguments = [], int rest = -1) returns int;
+
     function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int;
 
     function mapping(Field[] fields = [], int rest = -1) returns int;
 
     function union(int i1, int i2) returns int;
+
+    function intersection(int i1, int i2) returns int;
 };
 
 class SemtypeBuilder {
@@ -146,6 +150,13 @@ class SemtypeBuilder {
         return self.push(t); 
     }
 
+    function functionArgumentType(int[] requiredArguments = [], int rest = -1) returns int {
+        t:SemType[] args = from var index in requiredArguments select self.defns[index];
+        t:SemType r = rest == -1 ? t:NEVER : self.defns[rest];
+        t:SemType t = t:defineListTypeWrapped(new (), self.cx.env, args, rest=r, mut = t:CELL_MUT_NONE);
+        return self.push(t);
+    }
+
     function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int {
         t:SemType rest = restType == -1 ? t:NEVER : self.defns[restType];
         t:SemType[] params = from var index in parameterTypes select self.defns[index];
@@ -170,6 +181,10 @@ class SemtypeBuilder {
 
     function union(int i1, int i2) returns int {
         return self.push(t:union(self.defns[i1], self.defns[i2]));
+    }
+
+    function intersection(int i1, int i2) returns int {
+        return self.push(t:intersect(self.defns[i1], self.defns[i2]));
     }
 
     function typeToString(int index) returns string|TypeBuilderError {
@@ -203,7 +218,6 @@ class AstBasedTypeDefBuilder {
     private int? xmlCommentIndex = ();
     private int? xmlPiIndex = ();
     private int? xmlTextIndex = ();
-
 
     function init(t:Context cx) {
         self.cx = cx;
@@ -476,6 +490,23 @@ class AstBasedTypeDefBuilder {
         return self.createTypeDef(td);
     }
 
+    function functionArgumentType(int[] requiredArguments = [], int rest = -1) returns int {
+        // This is a hack to create the argument list type since we can't represent that
+        // in the ast (due to mutability). Instead we will create a function type with
+        // parameters equal to the arguments and use its parameter list type.
+        int index = self.functionType(requiredArguments, rest);
+        t:SemType functionSemType = checkpanic self.semtype(index);
+        t:FunctionAtomicType atomic = <t:FunctionAtomicType>t:functionAtomicType(self.cx, functionSemType);
+        s:TypeDefn defn = self.defns[index];
+        defn.semType = atomic[0];
+        // We will also change the type descriptor to a tuple so that when showing
+        // errors we will get a tuple, instead of a function type desc
+        s:TypeDescRef[] members = from var arg in requiredArguments select self.createTypeDescRef(arg);
+        s:TypeDescRef? restDesc = rest == -1 ? () : self.createTypeDescRef(rest);
+        defn.td = { startPos: defn.td.startPos, endPos: defn.td.endPos, members: members, rest: restDesc };
+        return index;
+    }
+
     function functionType(int[] parameterTypes = [], int restType = -1, int returnType = -1) returns int {
         var [startPos, endPos] = self.calculatePosition();
         s:FunctionTypeParam[] params = from var index in parameterTypes select self.createFunctionTypeParam(index, false);
@@ -542,5 +573,12 @@ class AstBasedTypeDefBuilder {
         s:TypeDesc[] tds = [self.createTypeDescRef(i1), self.createTypeDescRef(i2)];
         s:BinaryTypeDesc union = { startPos, endPos, opPos: [startPos], op: "|", tds };
         return self.createTypeDef(union);
+    }
+
+    function intersection(int i1, int i2) returns int {
+        var [startPos, endPos] = self.calculatePosition();
+        s:TypeDesc[] tds = [self.createTypeDescRef(i1), self.createTypeDescRef(i2)];
+        s:BinaryTypeDesc intersection = { startPos, endPos, opPos: [startPos], op: "&", tds };
+        return self.createTypeDef(intersection);
     }
 }
