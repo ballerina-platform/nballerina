@@ -216,8 +216,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 if memberByName.hasKey(memberDesc.name) {
                     return err:semantic(`duplicate member ${memberDesc.name}`, s:locationInDefn(modDefn, memberDesc.namePos));
                 }
-                t:SemType ty = check resolveTypeDesc(mod, modDefn, depth + 1, memberDesc.td);
-                t:Member member = [memberDesc.name, ty];
+                t:SemType valueTy = check resolveTypeDesc(mod, modDefn, depth + 1, memberDesc.td);
+                t:Member member = { name: memberDesc.name, valueTy };
                 if memberDesc is s:FieldMemberDesc {
                     fields.push(member);
                 }
