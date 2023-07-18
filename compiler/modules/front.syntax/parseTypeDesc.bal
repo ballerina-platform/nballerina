@@ -339,7 +339,24 @@ function parseObjectTypeDesc(Tokenizer tok, Position startPos) returns ObjectTyp
         if tok.current() == "function" {
             check tok.advance();
             Position namePos = tok.currentStartPos();
-            string name = check tok.expectIdentifier();
+            string name;
+            Token? t = tok.current();
+            match t {
+                [IDENTIFIER, var identifier] => {
+                    name = identifier;
+                }
+                // XXX: when we have join and start as keywords they need to be added here as well
+                "map" => {
+                    // JBUG cast
+                    name = <string>t;
+                }
+                _ => {
+                    // JBUG name is not initialized otherwise
+                    name = "";
+                    return parseError(tok, "expected a valid method name");
+                }
+            }
+            check tok.advance();
             // NOTE: pass [] to parseFunctionTypeDesc to ensure parameters are named
             FunctionTypeDesc td = check parseFunctionTypeDesc(tok, []);
             Position endPos = check tok.expectEnd(";");

@@ -12,5 +12,8 @@ type O object {
         string d;
     |}
     c;
+    function map (int a, int b);
+    function join (int a, int b);
+    function start (int a, int b);
 };
 // @end
