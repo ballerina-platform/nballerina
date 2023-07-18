@@ -211,7 +211,11 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             td.defn = d;
             t:Member[] fields = [];
             t:Member[] methods = [];
+            map<t:Member> memberByName = {};
             foreach s:MemberDesc memberDesc in td.members {
+                if memberByName.hasKey(memberDesc.name) {
+                    return err:semantic(`duplicate member ${memberDesc.name}`, s:locationInDefn(modDefn, memberDesc.namePos));
+                }
                 t:SemType ty = check resolveTypeDesc(mod, modDefn, depth + 1, memberDesc.td);
                 t:Member member = [memberDesc.name, ty];
                 if memberDesc is s:FieldMemberDesc {
@@ -220,6 +224,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 else {
                     methods.push(member);
                 }
+                memberByName[memberDesc.name] = member;
             }
             return nonEmptyType(mod, modDefn, td, d.define(env, fields, methods));
         }
