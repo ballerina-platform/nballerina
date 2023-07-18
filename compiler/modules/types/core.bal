@@ -1731,7 +1731,7 @@ function init() {
         mappingOps, // mapping
         tableOps, // table
         xmlOps, // xml
-        {}, // object
+        objectOps, // object
         cellOps, // cell
         {} // undef
     ];

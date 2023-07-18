@@ -205,8 +205,25 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     } 
     if td is s:ObjectTypeDesc {
-        // FIXME:
-        panic error("Object type resolution not implemented");
+        t:ObjectDefinition? defn = td.defn;
+        if defn == () {
+            t:ObjectDefinition d = new;
+            td.defn = d;
+            t:Member[] fields = [];
+            t:Member[] methods = [];
+            foreach s:MemberDesc memberDesc in td.members {
+                t:SemType ty = check resolveTypeDesc(mod, modDefn, depth + 1, memberDesc.td);
+                t:Member member = [memberDesc.name, ty];
+                if memberDesc is s:FieldMemberDesc {
+                    fields.push(member);
+                }
+                else {
+                    methods.push(member);
+                }
+            }
+            return nonEmptyType(mod, modDefn, td, d.define(env, fields, methods));
+        }
+        return nonEmptyType(mod, modDefn, td, defn.getSemType(env));
     }
     if td is s:ArrayTypeDesc {
         t:ListDefinition? defn = td.defn;

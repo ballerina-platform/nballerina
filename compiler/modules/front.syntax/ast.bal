@@ -503,23 +503,26 @@ public type TableTypeDesc record {|
 public type ObjectTypeDesc record {|
     *PositionFields;
     MemberDesc[] members;
-    // TODO: add the ObjectDefinition
+    t:ObjectDefinition? defn = ();
 |};
 
 public type MemberDesc FieldMemberDesc|MethodMemberDesc;
 
-public type FieldMemberDesc record {|
+type MemberDescBase record {|
     *PositionFields;
     Position namePos;
     string name;
-    "field" kind = "field";
+    "field"|"method" kind;
     TypeDesc td;
 |};
 
+public type FieldMemberDesc record {|
+    *MemberDescBase;
+    "field" kind = "field";
+|};
+
 public type MethodMemberDesc record {|
-    *PositionFields;
-    Position namePos;
-    string name;
+    *MemberDescBase;
     "method" kind = "method";
     FunctionTypeDesc td;
 |};
