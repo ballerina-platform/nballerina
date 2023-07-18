@@ -193,6 +193,9 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         "record" => {
             return parseRecordTypeDesc(tok, startPos);
         }
+        "object" => {
+            return parseObjectTypeDesc(tok, startPos);
+        }
         "table" => {
             check tok.advance();
             TypeDesc row = check parseTypeParam(tok);
@@ -325,6 +328,34 @@ function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTy
             return parseError(tok);
         }
     }
+}
+
+function parseObjectTypeDesc(Tokenizer tok, Position startPos) returns ObjectTypeDesc|err:Syntax {
+    check tok.advance();
+    check tok.expect("{");
+    MemberDesc[] members = [];
+    while tok.current() != "}" {
+        Position fieldStartPos = tok.currentStartPos();
+        if tok.current() == "function" {
+            check tok.advance();
+            Position namePos = tok.currentStartPos();
+            string name = check tok.expectIdentifier();
+            // NOTE: pass [] to parseFunctionTypeDesc to ensure parameters are named
+            FunctionTypeDesc td = check parseFunctionTypeDesc(tok, []);
+            Position endPos = check tok.expectEnd(";");
+            members.push(<MethodMemberDesc>{ name, namePos, td, startPos: fieldStartPos, endPos });
+        }
+        else {
+            TypeDesc td = check parseTypeDesc(tok);
+            Position namePos = tok.currentStartPos();
+            string name = check tok.expectIdentifier();
+            Position endPos = check tok.expectEnd(";");
+            members.push(<FieldMemberDesc>{ name, namePos, td, startPos: fieldStartPos, endPos });
+        }
+    }
+    Position endPos = tok.currentEndPos();
+    check tok.advance();
+    return { startPos, endPos, members };
 }
 
 function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {

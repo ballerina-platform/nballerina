@@ -125,6 +125,7 @@ final readonly & Keyword[] keywords = [
     "match",
     "never",
     "null",
+    "object",
     "panic",
     "public",
     "readonly",

@@ -204,6 +204,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return check nonEmptyType(mod, modDefn, td, defn.getSemType(env));
         }
     } 
+    if td is s:ObjectTypeDesc {
+        // FIXME:
+        panic error("Object type resolution not implemented");
+    }
     if td is s:ArrayTypeDesc {
         t:ListDefinition? defn = td.defn;
         if defn == () {
