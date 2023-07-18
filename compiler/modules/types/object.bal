@@ -7,7 +7,7 @@ public class ObjectDefinition {
     private MappingDefinition mappingDefn = new();
 
     public function getSemType(Env env) returns SemType {
-        return self.mappingDefn.getSemType(env);
+        return self.createSemType(self.mappingDefn.getSemType(env));
     }
 
     public function define(Env env, Member[] fields, Member[] methods) returns SemType {
@@ -16,6 +16,10 @@ public class ObjectDefinition {
         // TODO: make the rest type more precise
         SemType mappingType = self.mappingDefn.define(env, [...cellFields, ...cellMethods],
                                                       cellContaining(env, MAPPING));
+        return self.createSemType(mappingType);
+    }
+
+    private function createSemType(SemType mappingType) returns SemType {
         Bdd bdd = <Bdd>subtypeData(mappingType, BT_MAPPING);
         return createBasicSemType(BT_OBJECT, bdd);
     }

@@ -365,7 +365,7 @@ function parseObjectTypeDesc(Tokenizer tok, Position startPos) returns ObjectTyp
             }
         }
         check tok.advance();
-        // NOTE: pass [] to parseFunctionTypeDesc to ensure parameters are named
+        // NOTE: passing [] to parseFunctionTypeDesc to ensure parameters are named
         FunctionTypeDesc td = check parseFunctionTypeDesc(tok, []);
         Position endPos = check tok.expectEnd(";");
         MethodMemberDesc memberDesc = { name, namePos, td, startPos: fieldStartPos, endPos };
