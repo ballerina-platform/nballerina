@@ -336,44 +336,50 @@ function parseObjectTypeDesc(Tokenizer tok, Position startPos) returns ObjectTyp
     MemberDesc[] members = [];
     while tok.current() != "}" {
         Position fieldStartPos = tok.currentStartPos();
-        if tok.current() != "function" {
-            TypeDesc td = check parseTypeDesc(tok);
-            Position namePos = tok.currentStartPos();
-            string name = check tok.expectIdentifier();
-            Position endPos = check tok.expectEnd(";");
-            FieldMemberDesc memberDesc = { name, namePos, td, startPos: fieldStartPos, endPos };
-            members.push(memberDesc);
-            continue;
-        }
-        check tok.advance();
-        Position namePos = tok.currentStartPos();
-        string name;
-        Token? t = tok.current();
-        match t {
-            [IDENTIFIER, var identifier] => {
-                name = identifier;
-            }
-            // XXX: when we have join and start as keywords they need to be added here as well
-            "map" => {
-                // JBUG cast
-                name = <string>t;
-            }
-            _ => {
-                // JBUG name is not initialized otherwise
-                name = "";
-                return parseError(tok, "expected a valid method name");
-            }
-        }
-        check tok.advance();
-        // NOTE: passing [] to parseFunctionTypeDesc to ensure parameters are named
-        FunctionTypeDesc td = check parseFunctionTypeDesc(tok, []);
-        Position endPos = check tok.expectEnd(";");
-        MethodMemberDesc memberDesc = { name, namePos, td, startPos: fieldStartPos, endPos };
+        // We can have fields with function values
+        boolean isMethod = tok.current() == "function" && tok.peek() != "(";
+        MemberDesc memberDesc = isMethod ? check parseMethodMemberDesc(tok, fieldStartPos):
+                                           check parseFieldMemberDesc(tok, fieldStartPos);
         members.push(memberDesc);
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();
     return { startPos, endPos, members };
+}
+
+function parseFieldMemberDesc(Tokenizer tok, Position startPos) returns FieldMemberDesc|err:Syntax {
+    TypeDesc td = check parseTypeDesc(tok);
+    Position namePos = tok.currentStartPos();
+    string name = check tok.expectIdentifier();
+    Position endPos = check tok.expectEnd(";");
+    return { name, namePos, td, startPos, endPos };
+}
+
+function parseMethodMemberDesc(Tokenizer tok, Position startPos) returns MethodMemberDesc|err:Syntax {
+    check tok.advance();
+    Position namePos = tok.currentStartPos();
+    string name;
+    Token? t = tok.current();
+    match t {
+        [IDENTIFIER, var identifier] => {
+            name = identifier;
+        }
+        // XXX: when we have join and start as keywords they need to be added here as well
+        "map" => {
+            // JBUG cast
+            name = <string>t;
+        }
+        _ => {
+            // JBUG name is not initialized otherwise
+            name = "";
+            return parseError(tok, "expected a valid method name");
+        }
+    }
+    check tok.advance();
+    // NOTE: passing [] to parseFunctionTypeDesc to ensure parameters are named
+    FunctionTypeDesc td = check parseFunctionTypeDesc(tok, []);
+    Position endPos = check tok.expectEnd(";");
+    return { name, namePos, td, startPos, endPos };
 }
 
 function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {

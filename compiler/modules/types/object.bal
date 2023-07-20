@@ -41,7 +41,7 @@ function restMemberType(Env env) returns CellSemType {
 function fieldMember(Env env, Member member) returns CellField {
     return [member.name,
             cellContaining(env,
-                           defineMappingTypeWrapped(new, env, [{ name: "value", ty: cellContaining(env, member.valueTy)},
+                           defineMappingTypeWrapped(new, env, [{ name: "value", ty: cellContaining(env, member.valueTy) },
                                                                { name: "kind", ty: MEMBER_KIND_FIELD }],
                                                     NEVER))];
 }

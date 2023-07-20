@@ -71,3 +71,12 @@ type O8 object {
 type O9 object {
     O6 o;
 };
+
+// @type O10 <> O11
+type O10 object {
+    function foo();
+};
+
+type O11 object {
+    function() foo;
+};
