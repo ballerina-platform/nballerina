@@ -209,8 +209,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         if defn == () {
             t:ObjectDefinition d = new;
             td.defn = d;
-            t:Member[] fields = [];
-            t:Member[] methods = [];
+            t:Member[] members = [];
             string[] memberNames = [];
             foreach s:MemberDesc memberDesc in td.members {
                 if memberNames.indexOf(memberDesc.name) != () {
@@ -218,15 +217,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
                 memberNames.push(memberDesc.name);
                 t:SemType valueTy = check resolveTypeDesc(mod, modDefn, depth + 1, memberDesc.td);
-                t:Member member = { name: memberDesc.name, valueTy };
-                if memberDesc is s:FieldMemberDesc {
-                    fields.push(member);
-                }
-                else {
-                    methods.push(member);
-                }
+                "field"|"method" kind = memberDesc is s:FieldMemberDesc ? "field" : "method";
+                members.push({ name: memberDesc.name, valueTy, kind });
             }
-            return nonEmptyType(mod, modDefn, td, d.define(env, fields, methods));
+            return nonEmptyType(mod, modDefn, td, d.define(env, members));
         }
         return nonEmptyType(mod, modDefn, td, defn.getSemType(env));
     }

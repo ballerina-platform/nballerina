@@ -508,7 +508,7 @@ public type ObjectTypeDesc record {|
 
 public type MemberDesc FieldMemberDesc|MethodMemberDesc;
 
-type MemberDescBase record {|
+public type MemberDescBase record {|
     *PositionFields;
     Position namePos;
     string name;

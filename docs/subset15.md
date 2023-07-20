@@ -166,8 +166,8 @@ rest-param = type-desc "..." identifier
 
 object-type-desc = "object" "{" object-member-desc* "}"
 object-member-desc = object-field-desc | method-decl
-object-field-desc = type-desc identifier ";"
-method-decl = "function" method-name "(" [param-list] ")" ["returns" type-desc] ";"
+object-field-desc = "public" type-desc identifier ";"
+method-decl = "public" "function" method-name "(" [param-list] ")" ["returns" type-desc] ";"
 method-name = identifier | special-method-name
 special-method-name = "map"
 

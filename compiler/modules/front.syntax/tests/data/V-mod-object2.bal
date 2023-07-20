@@ -1,19 +1,19 @@
 // @case
 type O object {
-    int a;
-    function foo (int a, int b);
-    object {
-        string b;
-        function bar (string a);
+    public int a;
+    public function foo (int a, int b);
+    public object {
+        public string b;
+        public function bar (string a);
     }
     b;
-    record {|
+    public record {|
         int c;
         string d;
     |}
     c;
-    function map (int a, int b);
-    function join (int a, int b);
-    function start (int a, int b);
+    public function map (int a, int b);
+    public function join (int a, int b);
+    public function start (int a, int b);
 };
 // @end

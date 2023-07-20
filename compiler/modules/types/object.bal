@@ -1,6 +1,7 @@
 public type Member record {|
     string name;
     SemType valueTy;
+    "field"|"method" kind;
 |};
 
 SemType MEMBER_KIND_FIELD = stringConst("field");
@@ -14,9 +15,12 @@ public class ObjectDefinition {
         return self.createSemType(self.mappingDefn.getSemType(env));
     }
 
-    public function define(Env env, Member[] fields, Member[] methods) returns SemType {
-        CellField[] fieldCells = from Member f in fields select fieldMember(env, f);
-        CellField[] methodCells = from Member m in methods select methodMember(env, m);
+    public function define(Env env, Member[] members) returns SemType {
+        if members.length() == 0 {
+            return OBJECT;
+        }
+        CellField[] fieldCells = from Member member in members where member.kind == "field" select fieldMember(env, member);
+        CellField[] methodCells = from Member member in members where member.kind == "method" select methodMember(env, member);
         SemType mappingType = self.mappingDefn.define(env, [...fieldCells, ...methodCells],
                                                       restMemberType(env));
         return self.createSemType(mappingType);

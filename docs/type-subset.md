@@ -32,6 +32,7 @@ primary-td :=
   predefined-td
   | int-td
   | map-td
+  | object-td
   | record-td
   | tuple-td
   | table-td
@@ -56,7 +57,13 @@ td-list :=
   | td-list "," type-desc
 
 record-td := "record" "{|" field-desc* "|}"
-field-desc := type-desc identifier ";"
+field-desc := type-desc identifier ["?"] ";"
+
+object-td := "object" "{" member-desc* "}"
+member-desc := object-field-desc | method-decl
+object-field-desc := "public" type-desc identifier ";"
+method-decl := "public" "function" method-name "(" opt-td-list ")" ["returns" function-td]
+method-name := identifier | "map" | "join" | "start"
 
 table-td := "table" type-param
 xml-rd := "xml" [type-param]

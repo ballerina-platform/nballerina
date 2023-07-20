@@ -1,5 +1,5 @@
 // @case
 type O object {
-    function foo(int, int);
+    public function foo(int, int);
 };
 // @end

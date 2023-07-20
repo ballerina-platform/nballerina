@@ -14,29 +14,29 @@ type ObjectTop object {};
 // @type O0 = Ox
 // @type O2 < O1
 type O0 object {
-    function fooFn(int a) returns int;
-    int foo;
+    public function fooFn(int a) returns int;
+    public int foo;
 };
 
 type Ox object {
-    function fooFn(int b) returns int;
-    int foo;
+    public function fooFn(int b) returns int;
+    public int foo;
 };
 
 type O1 object {
-    int foo;
-    function fooFn(int a) returns int;
+    public int foo;
+    public function fooFn(int a) returns int;
 };
 
 type O2 object {
-    int foo;
-    string bar;
-    function fooFn(int a) returns int;
+    public int foo;
+    public string bar;
+    public function fooFn(int a) returns int;
 };
 
 // @type O3 <> R
 type O3 object {
-    int foo;
+    public int foo;
 };
 
 type R record {};
@@ -44,39 +44,39 @@ type R record {};
 // @type O4 < O5
 // @type O4 < O6
 type O4 object {
-    byte foo;
-    function bar(int a) returns int;
+    public byte foo;
+    public function bar(int a) returns int;
 };
 
 type O5 object {
-    int foo;
-    function bar(byte a) returns int;
+    public int foo;
+    public function bar(byte a) returns int;
 };
 
 type O6 object {
-    byte|string foo;
-    function bar(int a) returns int;
+    public byte|string foo;
+    public function bar(int a) returns int;
 };
 
 // @type O7 < O8
 // @type O7 < O9
 type O7 object {
-    O4 o;
+    public O4 o;
 };
 
 type O8 object {
-    O5 o;
+    public O5 o;
 };
 
 type O9 object {
-    O6 o;
+    public O6 o;
 };
 
 // @type O10 <> O11
 type O10 object {
-    function foo();
+    public function foo();
 };
 
 type O11 object {
-    function() foo;
+    public function() foo;
 };

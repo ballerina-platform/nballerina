@@ -552,14 +552,16 @@ function syntaxNodeFromMemberDesc(MemberDesc md) returns NonTerminalSyntaxNode {
 
 function syntaxNodeFromObjectFieldMemberDesc(FieldMemberDesc md) returns NonTerminalSyntaxNode {
     var { td, name, namePos } = md;
-    return nonTerminalSyntaxNode(md, syntaxNodeFromTypeDesc(td),
+    return nonTerminalSyntaxNode(md, { token: "public", pos: md.startPos },
+                                     syntaxNodeFromTypeDesc(td),
                                      { name, pos: namePos },
                                      { token: ";" });
 }
 
 function syntaxNodeFromMethodDesc(MethodMemberDesc md) returns NonTerminalSyntaxNode {
     var { td, name, namePos } = md;
-    return nonTerminalSyntaxNode(md, { token: "function" },
+    return nonTerminalSyntaxNode(md, { token: "public", pos: md.startPos },
+                                     { token: "function" },
                                      { name, pos: namePos },
                                      syntaxNodeFromFunctionTypeDesc(td, true),
                                      { token: ";" });

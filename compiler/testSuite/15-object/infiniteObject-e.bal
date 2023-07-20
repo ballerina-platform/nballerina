@@ -1,4 +1,4 @@
 type O object { // @error
-    O foo;
-    int bar;
+    public O foo;
+    public int bar;
 };
