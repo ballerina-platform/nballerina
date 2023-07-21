@@ -1060,6 +1060,10 @@ public function mappingSubtype(SemType t) returns Bdd {
     return <boolean|Bdd>subtypeData(t, BT_MAPPING);
 }
 
+public function objectSubtype(SemType t) returns Bdd {
+    return <boolean|Bdd>subtypeData(t, BT_OBJECT);
+}
+
 public function tableSubtype(SemType t) returns Bdd {
     return <boolean|Bdd>subtypeData(t, BT_TABLE);
 }

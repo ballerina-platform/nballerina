@@ -12,7 +12,7 @@ public class ObjectDefinition {
     private MappingDefinition mappingDefn = new();
 
     public function getSemType(Env env) returns SemType {
-        return self.createSemType(self.mappingDefn.getSemType(env));
+        return objectContaining(self.mappingDefn.getSemType(env));
     }
 
     public function define(Env env, Member[] members) returns SemType {
@@ -23,13 +23,14 @@ public class ObjectDefinition {
         CellField[] methodCells = from Member member in members where member.kind == "method" select methodMember(env, member);
         SemType mappingType = self.mappingDefn.define(env, [...fieldCells, ...methodCells],
                                                       restMemberType(env));
-        return self.createSemType(mappingType);
+        return objectContaining(mappingType);
     }
 
-    private function createSemType(SemType mappingType) returns SemType {
-        Bdd bdd = <Bdd>subtypeData(mappingType, BT_MAPPING);
-        return createBasicSemType(BT_OBJECT, bdd);
-    }
+}
+
+public function objectContaining(SemType mappingType) returns SemType {
+    Bdd bdd = <Bdd>subtypeData(mappingType, BT_MAPPING);
+    return createBasicSemType(BT_OBJECT, bdd);
 }
 
 function restMemberType(Env env) returns CellSemType {

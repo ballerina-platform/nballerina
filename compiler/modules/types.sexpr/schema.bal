@@ -23,6 +23,7 @@ public type Type AtomRef | Union | Intersection | Not |
                  List |
                  Mapping |
                  Table | TableSubtype |
+                 Object | ObjectSubtype |
                  Xml | XmlSubtype |
                  Any | Readonly | Never;
 
@@ -51,6 +52,8 @@ public type List "list";
 public type Mapping "mapping";
 public type Table "table";
 public type TableSubtype ["table", Type];
+public type Object "object";
+public type ObjectSubtype ["object", Atom];
 public type Xml "xml";
 // XXX: _rw and _ro are temporary placeholders until we support readonly in type sexpr
 public type XmlBuiltinSubtypeNames "text"|"element_ro"|"pi_ro"|"comment_ro"|"element_rw"|"pi_rw"|"comment_rw"|"element"|"pi"|"comment";

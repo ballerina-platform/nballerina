@@ -170,6 +170,9 @@ function fromSexprInternal(SexprParseContext pc, ts:Type tySexpr) returns SemTyp
         ["table", var ty] => {
             return tableContaining(pc.env, fromSexprInternal(pc, <ts:Type>ty));
         }
+        ["object", var ty] => {
+            return objectContaining(fromSexprInternal(pc, <ts:Type>ty));
+        }
         _ => {
             panic err:impossible("unsupported sexpr SemType:" + tySexpr.toString());
         }
