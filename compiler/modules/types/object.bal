@@ -33,10 +33,10 @@ public class ObjectDefinition {
 }
 
 function restMemberType(Env env) returns CellSemType {
-    SemType fieldMemberType = defineMappingTypeWrapped(new, env, [{ name: "value", ty: cellContaining(env, ANY) },
+    SemType fieldMemberType = defineMappingTypeWrapped(new, env, [{ name: "value", ty: ANY },
                                                                   { name: "kind", ty: MEMBER_KIND_FIELD }],
                                                        NEVER);
-    SemType methodMemberType = defineMappingTypeWrapped(new, env, [{ name: "value", ty: cellContaining(env, FUNCTION, CELL_MUT_NONE) },
+    SemType methodMemberType = defineMappingTypeWrapped(new, env, [{ name: "value", ty: FUNCTION, ro: true },
                                                                    { name: "kind", ty: MEMBER_KIND_METHOD }],
                                                         NEVER);
     return cellContaining(env, union(fieldMemberType, methodMemberType));
@@ -45,7 +45,7 @@ function restMemberType(Env env) returns CellSemType {
 function fieldMember(Env env, Member member) returns CellField {
     return [member.name,
             cellContaining(env,
-                           defineMappingTypeWrapped(new, env, [{ name: "value", ty: cellContaining(env, member.valueTy) },
+                           defineMappingTypeWrapped(new, env, [{ name: "value", ty: member.valueTy },
                                                                { name: "kind", ty: MEMBER_KIND_FIELD }],
                                                     NEVER))];
 }
@@ -53,7 +53,7 @@ function fieldMember(Env env, Member member) returns CellField {
 function methodMember(Env env, Member member) returns CellField {
     return [member.name,
             cellContaining(env,
-                           defineMappingTypeWrapped(new, env, [{ name: "value", ty: cellContaining(env, member.valueTy, CELL_MUT_NONE) },
+                           defineMappingTypeWrapped(new, env, [{ name: "value", ty: member.valueTy, ro: true },
                                                                { name: "kind", ty: MEMBER_KIND_METHOD }],
                                                     NEVER))];
 }
