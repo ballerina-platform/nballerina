@@ -80,7 +80,7 @@ public class MappingDefinition {
         }
     }
 
-    public function define(Env env, FieldBase[] fields, CellSemType rest) returns SemType {
+    public function define(Env env, FieldBase[] fields, SemType rest) returns SemType {
         var [names, types] = splitFields(fields);
         MappingAtomicType atomicType = {
             names: names.cloneReadOnly(),
@@ -193,7 +193,7 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
             return mappingInhabited(cx, pos, negList.next);
         }
         foreach var { name, index1, type1: posType, type2: negType } in pairing {
-            CellSemType d = <CellSemType>diff(posType, negType);
+            SemType d = diff(posType, negType);
             if !isEmpty(cx, d) {
                 TempMappingSubtype mt;
                 if index1 is () {
@@ -214,7 +214,7 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
     }
 }
 
-function insertField(TempMappingSubtype m, string name, CellSemType t) returns TempMappingSubtype {
+function insertField(TempMappingSubtype m, string name, SemType t) returns TempMappingSubtype {
     string[] names = shallowCopyStrings(m.names);
     SemType[] types = shallowCopyTypes(m.types);
     int i = names.length();
@@ -256,21 +256,22 @@ type TempMappingSubtype record {|
 
 function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2) returns TempMappingSubtype? {
     string[] names = [];
-    CellSemType[] types = [];
+    SemType[] types = [];
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
-        CellSemType t = intersectMemberSemTypes(env, type1, type2);
-        SemType t1 = type1 !is CellSemType ? type1 : cellInner(type1);
+        SemType t = intersectMemberSemTypes(env, type1, type2);
+        CellAtomicType? atomic = cellAtomicType(type1);
+        SemType t1 = atomic == () ? type1 : atomic.ty;
         if t1 == NEVER {
             return ();
         }
         types.push(t);
     }
-    CellSemType rest = intersectMemberSemTypes(env, m1.rest, m2.rest);
+    SemType rest = intersectMemberSemTypes(env, m1.rest, m2.rest);
     return { names, types, rest };
 }
 
-type CellFieldPair record {|
+type FieldPair record {|
     string name;
     SemType type1;
     SemType type2;
@@ -279,7 +280,7 @@ type CellFieldPair record {|
 |};
 
 public type MappingPairIterator object {
-    public function next() returns record {| CellFieldPair value; |}?;
+    public function next() returns record {| FieldPair value; |}?;
 };
 
 class MappingPairing {
@@ -316,8 +317,8 @@ class MappingPairing {
         self.i2 = 0;
     }
 
-    public function next() returns record {| CellFieldPair value; |}? {
-        CellFieldPair p;
+    public function next() returns record {| FieldPair value; |}? {
+        FieldPair p;
         if self.i1 >= self.len1 {
             if self.i2 >= self.len2 {
                 return ();

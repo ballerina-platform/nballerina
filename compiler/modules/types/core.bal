@@ -726,13 +726,18 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
-// FIXME: this is commonly used by both mapping and list
-public function intersectMemberSemTypes(Env env, SemType t1, SemType t2) returns CellSemType {
-    if t1 !is CellSemType && t2 !is CellSemType {
-        panic error("a");
-        // return cellContaining(env, intersect(t1, t2));
+public function intersectMemberSemTypes(Env env, SemType t1, SemType t2) returns SemType {
+    CellAtomicType? a1 = cellAtomicType(t1);
+    CellAtomicType? a2 = cellAtomicType(t2);
+    // If one of them is a not a cell we don't know about the mutability
+    if a1 == () && a2 == () {
+        return intersect(t1, t2);
     }
-    var { ty, mut } = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
+    if a1 == () || a2 == () {
+        // FIXME:
+        panic error("mixing cells and raw types");
+    }
+    var { ty, mut } = intersectCellAtomicType(a1, a2);
     return cellContaining(env, ty, ty == UNDEF ? CELL_MUT_NONE : mut);
 }
 

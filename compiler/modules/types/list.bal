@@ -227,10 +227,10 @@ function listIntersectWith(Env env, FixedLengthArray members1, CellSemType rest1
     return [
         {
             initial: from int i in 0 ..< int:max(members1.initial.length(), members2.initial.length())
-            select intersectMemberSemTypes(env, listMemberAt(members1, rest1, i), listMemberAt(members2, rest2, i)),
+            select <CellSemType>intersectMemberSemTypes(env, listMemberAt(members1, rest1, i), listMemberAt(members2, rest2, i)),
             fixedLength: int:max(members1.fixedLength, members2.fixedLength)
         },
-        intersectMemberSemTypes(env, rest1, rest2)
+        <CellSemType>intersectMemberSemTypes(env, rest1, rest2)
     ];
 }
 
