@@ -1,13 +1,20 @@
 // Implementation specific to basic type list.
 
-public type Field record {|
+type FieldBase record {
     string name;
     SemType ty;
+};
+
+public type Field record {|
+    *FieldBase;
     boolean ro = false;
     boolean opt = false;
 |};
 
-public type CellField [string, CellSemType];
+public type CellField record {|
+    string name;
+    CellSemType ty;
+|};
 
 public type MappingAtomicType readonly & record {|
     // sorted
@@ -82,7 +89,7 @@ public class MappingDefinition {
 
 public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] fields, SemType rest, CellMutability mut = CELL_MUT_LIMITED) returns SemType {
     CellField[] cellFields = from var { name, ty, ro, opt } in fields
-        select [name, cellContaining(env, opt ? union(ty, UNDEF) : ty, ro ? CELL_MUT_NONE : mut)];
+        select { name, ty: cellContaining(env, opt ? union(ty, UNDEF) : ty, ro ? CELL_MUT_NONE : mut) };
     CellSemType restCell = cellContaining(env, union(rest, UNDEF), rest == NEVER ? CELL_MUT_NONE : mut);
     return md.define(env, cellFields, restCell);
 }
@@ -91,15 +98,15 @@ function splitFields(CellField[] fields) returns [string[], CellSemType[]] {
     CellField[] sortedFields = fields.sort("ascending", fieldName);
     string[] names = [];
     CellSemType[] types = [];
-    foreach var [s, t] in sortedFields {
-        names.push(s);
-        types.push(t);
+    foreach var { name, ty } in sortedFields {
+        names.push(name);
+        types.push(ty);
     }
     return [names, types];
 }
 
 isolated function fieldName(CellField f) returns string {
-    return f[0];
+    return f.name;
 }
 
 function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {

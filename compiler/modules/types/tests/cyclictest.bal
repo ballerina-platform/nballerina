@@ -28,7 +28,7 @@ function testCyclicMapping1() {
     Env env = new();
     MappingDefinition defn = new();
     // M { l1: M }
-    SemType ty = defn.define(env, [["l1", cellContaining(env, defn.getSemType(env))]], cellContaining(env, ANY));
+    SemType ty = defn.define(env, [{ name: "l1", ty: cellContaining(env, defn.getSemType(env)) }], cellContaining(env, ANY));
     Context tc = typeContext(env);
     test:assertTrue(isCyclic(tc, ty));
 }
@@ -38,7 +38,7 @@ function testCyclicMapping2() {
     Env env = new();
     MappingDefinition defn = new();
     // M {| l1: M |}
-    SemType ty = defn.define(env, [["l1", cellContaining(env, defn.getSemType(env))]], cellContaining(env, NEVER));
+    SemType ty = defn.define(env, [{ name:"l1", ty: cellContaining(env, defn.getSemType(env)) }], cellContaining(env, NEVER));
     Context tc = typeContext(env);
     test:assertTrue(isCyclic(tc, ty));
 }
@@ -48,7 +48,7 @@ function testCyclicMapping3() {
     Env env = new();
     MappingDefinition defn = new();
     // M { l1: M; M...; }
-    SemType ty = defn.define(env, [["l1", cellContaining(env, defn.getSemType(env))]], cellContaining(env, defn.getSemType(env)));
+    SemType ty = defn.define(env, [{ name: "l1", ty: cellContaining(env, defn.getSemType(env)) }], cellContaining(env, defn.getSemType(env)));
     Context tc = typeContext(env);
     test:assertTrue(isCyclic(tc, ty));
 }
@@ -59,7 +59,7 @@ function testNonCyclicMapping1() {
     MappingDefinition defn = new();
     // M { l1: M } | int
     SemType ty = union(INT, defn.getSemType(env));
-    _ = defn.define(env, [["l1", cellContaining(env, defn.getSemType(env))]], cellContaining(env, ANY));
+    _ = defn.define(env, [{ name: "l1", ty: cellContaining(env, defn.getSemType(env)) }], cellContaining(env, ANY));
     Context tc = typeContext(env);
     test:assertFalse(isCyclic(tc, ty));
 } 
@@ -70,7 +70,7 @@ function testNonCyclicMapping2() {
     MappingDefinition defn = new();
     // M {| l1: M |} | int
     SemType ty = union(INT, defn.getSemType(env));
-    _ = defn.define(env, [["l1", cellContaining(env, defn.getSemType(env))]], cellContaining(env, NEVER));
+    _ = defn.define(env, [{ name: "l1", ty: cellContaining(env, defn.getSemType(env)) }], cellContaining(env, NEVER));
     Context tc = typeContext(env);
     test:assertFalse(isCyclic(tc, ty));
 } 
@@ -81,7 +81,7 @@ function testNonCyclicMapping3() {
     MappingDefinition defn = new();
     // M {| l1: M; M... |} | int
     SemType ty = union(INT, defn.getSemType(env));
-    _ = defn.define(env, [["l1", cellContaining(env, defn.getSemType(env))]], cellContaining(env, defn.getSemType(env)));
+    _ = defn.define(env, [{ name:"l1", ty: cellContaining(env, defn.getSemType(env)) }], cellContaining(env, defn.getSemType(env)));
     Context tc = typeContext(env);
     test:assertFalse(isCyclic(tc, ty));
 } 
