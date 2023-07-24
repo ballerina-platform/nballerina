@@ -19,9 +19,10 @@ public class ObjectDefinition {
         if members.length() == 0 {
             return OBJECT;
         }
-        CellField[] fieldCells = from Member member in members where member.kind == "field" select fieldMember(env, member);
-        CellField[] methodCells = from Member member in members where member.kind == "method" select methodMember(env, member);
-        SemType mappingType = self.mappingDefn.define(env, [...fieldCells, ...methodCells],
+        CellField[] memberCells = from Member member in members select 
+                                    member.kind == "field" ? fieldMember(env, member):
+                                                             methodMember(env, member);
+        SemType mappingType = self.mappingDefn.define(env, [...memberCells],
                                                       restMemberType(env));
         return objectContaining(mappingType);
     }
