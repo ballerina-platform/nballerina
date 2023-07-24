@@ -726,7 +726,12 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
-public function intersectMemberSemTypes(Env env, CellSemType t1, CellSemType t2) returns CellSemType {
+// FIXME: this is commonly used by both mapping and list
+public function intersectMemberSemTypes(Env env, SemType t1, SemType t2) returns CellSemType {
+    if t1 !is CellSemType && t2 !is CellSemType {
+        panic error("a");
+        // return cellContaining(env, intersect(t1, t2));
+    }
     var { ty, mut } = intersectCellAtomicType(<CellAtomicType>cellAtomicType(t1), <CellAtomicType>cellAtomicType(t2));
     return cellContaining(env, ty, ty == UNDEF ? CELL_MUT_NONE : mut);
 }
@@ -1758,7 +1763,7 @@ function toMemberSemtypes(Context cx, SemType ty) returns SemType[] {
         }
         else {
             MappingAtomicType atomicTy = cx.mappingAtomType(subtype.atom);
-            members.push(...from string name in atomicTy.names select mappingAtomicTypeMemberAt(atomicTy, name));
+            members.push(...from string name in atomicTy.names select mappingAtomicTypeMemberAtInner(atomicTy, name));
         }
     }
     return members;

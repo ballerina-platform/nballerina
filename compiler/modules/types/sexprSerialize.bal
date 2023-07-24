@@ -342,10 +342,10 @@ function fromListAtom(SerializationContext sc, Atom atom) returns ts:Atom {
 function fromMappingAtom(SerializationContext sc, Atom atom) returns ts:Atom {
     MappingAtomicType mat = sc.tc.mappingAtomType(atom);
     ts:Field[] fields = [];
-    foreach int i in 0 ..< mat.types.length() {
-        fields.push([{ s: mat.names[i] }, sexprFormSemTypeInternal(sc, cellInner(mat.types[i]))]);
+    foreach string name in mat.names {
+        fields.push([{ s: name }, sexprFormSemTypeInternal(sc, mappingAtomicTypeMemberAtInner(mat, name))]);
     }
-    SemType restSemType = cellInnerVal(mat.rest);
+    SemType restSemType = mappingAtomicTypeRestInnerVal(mat);
     if restSemType != NEVER {
         ts:Type rest = sexprFormSemTypeInternal(sc, restSemType);
         if fields.length() == 0 {

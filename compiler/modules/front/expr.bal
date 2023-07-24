@@ -996,7 +996,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
             }
             fieldPos[name] = f.startPos;
             if mat.names.indexOf(name) == () {
-                if t:cellInner(mat.rest) == t:UNDEF {
+                if t:mappingAtomicTypeRest(mat) == t:UNDEF {
                     return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
                 }
                 else if f.isIdentifier && mat.names.length() > 0 {
@@ -1067,7 +1067,7 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
     t:MappingAtomicType? pos = alt.pos;
     if pos !is () {
         // SUBSET won't be right with record defaults
-        if t:cellInner(pos.rest) == t:UNDEF {
+        if t:mappingAtomicTypeRest(pos) == t:UNDEF {
             if pos.names != fieldNames {
                 return false;
             }

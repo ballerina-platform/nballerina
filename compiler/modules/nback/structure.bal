@@ -554,7 +554,7 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
     string? k = t:singleStringShape(keyOperand.semType);
     if k is string {
         t:MappingAtomicType? mat = t:mappingAtomicType(tc, mappingType);
-        if mat != () && t:cellInner(mat.rest) == t:UNDEF {
+        if mat != () && t:mappingAtomicTypeRest(mat) == t:UNDEF {
             return mat.names.indexOf(k);
         }
     }

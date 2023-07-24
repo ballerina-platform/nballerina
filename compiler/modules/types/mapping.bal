@@ -1,6 +1,6 @@
 // Implementation specific to basic type list.
 
-type FieldBase record {
+public type FieldBase record {
     string name;
     SemType ty;
 };
@@ -19,21 +19,45 @@ public type CellField record {|
 public type MappingAtomicType readonly & record {|
     // sorted
     string[] names;
-    CellSemType[] types;
-    CellSemType rest;
+    SemType[] types;
+    SemType rest;
 |};
 
 public function mappingAtomicTypeMemberAtInnerVal(MappingAtomicType mat, string k) returns SemType {
-    return cellInnerVal(mappingAtomicTypeMemberAt(mat, k));
+    SemType memberType = mappingAtomicTypeMemberAt(mat, k);
+    if memberType !is CellSemType {
+        return memberType;
+    }
+    return cellInnerVal(memberType);
 }
 
 public function mappingAtomicTypeMemberAtInner(MappingAtomicType mat, string k) returns SemType {
-    return cellInner(mappingAtomicTypeMemberAt(mat, k));
+    SemType memberType = mappingAtomicTypeMemberAt(mat, k);
+    if memberType !is CellSemType {
+        return memberType;
+    }
+    return cellInner(memberType);
 }
 
-public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) returns CellSemType {
+public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) returns SemType {
     int? i = mat.names.indexOf(k, 0);
     return i is int ? mat.types[i] : mat.rest;
+}
+
+public function mappingAtomicTypeRest(MappingAtomicType mat) returns SemType {
+    SemType rest = mat.rest;
+    if rest !is CellSemType {
+        return rest;
+    }
+    return cellInner(rest);
+}
+
+public function mappingAtomicTypeRestInnerVal(MappingAtomicType mat) returns SemType {
+    SemType rest = mat.rest;
+    if rest !is CellSemType {
+        return rest;
+    }
+    return cellInnerVal(rest);
 }
 
 // This is mapping index 0 to be used by VAL_READONLY
@@ -56,7 +80,7 @@ public class MappingDefinition {
         }
     }
 
-    public function define(Env env, CellField[] fields, CellSemType rest) returns SemType {
+    public function define(Env env, FieldBase[] fields, CellSemType rest) returns SemType {
         var [names, types] = splitFields(fields);
         MappingAtomicType atomicType = {
             names: names.cloneReadOnly(),
@@ -94,10 +118,10 @@ public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] 
     return md.define(env, cellFields, restCell);
 }
 
-function splitFields(CellField[] fields) returns [string[], CellSemType[]] {
-    CellField[] sortedFields = fields.sort("ascending", fieldName);
+function splitFields(FieldBase[] fields) returns [string[], SemType[]] {
+    FieldBase[] sortedFields = fields.sort("ascending", fieldName);
     string[] names = [];
-    CellSemType[] types = [];
+    SemType[] types = [];
     foreach var { name, ty } in sortedFields {
         names.push(name);
         types.push(ty);
@@ -105,7 +129,7 @@ function splitFields(CellField[] fields) returns [string[], CellSemType[]] {
     return [names, types];
 }
 
-isolated function fieldName(CellField f) returns string {
+isolated function fieldName(FieldBase f) returns string {
     return f.name;
 }
 
@@ -177,7 +201,7 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
                     mt = insertField(pos, name, d);
                 }
                 else {
-                    CellSemType[] posTypes = shallowCopyCellTypes(pos.types);
+                    SemType[] posTypes = shallowCopyTypes(pos.types);
                     posTypes[index1] = d;
                     mt = { types: posTypes, names: pos.names, rest: pos.rest };
                 }
@@ -192,7 +216,7 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
 
 function insertField(TempMappingSubtype m, string name, CellSemType t) returns TempMappingSubtype {
     string[] names = shallowCopyStrings(m.names);
-    CellSemType[] types = shallowCopyCellTypes(m.types);
+    SemType[] types = shallowCopyTypes(m.types);
     int i = names.length();
     while true {
         if i == 0 || name > names[i - 1] {
@@ -226,8 +250,8 @@ function intersectMappingAtoms(Env env, MappingAtomicType[] atoms) returns [SemT
 type TempMappingSubtype record {|
     // sorted
     string[] names;
-    CellSemType[] types;
-    CellSemType rest;
+    SemType[] types;
+    SemType rest;
 |};
 
 function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2) returns TempMappingSubtype? {
@@ -236,7 +260,8 @@ function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2)
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
         CellSemType t = intersectMemberSemTypes(env, type1, type2);
-        if cellInner(type1) == NEVER {
+        SemType t1 = type1 !is CellSemType ? type1 : cellInner(type1);
+        if t1 == NEVER {
             return ();
         }
         types.push(t);
@@ -247,8 +272,8 @@ function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2)
 
 type CellFieldPair record {|
     string name;
-    CellSemType type1;
-    CellSemType type2;
+    SemType type1;
+    SemType type2;
     int? index1 = ();
     int? index2 = ();
 |};
@@ -262,14 +287,14 @@ class MappingPairing {
     *object:Iterable;
     private final string[] names1;
     private final string[] names2;
-    private final CellSemType[] types1;
-    private final CellSemType[] types2;
+    private final SemType[] types1;
+    private final SemType[] types2;
     private final int len1;
     private final int len2;
     private int i1 = 0;
     private int i2 = 0;
-    private final CellSemType rest1;
-    private final CellSemType rest2;
+    private final SemType rest1;
+    private final SemType rest2;
 
     function init(TempMappingSubtype m1, TempMappingSubtype m2) {
         self.names1 = m1.names;
@@ -350,9 +375,9 @@ class MappingPairing {
         return { value: p };
     }
     
-    private function curType1() returns CellSemType => self.types1[self.i1];
+    private function curType1() returns SemType => self.types1[self.i1];
     
-    private function curType2() returns CellSemType => self.types2[self.i2];
+    private function curType2() returns SemType => self.types2[self.i2];
     
     private function curName1() returns string => self.names1[self.i1];
 
@@ -386,8 +411,8 @@ function mappingAtomicMemberTypeInner(MappingAtomicType atomic, StringSubtype|tr
 }
 
 function mappingAtomicApplicableMemberTypesInner(MappingAtomicType atomic, StringSubtype|true key) returns SemType[] {
-    SemType[] types = from CellSemType t in atomic.types select cellInner(t);
-    SemType rest = cellInner(atomic.rest);
+    SemType[] types = from string name in atomic.names select mappingAtomicTypeMemberAtInner(atomic, name);
+    SemType rest = mappingAtomicTypeRest(atomic);
     SemType[] memberTypes = [];
     if key == true {
         memberTypes.push(...types);
