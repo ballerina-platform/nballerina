@@ -1,18 +1,18 @@
 // Implementation specific to basic type list.
 
-public type FieldBase record {
+public type InnerField record {
     string name;
     SemType ty;
 };
 
 public type Field record {|
-    *FieldBase;
+    *InnerField;
     boolean ro = false;
     boolean opt = false;
 |};
 
 public type CellField record {|
-    string name;
+    *InnerField;
     CellSemType ty;
 |};
 
@@ -25,39 +25,27 @@ public type MappingAtomicType readonly & record {|
 
 public function mappingAtomicTypeMemberAtInnerVal(MappingAtomicType mat, string k) returns SemType {
     SemType memberType = mappingAtomicTypeMemberAt(mat, k);
-    if memberType !is CellSemType {
-        return memberType;
-    }
-    return cellInnerVal(memberType);
+    return memberType !is CellSemType ? memberType : cellInnerVal(memberType);
 }
 
 public function mappingAtomicTypeMemberAtInner(MappingAtomicType mat, string k) returns SemType {
     SemType memberType = mappingAtomicTypeMemberAt(mat, k);
-    if memberType !is CellSemType {
-        return memberType;
-    }
-    return cellInner(memberType);
+    return memberType !is CellSemType ? memberType : cellInner(memberType);
 }
 
-public function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) returns SemType {
+function mappingAtomicTypeMemberAt(MappingAtomicType mat, string k) returns SemType {
     int? i = mat.names.indexOf(k, 0);
     return i is int ? mat.types[i] : mat.rest;
 }
 
 public function mappingAtomicTypeRest(MappingAtomicType mat) returns SemType {
     SemType rest = mat.rest;
-    if rest !is CellSemType {
-        return rest;
-    }
-    return cellInner(rest);
+    return rest !is CellSemType ? rest : cellInner(rest);
 }
 
 public function mappingAtomicTypeRestInnerVal(MappingAtomicType mat) returns SemType {
     SemType rest = mat.rest;
-    if rest !is CellSemType {
-        return rest;
-    }
-    return cellInnerVal(rest);
+    return rest !is CellSemType ? rest : cellInnerVal(rest);
 }
 
 // This is mapping index 0 to be used by VAL_READONLY
@@ -80,7 +68,7 @@ public class MappingDefinition {
         }
     }
 
-    public function define(Env env, FieldBase[] fields, SemType rest) returns SemType {
+    public function define(Env env, InnerField[] fields, SemType rest) returns SemType {
         var [names, types] = splitFields(fields);
         MappingAtomicType atomicType = {
             names: names.cloneReadOnly(),
@@ -118,8 +106,8 @@ public function defineMappingTypeWrapped(MappingDefinition md, Env env, Field[] 
     return md.define(env, cellFields, restCell);
 }
 
-function splitFields(FieldBase[] fields) returns [string[], SemType[]] {
-    FieldBase[] sortedFields = fields.sort("ascending", fieldName);
+function splitFields(InnerField[] fields) returns [string[], SemType[]] {
+    InnerField[] sortedFields = fields.sort("ascending", fieldName);
     string[] names = [];
     SemType[] types = [];
     foreach var { name, ty } in sortedFields {
@@ -129,7 +117,7 @@ function splitFields(FieldBase[] fields) returns [string[], SemType[]] {
     return [names, types];
 }
 
-isolated function fieldName(FieldBase f) returns string {
+isolated function fieldName(InnerField f) returns string {
     return f.name;
 }
 
@@ -260,6 +248,8 @@ function intersectMapping(Env env, TempMappingSubtype m1, TempMappingSubtype m2)
     foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
         SemType t = intersectMemberSemTypes(env, type1, type2);
+        // FIXME: not sure this is working as intended we are getting t be an 
+        // non-atomic cell, but we pass all tests
         CellAtomicType? atomic = cellAtomicType(type1);
         SemType t1 = atomic == () ? type1 : atomic.ty;
         if t1 == NEVER {

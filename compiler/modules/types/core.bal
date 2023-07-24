@@ -734,7 +734,7 @@ public function intersectMemberSemTypes(Env env, SemType t1, SemType t2) returns
         return intersect(t1, t2);
     }
     if a1 == () || a2 == () {
-        // FIXME:
+        // FIXME: should we throw an error here or return ()?
         panic error("mixing cells and raw types");
     }
     var { ty, mut } = intersectCellAtomicType(a1, a2);
