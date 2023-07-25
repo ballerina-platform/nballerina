@@ -221,10 +221,14 @@ function bddFunctionAtomicType(Env env, Bdd bdd) returns FunctionAtomicType? {
     return ();
 }
 
+function functionSubtypeComplement(ProperSubtypeData t) returns SubtypeData {
+    return bddSubtypeDiff(FUNCTION_SUBTYPE_TOP, t);
+}
+
 BasicTypeOps functionOps =  {  
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
-    complement: bddSubtypeComplement,
+    complement: functionSubtypeComplement,
     isEmpty: functionSubtypeIsEmpty
 };

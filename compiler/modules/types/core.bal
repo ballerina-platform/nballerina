@@ -1357,6 +1357,7 @@ final CellAtomicType CELL_ATOMIC_INNER_RO = { ty: INNER_READONLY, mut: CELL_MUT_
 final MappingAtomicType MAPPING_ATOMIC_INNER = { names: [], types: [], rest: CELL_SEMTYPE_INNER };
 final ListAtomicType LIST_ATOMIC_INNER = { members: { initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_INNER };
 final ListAtomicType LIST_ATOMIC_MAPPING = { members: {initial: [], fixedLength: 0 }, rest: CELL_SEMTYPE_INNER_MAPPING };
+final FunctionAtomicType FUNCTION_ATOMIC_TOP = [NEVER, ANY];
 
 final TypeAtom ATOM_CELL_VAL = { index: 0, atomicType: CELL_ATOMIC_VAL };
 final TypeAtom ATOM_CELL_NEVER = { index: 1, atomicType: CELL_ATOMIC_NEVER };
@@ -1366,11 +1367,13 @@ final TypeAtom ATOM_LIST_MAPPING = { index: 4, atomicType: LIST_ATOMIC_MAPPING }
 final TypeAtom ATOM_CELL_INNER_MAPPING_RO = { index: 5, atomicType: CELL_ATOMIC_INNER_MAPPING_RO };
 final TypeAtom ATOM_LIST_MAPPING_RO = { index: 6, atomicType: LIST_ATOMIC_MAPPING_RO };
 final TypeAtom ATOM_CELL_INNER_RO = { index: 7, atomicType: CELL_ATOMIC_INNER_RO };
+final TypeAtom ATOM_FUNCTION_TOP = { index: 8, atomicType: FUNCTION_ATOMIC_TOP };
 
 const BDD_REC_ATOM_READONLY = 0;
 final BddNode BDD_SUBTYPE_RO = bddAtom(BDD_REC_ATOM_READONLY); // represents both readonly & map<readonly> and readonly & readonly[]
 final BddNode LIST_SUBTYPE_MAPPING = bddAtom(ATOM_LIST_MAPPING); // represents (map<any|error>)[]
 final BddNode LIST_SUBTYPE_MAPPING_RO = bddAtom(ATOM_LIST_MAPPING_RO); // represents readonly & (map<readonly>)[]
+final BddNode FUNCTION_SUBTYPE_TOP = bddAtom(ATOM_FUNCTION_TOP); // represents function
 
 final ComplexSemType MAPPING_RO = basicSubtype(BT_MAPPING, BDD_SUBTYPE_RO);
 final CellSemType CELL_SEMTYPE_VAL = <CellSemType>basicSubtype(BT_CELL, bddAtom(ATOM_CELL_VAL));
