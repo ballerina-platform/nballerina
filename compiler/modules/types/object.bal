@@ -60,10 +60,14 @@ function methodMember(Env env, Member member) returns CellField {
                                                     NEVER))];
 }
 
+function objectSubtypeComplement(ProperSubtypeData t) returns SubtypeData {
+    return bddSubtypeDiff(MAPPING_SUBTYPE_OBJECT, t);
+}
+
 final BasicTypeOps objectOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
-    complement: bddSubtypeComplement,
+    complement: objectSubtypeComplement,
     isEmpty: mappingSubtypeIsEmpty
 };
