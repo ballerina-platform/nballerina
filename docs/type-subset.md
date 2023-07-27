@@ -9,9 +9,11 @@ type-defn := "type" identifier type-desc ";"
 
 type-desc := function-td 
 
-function-td =
+function-td :=
     union-td
-    | "function" identifier "(" opt-td-list ")" ["returns" function-td]
+    | "function" identifier signature
+
+signature := "(" opt-td-list ")" ["returns" function-td]
 
 union-td :=
     intersection-td
@@ -32,6 +34,7 @@ primary-td :=
   predefined-td
   | int-td
   | map-td
+  | object-td
   | record-td
   | tuple-td
   | table-td
@@ -56,7 +59,13 @@ td-list :=
   | td-list "," type-desc
 
 record-td := "record" "{|" field-desc* "|}"
-field-desc := type-desc identifier ";"
+field-desc := type-desc identifier ["?"] ";"
+
+object-td := "object" "{" member-desc* "}"
+member-desc := object-field-desc | method-decl
+object-field-desc := "public" type-desc identifier ";"
+method-decl := "public" "function" method-name signature
+method-name := identifier | "map" | "join" | "start"
 
 table-td := "table" type-param
 xml-rd := "xml" [type-param]

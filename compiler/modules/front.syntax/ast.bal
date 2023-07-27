@@ -418,7 +418,7 @@ public type TypeDefn record {|
 
 public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
-public type ConstructorTypeDesc TupleTypeDesc|ArrayTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc|TableTypeDesc;
+public type ConstructorTypeDesc TupleTypeDesc|ArrayTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc|TableTypeDesc|ObjectTypeDesc;
 
 public type TupleTypeDesc record {|
     *PositionFields;
@@ -498,6 +498,33 @@ public type XmlSequenceTypeDesc record {|
 public type TableTypeDesc record {|
     *PositionFields;
     TypeDesc row;
+|};
+
+public type ObjectTypeDesc record {|
+    *PositionFields;
+    MemberDesc[] members;
+    t:ObjectDefinition? defn = ();
+|};
+
+public type MemberDesc FieldMemberDesc|MethodMemberDesc;
+
+public type MemberDescBase record {|
+    *PositionFields;
+    Position namePos;
+    string name;
+    "field"|"method" kind;
+    TypeDesc td;
+|};
+
+public type FieldMemberDesc record {|
+    *MemberDescBase;
+    "field" kind = "field";
+|};
+
+public type MethodMemberDesc record {|
+    *MemberDescBase;
+    "method" kind = "method";
+    FunctionTypeDesc td;
 |};
 
 public type TypeDescRef record {|

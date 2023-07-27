@@ -31,6 +31,7 @@ For programs that are in the subset, the compiler should conform to the Ballerin
    * function types
       * bare function type: `function`
       * proper subtypes of `function` such as: `function(T1) returns T2`
+   * `object` type
    * a reference to a type defined by a type definition
 * Statements:
    * function/method call statement
@@ -132,6 +133,7 @@ primary-type-desc =
   | record-type-desc
   | tuple-type-desc
   | function-type-desc
+  | object-type-desc
 
 builtin-type-name = "any" | "anydata" | "boolean" | "byte" | "int" | "float" | "string" | "error" | "function"
 
@@ -156,11 +158,18 @@ tuple-member-type-desc-list =
    | [ tuple-rest-desc ]
 tuple-rest-desc = type-desc "..."
 
-function-type-desc = "function" "(" [param-list] ")" ["returns" type-desc]
+function-type-desc = "function" signature
 
 param-list = param ["," param]* ["," rest-param]
 param = type-desc [identifier] # identifier can only be omitted when occurring in function-type-desc
 rest-param = type-desc "..." identifier
+
+object-type-desc = "object" "{" object-member-desc* "}"
+object-member-desc = object-field-desc | method-decl
+object-field-desc = "public" type-desc identifier ";"
+method-decl = "public" "function" method-name signature ";"
+method-name = identifier | special-method-name
+special-method-name = "map" | "join" | "start"
 
 stmt-block = "{" statement* "}"
 
@@ -410,6 +419,7 @@ Two kinds of `import` are supported.
 ## Additions from subset 14
 
 * Add support for `function` values
+* Add support for `object` type descriptors with restrictions
 
 ## Implemented spec changes since 2022R1
 

@@ -204,6 +204,26 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return check nonEmptyType(mod, modDefn, td, defn.getSemType(env));
         }
     } 
+    if td is s:ObjectTypeDesc {
+        t:ObjectDefinition? defn = td.defn;
+        if defn == () {
+            t:ObjectDefinition d = new;
+            td.defn = d;
+            t:Member[] members = [];
+            string[] memberNames = [];
+            foreach s:MemberDesc memberDesc in td.members {
+                if memberNames.indexOf(memberDesc.name) != () {
+                    return err:semantic(`duplicate member ${memberDesc.name}`, s:locationInDefn(modDefn, memberDesc.namePos));
+                }
+                memberNames.push(memberDesc.name);
+                t:SemType valueTy = check resolveTypeDesc(mod, modDefn, depth + 1, memberDesc.td);
+                "field"|"method" kind = memberDesc is s:FieldMemberDesc ? "field" : "method";
+                members.push({ name: memberDesc.name, valueTy, kind });
+            }
+            return nonEmptyType(mod, modDefn, td, d.define(env, members));
+        }
+        return nonEmptyType(mod, modDefn, td, defn.getSemType(env));
+    }
     if td is s:ArrayTypeDesc {
         t:ListDefinition? defn = td.defn;
         if defn == () {

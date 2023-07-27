@@ -471,6 +471,9 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SubSyntaxNode {
     else if td is MappingTypeDesc {
         return syntaxNodeFromMappingTypeDesc(td);
     }
+    else if td is ObjectTypeDesc {
+        return syntaxNodeFromObjectTypeDesc(td);
+    }
     else if td is FunctionTypeDesc {
         return syntaxNodeFromFunctionTypeDesc(td);
     }
@@ -529,6 +532,39 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
                                          rest is TypeDesc ? syntaxNodeFromTypeDesc(rest) : { token: "never" },
                                          { token: ">" });
     }
+}
+
+function syntaxNodeFromObjectTypeDesc(ObjectTypeDesc td) returns NonTerminalSyntaxNode {
+    SubSyntaxNode[] members = from MemberDesc m in td.members select syntaxNodeFromMemberDesc(m);
+    return nonTerminalSyntaxNode(td, { token: "object", pos: td.startPos },
+                                     { token: "{" },
+                                     members,
+                                     { token: "}" });
+}
+
+function syntaxNodeFromMemberDesc(MemberDesc md) returns NonTerminalSyntaxNode {
+    if md is FieldMemberDesc {
+        return syntaxNodeFromObjectFieldMemberDesc(md);
+    }
+    // JBUG: cast
+    return syntaxNodeFromMethodDesc(<MethodMemberDesc>md);
+}
+
+function syntaxNodeFromObjectFieldMemberDesc(FieldMemberDesc md) returns NonTerminalSyntaxNode {
+    var { td, name, namePos } = md;
+    return nonTerminalSyntaxNode(md, { token: "public", pos: md.startPos },
+                                     syntaxNodeFromTypeDesc(td),
+                                     { name, pos: namePos },
+                                     { token: ";" });
+}
+
+function syntaxNodeFromMethodDesc(MethodMemberDesc md) returns NonTerminalSyntaxNode {
+    var { td, name, namePos } = md;
+    return nonTerminalSyntaxNode(md, { token: "public", pos: md.startPos },
+                                     { token: "function" },
+                                     { name, pos: namePos },
+                                     syntaxNodeFromFunctionTypeDesc(td, true),
+                                     { token: ";" });
 }
 
 function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSignature = false) returns SubSyntaxNode {

@@ -2,7 +2,7 @@ import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.sexpr;
 import wso2/nballerina.types.sexpr as ts;
 
-type BaseBddTopSexpr "list"|"mapping"|"function";
+type BaseBddTopSexpr "list"|"mapping"|"function"|"object";
 type BddTopSexpr BaseBddTopSexpr|"table";
 const REC_ATOM = true;
 const TYPE_ATOM = false;
@@ -89,6 +89,9 @@ function sexprFormSemTypeInternal(SerializationContext sc, SemType ty) returns t
             }
             BT_MAPPING => {
                 disj.push(...bddToSexprAccum(sc, mappingSubtype(subtype), "mapping"));
+            }
+            BT_OBJECT => {
+                disj.push(...bddToSexprAccum(sc, objectSubtype(subtype), "object"));
             }
             BT_TABLE => {
                 disj.push(...bddToSexprAccum(sc, tableSubtype(subtype), "table"));
@@ -260,7 +263,8 @@ function bddToSexprAccum(SerializationContext sc, Bdd bdd, BddTopSexpr top) retu
     return disj;
 }
 
-function atomToSexprAccum(SerializationContext sc, Atom atom, BddTopSexpr top) returns ts:Table|ts:TableSubtype|ts:AtomRef {
+function atomToSexprAccum(SerializationContext sc, Atom atom, BddTopSexpr top) returns ts:Table|ts:TableSubtype|
+                                                                                       ts:Object|ts:ObjectSubtype|ts:AtomRef {
     if top == "table" {
         ListAtomicType lat = sc.tc.listAtomType(atom);
         Bdd rest = mappingSubtype(cellInnerVal(lat.rest));
@@ -268,6 +272,13 @@ function atomToSexprAccum(SerializationContext sc, Atom atom, BddTopSexpr top) r
             return "table";
         }
         return ["table", joinTypeSexpr("|", bddToSexprAccum(sc, rest, "mapping"))];
+    }
+    if top == "object" {
+        MappingAtomicType mat = sc.tc.mappingAtomType(atom);
+        if mat.names.length() == 0 {
+            return "object";
+        }
+        return ["object", fromMappingAtom(sc, atom)];
     }
     AtomId id = (atom is RecAtom) ? [top, REC_ATOM, atom] : [top, TYPE_ATOM, atom.index];
     var { memos, atomSexprs } = sc;
