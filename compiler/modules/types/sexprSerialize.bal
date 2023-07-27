@@ -260,7 +260,8 @@ function bddToSexprAccum(SerializationContext sc, Bdd bdd, BddTopSexpr top) retu
     return disj;
 }
 
-function atomToSexprAccum(SerializationContext sc, Atom atom, BddTopSexpr top) returns ts:Table|ts:TableSubtype|ts:AtomRef {
+function atomToSexprAccum(SerializationContext sc, Atom atom, BddTopSexpr top) returns ts:Table|ts:TableSubtype|
+                                                                                       ts:Function|ts:AtomRef {
     if top == "table" {
         ListAtomicType lat = sc.tc.listAtomType(atom);
         Bdd rest = mappingSubtype(cellInnerVal(lat.rest));
@@ -268,6 +269,13 @@ function atomToSexprAccum(SerializationContext sc, Atom atom, BddTopSexpr top) r
             return "table";
         }
         return ["table", joinTypeSexpr("|", bddToSexprAccum(sc, rest, "mapping"))];
+    }
+    if top == "function" {
+        FunctionAtomicType fat = sc.tc.functionAtomType(atom);
+        // We have to special case handling of function top type since it don't have a signature
+        if fat[0] == NEVER && fat[1] == ANY {
+            return "function";
+        }
     }
     AtomId id = (atom is RecAtom) ? [top, REC_ATOM, atom] : [top, TYPE_ATOM, atom.index];
     var { memos, atomSexprs } = sc;
