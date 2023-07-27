@@ -4,8 +4,8 @@ public type Member record {|
     "field"|"method" kind;
 |};
 
-SemType MEMBER_KIND_FIELD = stringConst("field");
-SemType MEMBER_KIND_METHOD = stringConst("method");
+final SemType MEMBER_KIND_FIELD = stringConst("field");
+final SemType MEMBER_KIND_METHOD = stringConst("method");
 
 public class ObjectDefinition {
     *Definition;
@@ -36,10 +36,10 @@ public function objectContaining(SemType mappingType) returns SemType {
 
 function restMemberType(Env env) returns CellSemType {
     SemType fieldMemberType = defineMappingTypeWrapped(new, env, [{ name: "value", ty: ANY },
-                                                                  { name: "kind", ty: MEMBER_KIND_FIELD }],
+                                                                  { name: "kind", ty: MEMBER_KIND_FIELD, ro: true }],
                                                        NEVER);
     SemType methodMemberType = defineMappingTypeWrapped(new, env, [{ name: "value", ty: FUNCTION, ro: true },
-                                                                   { name: "kind", ty: MEMBER_KIND_METHOD }],
+                                                                   { name: "kind", ty: MEMBER_KIND_METHOD, ro: true }],
                                                         NEVER);
     return cellContaining(env, union(fieldMemberType, methodMemberType));
 }
@@ -48,7 +48,7 @@ function fieldMember(Env env, Member member) returns CellField {
     return [member.name,
             cellContaining(env,
                            defineMappingTypeWrapped(new, env, [{ name: "value", ty: member.valueTy },
-                                                               { name: "kind", ty: MEMBER_KIND_FIELD }],
+                                                               { name: "kind", ty: MEMBER_KIND_FIELD, ro: true }],
                                                     NEVER))];
 }
 
@@ -56,7 +56,7 @@ function methodMember(Env env, Member member) returns CellField {
     return [member.name,
             cellContaining(env,
                            defineMappingTypeWrapped(new, env, [{ name: "value", ty: member.valueTy, ro: true },
-                                                               { name: "kind", ty: MEMBER_KIND_METHOD }],
+                                                               { name: "kind", ty: MEMBER_KIND_METHOD, ro: true }],
                                                     NEVER))];
 }
 
