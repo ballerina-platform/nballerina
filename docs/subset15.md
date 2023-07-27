@@ -158,7 +158,7 @@ tuple-member-type-desc-list =
    | [ tuple-rest-desc ]
 tuple-rest-desc = type-desc "..."
 
-function-type-desc = "function" "(" [param-list] ")" ["returns" type-desc]
+function-type-desc = "function" signature
 
 param-list = param ["," param]* ["," rest-param]
 param = type-desc [identifier] # identifier can only be omitted when occurring in function-type-desc
@@ -167,9 +167,9 @@ rest-param = type-desc "..." identifier
 object-type-desc = "object" "{" object-member-desc* "}"
 object-member-desc = object-field-desc | method-decl
 object-field-desc = "public" type-desc identifier ";"
-method-decl = "public" "function" method-name "(" [param-list] ")" ["returns" type-desc] ";"
+method-decl = "public" "function" method-name signature ";"
 method-name = identifier | special-method-name
-special-method-name = "map"
+special-method-name = "map" | "join" | "start"
 
 stmt-block = "{" statement* "}"
 
