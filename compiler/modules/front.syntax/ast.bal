@@ -45,7 +45,7 @@ public type FunctionDefn record {|
     ModulePart part;
 |};
 
-public type Function FunctionDefn|Closure;
+public type Function FunctionDefn|Lambda;
 
 public type FunctionParam record {|
     *PositionFields;
@@ -276,15 +276,14 @@ public type MethodCallExpr record {|
     Expr[] args;
 |};
 
-// TODO: Is this the correct name for this (we don't capture env at the moment) or lambda better?
-public type Closure record {|
+public type Lambda record {|
     *FunctionDefnBase;
 |};
 
 public type ExplicitAnonymousFunctionExpr record {|
     *PositionFields;
-    Closure closure;
-|};// Result of codegenning this should be a =ConstFunctionValue=
+    Lambda lambda;
+|};
 
 public type CheckingKeyword "check"|"checkpanic";
 

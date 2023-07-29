@@ -18,6 +18,7 @@ class Module {
     final s:SourceFile[] files;
     final ModuleSymbols syms;
     final s:FunctionDefn[] functionDefnSource = [];
+    final [s:Lambda, s:FunctionDefn, bir:FunctionDefn][] lambdaSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
     function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
@@ -45,8 +46,38 @@ class Module {
     public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        return codeGenFunction(self.syms, self.functionDefnSource[i], 
-                               self.functionDefnSource[i], self.functionDefns[i].decl);
+        return codeGenFunction(self, self.functionDefnSource[i], self.functionDefnSource[i], self.functionDefns[i].decl);
+    }
+
+    public function generateLambdaCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
+        // NOTE: may be we can do sepecial codegen for closures here,
+        // - As the first parameter take the closure struct
+        // - Then in the body copy the fields from the struct to stack
+        var [lambda, defn, _] = self.lambdaSource[i];
+        return codeGenFunction(self, defn, lambda, <t:FunctionSignature>lambda.signature);
+    }
+
+    public function addLambda(s:Lambda lambda, s:FunctionDefn defn) returns bir:FunctionRef {
+        // NOTE: we need to do caching in order to make bir roundtrip work
+        // TODO: better to keep a table and do a lookup?
+        foreach var [l, _, birDefn] in self.lambdaSource {
+            if l === lambda {
+                var { decl: signature, symbol } = birDefn;
+                return { symbol, signature, erasedSignature: signature };
+            }
+        }
+        string identifier = string `lambda_${self.lambdaSource.length()}`;
+        bir:InternalSymbol symbol = { identifier, isPublic: false };
+        t:FunctionSignature signature = <t:FunctionSignature>lambda.signature;
+        bir:FunctionRef ref = { symbol, signature, erasedSignature: signature };
+        bir:FunctionDefn birDefn =  {
+            symbol,
+            decl: signature,
+            position: lambda.startPos,
+            partIndex: defn.part.partIndex
+        };
+        self.lambdaSource.push([lambda, defn, birDefn]);
+        return ref;
     }
    
     public function finish() returns err:Semantic? {
@@ -62,6 +93,10 @@ class Module {
 
     public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {
         return self.functionDefns;
+    }
+
+    public function getLambdas() returns readonly & bir:FunctionDefn[] {
+        return from var [_, _, defn] in self.lambdaSource select defn;
     }
 
     public function getPartFile(int partIndex) returns bir:File {

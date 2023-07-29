@@ -49,19 +49,68 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         functionDefns: llFuncMap,
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard")),
         llInitTypes: createInitTypes(llContext)
-    };  
-    // TODO: we need to generate closure code here
-    foreach int i in 0 ..< functionDefns.length() {
-        bir:FunctionDefn defn = functionDefns[i];
-        bir:FunctionCode code = check birMod.generateFunctionCode(i);
+    };
+    llvm:FunctionDefn[] llLambdas = [];
+    DISubprogram[] diLambdas = [];
+    bir:FunctionCode[] functionCodes = from int i in 0 ..< functionDefns.length()
+                                         select check birMod.generateFunctionCode(i);
+    addLambdas(mod, llLambdas, diLambdas, birMod.getLambdas(), options.gcName);
+    check buildFunctionBodies(builder, birMod, mod, di, diFuncs, llFuncs, functionDefns, functionCodes);
+    bir:FunctionCode[] lambdaCodes = [];
+    bir:FunctionDefn[] lambdas = birMod.getLambdas();
+    int i = 0;
+    // lambdas can contain lambdas, so we need to keep iterating until we don't find any new lambdas
+    while i < lambdas.length() {
+        lambdaCodes.push(check birMod.generateLambdaCode(i));
+        lambdas = birMod.getLambdas();
+        i += 1;
+    }
+    addLambdas(mod, llLambdas, diLambdas, birMod.getLambdas(), options.gcName);
+    check buildFunctionBodies(builder, birMod, mod, di, diLambdas, llLambdas, lambdas, lambdaCodes);
+    check birMod.finish();
+    return [llMod, createTypeUsage(mod.usedSemTypes)];
+}
+
+function buildFunctionBodies(llvm:Builder builder, bir:Module birMod, Module mod, ModuleDI? di, DISubprogram[] diFuncs,
+                             llvm:FunctionDefn[] llFuncs, bir:FunctionDefn[] defns, bir:FunctionCode[] codes) returns BuildError? {
+    foreach int i in 0 ..< defns.length() {
+        bir:FunctionDefn defn = defns[i];
+        bir:FunctionCode code = codes[i];
         check bir:verifyFunctionCode(birMod, defn, code);
         DISubprogram? diFunc = di == () ? () : diFuncs[i];
         Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
     }
-    check birMod.finish();
-    return [llMod, createTypeUsage(mod.usedSemTypes)];
+}
+
+function addLambdas(Module mod, llvm:FunctionDefn[] llLambdas, DISubprogram[] diLambdas,
+                    bir:FunctionDefn[] lambdas, string? gcName) {
+    var { modId, llMod, di, partFiles, functionDefns } = mod;
+    foreach var defn in lambdas {
+        if functionDefns.hasKey(defn.symbol.identifier) {
+            continue;
+        }
+        llvm:FunctionType ty = buildFunctionSignature(defn.decl);
+        bir:InternalSymbol symbol = defn.symbol;
+        // TODO: properly mangle the names such that they don't collide wth the function names
+        string mangledName = mangleInternalSymbol(modId, symbol);
+        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
+        if di != () {
+            DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName);
+            diLambdas.push(diFunc);
+            llFunc.setSubprogram(diFunc);
+        }
+        if gcName != () {
+            llFunc.setGC(gcName);
+        }
+        if !symbol.isPublic {
+            llFunc.setLinkage("internal");
+        }
+        llLambdas.push(llFunc);
+        functionDefns[defn.symbol.identifier] = llFunc;
+    }
+    mod.functionDefns = functionDefns;
 }
 
 function calculateBuildOrder(bir:BasicBlock[] blocks) returns bir:Label[] {

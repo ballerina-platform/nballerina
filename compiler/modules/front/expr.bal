@@ -3,7 +3,6 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
-import ballerina/io;
 
 type CodeGenError err:Semantic|err:Unimplemented;
 
@@ -187,16 +186,6 @@ class ExprContext {
     function exprContext(BindingChain? bindings) returns ExprContext {
         return new(self.mod, self.defn, self.code, bindings, self.sc);
     }
-
-    function closureName() returns string {
-        // FIXME: we need to do this by incrementing
-        // this needs to be unique within the module (best way is to pass this up the context chain)
-        return "closure";
-    }
-
-    function addClosure() returns bir:FunctionOperand {
-        panic error("not implemented");
-    }
 }
 
 function codeGenExprForBoolean(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|BooleanExprEffect {
@@ -305,10 +294,9 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
                 return codeGenMethodCallExpr(cx, bb, callExpr);
             }
         }
-        var { closure } => {
-            // TODO: should we prevent this or allow this?
+        var { lambda } => {
             check cx.notInConst(expr);
-            return codeGenExplicitAnonymousFunctionExpr(cx, bb, closure);
+            return codeGenLambda(cx, bb, lambda);
         }
         // Member access E[i]
         var { container, index, opPos: pos } => {
@@ -1527,18 +1515,15 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
                        func.signature.returnType, args, false, expr.namePos);
 }
 
-// TODO: should this be named something closure? (may be as some sort of helper?)
-function codeGenExplicitAnonymousFunctionExpr(ExprContext cx, bir:BasicBlock bb, s:Closure closure) returns CodeGenError|ExprEffect {
+function codeGenLambda(ExprContext cx, bir:BasicBlock bb, s:Lambda lambda) returns CodeGenError|ExprEffect {
+    StmtContext stmtContext = check cx.stmtContext(); // For the time being we don't allow lambdas as constants so this is fine
+    s:FunctionDefn funcDefn = stmtContext.functionDefn;
     // When it comes to errors we still use the name of the enclosing function
-    s:FunctionDefn funcDefn = (check cx.stmtContext()).functionDefn;
-    t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, funcDefn, closure);
-    // TODO: does closures need to hold on to the signature?
-    closure.signature = signature;
-    io:println(closure);
-    bir:FunctionCode code = check codeGenFunction(cx.mod, funcDefn, closure, signature);
-    // TODO: now add this to the module
-    // TODO: create a function const operand
-    panic error("TODO");
+    t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, funcDefn, lambda);
+    lambda.signature = signature;
+    bir:FunctionRef ref = stmtContext.mod.addLambda(lambda, funcDefn);
+    bir:Operand result = functionValOperand(cx.mod.tc, ref);
+    return { result, block: bb, binding: () };
 }
 
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func, 

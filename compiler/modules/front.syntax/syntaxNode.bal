@@ -410,7 +410,7 @@ function syntaxNodeFromCheckingExpr(CheckingExpr expr) returns NonTerminalSyntax
 }
 
 function syntaxNodeFromExplicitAnonymousFunctionExpr(ExplicitAnonymousFunctionExpr expr) returns NonTerminalSyntaxNode {
-    var { typeDesc, body } = expr.closure;
+    var { typeDesc, body } = expr.lambda;
     return nonTerminalSyntaxNode(expr, { token: "function", pos: expr.startPos },
                                        syntaxNodeFromFunctionTypeDesc(typeDesc, functionSignature = true),
                                        syntaxNodeFromStmtBlock(body));

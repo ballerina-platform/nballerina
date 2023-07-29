@@ -61,13 +61,15 @@ class VirtualModule {
     final bir:ModuleId id;
     final VirtualFile[] files;
     final readonly & bir:FunctionDefn[] functionDefns;
+    final readonly & bir:FunctionDefn[] closureDefns;
     final FunctionCode[] functionCodes;
     final ParseContext pc;
 
-    function init(ParseContext pc, bir:ModuleId id, readonly & bir:FunctionDefn[] functionDefns, FunctionCode[] code, VirtualFile[] files) {
+    function init(ParseContext pc, bir:ModuleId id, readonly & bir:FunctionDefn[] functionDefns, readonly & bir:FunctionDefn[] closureDefns, FunctionCode[] code, VirtualFile[] files) {
         self.id = id;
         self.files = files;
         self.functionDefns = functionDefns;
+        self.closureDefns = closureDefns;
         self.functionCodes = code;
         self.pc = pc;
     }
@@ -80,12 +82,21 @@ class VirtualModule {
         return toFunctionCode(self.pc, self.functionCodes[i]);
     }
 
+    // FIXME:
+    public function generateLambdaCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
+        panic error("not implemented");
+    }
+
     public function finish() returns err:Semantic? {
     }
 
     public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {
         return self.functionDefns;
 
+    }
+
+    public function getLambdas() returns readonly & bir:FunctionDefn[] {
+        return self.closureDefns;
     }
 
     public function getPartFile(int partIndex) returns VirtualFile {
@@ -141,7 +152,8 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     }
     ParseContext pc = { tc, atoms, extFuncDecl, internalFuncDecl };
     VirtualFile[] vFiles = from var f in vFilesByName order by f.partIndex() select f;
-    VirtualModule mod = new(pc, modId, funcDefns.cloneReadOnly(), funcCodes, vFiles);
+    // FIXME: closures
+    VirtualModule mod = new(pc, modId, funcDefns.cloneReadOnly(), [], funcCodes, vFiles);
     return mod;
 }
 

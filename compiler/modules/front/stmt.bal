@@ -32,7 +32,8 @@ type LoopContext record {|
 
 class StmtContext {
     *err:SemanticContext;
-    final ModuleSymbols mod;
+    final Module mod;
+    final ModuleSymbols syms;
     final s:SourceFile file;
     final s:FunctionDefn functionDefn;
     final s:Function func;
@@ -42,8 +43,9 @@ class StmtContext {
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
 
-    function init(ModuleSymbols mod, s:FunctionDefn functionDefn, s:Function func, t:SemType returnType) {
+    function init(Module mod, ModuleSymbols syms, s:FunctionDefn functionDefn, s:Function func, t:SemType returnType) {
         self.mod = mod;
+        self.syms = syms;
         self.functionDefn = functionDefn;
         self.func = func;
         self.file = functionDefn.part.file;
@@ -191,8 +193,7 @@ class StmtContext {
     }
 
     function exprContext(BindingChain? bindings) returns ExprContext {
-        // FIXME:
-        return new ExprContext(self.mod, self.functionDefn, self.code, bindings, self);
+        return new ExprContext(self.syms, self.functionDefn, self.code, bindings, self);
     }
 
     function codeGenExpr(bir:BasicBlock block, BindingChain? bindings, t:SemType? expectedType, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -212,13 +213,13 @@ class StmtContext {
     }
 
     function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
-        return resolveSubsetTypeDesc(self.mod, self.functionDefn, td);
+        return resolveSubsetTypeDesc(self.syms, self.functionDefn, td);
     }
 
 }
 
-function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, s:Function func, t:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
-    StmtContext cx = new(mod, defn, func, signature.returnType);
+function codeGenFunction(Module mod, s:FunctionDefn defn, s:Function func, t:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
+    StmtContext cx = new(mod, mod.syms, defn, func, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     BindingChain? bindings = ();
     foreach int i in 0 ..< func.params.length() {
@@ -421,7 +422,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCh
     }
     if loopStep != () {
         bir:TmpRegister nextLoopVal = cx.createTmpRegister(t:INT);
-        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: nextLoopVal };
+        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.syms.tc, 1)], result: nextLoopVal };
         bir:AssignInsn incrementAssign = { result: loopVar, operand: nextLoopVal, pos: stmt.kwPos };
         bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
         loopStep.insns.push(increment, incrementAssign, backwardBranchToLoopHead);
@@ -530,7 +531,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
     ExprContext ec = cx.exprContext(initialBindings);
     final int startRegister = cx.nextRegisterNumber();
     var { result: matched, block: testBlock, binding } = check codeGenExpr(ec, startBlock, (), stmt.expr);
-    t:Context tc = cx.mod.tc;
+    t:Context tc = cx.syms.tc;
     t:SemType matchedType = operandSemType(tc, matched);
     // defaultCodeIndex is either () or the index of the last clause;
     // the latter case means that the match is exhaustive
@@ -586,7 +587,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
         precedingPatternsUnion = t:union(precedingPatternsUnion, clausePatternUnion);
         clauseUnmatchedLooksLike[i] = t:diff(matchedType , precedingPatternsUnion);
         clausePatternUnions[i] = clausePatternUnion;
-        if t:isSubtype(cx.mod.tc, matchedType, precedingPatternsUnion) {
+        if t:isSubtype(cx.syms.tc, matchedType, precedingPatternsUnion) {
             if i != stmt.clauses.length() - 1 {
                 return cx.semanticErr("match clause unmatchable because of previous wildcard match pattern", pos=s:range(stmt.clauses[i + 1]));
             }
@@ -690,7 +691,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
 
 function resolveConstMatchPattern(StmtContext cx, BindingChain? bindings, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|ResolveTypeError {
     if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(expr.name, bindings) {
-        var [_, value] = check resolveConstExprForType(cx.mod, cx.functionDefn, expr, expectedType, "pattern will not be matched");
+        var [_, value] = check resolveConstExprForType(cx.syms, cx.functionDefn, expr, expectedType, "pattern will not be matched");
         return value;
     }
     return cx.semanticErr(`match pattern is not constant`, s:range(expr));
@@ -831,7 +832,7 @@ function codeGenVarDeclStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCh
 
 function codeGenWildcardDeclStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain? initialBindings, s:Expr expr, s:TypeDesc td, Position pos) returns CodeGenError|StmtEffect {
     t:SemType semType = check cx.resolveTypeDesc(td);
-    if !t:isSubtype(cx.mod.tc, semType, t:ANY) {
+    if !t:isSubtype(cx.syms.tc, semType, t:ANY) {
         return cx.semanticErr("type descriptor of wildcard should be a subtype of any", pos);
     }
     bir:BasicBlock nextBlock = check codeGenAssign(cx, initialBindings, startBlock, cx.createVarRegister(semType, pos, "_"), expr, semType, pos);
@@ -931,8 +932,8 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
         }
         else {
             var { result: index, block: nextBlock } = check cx.codeGenExprForInt(block1, initialBindings, lValue.index);
-            t:SemType memberType = t:listMemberTypeInnerVal(cx.mod.tc, reg.semType, index.semType);
-            if t:isEmpty(cx.mod.tc, memberType) {
+            t:SemType memberType = t:listMemberTypeInnerVal(cx.syms.tc, reg.semType, index.semType);
+            if t:isEmpty(cx.syms.tc, memberType) {
                 return cx.semanticErr("index out of range", s:range(lValue.index));
             }
             { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, initialBindings, memberType, expr);
@@ -943,7 +944,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
     }
     else {
         var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, block1, initialBindings, lValue, reg.semType);
-        t:SemType memberType = t:mappingMemberTypeInnerVal(cx.mod.tc, reg.semType, index.semType);
+        t:SemType memberType = t:mappingMemberTypeInnerVal(cx.syms.tc, reg.semType, index.semType);
         { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, initialBindings, memberType, expr);
         bir:MappingSetInsn insn =  { operands: [ reg, index, operand], pos: lValue.opPos };
         nextBlock.insns.push(insn);
@@ -954,10 +955,10 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
 function codeGenLExprMappingKey(StmtContext cx, bir:BasicBlock block, BindingChain? initialBindings, s:MemberAccessLExpr|s:FieldAccessLExpr mappingLValue, t:SemType mappingType) returns CodeGenError|StringExprEffect {
     if mappingLValue is s:FieldAccessLExpr {
         string fieldName = mappingLValue.fieldName;
-        if t:containsUndef(t:mappingMemberTypeInner(cx.mod.tc, mappingType, t:stringConst(fieldName))) {
+        if t:containsUndef(t:mappingMemberTypeInner(cx.syms.tc, mappingType, t:stringConst(fieldName))) {
             return cx.semanticErr(`${fieldName} must be a required key`, pos=mappingLValue.opPos);
         }
-        return { result: singletonStringOperand(cx.mod.tc, fieldName), block };
+        return { result: singletonStringOperand(cx.syms.tc, fieldName), block };
     }
     else {
         return cx.codeGenExprForString(block, initialBindings, mappingLValue.index);
@@ -1011,8 +1012,8 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
                                            s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                            Position pos) returns CodeGenError|StmtEffect {
     var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, initialBindings, lValue.index);
-    t:SemType memberType = t:listMemberTypeInnerVal(cx.mod.tc, list.semType, index.semType);
-    if t:isEmpty(cx.mod.tc, memberType) {
+    t:SemType memberType = t:listMemberTypeInnerVal(cx.syms.tc, list.semType, index.semType);
+    if t:isEmpty(cx.syms.tc, memberType) {
         return cx.semanticErr("index out of range", s:range(lValue.index));
     }
     bir:TmpRegister member = cx.createTmpRegister(memberType, lValue.opPos);
@@ -1069,7 +1070,7 @@ function codeGenCallStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain
     else {
         return codeGenCheckingStmt(cx, startBlock, initialBindings, expr.checkingKeyword, expr.operand, expr.kwPos);
     }
-    if !t:isSubtype(cx.mod.tc, result.semType, t:NIL) {
+    if !t:isSubtype(cx.syms.tc, result.semType, t:NIL) {
         return cx.semanticErr("return type of function or method in call statement must be nil", stmt.startPos);
     }
     return { block: nextBlock };
@@ -1078,7 +1079,7 @@ function codeGenCallStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain
 function codeGenCheckingStmt(StmtContext cx, bir:BasicBlock bb, BindingChain? initialBindings, s:CheckingKeyword checkingKeyword, s:Expr expr, Position pos) returns CodeGenError|StmtEffect {
     // checking stmt falls into one of : 1) never err 2) always err 3) conditionally err
     var { result: o, block: nextBlock, binding } = check cx.codeGenExpr(bb, initialBindings, t:ERROR, expr);
-    t:SemType semType = operandSemType(cx.mod.tc, o);
+    t:SemType semType = operandSemType(cx.syms.tc, o);
     t:SemType errorType = t:intersect(semType, t:ERROR);
     bir:BasicBlock block;
     t:SemType resultType;
@@ -1123,7 +1124,7 @@ function codeGenCheckingCond(ExprContext cx, bir:BasicBlock bb, bir:Register ope
 }
 
 function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings, Position pos) returns Binding|CodeGenError {
-    var b = check lookupLocalVarRef(cx, cx.mod, name, bindings, pos);
+    var b = check lookupLocalVarRef(cx, cx.syms, name, bindings, pos);
     if b is Binding {
         return b;
     }
