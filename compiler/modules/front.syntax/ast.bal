@@ -28,17 +28,21 @@ public type ImportDecl record {|
     int partIndex;
 |};
 
-public type FunctionDefn record {|
+public type FunctionDefnBase record {|
     *PositionFields;
-    readonly string name;
-    ModulePart part;
-    Visibility vis;
     FunctionTypeDesc typeDesc;
     FunctionParam[] params;
     StmtBlock body;
-    Position namePos;
     // This is filled in during analysis
     t:FunctionSignature? signature = ();
+|};
+
+public type FunctionDefn record {|
+    *FunctionDefnBase;
+    readonly string name;
+    Position namePos;
+    Visibility vis;
+    ModulePart part;
 |};
 
 public type FunctionParam record {|
@@ -63,7 +67,7 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallExpr FunctionCallExpr|MethodCallExpr|CheckingCallExpr;
-public type Expr GroupingExpr|NumericLiteralExpr|LiteralExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
+public type Expr GroupingExpr|NumericLiteralExpr|LiteralExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr|ExplicitAnonymousFunctionExpr;
 public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type ExtendedLiteralExpr LiteralExpr|NumericLiteralExpr|SimpleConstNegateExpr;
@@ -269,6 +273,16 @@ public type MethodCallExpr record {|
     Expr target;
     Expr[] args;
 |};
+
+// TODO: Is this the correct name for this (we don't capture env at the moment) or lambda better?
+public type Closure record {|
+    *FunctionDefnBase;
+|};
+
+public type ExplicitAnonymousFunctionExpr record {|
+    *PositionFields;
+    Closure closure;
+|};// Result of codegenning this should be a =ConstFunctionValue=
 
 public type CheckingKeyword "check"|"checkpanic";
 
