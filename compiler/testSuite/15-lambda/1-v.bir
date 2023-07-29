@@ -1,0 +1,68 @@
+(atoms
+    ("FT.11" (function int (int int))))
+(defns
+    ("main" (public) (function (() () never) (file "1-v") (loc 3 16)
+            (registers
+                (r.f var FT.11)
+                (r.g var FT.11)
+                (r2 tmp int)
+                (r3 tmp list)
+                (r4 tmp ())
+                (r5 tmp int)
+                (r6 tmp list)
+                (r7 tmp ()))
+            (blocks
+                (b0 (no-panic)
+                    (set r.f (function "bal_closure_0"))
+                    (set r.g (function "bal_closure_1"))
+                    (call r.f r2 1 2)
+                    (list-construct r3 r2)
+                    (call-rest-list (module-get ("ballerina" "io") "println") r4 r3)
+                    (call r.g r5 4 2)
+                    (list-construct r6 r5)
+                    (call-rest-list (module-get ("ballerina" "io") "println") r7 r6)
+                    (ret ())))))
+    ("bal_closure_0" () (function (int (int int) never) (file "1-v") (loc 4 10)
+            (registers
+                (r.a param int)
+                (r.b param int)
+                (r2 tmp int)
+                (r3 tmp error))
+            (blocks
+                (b0 (on-panic b1)
+                    (loc 5 17)
+                    (int+ r2 r.a r.b)
+                    (ret r2))
+                (b1 (no-panic)
+                    (catch r3)
+                    (abnormal-ret r3)))))
+    ("bal_closure_1" () (function (int (int int) never) (file "1-v") (loc 7 10)
+            (registers
+                (r.a param int)
+                (r.b param int)
+                (r.mul var FT.11)
+                (r3 tmp int))
+            (blocks
+                (b0 (no-panic)
+                    (set r.mul (function "bal_closure_2"))
+                    (call r.mul r3 r.a r.b)
+                    (ret r3)))))
+    ("bal_closure_2" () (function (int (int int) never) (file "1-v") (loc 8 16)
+            (registers
+                (r.x param int)
+                (r.y param int)
+                (r2 tmp int)
+                (r3 tmp error))
+            (blocks
+                (b0 (on-panic b1)
+                    (loc 9 21)
+                    (int* r2 r.x r.y)
+                    (ret r2))
+                (b1 (no-panic)
+                    (catch r3)
+                    (abnormal-ret r3))))))
+(decls
+    (("ballerina" "io")
+        ("println" function (() (list) (| any error)))))
+(files
+    ("1-v" "../../testSuite/15-lambda/1-v.bal"))

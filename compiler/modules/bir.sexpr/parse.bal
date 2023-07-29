@@ -61,15 +61,13 @@ class VirtualModule {
     final bir:ModuleId id;
     final VirtualFile[] files;
     final readonly & bir:FunctionDefn[] functionDefns;
-    final readonly & bir:FunctionDefn[] closureDefns;
     final FunctionCode[] functionCodes;
     final ParseContext pc;
 
-    function init(ParseContext pc, bir:ModuleId id, readonly & bir:FunctionDefn[] functionDefns, readonly & bir:FunctionDefn[] closureDefns, FunctionCode[] code, VirtualFile[] files) {
+    function init(ParseContext pc, bir:ModuleId id, readonly & bir:FunctionDefn[] functionDefns, readonly & bir:FunctionDefn[0] lambdaDefns, FunctionCode[] code, VirtualFile[] files) {
         self.id = id;
         self.files = files;
         self.functionDefns = functionDefns;
-        self.closureDefns = closureDefns;
         self.functionCodes = code;
         self.pc = pc;
     }
@@ -82,9 +80,9 @@ class VirtualModule {
         return toFunctionCode(self.pc, self.functionCodes[i]);
     }
 
-    // FIXME:
     public function generateLambdaCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        panic error("not implemented");
+        // FIXME:
+        panic error("lambdas should have been desugared");
     }
 
     public function finish() returns err:Semantic? {
@@ -96,7 +94,9 @@ class VirtualModule {
     }
 
     public function getLambdas() returns readonly & bir:FunctionDefn[] {
-        return self.closureDefns;
+        // NOTE: this is to make BIR round trip compilation work (since nBack 
+        // gets a virtual module in round 2)
+        return [];
     }
 
     public function getPartFile(int partIndex) returns VirtualFile {
@@ -152,7 +152,8 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     }
     ParseContext pc = { tc, atoms, extFuncDecl, internalFuncDecl };
     VirtualFile[] vFiles = from var f in vFilesByName order by f.partIndex() select f;
-    // FIXME: closures
+    // NOTE: When generating the BIR we desugar the lambdas into functions,
+    // therefore when parsing the BIR we don't have lambdas left.
     VirtualModule mod = new(pc, modId, funcDefns.cloneReadOnly(), [], funcCodes, vFiles);
     return mod;
 }
