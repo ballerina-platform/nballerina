@@ -45,7 +45,8 @@ class Module {
     public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        return codeGenFunction(self.syms, self.functionDefnSource[i], self.functionDefns[i].decl);
+        return codeGenFunction(self.syms, self.functionDefnSource[i], 
+                               self.functionDefnSource[i], self.functionDefns[i].decl);
     }
    
     public function finish() returns err:Semantic? {

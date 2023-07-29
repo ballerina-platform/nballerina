@@ -35,19 +35,21 @@ class StmtContext {
     final ModuleSymbols mod;
     final s:SourceFile file;
     final s:FunctionDefn functionDefn;
+    final s:Function func;
     final bir:FunctionCode code;
     final t:SemType returnType;
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
 
-    function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
+    function init(ModuleSymbols mod, s:FunctionDefn functionDefn, s:Function func, t:SemType returnType) {
         self.mod = mod;
         self.functionDefn = functionDefn;
+        self.func = func;
         self.file = functionDefn.part.file;
         self.code = {};
         self.returnType = returnType;
-        self.scopeStack.push({ scope: (), startPos: functionDefn.startPos, endPos: functionDefn.endPos });
+        self.scopeStack.push({ scope: (), startPos: func.startPos, endPos: func.endPos });
     }
 
     function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
@@ -189,6 +191,7 @@ class StmtContext {
     }
 
     function exprContext(BindingChain? bindings) returns ExprContext {
+        // FIXME:
         return new ExprContext(self.mod, self.functionDefn, self.code, bindings, self);
     }
 
@@ -214,21 +217,21 @@ class StmtContext {
 
 }
 
-function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, t:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
-    StmtContext cx = new(mod, defn, signature.returnType);
+function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, s:Function func, t:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
+    StmtContext cx = new(mod, defn, func, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     BindingChain? bindings = ();
-    foreach int i in 0 ..< defn.params.length() {
-        var param = defn.params[i];
+    foreach int i in 0 ..< func.params.length() {
+        var param = func.params[i];
         bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], param.namePos, param.name);
         bindings = { head: { name: <string>param.name, reg, isFinal: true }, prev: bindings };
     }
-    var { block: endBlock } = check codeGenScope(cx, startBlock, bindings, defn.body);
+    var { block: endBlock } = check codeGenScope(cx, startBlock, bindings, func.body);
     if endBlock != () {
-        bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: defn.body.closeBracePos };
+        bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: func.body.closeBracePos };
         endBlock.insns.push(ret);
     }
-    codeGenOnPanic(cx, defn.body.closeBracePos);
+    codeGenOnPanic(cx, func.body.closeBracePos);
     return cx.code;
 }
 

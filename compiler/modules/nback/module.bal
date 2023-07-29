@@ -50,6 +50,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard")),
         llInitTypes: createInitTypes(llContext)
     };  
+    // TODO: we need to generate closure code here
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check birMod.generateFunctionCode(i);

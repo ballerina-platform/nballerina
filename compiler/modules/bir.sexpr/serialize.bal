@@ -32,6 +32,7 @@ public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Sema
     SerializeContext sc = { tc };
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     Function[] funcSexprs = [];
+    // TODO: generate closures
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check mod.generateFunctionCode(i);

@@ -45,6 +45,8 @@ public type FunctionDefn record {|
     ModulePart part;
 |};
 
+public type Function FunctionDefn|Closure;
+
 public type FunctionParam record {|
     *PositionFields;
     string name;
