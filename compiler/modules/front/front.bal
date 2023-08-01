@@ -12,13 +12,20 @@ public type ResolvedModule object {
     public function validMain() returns err:Diagnostic?;
 };
 
+type LambdaData record {|
+    s:Lambda lambda;
+    s:FunctionDefn defn;
+    bir:FunctionDefn birDefn;
+    BindingChain? bindings;
+|};
+
 class Module {
     *ResolvedModule;
     final bir:ModuleId id;
     final s:SourceFile[] files;
     final ModuleSymbols syms;
     final s:FunctionDefn[] functionDefnSource = [];
-    final [s:Lambda, s:FunctionDefn, bir:FunctionDefn][] lambdaSource = [];
+    final LambdaData[] lambdaSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
     function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
@@ -53,14 +60,14 @@ class Module {
         // NOTE: may be we can do sepecial codegen for closures here,
         // - As the first parameter take the closure struct
         // - Then in the body copy the fields from the struct to stack
-        var [lambda, defn, _] = self.lambdaSource[i];
-        return codeGenFunction(self, defn, lambda, <t:FunctionSignature>lambda.signature);
+        var { lambda, defn, bindings } = self.lambdaSource[i];
+        return codeGenFunction(self, defn, lambda, <t:FunctionSignature>lambda.signature, bindings);
     }
 
-    public function addLambda(s:Lambda lambda, s:FunctionDefn defn) returns bir:FunctionRef {
+    public function addLambda(s:Lambda lambda, s:FunctionDefn defn, BindingChain? bindings) returns bir:FunctionRef {
         // NOTE: we need to do caching in order to make bir roundtrip work
         // TODO: better to keep a table and do a lookup?
-        foreach var [l, _, birDefn] in self.lambdaSource {
+        foreach var { lambda: l, birDefn } in self.lambdaSource {
             if l === lambda {
                 var { decl: signature, symbol } = birDefn;
                 return { symbol, signature, erasedSignature: signature };
@@ -76,7 +83,7 @@ class Module {
             position: lambda.startPos,
             partIndex: defn.part.partIndex
         };
-        self.lambdaSource.push([lambda, defn, birDefn]);
+        self.lambdaSource.push({ lambda, defn, birDefn, bindings });
         return ref;
     }
    
@@ -96,7 +103,7 @@ class Module {
     }
 
     public function getLambdas() returns readonly & bir:FunctionDefn[] {
-        return from var [_, _, defn] in self.lambdaSource select defn;
+        return from var { birDefn } in self.lambdaSource select birDefn;
     }
 
     public function getPartFile(int partIndex) returns bir:File {

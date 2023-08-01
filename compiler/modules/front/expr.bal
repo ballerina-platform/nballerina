@@ -47,11 +47,13 @@ type AssignmentBinding record {|
     Position pos;
 |};
 
+type FunctionMarker "func";
+
 type OccurrenceBinding NarrowBinding|AssignmentBinding;
 type Binding DeclBinding|NarrowBinding|AssignmentBinding;
 
 type BindingChain record {|
-    Binding head;
+    Binding|FunctionMarker head;
     BindingChain? prev;
 |};
 
@@ -105,13 +107,14 @@ type CalledFunctionInfo record {|
 |};
 
 class ExprContext {
-    *err:SemanticContext;
+    *FunctionContext;
     final StmtContext? sc;
     final ModuleSymbols mod;
     final s:ModuleLevelDefn defn;
     final BindingChain? bindings;
     final s:SourceFile file;
     final bir:FunctionCode code;
+    final Binding[] capturedBindings = [];
 
     function init(ModuleSymbols mod, s:ModuleLevelDefn defn, bir:FunctionCode code, BindingChain? bindings, StmtContext? sc) {
         self.mod = mod;
@@ -120,6 +123,19 @@ class ExprContext {
         self.file = defn.part.file;
         self.sc = sc;
         self.code = code;
+    }
+
+    function isClosure() returns boolean {
+        StmtContext? sc = self.sc;
+        if sc == () {
+            return false;
+        }
+        return sc.isClosure();
+    }
+
+    function captureBinding(Binding binding) {
+        // TODO: this should probaly passed on to the Function
+        self.capturedBindings.push(binding);
     }
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
@@ -174,7 +190,11 @@ class ExprContext {
     }
 
     function lookupLocalVarRef(string varName, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
-        return lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
+        t:SingleValue|Binding|bir:FunctionRef result = check lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
+        if result is Binding && self.capturedBindings.indexOf(result) != () {
+            return self.unimplementedErr("variable capture not implemented", pos);
+        }
+        return result;
     }
 
     function notInConst(s:Expr expr) returns CodeGenError? {
@@ -1521,7 +1541,7 @@ function codeGenLambda(ExprContext cx, bir:BasicBlock bb, s:Lambda lambda) retur
     // When it comes to errors we still use the name of the enclosing function
     t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, funcDefn, lambda);
     lambda.signature = signature;
-    bir:FunctionRef ref = stmtContext.mod.addLambda(lambda, funcDefn);
+    bir:FunctionRef ref = stmtContext.mod.addLambda(lambda, funcDefn, cx.bindings);
     bir:Operand result = functionValOperand(cx.mod.tc, ref);
     return { result, block: bb, binding: () };
 }
@@ -1579,7 +1599,7 @@ function codeGenTypeMerge(ExprContext cx, bir:BasicBlock block, BindingChain? bi
             continue;
         }
         Binding unnarrowed = originGroup.unnarrowed;
-        Binding existing = <Binding>envLookup(unnarrowed.name, bindingLimit);
+        Binding existing = <Binding>envLookup(cx, unnarrowed.name, bindingLimit, pos);
         if existing.reg.semType == originGroup.union {
             continue;
         }

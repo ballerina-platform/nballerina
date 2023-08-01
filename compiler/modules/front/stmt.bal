@@ -30,8 +30,15 @@ type LoopContext record {|
     boolean continueIsBackward;
 |};
 
-class StmtContext {
+type FunctionContext object {
     *err:SemanticContext;
+    // TODO: remove this when we support closures (used to create the capture error)
+    function isClosure() returns boolean;
+    function captureBinding(Binding binding);
+};
+
+class StmtContext {
+    *FunctionContext;
     final Module mod;
     final ModuleSymbols syms;
     final s:SourceFile file;
@@ -52,6 +59,14 @@ class StmtContext {
         self.code = {};
         self.returnType = returnType;
         self.scopeStack.push({ scope: (), startPos: func.startPos, endPos: func.endPos });
+    }
+
+    function captureBinding(Binding binding) {
+        // We can use this to detect shadowing but they will anyway get a duplicate decleartion error
+    }
+
+    function isClosure() returns boolean {
+        return self.func is s:Lambda;
     }
 
     function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
@@ -122,10 +137,6 @@ class StmtContext {
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
-    }
-
-    function unimplementedErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Unimplemented {
-        return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
     }
 
     private function location(Position|Range pos) returns d:Location {
@@ -218,14 +229,17 @@ class StmtContext {
 
 }
 
-function codeGenFunction(Module mod, s:FunctionDefn defn, s:Function func, t:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
+function codeGenFunction(Module mod, s:FunctionDefn defn, s:Function func, t:FunctionSignature signature, BindingChain? closureBindings = ()) returns bir:FunctionCode|CodeGenError {
     StmtContext cx = new(mod, mod.syms, defn, func, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
-    BindingChain? bindings = ();
+    BindingChain bindings = { head: "func", prev: closureBindings };
     foreach int i in 0 ..< func.params.length() {
-        var param = func.params[i];
-        bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], param.namePos, param.name);
-        bindings = { head: { name: <string>param.name, reg, isFinal: true }, prev: bindings };
+        var { name, namePos } = func.params[i];
+        if envDefines(cx, name, bindings, namePos) {
+            return cx.semanticErr(`duplicate declaration of ${name}`, namePos);
+        }
+        bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], namePos, name);
+        bindings = { head: { name: <string>name, reg, isFinal: true }, prev: bindings };
     }
     var { block: endBlock } = check codeGenScope(cx, startBlock, bindings, func.body);
     if endBlock != () {
@@ -314,7 +328,9 @@ function bindingsUpTo(BindingChain? bindingLimit, BindingChain? bindings) return
     while b !== bindingLimit {
         // Since `bindingLimit` is a sub-chain of `bindings`, we never reach nil on `b`.
         var { head, prev } = <BindingChain>b;
-        result.push(head);
+        if head !is FunctionMarker {
+            result.push(head);
+        }
         b = prev;
     }
     return result;
@@ -383,7 +399,7 @@ function unusedLocalVariables(StmtContext cx, BindingChain? blockBindings, Bindi
 
 function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain? initialBindings, s:ForeachStmt stmt) returns CodeGenError|StmtEffect {
     string varName = stmt.name;
-    if envDefines(varName, initialBindings) {
+    if envDefines(cx, varName, initialBindings, stmt.namePos) {
         return cx.semanticErr(`duplicate declaration of ${varName}`, stmt.namePos);
     }
     s:RangeExpr range = stmt.range;
@@ -690,7 +706,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
 }
 
 function resolveConstMatchPattern(StmtContext cx, BindingChain? bindings, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|ResolveTypeError {
-    if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(expr.name, bindings) {
+    if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(cx, expr.name, bindings, expr.qNamePos) {
         var [_, value] = check resolveConstExprForType(cx.syms, cx.functionDefn, expr, expectedType, "pattern will not be matched");
         return value;
     }
@@ -820,7 +836,7 @@ function codeGenVarDeclStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCh
         return codeGenWildcardDeclStmt(cx, startBlock, initialBindings, initExpr, td, stmt.opPos);
     }
     else {
-        if envDefines(name, initialBindings) {
+        if envDefines(cx, name, initialBindings, namePos) {
             return cx.semanticErr(`duplicate declaration of ${name}`, namePos);
         }
         t:SemType semType = check cx.resolveTypeDesc(td);
@@ -1133,8 +1149,8 @@ function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings
     }
 }
 
-function lookupLocalVarRef(err:SemanticContext cx, ModuleSymbols mod, string name, BindingChain? bindings, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
-    Binding? binding = envLookup(name, bindings);
+function lookupLocalVarRef(FunctionContext cx, ModuleSymbols mod, string name, BindingChain? bindings, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
+    Binding? binding = envLookup(cx, name, bindings, pos);
     if binding == () {
         s:ModuleLevelDefn? defn = mod.defns[name];
         if defn == () {
@@ -1165,8 +1181,8 @@ function lookupLocalVarRef(err:SemanticContext cx, ModuleSymbols mod, string nam
     }
 }
 
-function envLookup(string name, BindingChain? bindings) returns Binding? {
-    Binding? binding = bindingsLookup(name, bindings);
+function envLookup(FunctionContext cx, string name, BindingChain? bindings, Position pos) returns Binding? {
+    Binding? binding = bindingsLookup(cx, name, bindings, pos);
     if binding != () {
         DeclBinding unnarrowed = unnarrowBinding(binding);
         unnarrowed.used = true;
@@ -1174,18 +1190,27 @@ function envLookup(string name, BindingChain? bindings) returns Binding? {
     return binding;
 }
 
-function envDefines(string name, BindingChain? bindings) returns boolean {
-    return bindingsLookup(name, bindings) != ();
+function envDefines(FunctionContext cx, string name, BindingChain? bindings, Position pos) returns boolean {
+    return bindingsLookup(cx, name, bindings, pos) != ();
 }
 
-function bindingsLookup(string name, BindingChain? bindings) returns Binding? {
+function bindingsLookup(FunctionContext? cx, string name, BindingChain? bindings, Position pos) returns Binding? {
     BindingChain? tem = bindings;
+    boolean shouldCapture = false;
+    boolean isClosure = cx != () && cx.isClosure();
     while true {
         if tem == () {
             break;
         }
-        else if tem.head.name == name {
-            return tem.head;
+        Binding|FunctionMarker head = tem.head;
+        if head is FunctionMarker && isClosure {
+            shouldCapture = true;
+        }
+        if head !is FunctionMarker && head.name == name {
+            if shouldCapture && cx != () {
+                cx.captureBinding(head);
+            }
+            return head;
         }
         else {
             tem = tem.prev;
