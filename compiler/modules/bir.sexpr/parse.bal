@@ -88,7 +88,7 @@ class VirtualModule {
     public function finish() returns err:Semantic? {
     }
 
-    public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {
+    public function getFunctions() returns readonly & bir:FunctionDefn[] {
         return self.functionDefns;
 
     }

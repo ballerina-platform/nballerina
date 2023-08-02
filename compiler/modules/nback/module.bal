@@ -12,11 +12,26 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     if options.debugLevel > 0 {
         di = createModuleDI(llMod, partFiles, options.debugLevel == DEBUG_FULL);
     }
-    bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
     llvm:FunctionDefn[] llFuncs = [];
     DISubprogram[] diFuncs = [];
     llvm:FunctionType[] llFuncTypes = [];
     map<llvm:FunctionDefn> llFuncMap = {};
+    llvm:Builder builder = llContext.createBuilder();
+    Module mod = {
+        bir: birMod,
+        modId,
+        llContext,
+        llMod,
+        partFiles,
+        di,
+        typeContext: birMod.getTypeContext(),
+        functionDefns: llFuncMap,
+        stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard")),
+        llInitTypes: createInitTypes(llContext)
+    };
+    bir:FunctionDefn[] functionDefns = birMod.getFunctions();
+    bir:FunctionCode[] functionCodes = from int i in 0 ..< functionDefns.length()
+                                         select check birMod.generateFunctionCode(i);
     foreach var defn in functionDefns {
         llvm:FunctionType ty = buildFunctionSignature(defn.decl);
         llFuncTypes.push(ty);
@@ -37,51 +52,23 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         llFuncs.push(llFunc);
         llFuncMap[defn.symbol.identifier] = llFunc;
     }
-    llvm:Builder builder = llContext.createBuilder();
-    Module mod = {
-        bir: birMod,
-        modId,
-        llContext,
-        llMod,
-        partFiles,
-        di,
-        typeContext: birMod.getTypeContext(),
-        functionDefns: llFuncMap,
-        stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard")),
-        llInitTypes: createInitTypes(llContext)
-    };
-    llvm:FunctionDefn[] llLambdas = [];
-    DISubprogram[] diLambdas = [];
-    bir:FunctionCode[] functionCodes = from int i in 0 ..< functionDefns.length()
-                                         select check birMod.generateFunctionCode(i);
-    addLambdas(mod, llLambdas, diLambdas, birMod.getLambdas(), options.gcName);
-    check buildFunctionBodies(builder, birMod, mod, di, diFuncs, llFuncs, functionDefns, functionCodes);
-    bir:FunctionCode[] lambdaCodes = [];
-    bir:FunctionDefn[] lambdas = birMod.getLambdas();
-    int i = 0;
-    // lambdas can contain lambdas, so we need to keep iterating until we don't find any new lambdas
-    while i < lambdas.length() {
-        lambdaCodes.push(check birMod.generateLambdaCode(i));
-        lambdas = birMod.getLambdas();
-        i += 1;
+    foreach int i in 0 ..< functionCodes.length() {
+        bir:FunctionCode code = functionCodes[i];
+        check buildFunction(builder, birMod, mod, di, diFuncs[i], llFuncs[i], functionDefns[i], code);
+        foreach var [index, lambdaCode] in code.childAnnonFunctions {
+            check buildFunction(builder, birMod, mod, di, diFuncs[index], llFuncs[index], functionDefns[index], lambdaCode);
+        }
     }
-    addLambdas(mod, llLambdas, diLambdas, birMod.getLambdas(), options.gcName);
-    check buildFunctionBodies(builder, birMod, mod, di, diLambdas, llLambdas, lambdas, lambdaCodes);
     check birMod.finish();
     return [llMod, createTypeUsage(mod.usedSemTypes)];
 }
 
-function buildFunctionBodies(llvm:Builder builder, bir:Module birMod, Module mod, ModuleDI? di, DISubprogram[] diFuncs,
-                             llvm:FunctionDefn[] llFuncs, bir:FunctionDefn[] defns, bir:FunctionCode[] codes) returns BuildError? {
-    foreach int i in 0 ..< defns.length() {
-        bir:FunctionDefn defn = defns[i];
-        bir:FunctionCode code = codes[i];
-        check bir:verifyFunctionCode(birMod, defn, code);
-        DISubprogram? diFunc = di == () ? () : diFuncs[i];
-        Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code);
-        buildPrologue(builder, scaffold, defn.position);
-        check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
-    }
+function buildFunction(llvm:Builder builder, bir:Module birMod, Module mod, ModuleDI? di, DISubprogram diFunc,
+                       llvm:FunctionDefn llFunc, bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+    check bir:verifyFunctionCode(birMod, defn, code);
+    Scaffold scaffold = new(mod, llFunc, diFunc, builder, defn, code);
+    buildPrologue(builder, scaffold, defn.position);
+    check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
 }
 
 function addLambdas(Module mod, llvm:FunctionDefn[] llLambdas, DISubprogram[] diLambdas,

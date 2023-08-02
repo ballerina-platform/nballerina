@@ -30,23 +30,14 @@ type FuncSerializeContext record {|
 
 public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Semantic|err:Unimplemented {
     SerializeContext sc = { tc };
-    bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
+    bir:FunctionDefn[] functionDefns = mod.getFunctions();
     Function[] funcSexprs = [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         bir:File file = mod.getPartFile(defn.partIndex);
+        // FIXME: also add all the annonymous function generated here as well
         funcSexprs.push(fromFunction(sc, defn, code, file));
-    }
-    bir:FunctionDefn[] lambdas = mod.getLambdas();
-    int i = 0;
-    while i < lambdas.length() {
-        bir:FunctionDefn defn = lambdas[i];
-        bir:FunctionCode code = check mod.generateLambdaCode(i);
-        bir:File file = mod.getPartFile(defn.partIndex);
-        funcSexprs.push(fromFunction(sc, defn, code, file));
-        lambdas = mod.getLambdas();
-        i += 1;
     }
     [sexpr:String, ts:Atom][] atoms = from var [s, atom] in sc.atoms.entries() select [{ s }, atom];
     ModuleDecls[] decl = from var { id, funcs } in sc.decls

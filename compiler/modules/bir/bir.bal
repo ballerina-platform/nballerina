@@ -11,10 +11,8 @@ public type Module object {
     // A SemType of a potentially recursive type uses integers to refer to definitions
     // which are in arrays in this.
     public function getTypeContext() returns t:Context;
-    public function getFunctionDefns() returns readonly & FunctionDefn[];
-    public function getLambdas() returns readonly & FunctionDefn[];
+    public function getFunctions() returns FunctionDefn[];
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
-    public function generateLambdaCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
     public function symbolToString(int partIndex, Symbol sym) returns string;
     // Get the File for a give part index
     public function getPartFile(int partIndex) returns File;
@@ -85,6 +83,8 @@ public type FunctionCode record {|
     Register[] registers = [];
     # Single-entry single-exit regions
     Region[] regions = [];
+    # TODO: add comment
+    [int, FunctionCode][] childAnnonFunctions = [];
 |};
 
 # This is sufficient until we support named parameters and default values.

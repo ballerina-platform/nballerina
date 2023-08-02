@@ -25,8 +25,9 @@ class Module {
     final s:SourceFile[] files;
     final ModuleSymbols syms;
     final s:FunctionDefn[] functionDefnSource = [];
-    final LambdaData[] lambdaSource = [];
-    final readonly & bir:FunctionDefn[] functionDefns;
+    final LambdaData[] lambdaBuffer = [];
+    final bir:FunctionDefn[] functionDefns;
+    int nextLambdaIndex = 0;
 
     function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
         self.id = id;
@@ -45,7 +46,7 @@ class Module {
                 });
             }
         }
-        self.functionDefns = functionDefns.cloneReadOnly();
+        self.functionDefns = functionDefns;
     }
 
     public function getId() returns bir:ModuleId => self.id;
@@ -53,27 +54,37 @@ class Module {
     public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        return codeGenFunction(self, self.functionDefnSource[i], self.functionDefnSource[i], self.functionDefns[i].decl);
+        bir:FunctionCode functionCode = check codeGenFunction(self, self.functionDefnSource[i], self.functionDefnSource[i], self.functionDefns[i].decl);
+        while self.lambdaBuffer.length() > 0 {
+            LambdaData data = self.lambdaBuffer.pop();
+            int index = self.functionDefns.length();
+            self.functionDefns.push(data.birDefn);
+            var { lambda, defn, bindings } = data;
+            bir:FunctionCode code = check codeGenFunction(self, defn, lambda, <t:FunctionSignature>lambda.signature, bindings);
+            functionCode.childAnnonFunctions.push([index, code]);
+        }
+        return functionCode;
     }
 
-    public function generateLambdaCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        // NOTE: may be we can do sepecial codegen for closures here,
-        // - As the first parameter take the closure struct
-        // - Then in the body copy the fields from the struct to stack
-        var { lambda, defn, bindings } = self.lambdaSource[i];
-        return codeGenFunction(self, defn, lambda, <t:FunctionSignature>lambda.signature, bindings);
-    }
+    // public function generateLambdaCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
+    //     // NOTE: may be we can do sepecial codegen for closures here,
+    //     // - As the first parameter take the closure struct
+    //     // - Then in the body copy the fields from the struct to stack
+    //     var { lambda, defn, bindings } = self.lambdaSource[i];
+    //     return codeGenFunction(self, defn, lambda, <t:FunctionSignature>lambda.signature, bindings);
+    // }
 
     public function addLambda(s:Lambda lambda, s:FunctionDefn defn, BindingChain? bindings) returns bir:FunctionRef {
         // NOTE: we need to do caching in order to make bir roundtrip work
         // TODO: better to keep a table and do a lookup?
-        foreach var { lambda: l, birDefn } in self.lambdaSource {
+        foreach var { lambda: l, birDefn } in self.lambdaBuffer {
             if l === lambda {
                 var { decl: signature, symbol } = birDefn;
                 return { symbol, signature, erasedSignature: signature };
             }
         }
-        string identifier = string `lambda_${self.lambdaSource.length()}`;
+        string identifier = string `lambda_${self.nextLambdaIndex}`;
+        self.nextLambdaIndex += 1;
         bir:InternalSymbol symbol = { identifier, isPublic: false };
         t:FunctionSignature signature = <t:FunctionSignature>lambda.signature;
         bir:FunctionRef ref = { symbol, signature, erasedSignature: signature };
@@ -83,7 +94,7 @@ class Module {
             position: lambda.startPos,
             partIndex: defn.part.partIndex
         };
-        self.lambdaSource.push({ lambda, defn, birDefn, bindings });
+        self.lambdaBuffer.push({ lambda, defn, birDefn, bindings });
         return ref;
     }
    
@@ -98,12 +109,8 @@ class Module {
         }
     }
 
-    public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {
+    public function getFunctions() returns bir:FunctionDefn[] {
         return self.functionDefns;
-    }
-
-    public function getLambdas() returns readonly & bir:FunctionDefn[] {
-        return from var { birDefn } in self.lambdaSource select birDefn;
     }
 
     public function getPartFile(int partIndex) returns bir:File {
