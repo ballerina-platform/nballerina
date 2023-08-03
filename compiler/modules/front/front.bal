@@ -14,8 +14,7 @@ public type ResolvedModule object {
 
 type LambdaData record {|
     s:Lambda lambda;
-    s:FunctionDefn defn;
-    bir:FunctionDefn birDefn;
+    bir:AnonFunction birFunc;
     BindingChain? bindings;
 |};
 
@@ -26,14 +25,14 @@ class Module {
     final ModuleSymbols syms;
     final s:FunctionDefn[] functionDefnSource = [];
     final LambdaData[] lambdaBuffer = [];
-    final bir:FunctionDefn[] functionDefns;
-    int nextLambdaIndex = 0;
+    final bir:Function[] functions;
+    final bir:Function[] parentStack = [];
 
     function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
         self.id = id;
         self.files = files;
         self.syms = syms;
-        final bir:FunctionDefn[] functionDefns = [];
+        final bir:Function[] functionDefns = [];
         foreach var defn in syms.defns {
             if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
@@ -46,7 +45,7 @@ class Module {
                 });
             }
         }
-        self.functionDefns = functionDefns;
+        self.functions = functionDefns;
     }
 
     public function getId() returns bir:ModuleId => self.id;
@@ -54,48 +53,76 @@ class Module {
     public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        bir:FunctionCode functionCode = check codeGenFunction(self, self.functionDefnSource[i], self.functionDefnSource[i], self.functionDefns[i].decl);
+        self.parentStack.push(self.functions[i]);
+        s:FunctionDefn defn = self.functionDefnSource[i];
+        bir:FunctionCode functionCode = check codeGenFunction(self, self.functionDefnSource[i], defn, self.functions[i].decl);
         while self.lambdaBuffer.length() > 0 {
             LambdaData data = self.lambdaBuffer.pop();
-            int index = self.functionDefns.length();
-            self.functionDefns.push(data.birDefn);
-            var { lambda, defn, bindings } = data;
-            bir:FunctionCode code = check codeGenFunction(self, defn, lambda, <t:FunctionSignature>lambda.signature, bindings);
-            functionCode.childAnnonFunctions.push([index, code]);
+            var { lambda, bindings, birFunc } = data;
+            self.parentStack.push(birFunc);
+            bir:FunctionCode code = check codeGenFunction(self, lambda, defn, <t:FunctionSignature>lambda.signature, bindings);
+            _ = self.parentStack.pop();
+            self.addFunctionCodeToParent(functionCode, code, birFunc);
         }
+        _ = self.parentStack.pop();
         return functionCode;
     }
 
-    // public function generateLambdaCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-    //     // NOTE: may be we can do sepecial codegen for closures here,
-    //     // - As the first parameter take the closure struct
-    //     // - Then in the body copy the fields from the struct to stack
-    //     var { lambda, defn, bindings } = self.lambdaSource[i];
-    //     return codeGenFunction(self, defn, lambda, <t:FunctionSignature>lambda.signature, bindings);
-    // }
-
-    public function addLambda(s:Lambda lambda, s:FunctionDefn defn, BindingChain? bindings) returns bir:FunctionRef {
-        // NOTE: we need to do caching in order to make bir roundtrip work
-        // TODO: better to keep a table and do a lookup?
-        foreach var { lambda: l, birDefn } in self.lambdaBuffer {
-            if l === lambda {
-                var { decl: signature, symbol } = birDefn;
-                return { symbol, signature, erasedSignature: signature };
+    private function addFunctionCodeToParent(bir:FunctionCode root, bir:FunctionCode code, bir:AnonFunction func) {
+        if func.parent is bir:FunctionDefn {
+            root.childAnnonFunctions.push([func.index, code]);
+        }
+        int[] ancestores = [];
+        bir:Function parent = func.parent;
+        while parent !is bir:FunctionDefn {
+            ancestores.push(parent.index);
+            parent = parent.parent;
+        }
+        int[] ancestorIndices = ancestores.reverse();
+        bir:FunctionCode parentCode = root;
+        foreach int i in 0 ..< ancestorIndices.length() {
+            int index = ancestorIndices[i];
+            foreach var [ancestorIndex, ancestorCode] in parentCode.childAnnonFunctions {
+                if ancestorIndex == index {
+                    parentCode = ancestorCode;
+                    break;
+                }
             }
         }
-        string identifier = string `lambda_${self.nextLambdaIndex}`;
-        self.nextLambdaIndex += 1;
-        bir:InternalSymbol symbol = { identifier, isPublic: false };
+        parentCode.childAnnonFunctions.push([func.index, code]);
+    }
+
+    private function topLevelParent(bir:Function func) returns bir:FunctionDefn {
+        if func is bir:FunctionDefn {
+            return func;
+        }
+        return self.topLevelParent(func.parent);
+    }
+
+    public function addLambda(s:Lambda lambda, BindingChain? bindings) returns [bir:FunctionRef, int] {
+        // NOTE: we need to do caching in order to make bir roundtrip work
+        // TODO: better to keep a table and do a lookup?
+        foreach var { lambda: l, birFunc } in self.lambdaBuffer {
+            if l === lambda {
+                var { decl: signature, index } = birFunc;
+                return [{ index, signature, erasedSignature: signature }, birFunc.index];
+            }
+        }
+        bir:Function parent = self.parentStack[self.parentStack.length() - 1];
         t:FunctionSignature signature = <t:FunctionSignature>lambda.signature;
-        bir:FunctionRef ref = { symbol, signature, erasedSignature: signature };
-        bir:FunctionDefn birDefn =  {
-            symbol,
+        int index = self.functions.length();
+        bir:AnonFunctionRef ref = { index, signature, erasedSignature: signature };
+        bir:FunctionDefn topLevelParent = self.topLevelParent(parent);
+        bir:AnonFunction birFunc =  {
+            index,
             decl: signature,
             position: lambda.startPos,
-            partIndex: defn.part.partIndex
+            partIndex: topLevelParent.partIndex,
+            parent
         };
-        self.lambdaBuffer.push({ lambda, defn, birDefn, bindings });
-        return ref;
+        self.functions.push(birFunc);
+        self.lambdaBuffer.push({ lambda, birFunc, bindings });
+        return [ref, index];
     }
    
     public function finish() returns err:Semantic? {
@@ -109,8 +136,8 @@ class Module {
         }
     }
 
-    public function getFunctions() returns bir:FunctionDefn[] {
-        return self.functionDefns;
+    public function getFunctions() returns bir:Function[] {
+        return self.functions;
     }
 
     public function getPartFile(int partIndex) returns bir:File {

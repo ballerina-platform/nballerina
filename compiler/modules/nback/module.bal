@@ -29,75 +29,53 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard")),
         llInitTypes: createInitTypes(llContext)
     };
-    bir:FunctionDefn[] functionDefns = birMod.getFunctions();
-    bir:FunctionCode[] functionCodes = from int i in 0 ..< functionDefns.length()
+    bir:Function[] functions = birMod.getFunctions();
+    bir:FunctionCode[] functionCodes = from int i in 0 ..< functions.length()
                                          select check birMod.generateFunctionCode(i);
-    foreach var defn in functionDefns {
+    foreach var defn in functions {
         llvm:FunctionType ty = buildFunctionSignature(defn.decl);
         llFuncTypes.push(ty);
-        bir:InternalSymbol symbol = defn.symbol;
-        string mangledName = mangleInternalSymbol(modId, symbol);
+        var [mangledName, identifier] = functionIdentifiers(modId, defn);
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
+        boolean isPublic = defn is bir:AnonFunction ? false : defn.symbol.isPublic;
         if di != () {
-            DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName);
+            DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName, identifier);
             diFuncs.push(diFunc);
             llFunc.setSubprogram(diFunc);
         }   
         if !(options.gcName == ()) {
             llFunc.setGC(options.gcName);
         }
-        if !symbol.isPublic {
+        if !isPublic {
             llFunc.setLinkage("internal");
         }
         llFuncs.push(llFunc);
-        llFuncMap[defn.symbol.identifier] = llFunc;
+        llFuncMap[identifier] = llFunc;
     }
     foreach int i in 0 ..< functionCodes.length() {
         bir:FunctionCode code = functionCodes[i];
-        check buildFunction(builder, birMod, mod, di, diFuncs[i], llFuncs[i], functionDefns[i], code);
-        foreach var [index, lambdaCode] in code.childAnnonFunctions {
-            check buildFunction(builder, birMod, mod, di, diFuncs[index], llFuncs[index], functionDefns[index], lambdaCode);
-        }
+        check buildFunction(builder, birMod, mod, diFuncs[i], llFuncs[i], functions[i], code);
     }
     check birMod.finish();
     return [llMod, createTypeUsage(mod.usedSemTypes)];
 }
 
-function buildFunction(llvm:Builder builder, bir:Module birMod, Module mod, ModuleDI? di, DISubprogram diFunc,
-                       llvm:FunctionDefn llFunc, bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
-    check bir:verifyFunctionCode(birMod, defn, code);
-    Scaffold scaffold = new(mod, llFunc, diFunc, builder, defn, code);
-    buildPrologue(builder, scaffold, defn.position);
-    check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
+function functionIdentifiers(bir:ModuleId modId, bir:Function func) returns [string, string] {
+    if func is bir:AnonFunction {
+        string mangledName = anonFunctionSymbol(func.index);
+        return [mangledName, mangledName];
+    }
+    string mangledName = mangleInternalSymbol(modId, func.symbol);
+    string identifier = func.symbol.identifier;
+    return [mangledName, identifier];
 }
 
-function addLambdas(Module mod, llvm:FunctionDefn[] llLambdas, DISubprogram[] diLambdas,
-                    bir:FunctionDefn[] lambdas, string? gcName) {
-    var { modId, llMod, di, partFiles, functionDefns } = mod;
-    foreach var defn in lambdas {
-        if functionDefns.hasKey(defn.symbol.identifier) {
-            continue;
-        }
-        llvm:FunctionType ty = buildFunctionSignature(defn.decl);
-        bir:InternalSymbol symbol = defn.symbol;
-        // TODO: properly mangle the names such that they don't collide wth the function names
-        string mangledName = mangleInternalSymbol(modId, symbol);
-        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
-        if di != () {
-            DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName);
-            diLambdas.push(diFunc);
-            llFunc.setSubprogram(diFunc);
-        }
-        if gcName != () {
-            llFunc.setGC(gcName);
-        }
-        if !symbol.isPublic {
-            llFunc.setLinkage("internal");
-        }
-        llLambdas.push(llFunc);
-        functionDefns[defn.symbol.identifier] = llFunc;
-    }
-    mod.functionDefns = functionDefns;
+function buildFunction(llvm:Builder builder, bir:Module birMod, Module mod, DISubprogram diFunc,
+                       llvm:FunctionDefn llFunc, bir:Function birFunc, bir:FunctionCode code) returns BuildError? {
+    check bir:verifyFunctionCode(birMod, birFunc, code);
+    Scaffold scaffold = new(mod, llFunc, diFunc, builder, birFunc, code);
+    buildPrologue(builder, scaffold, birFunc.position);
+    check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
 }
 
 function calculateBuildOrder(bir:BasicBlock[] blocks) returns bir:Label[] {
@@ -173,7 +151,7 @@ function createModuleDI(llvm:Module mod, bir:File[] partFiles, boolean debugFull
     return { builder, files, compileUnit, funcType, debugFull };
 }
 
-function createFunctionDI(ModuleDI mod, bir:File[] files, bir:FunctionDefn birFunc, llvm:FunctionDefn llFunc, string mangledName) returns DISubprogram {
+function createFunctionDI(ModuleDI mod, bir:File[] files, bir:Function birFunc, llvm:FunctionDefn llFunc, string mangledName, string identifier) returns DISubprogram {
     int partIndex = birFunc.partIndex;
     var [lineNo, _] = files[partIndex].lineColumn(birFunc.position); 
     DIFile file = mod.files[partIndex];
@@ -184,7 +162,7 @@ function createFunctionDI(ModuleDI mod, bir:File[] files, bir:FunctionDefn birFu
         linkageName: mangledName,
         lineNo,
         isDefinition: true,
-        name: birFunc.symbol.identifier,
+        name: identifier,
         scopeLine: lineNo // XXX should be line number of opening brace
     });
 }

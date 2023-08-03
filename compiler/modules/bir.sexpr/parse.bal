@@ -464,7 +464,7 @@ function toOperand(FuncParseContext pc, Operand operand) returns bir:Operand {
             bir:Symbol symbol = symbolFromSexpr(<FunctionRef>symbolSexpr);
             t:FunctionSignature signature = lookupSignature(pc, symbol);
             t:SemType semType =  t:functionSemType(pc.tc, signature);
-            return <bir:FunctionConstOperand>{ value: { symbol, signature, erasedSignature: signature }, semType };
+            return <bir:NamedFunctionConstOperand>{ value: { symbol, signature, erasedSignature: signature }, semType };
         }
         ["float", var f] => {
             return toConstOperand(pc, checkpanic float:fromString((<sexpr:String>f).s)); // JBUG: cast

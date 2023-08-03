@@ -30,10 +30,11 @@ type FuncSerializeContext record {|
 
 public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Semantic|err:Unimplemented {
     SerializeContext sc = { tc };
-    bir:FunctionDefn[] functionDefns = mod.getFunctions();
+    bir:Function[] functionDefns = mod.getFunctions();
     Function[] funcSexprs = [];
     foreach int i in 0 ..< functionDefns.length() {
-        bir:FunctionDefn defn = functionDefns[i];
+        // FIXME:
+        bir:FunctionDefn defn = <bir:FunctionDefn>functionDefns[i];
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         bir:File file = mod.getPartFile(defn.partIndex);
         // FIXME: also add all the annonymous function generated here as well
@@ -97,6 +98,9 @@ function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File 
 }
 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
+    if insn is bir:FunctionConstructInsn {
+        panic error("TODO");
+    }
     if insn is bir:CallIndirectInsn {
         (readonly & Operand)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
         return callInsn(insn.restParamIsList, fromRegister(sc, insn.operands[0]), fromRegister(sc, insn.result), args);
@@ -199,6 +203,9 @@ function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & 
 
 // Convert FunctionRef to a sexpr, accumulates external function signatures to sc.
 function fromFunctionRefAccum(FuncSerializeContext sc, bir:FunctionRef funcRef) returns FunctionRef {
+    if funcRef is bir:AnonFunctionRef {
+        panic error("lambda not implemented");
+    }
     bir:Symbol symbol = funcRef.symbol;
     string identifier = symbol.identifier;
     if symbol is bir:ExternalSymbol {

@@ -316,7 +316,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         var { lambda } => {
             check cx.notInConst(expr);
-            return codeGenLambda(cx, bb, lambda);
+            return codeGenLambda(cx, bb, lambda, expr.startPos);
         }
         // Member access E[i]
         var { container, index, opPos: pos } => {
@@ -1535,15 +1535,16 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
                        func.signature.returnType, args, false, expr.namePos);
 }
 
-function codeGenLambda(ExprContext cx, bir:BasicBlock bb, s:Lambda lambda) returns CodeGenError|ExprEffect {
-    StmtContext stmtContext = check cx.stmtContext(); // For the time being we don't allow lambdas as constants so this is fine
-    s:FunctionDefn funcDefn = stmtContext.functionDefn;
+function codeGenLambda(ExprContext cx, bir:BasicBlock curBlock, s:Lambda lambda, bir:Position pos) returns CodeGenError|ExprEffect {
+    StmtContext stmtContext = check cx.stmtContext();
     // When it comes to errors we still use the name of the enclosing function
-    t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, funcDefn, lambda);
+    t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, stmtContext.moduleLevelDefn, lambda);
     lambda.signature = signature;
-    bir:FunctionRef ref = stmtContext.mod.addLambda(lambda, funcDefn, cx.bindings);
-    bir:Operand result = functionValOperand(cx.mod.tc, ref);
-    return { result, block: bb, binding: () };
+    var [ref, index] = stmtContext.mod.addLambda(lambda, cx.bindings);
+    bir:FunctionConstOperand result = functionValOperand(cx.mod.tc, ref);
+    bir:FunctionConstructInsn insn = { pos, operand: index  };
+    curBlock.insns.push(insn);
+    return { result, block: curBlock };
 }
 
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func, 

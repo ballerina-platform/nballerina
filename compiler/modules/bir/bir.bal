@@ -11,7 +11,7 @@ public type Module object {
     // A SemType of a potentially recursive type uses integers to refer to definitions
     // which are in arrays in this.
     public function getTypeContext() returns t:Context;
-    public function getFunctions() returns FunctionDefn[];
+    public function getFunctions() returns Function[];
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
     public function symbolToString(int partIndex, Symbol sym) returns string;
     // Get the File for a give part index
@@ -42,17 +42,30 @@ public type Label int;
 # A RegionIndex is an index of a region in the regions array.
 public type RegionIndex int;
 
-# The definition of a function.
-public type FunctionDefn readonly & record {|
-    *ModuleDefn;
-    # Name within the module
-    InternalSymbol symbol;
-    FunctionDecl decl;
+public type Function FunctionDefn | AnonFunction;
 
+public type FunctionBase record {|
+    FunctionDecl decl;
     # Index of source part in which the definition occurs
     int partIndex;
     # The position of the definition
     Position position;
+    readonly...;
+|};
+
+# The definition of a function.
+public type FunctionDefn readonly & record {|
+    *ModuleDefn;
+    *FunctionBase;
+    # Name within the module
+    InternalSymbol symbol;
+|};
+
+public type AnonFunction readonly & record {|
+    *FunctionBase;
+    # The index of the function in the module
+    int index;
+    Function parent;
 |};
 
 public type InternalSymbol readonly & record {|
@@ -62,8 +75,16 @@ public type InternalSymbol readonly & record {|
 
 public type Symbol InternalSymbol|ExternalSymbol;
 
-public type FunctionRef readonly & record {|
+public type FunctionRef NamedFunctionRef | AnonFunctionRef;
+
+public type NamedFunctionRef readonly & record {|
     Symbol symbol;
+    t:FunctionSignature erasedSignature;
+    t:FunctionSignature signature;
+|};
+
+public type AnonFunctionRef readonly & record {|
+    int index;
     t:FunctionSignature erasedSignature;
     t:FunctionSignature signature;
 |};
@@ -83,7 +104,7 @@ public type FunctionCode record {|
     Register[] registers = [];
     # Single-entry single-exit regions
     Region[] regions = [];
-    # TODO: add comment
+    # TODO:index in bir:Module functions 
     [int, FunctionCode][] childAnnonFunctions = [];
 |};
 
@@ -299,6 +320,7 @@ public enum InsnName {
     INSN_ABNORMAL_RET,
     INSN_CALL_DIRECT,
     INSN_CALL_INDIRECT,
+    INSN_FUNCTION_CONSTRUCT,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -335,7 +357,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn|FunctionConstructInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -383,9 +405,16 @@ public type StringConstOperand readonly & record {|
     string value;
 |};
 
-public type FunctionConstOperand readonly & record {|
+public type FunctionConstOperand NamedFunctionConstOperand | AnonFunctionConstOperand;
+
+public type NamedFunctionConstOperand readonly & record {|
     t:SemType semType;
     FunctionRef value;
+|};
+
+public type AnonFunctionConstOperand readonly & record {|
+    t:SemType semType;
+    AnonFunctionRef value;
 |};
 
 public type IntOperand IntConstOperand|Register;
@@ -663,6 +692,15 @@ public type CallIndirectInsn readonly & record {|
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
     [Register, Operand...] operands;
     boolean restParamIsList;
+|};
+
+// FIXME: I am not sure if this instruction should have a result? (reference to the function created)?
+# TODO: document
+public type FunctionConstructInsn readonly & record {|
+    *InsnBase; 
+    INSN_FUNCTION_CONSTRUCT name = INSN_FUNCTION_CONSTRUCT;
+    // Index in the bir:Module functions
+    int operand; // TODO: this needs a proper operand (also fix verify.bal)
 |};
 
 # Assign a value to a register.

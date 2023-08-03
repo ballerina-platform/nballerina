@@ -137,7 +137,7 @@ type UsedSemType record {|
 
 class Scaffold {
     *Context;
-    private final Module mod;
+    final Module mod;
     private final bir:File file;
     private final llvm:FunctionDefn llFunc;
 
@@ -155,9 +155,11 @@ class Scaffold {
     private DIScaffold? diScaffold;
     final t:SemType returnType;
     private final BlockNarrowRegBuilder[] narrowRegBuilders = [];
+    final bir:FunctionCode code;
 
-    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
+    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:Function defn, bir:FunctionCode code) {
         self.mod = mod;
+        self.code = code;
         self.file = mod.partFiles[defn.partIndex];
         self.llFunc = llFunc;
         DIScaffold? diScaffold;
@@ -218,8 +220,13 @@ class Scaffold {
     function getFunctionDefn(string name) returns llvm:FunctionDefn => self.mod.functionDefns.get(name);
 
     function getModule() returns llvm:Module => self.mod.llMod;
+    function getBirModule() returns bir:Module => self.mod.bir;
 
     function stackGuard() returns llvm:PointerValue => self.mod.stackGuard;
+
+    function innerScaffold(llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:Function defn, bir:FunctionCode code) returns Scaffold {
+        return new(self.mod, llFunc, diFunc, builder, defn, code);
+    }
 
     function getImportedFunction(bir:ExternalSymbol symbol) returns llvm:FunctionDecl? {
         ImportedFunction? fn = self.mod.importedFunctions[symbol];

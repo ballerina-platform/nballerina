@@ -54,6 +54,31 @@ type IndirectFunctionValue record {|
     llvm:PointerValue uniformFuncPtr;
 |};
 
+function buildFunctionConstruct(llvm:Builder builder, Scaffold scaffold, bir:FunctionConstructInsn insn) returns BuildError? {
+    int index = insn.operand;
+    bir:Module birMod = scaffold.getBirModule();
+    bir:AnonFunction birFunc = <bir:AnonFunction>birMod.getFunctions()[index];
+    bir:FunctionCode? code = ();
+    foreach var [childIndex, childCode] in scaffold.code.childAnnonFunctions {
+        if childIndex == index {
+            code = childCode;
+            break;
+        } 
+    }
+    if code == () {
+        // TODO: better error
+        panic error("failed to find code");
+    }
+    // NOTE: this is to give us a place to point the builder, after building the inner function
+    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+    builder.br(continueBlock);
+
+    string name = anonFunctionSymbol(birFunc.index);
+    llvm:FunctionDefn llFunc = scaffold.getFunctionDefn(name);
+    check buildFunction(builder, birMod, scaffold.mod, <DISubprogram>llFunc.getSubProgram(), llFunc, birFunc, code);
+    builder.positionAtEnd(continueBlock);
+}
+
 function buildCallDirect(llvm:Builder builder, Scaffold scaffold, bir:CallDirectInsn insn) returns BuildError? {
     var { func, signature, erasedSignature } = check buildDirectFunctionValue(scaffold, insn.operands[0]);
     return buildCallExact(builder, scaffold, func, erasedSignature, signature, 
@@ -123,9 +148,19 @@ function buildIndirectFunctionValue(llvm:Builder builder, Scaffold scaffold, bir
 }
 
 function buildDirectFunctionValue(Scaffold scaffold, bir:FunctionConstOperand operand) returns DirectFunctionValue|BuildError {
-    var { symbol: funcSymbol, erasedSignature, signature } = operand.value;
-    llvm:Function func = funcSymbol is bir:InternalSymbol ? scaffold.getFunctionDefn(funcSymbol.identifier):
-                                                            check buildFunctionDecl(scaffold, funcSymbol, erasedSignature);
+    bir:FunctionRef functionRef = operand.value;
+    t:FunctionSignature erasedSignature = functionRef.erasedSignature;
+    t:FunctionSignature signature = functionRef.signature;
+    llvm:Function func;
+    if functionRef is bir:AnonFunctionRef {
+        func = scaffold.getFunctionDefn(anonFunctionSymbol(functionRef.index));
+    }
+    else {
+        bir:Symbol funcSymbol = functionRef.symbol;
+        func = funcSymbol is bir:InternalSymbol ? scaffold.getFunctionDefn(funcSymbol.identifier):
+                                                  check buildFunctionDecl(scaffold, funcSymbol, erasedSignature);
+
+    }
     return { signature, erasedSignature, func };
 }
 

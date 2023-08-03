@@ -61,6 +61,10 @@ function mangleInternalSymbol(bir:ModuleId modId, bir:InternalSymbol symbol) ret
     return "_B_" + symbol.identifier;
 }
 
+function anonFunctionSymbol(int n) returns string {
+    return ".anonFn" + n.toString();
+}
+
 function stringDefnSymbol(int n) returns string {
     return ".str" + n.toString();
 }

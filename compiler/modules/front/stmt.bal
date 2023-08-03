@@ -42,22 +42,22 @@ class StmtContext {
     final Module mod;
     final ModuleSymbols syms;
     final s:SourceFile file;
-    final s:FunctionDefn functionDefn;
     final s:Function func;
     final bir:FunctionCode code;
     final t:SemType returnType;
+    final s:FunctionDefn moduleLevelDefn;
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
 
-    function init(Module mod, ModuleSymbols syms, s:FunctionDefn functionDefn, s:Function func, t:SemType returnType) {
+    function init(Module mod, ModuleSymbols syms, s:Function func, s:FunctionDefn moduleLevelDefn, t:SemType returnType) {
         self.mod = mod;
         self.syms = syms;
-        self.functionDefn = functionDefn;
         self.func = func;
-        self.file = functionDefn.part.file;
+        self.file = moduleLevelDefn.part.file;
         self.code = {};
         self.returnType = returnType;
+        self.moduleLevelDefn = moduleLevelDefn;
         self.scopeStack.push({ scope: (), startPos: func.startPos, endPos: func.endPos });
     }
 
@@ -136,7 +136,7 @@ class StmtContext {
     }
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
+        return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.moduleLevelDefn.name);
     }
 
     private function location(Position|Range pos) returns d:Location {
@@ -204,7 +204,7 @@ class StmtContext {
     }
 
     function exprContext(BindingChain? bindings) returns ExprContext {
-        return new ExprContext(self.syms, self.functionDefn, self.code, bindings, self);
+        return new ExprContext(self.syms, self.moduleLevelDefn, self.code, bindings, self);
     }
 
     function codeGenExpr(bir:BasicBlock block, BindingChain? bindings, t:SemType? expectedType, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -224,13 +224,13 @@ class StmtContext {
     }
 
     function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
-        return resolveSubsetTypeDesc(self.syms, self.functionDefn, td);
+        return resolveSubsetTypeDesc(self.syms, self.moduleLevelDefn, td);
     }
 
 }
 
-function codeGenFunction(Module mod, s:FunctionDefn defn, s:Function func, t:FunctionSignature signature, BindingChain? closureBindings = ()) returns bir:FunctionCode|CodeGenError {
-    StmtContext cx = new(mod, mod.syms, defn, func, signature.returnType);
+function codeGenFunction(Module mod, s:Function func, s:FunctionDefn moduleLevelDefn, t:FunctionSignature signature, BindingChain? closureBindings = ()) returns bir:FunctionCode|CodeGenError {
+    StmtContext cx = new(mod, mod.syms, func, moduleLevelDefn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     BindingChain bindings = { head: "func", prev: closureBindings };
     foreach int i in 0 ..< func.params.length() {
@@ -707,7 +707,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
 
 function resolveConstMatchPattern(StmtContext cx, BindingChain? bindings, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|ResolveTypeError {
     if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(cx, expr.name, bindings, expr.qNamePos) {
-        var [_, value] = check resolveConstExprForType(cx.syms, cx.functionDefn, expr, expectedType, "pattern will not be matched");
+        var [_, value] = check resolveConstExprForType(cx.syms, cx.moduleLevelDefn, expr, expectedType, "pattern will not be matched");
         return value;
     }
     return cx.semanticErr(`match pattern is not constant`, s:range(expr));
