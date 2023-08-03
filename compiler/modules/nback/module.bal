@@ -55,8 +55,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     }
     foreach int i in 0 ..< functions.length() {
         bir:FunctionCode code = i < functionCodes.length() ? functionCodes[i] : check birMod.generateFunctionCode(i);
-        // TODO: we probably don't need this arrays
-        check buildFunction(builder, birMod, mod, diFuncs[i], llFuncs[i], functions[i], code);
+        check buildFunction(builder, birMod, mod, di != () ? diFuncs[i] : (), llFuncs[i], functions[i], code);
     }
     check birMod.finish();
     return [llMod, createTypeUsage(mod.usedSemTypes)];
@@ -72,7 +71,7 @@ function functionIdentifiers(bir:ModuleId modId, bir:Function func) returns [str
     return [mangledName, identifier];
 }
 
-function buildFunction(llvm:Builder builder, bir:Module birMod, Module mod, DISubprogram diFunc,
+function buildFunction(llvm:Builder builder, bir:Module birMod, Module mod, DISubprogram? diFunc,
                        llvm:FunctionDefn llFunc, bir:Function birFunc, bir:FunctionCode code) returns BuildError? {
     check bir:verifyFunctionCode(birMod, birFunc, code);
     Scaffold scaffold = new(mod, llFunc, diFunc, builder, birFunc, code);
