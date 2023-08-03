@@ -347,20 +347,12 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
 }
 
 function buildFunctionConstValue(Scaffold scaffold, bir:FunctionRef ref) returns llvm:Value|BuildError {
-    if ref is bir:AnonFunctionRef {
-        string identifier = anonFunctionSymbol(ref.index);
-        // FIXME:
-        return scaffold.getFunctionValue(scaffold.getFunctionDefn(identifier), ref.signature, { identifier, isPublic: false });
+    if ref is bir:InternalFunctionRef {
+        return scaffold.getLocalFunctionValue(scaffold.getFunctionDefn(ref.index), ref.signature, ref.index);
     }
     var { symbol, signature } = ref;
-    llvm:Function func;
-    if symbol is bir:InternalSymbol {
-        func = scaffold.getFunctionDefn(symbol.identifier);
-    }
-    else {
-        func = check buildFunctionDecl(scaffold, symbol, signature);
-    }
-    return scaffold.getFunctionValue(func, signature, symbol);
+    llvm:Function func = check buildFunctionDecl(scaffold, symbol, signature);
+    return scaffold.getExternalFunctionValue(func, signature, symbol);
 }
 
 function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:ConstPointerValue|BuildError {   

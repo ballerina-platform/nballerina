@@ -127,14 +127,12 @@ function buildDirectFunctionValue(Scaffold scaffold, bir:FunctionConstOperand op
     t:FunctionSignature erasedSignature = functionRef.erasedSignature;
     t:FunctionSignature signature = functionRef.signature;
     llvm:Function func;
-    if functionRef is bir:AnonFunctionRef {
-        func = scaffold.getFunctionDefn(anonFunctionSymbol(functionRef.index));
+    if functionRef is bir:InternalFunctionRef {
+        func = scaffold.getFunctionDefn(functionRef.index);
     }
     else {
-        bir:Symbol funcSymbol = functionRef.symbol;
-        func = funcSymbol is bir:InternalSymbol ? scaffold.getFunctionDefn(funcSymbol.identifier):
-                                                  check buildFunctionDecl(scaffold, funcSymbol, erasedSignature);
-
+        bir:ExternalSymbol funcSymbol = functionRef.symbol;
+        func = check buildFunctionDecl(scaffold, funcSymbol, erasedSignature);
     }
     return { signature, erasedSignature, func };
 }

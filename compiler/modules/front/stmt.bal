@@ -1165,9 +1165,17 @@ function lookupLocalVarRef(FunctionContext cx, ModuleSymbols mod, string name, B
                 // Signature will not be () if we are in a function
                 return cx.semanticErr("variable reference in a const cannot refer to a function", pos);
             }
-            boolean isPublic = defn.vis == "public";
-            bir:InternalSymbol symbol = { identifier: name, isPublic };
-            return { symbol, signature, erasedSignature: signature };
+            // TODO: we need a more efficient way to do this
+            int index = 0;
+            foreach var d in mod.defns {
+                if d.name == name {
+                    break;
+                }
+                if d is s:FunctionDefn {
+                    index += 1;
+                }
+            }
+            return { index, signature, erasedSignature: signature };
         }
         else {
             s:TypeDefn _ = defn;

@@ -200,7 +200,7 @@ function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & 
 
 // Convert FunctionRef to a sexpr, accumulates external function signatures to sc.
 function fromFunctionRefAccum(FuncSerializeContext sc, bir:FunctionRef funcRef) returns FunctionRef {
-    if funcRef is bir:AnonFunctionRef {
+    if funcRef is bir:InternalFunctionRef {
         panic error("lambda not implemented");
     }
     bir:Symbol symbol = funcRef.symbol;

@@ -50,6 +50,8 @@ public type FunctionBase record {|
     int partIndex;
     # The position of the definition
     Position position;
+    # The index of the function in the module
+    int index;
     readonly...;
 |};
 
@@ -57,14 +59,10 @@ public type FunctionBase record {|
 public type FunctionDefn readonly & record {|
     *ModuleDefn;
     *FunctionBase;
-    # Name within the module
-    InternalSymbol symbol;
 |};
 
 public type AnonFunction readonly & record {|
     *FunctionBase;
-    # The index of the function in the module
-    int index;
     Function parent;
 |};
 
@@ -75,15 +73,15 @@ public type InternalSymbol readonly & record {|
 
 public type Symbol InternalSymbol|ExternalSymbol;
 
-public type FunctionRef NamedFunctionRef | AnonFunctionRef;
+public type FunctionRef ExternalFunctionRef | InternalFunctionRef;
 
-public type NamedFunctionRef readonly & record {|
-    Symbol symbol;
+public type ExternalFunctionRef readonly & record {|
+    ExternalSymbol symbol;
     t:FunctionSignature erasedSignature;
     t:FunctionSignature signature;
 |};
 
-public type AnonFunctionRef readonly & record {|
+public type InternalFunctionRef readonly & record {|
     int index;
     t:FunctionSignature erasedSignature;
     t:FunctionSignature signature;
@@ -403,16 +401,9 @@ public type StringConstOperand readonly & record {|
     string value;
 |};
 
-public type FunctionConstOperand NamedFunctionConstOperand | AnonFunctionConstOperand;
-
-public type NamedFunctionConstOperand readonly & record {|
+public type FunctionConstOperand readonly & record {|
     t:SemType semType;
     FunctionRef value;
-|};
-
-public type AnonFunctionConstOperand readonly & record {|
-    t:SemType semType;
-    AnonFunctionRef value;
 |};
 
 public type IntOperand IntConstOperand|Register;

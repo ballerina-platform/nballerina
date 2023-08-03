@@ -38,6 +38,7 @@ class Module {
             if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
                 functionDefns.push({
+                    index: functionDefns.length(),
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
                     decl: <t:FunctionSignature>defn.signature,
@@ -84,7 +85,7 @@ class Module {
         bir:Function parent = self.parentStack[self.parentStack.length() - 1];
         t:FunctionSignature signature = <t:FunctionSignature>lambda.signature;
         int index = self.functions.length();
-        bir:AnonFunctionRef ref = { index, signature, erasedSignature: signature };
+        bir:InternalFunctionRef ref = { index, signature, erasedSignature: signature };
         bir:FunctionDefn topLevelParent = self.topLevelParent(parent);
         bir:AnonFunction birFunc =  {
             index,

@@ -102,21 +102,21 @@ type StringDefn llvm:ConstPointerValue;
 type DecimalDefn llvm:ConstPointerValue;
 
 type FunctionValueDefn record {|
-    readonly bir:Symbol symbol;
+    readonly (bir:Symbol|int) key;
     llvm:ConstPointerValue value;
 |};
 
 type Module record {|
     llvm:Context llContext;
     llvm:Module llMod;
-    // LLVM functions in the module indexed by (unmangled) identifier within the module
-    map<llvm:FunctionDefn> functionDefns;
+    // LLVM functions in the module
+    llvm:FunctionDefn[] functionDefns;
      // List of all imported functions that have been added to the LLVM module
     ImportedFunctionTable importedFunctions = table [];
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
     map<DecimalDefn> decimalDefns = {};
-    table<FunctionValueDefn> key(symbol) functionValueDefns = table [];
+    table<FunctionValueDefn> key(key) functionValueDefns = table [];
     t:Context typeContext;
     bir:Module bir;
     bir:ModuleId modId;
@@ -217,7 +217,7 @@ class Scaffold {
 
     function getRetRepr() returns RetRepr => self.retRepr;
 
-    function getFunctionDefn(string name) returns llvm:FunctionDefn => self.mod.functionDefns.get(name);
+    function getFunctionDefn(int index) returns llvm:FunctionDefn => self.mod.functionDefns[index];
 
     function getModule() returns llvm:Module => self.mod.llMod;
     function getBirModule() returns bir:Module => self.mod.bir;
@@ -264,15 +264,23 @@ class Scaffold {
         return newDefn;
     }
 
-    function getFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:Symbol symbol) returns llvm:ConstPointerValue {
-        FunctionValueDefn? curDefn = self.mod.functionValueDefns[symbol];
+    function getLocalFunctionValue(llvm:Function func, t:FunctionSignature signature, int index) returns llvm:ConstPointerValue {
+        return self.getFunctionValue(func, signature, index);
+    }
+
+    function getExternalFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:Symbol symbol) returns llvm:ConstPointerValue {
+        return self.getFunctionValue(func, signature, symbol);
+    }
+
+    private function getFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:Symbol|int key) returns llvm:ConstPointerValue {
+        FunctionValueDefn? curDefn = self.mod.functionValueDefns[key];
         if curDefn != () {
             return curDefn.value;
         }
         llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func,
                                                             self.getConstructType(t:functionSemType(self.typeContext(), signature)),
                                                             signature, self.mod.functionValueDefns.length());
-        self.mod.functionValueDefns.add({value, symbol });
+        self.mod.functionValueDefns.add({value, key });
         return value;
     }
 

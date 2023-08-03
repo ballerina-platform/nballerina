@@ -136,6 +136,7 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
         t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
         internalFuncDecl[identifier.s] = signature;
         funcDefns.push({ symbol: { isPublic: visibility is PublicVisibility , identifier: identifier.s },
+                         index: funcDefns.length(),
                          decl: signature,
                          partIndex: vFilesByName.get(partIndex.s).partIndex(),
                          position: createPosition(line, col) });
@@ -411,8 +412,12 @@ type BirInsnBase readonly & record {|
 
 function toCallInsn(FuncParseContext pc, FunctionRef|RegisterName symbolSexpr, Operand[] argsSexpr,
                     boolean restParamIsList, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallDirectInsn|bir:CallIndirectInsn {
+    // FIXME:
     bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(symbolSexpr):
                                                                   lookupRegister(pc, symbolSexpr);
+    if symbol is bir:InternalSymbol {
+        panic error("unimplemented");
+    }
     readonly & bir:Operand[] args = from var arg in argsSexpr select toOperand(pc, arg);
     var result = toResultRegister(pc, resultSexpr);
     if symbol is bir:Register {
@@ -427,7 +432,7 @@ function toCallInsn(FuncParseContext pc, FunctionRef|RegisterName symbolSexpr, O
     else {
         signature = erasedSignature;
     }
-    bir:FunctionConstOperand func = { value: { symbol, signature, erasedSignature },
+    bir:FunctionConstOperand func = { value: functionRef(symbol, erasedSignature, signature),
                                       semType: t:functionSemType(pc.tc, signature) };
     return { operands: [func, ...args], pos: 0, result };
 }
@@ -462,6 +467,9 @@ function toOperand(FuncParseContext pc, Operand operand) returns bir:Operand {
         }
         ["function", var symbolSexpr] => {
             bir:Symbol symbol = symbolFromSexpr(<FunctionRef>symbolSexpr);
+            if symbol is bir:InternalSymbol {
+                panic error("unimplemented");
+            }
             t:FunctionSignature signature = lookupSignature(pc, symbol);
             t:SemType semType =  t:functionSemType(pc.tc, signature);
             return <bir:NamedFunctionConstOperand>{ value: { symbol, signature, erasedSignature: signature }, semType };

@@ -15,7 +15,6 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     llvm:FunctionDefn[] llFuncs = [];
     DISubprogram[] diFuncs = [];
     llvm:FunctionType[] llFuncTypes = [];
-    map<llvm:FunctionDefn> llFuncMap = {};
     llvm:Builder builder = llContext.createBuilder();
     Module mod = {
         bir: birMod,
@@ -25,7 +24,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         partFiles,
         di,
         typeContext: birMod.getTypeContext(),
-        functionDefns: llFuncMap,
+        functionDefns: llFuncs,
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard")),
         llInitTypes: createInitTypes(llContext)
     };
@@ -51,7 +50,6 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
             llFunc.setLinkage("internal");
         }
         llFuncs.push(llFunc);
-        llFuncMap[identifier] = llFunc;
     }
     foreach int i in 0 ..< functions.length() {
         bir:FunctionCode code = i < functionCodes.length() ? functionCodes[i] : check birMod.generateFunctionCode(i);
