@@ -32,14 +32,15 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     bir:Function[] functions = birMod.getFunctions();
     bir:FunctionCode[] functionCodes = from int i in 0 ..< functions.length()
                                          select check birMod.generateFunctionCode(i);
-    foreach var defn in functions {
-        llvm:FunctionType ty = buildFunctionSignature(defn.decl);
+    foreach int i in 0 ..< functions.length() {
+        bir:Function func = functions[i];
+        llvm:FunctionType ty = buildFunctionSignature(func.decl);
         llFuncTypes.push(ty);
-        var [mangledName, identifier] = functionIdentifiers(modId, defn);
+        var [mangledName, identifier] = functionIdentifiers(modId, func);
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
-        boolean isPublic = defn is bir:AnonFunction ? false : defn.symbol.isPublic;
+        boolean isPublic = func is bir:AnonFunction ? false : func.symbol.isPublic;
         if di != () {
-            DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName, identifier);
+            DISubprogram diFunc = createFunctionDI(di, partFiles, func, llFunc, mangledName, identifier);
             diFuncs.push(diFunc);
             llFunc.setSubprogram(diFunc);
         }   
@@ -52,8 +53,9 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         llFuncs.push(llFunc);
         llFuncMap[identifier] = llFunc;
     }
-    foreach int i in 0 ..< functionCodes.length() {
-        bir:FunctionCode code = functionCodes[i];
+    foreach int i in 0 ..< functions.length() {
+        bir:FunctionCode code = i < functionCodes.length() ? functionCodes[i] : check birMod.generateFunctionCode(i);
+        // TODO: we probably don't need this arrays
         check buildFunction(builder, birMod, mod, diFuncs[i], llFuncs[i], functions[i], code);
     }
     check birMod.finish();

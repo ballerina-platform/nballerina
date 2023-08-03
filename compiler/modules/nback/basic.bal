@@ -93,9 +93,6 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:CallIndirectInsn {
             check buildCallIndirect(builder, scaffold, insn);
         }
-        else if insn is bir:FunctionConstructInsn {
-            check buildFunctionConstruct(builder, scaffold, insn);
-        }
         else if insn is bir:ListConstructInsn {
             check buildListConstruct(builder, scaffold, insn);
         }

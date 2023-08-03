@@ -54,31 +54,6 @@ type IndirectFunctionValue record {|
     llvm:PointerValue uniformFuncPtr;
 |};
 
-function buildFunctionConstruct(llvm:Builder builder, Scaffold scaffold, bir:FunctionConstructInsn insn) returns BuildError? {
-    int index = insn.operand;
-    bir:Module birMod = scaffold.getBirModule();
-    bir:AnonFunction birFunc = <bir:AnonFunction>birMod.getFunctions()[index];
-    bir:FunctionCode? code = ();
-    foreach var [childIndex, childCode] in scaffold.code.childAnnonFunctions {
-        if childIndex == index {
-            code = childCode;
-            break;
-        } 
-    }
-    if code == () {
-        // TODO: better error
-        panic error("failed to find code");
-    }
-    // NOTE: this is to give us a place to point the builder, after building the inner function
-    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
-    builder.br(continueBlock);
-
-    string name = anonFunctionSymbol(birFunc.index);
-    llvm:FunctionDefn llFunc = scaffold.getFunctionDefn(name);
-    check buildFunction(builder, birMod, scaffold.mod, <DISubprogram>llFunc.getSubProgram(), llFunc, birFunc, code);
-    builder.positionAtEnd(continueBlock);
-}
-
 function buildCallDirect(llvm:Builder builder, Scaffold scaffold, bir:CallDirectInsn insn) returns BuildError? {
     var { func, signature, erasedSignature } = check buildDirectFunctionValue(scaffold, insn.operands[0]);
     return buildCallExact(builder, scaffold, func, erasedSignature, signature, 

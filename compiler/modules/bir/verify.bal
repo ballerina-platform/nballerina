@@ -227,10 +227,6 @@ function verifyRegFlow(VerifyCodeContext cx, Label current, RegFlow viaFlow, Pos
                 regs[result.number] = true;
             }
             var { operand } => {
-                // FIXME: remove this once we have decided on the proper operand type for FunctionConstruct
-                if operand is int {
-                    continue;
-                }
                 check verifyOperandInitialized(cx, operand, regs, insn.pos);
             }
             var { operands } | var { args: operands } => {

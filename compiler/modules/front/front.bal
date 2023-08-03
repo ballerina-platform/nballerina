@@ -27,6 +27,7 @@ class Module {
     final LambdaData[] lambdaBuffer = [];
     final bir:Function[] functions;
     final bir:Function[] parentStack = [];
+    final bir:FunctionCode?[] functionCodes = [];
 
     function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
         self.id = id;
@@ -53,6 +54,10 @@ class Module {
     public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
+        bir:FunctionCode? memo = i < self.functionCodes.length() ? self.functionCodes[i] : ();
+        if memo != () {
+            return memo;
+        }
         self.parentStack.push(self.functions[i]);
         s:FunctionDefn defn = self.functionDefnSource[i];
         bir:FunctionCode functionCode = check codeGenFunction(self, self.functionDefnSource[i], defn, self.functions[i].decl);
@@ -62,34 +67,11 @@ class Module {
             self.parentStack.push(birFunc);
             bir:FunctionCode code = check codeGenFunction(self, lambda, defn, <t:FunctionSignature>lambda.signature, bindings);
             _ = self.parentStack.pop();
-            self.addFunctionCodeToParent(functionCode, code, birFunc);
+            self.functionCodes[birFunc.index] = code;
         }
         _ = self.parentStack.pop();
+        self.functionCodes[i] = functionCode;
         return functionCode;
-    }
-
-    private function addFunctionCodeToParent(bir:FunctionCode root, bir:FunctionCode code, bir:AnonFunction func) {
-        if func.parent is bir:FunctionDefn {
-            root.childAnnonFunctions.push([func.index, code]);
-        }
-        int[] ancestores = [];
-        bir:Function parent = func.parent;
-        while parent !is bir:FunctionDefn {
-            ancestores.push(parent.index);
-            parent = parent.parent;
-        }
-        int[] ancestorIndices = ancestores.reverse();
-        bir:FunctionCode parentCode = root;
-        foreach int i in 0 ..< ancestorIndices.length() {
-            int index = ancestorIndices[i];
-            foreach var [ancestorIndex, ancestorCode] in parentCode.childAnnonFunctions {
-                if ancestorIndex == index {
-                    parentCode = ancestorCode;
-                    break;
-                }
-            }
-        }
-        parentCode.childAnnonFunctions.push([func.index, code]);
     }
 
     private function topLevelParent(bir:Function func) returns bir:FunctionDefn {

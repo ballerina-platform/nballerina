@@ -104,8 +104,6 @@ public type FunctionCode record {|
     Register[] registers = [];
     # Single-entry single-exit regions
     Region[] regions = [];
-    # TODO:index in bir:Module functions 
-    [int, FunctionCode][] childAnnonFunctions = [];
 |};
 
 # This is sufficient until we support named parameters and default values.
@@ -357,7 +355,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn|FunctionConstructInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 

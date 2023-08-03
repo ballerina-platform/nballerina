@@ -1540,10 +1540,8 @@ function codeGenLambda(ExprContext cx, bir:BasicBlock curBlock, s:Lambda lambda,
     // When it comes to errors we still use the name of the enclosing function
     t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, stmtContext.moduleLevelDefn, lambda);
     lambda.signature = signature;
-    var [ref, index] = stmtContext.mod.addLambda(lambda, cx.bindings);
+    var [ref, _] = stmtContext.mod.addLambda(lambda, cx.bindings);
     bir:FunctionConstOperand result = functionValOperand(cx.mod.tc, ref);
-    bir:FunctionConstructInsn insn = { pos, operand: index  };
-    curBlock.insns.push(insn);
     return { result, block: curBlock };
 }
 

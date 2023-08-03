@@ -98,9 +98,6 @@ function fromBasicBlock(FuncSerializeContext sc, bir:BasicBlock block, bir:File 
 }
 
 function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns Insn {
-    if insn is bir:FunctionConstructInsn {
-        panic error("TODO");
-    }
     if insn is bir:CallIndirectInsn {
         (readonly & Operand)[] args = from var arg in insn.operands.slice(1) select fromOperand(sc, arg);
         return callInsn(insn.restParamIsList, fromRegister(sc, insn.operands[0]), fromRegister(sc, insn.result), args);
