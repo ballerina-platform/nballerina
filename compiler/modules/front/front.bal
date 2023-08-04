@@ -67,13 +67,6 @@ class Module {
         return functionCode;
     }
 
-    private function topLevelParent(bir:Function func) returns bir:FunctionDefn {
-        if func is bir:FunctionDefn {
-            return func;
-        }
-        return self.topLevelParent(func.parent);
-    }
-
     public function addLambda(s:Lambda lambda, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:FunctionRef, int]|CodeGenError {
         // NOTE: we need to do caching in order to make bir roundtrip work
         foreach var { lambda: l, birFunc } in self.lambdaMemo {
@@ -86,12 +79,10 @@ class Module {
         t:FunctionSignature signature = <t:FunctionSignature>lambda.signature;
         int index = self.functions.length();
         bir:InternalFunctionRef ref = { index, signature, erasedSignature: signature };
-        bir:FunctionDefn topLevelParent = self.topLevelParent(parent);
         bir:AnonFunction birFunc =  {
             index,
             decl: signature,
             position: lambda.startPos,
-            partIndex: topLevelParent.partIndex,
             parent
         };
         self.functions.push(birFunc);

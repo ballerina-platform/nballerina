@@ -160,12 +160,12 @@ class Scaffold {
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:Function defn, bir:FunctionCode code) {
         self.mod = mod;
         self.code = code;
-        self.file = mod.partFiles[defn.partIndex];
+        self.file = mod.partFiles[functionPartIndex(defn)];
         self.llFunc = llFunc;
         DIScaffold? diScaffold;
         ModuleDI? moduleDI = mod.di;
         if moduleDI !is () {
-            diScaffold = new(<DISubprogram>diFunc, moduleDI, self, defn.position, defn.partIndex);
+            diScaffold = new(<DISubprogram>diFunc, moduleDI, self, defn.position, functionPartIndex(defn));
         }
         else {
             diScaffold = ();
@@ -433,6 +433,13 @@ class Scaffold {
     function scheduleBlockNarrowReg(bir:Label label, bir:NarrowRegister reg) {
         self.narrowRegBuilders[label].schedule(reg);
     }
+}
+
+function functionPartIndex(bir:Function func) returns int {
+    if func is bir:FunctionDefn {
+        return func.partIndex;
+    }
+    return functionPartIndex(func.parent);
 }
 
 class BlockNarrowRegBuilder {

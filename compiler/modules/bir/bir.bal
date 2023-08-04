@@ -46,8 +46,6 @@ public type Function FunctionDefn | AnonFunction;
 
 public type FunctionBase record {|
     FunctionDecl decl;
-    # Index of source part in which the definition occurs
-    int partIndex;
     # The position of the definition
     Position position;
     # The index of the function in the module
@@ -59,6 +57,8 @@ public type FunctionBase record {|
 public type FunctionDefn readonly & record {|
     *ModuleDefn;
     *FunctionBase;
+    # Index of source part in which the definition occurs
+    int partIndex;
 |};
 
 public type AnonFunction readonly & record {|

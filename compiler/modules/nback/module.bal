@@ -151,7 +151,7 @@ function createModuleDI(llvm:Module mod, bir:File[] partFiles, boolean debugFull
 }
 
 function createFunctionDI(ModuleDI mod, bir:File[] files, bir:Function birFunc, llvm:FunctionDefn llFunc, string mangledName, string identifier) returns DISubprogram {
-    int partIndex = birFunc.partIndex;
+    int partIndex = functionPartIndex(birFunc);
     var [lineNo, _] = files[partIndex].lineColumn(birFunc.position); 
     DIFile file = mod.files[partIndex];
     return mod.builder.createFunction({

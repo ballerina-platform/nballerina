@@ -61,13 +61,13 @@ class VerifyContext {
     }
 
     private function location(Position|Range pos) returns d:Location {
-        return d:location(self.mod.getPartFile(self.func.partIndex), pos);
+        return d:location(self.mod.getPartFile(self.moduleDefn.partIndex), pos);
     }
 
     function returnType() returns t:SemType => self.func.decl.returnType;
 
     function symbolToString(Symbol sym) returns string {
-        return self.mod.symbolToString(self.func.partIndex, sym);
+        return self.mod.symbolToString(self.moduleDefn.partIndex, sym);
     }
 
     function verifyCodeContext(FunctionCode code) returns VerifyCodeContext|Error {
