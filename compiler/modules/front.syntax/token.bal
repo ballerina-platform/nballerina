@@ -17,12 +17,11 @@ const N_VARIABLE_TOKENS = 5;
 type VariableTokenCode IDENTIFIER|DECIMAL_NUMBER|STRING_LITERAL|HEX_INT_LITERAL|DECIMAL_FP_NUMBER;
 
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
-// JBUG #33694 can't factor `readonly` out
-type VariableLengthToken readonly & [IDENTIFIER, string] |
-                         readonly & [DECIMAL_NUMBER, string] |
-                         readonly & [STRING_LITERAL, string] |
-                         readonly & [HEX_INT_LITERAL, string] |
-                         readonly & [DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
+type VariableLengthToken readonly & ([IDENTIFIER, string] |
+                                     [DECIMAL_NUMBER, string] |
+                                     [STRING_LITERAL, string] |
+                                     [HEX_INT_LITERAL, string] |
+                                     [DECIMAL_FP_NUMBER, string, FpTypeSuffix?]);
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | "." | "~";
@@ -236,8 +235,7 @@ class Tokenizer {
                     return;
                 }
                 _ => {
-                    // JBUG #33346 cast should not be needed
-                    FixedToken? ft = fragTokens[<int>fragCode];
+                    FixedToken? ft = fragTokens[fragCode];
                     // if we've missed something above, we'll get a panic from the cast here
                     self.codePointIndex += (<string>ft).length();
                     self.curTok = ft;
@@ -315,8 +313,7 @@ class Tokenizer {
                         }
                     }
                     _ => {
-                        // JBUG #33346 cast should not be needed
-                        return <FixedToken>fragTokens[<int>fragCode];
+                        return fragTokens[fragCode];
                     }
                 }
             }   

@@ -521,8 +521,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
 // we have to do the same was what we would do if the mapping value was inexact.
 function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, t:SemType keyType, t:SemType newMemberType) returns boolean {
     t:MappingAtomicType? mat = t:mappingAtomicType(tc, mappingType);
-    // JBUG == doesn't work
-    if mat is () {
+    if mat == () {
         // inherent type is atomic, so if mapping type isn't, they cannot be equal
         return false;
     }
@@ -536,8 +535,7 @@ function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, t:SemTyp
 
 function isListSetAlwaysInexact(t:Context tc, t:SemType listType, t:SemType indexType, t:SemType newMemberType) returns boolean {
     t:ListAtomicType? lat = t:listAtomicType(tc, listType);
-    // JBUG == doesn't work
-    if lat is () || t:singleIntShape(indexType) != () {
+    if lat == () || t:singleIntShape(indexType) != () {
         // inherent type is atomic, so if list type isn't, they cannot be equal
         // If indexing with a constant value, then we have the precise type
         return false;

@@ -183,7 +183,7 @@ void testIntNilArr(TaggedPtr (*constructList)()) {
     pushInt(a, 2);
     pushInt(a, 3);
 
-    TaggedPtr e = constructList(&DESC_INT); // [1, (), 3]
+    TaggedPtr e = constructList(); // [1, (), 3]
     pushInt(e, 1);
     pushNil(e);
     pushInt(e, 3);
