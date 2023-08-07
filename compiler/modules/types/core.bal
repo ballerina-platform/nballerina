@@ -2,8 +2,7 @@ import wso2/nballerina.comm.lib;
 
 // There is an integer for each basic type.
 
-// JBUG #28334 type-descriptor is not needed
-public const int VT_COUNT = BT_OBJECT + 1;
+public const VT_COUNT = BT_OBJECT + 1;
 
 const int VT_MASK = (1 << VT_COUNT) - 1;
 

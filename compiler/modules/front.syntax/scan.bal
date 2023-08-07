@@ -158,31 +158,30 @@ function createFragTokens() returns readonly & FixedToken?[] {
     foreach int i in 0 ..< keywords.length() {
         ft[FRAG_KEYWORD + i] = keywords[i];
     }
-    // JBUG #33346 int casts needed
-    ft[<int>FRAG_LEFT_CURLY_VBAR] = "{|";
-    ft[<int>FRAG_VBAR_RIGHT_CURLY] = "|}";
-    ft[<int>FRAG_DOT_DOT_DOT] = "...";
-    ft[<int>FRAG_DOT_DOT_LESS_THAN] = "..<";
-    ft[<int>FRAG_EQUAL_EQUAL] = "==";
-    ft[<int>FRAG_NOT_EQUAL] = "!=";
-    ft[<int>FRAG_EQUAL_EQUAL_EQUAL] = "===";
-    ft[<int>FRAG_NOT_EQUAL_EQUAL] = "!==";
-    ft[<int>FRAG_LESS_THAN_EQUAL] = "<=";
-    ft[<int>FRAG_GREATER_THAN_EQUAL] = ">=";
-    ft[<int>FRAG_LESS_THAN_LESS_THAN] = "<<";
-    ft[<int>FRAG_EQUAL_GREATER_THAN] = "=>";
-    ft[<int>FRAG_PLUS_EQUAL] = "+=";
-    ft[<int>FRAG_MINUS_EQUAL] = "-=";
-    ft[<int>FRAG_ASTERISK_EQUAL] = "*=";
-    ft[<int>FRAG_SLASH_EQUAL] = "/=";
-    ft[<int>FRAG_AMPERSAND_EQUAL] = "&=";
-    ft[<int>FRAG_VBAR_EQUAL] = "|=";
-    ft[<int>FRAG_CIRCUMFLEX_EQUAL] = "^=";
-    ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = "<<=";
-    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = ">>=";
-    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = ">>>=";
-    ft[<int>FRAG_AMPERSAND_AMPERSAND] = "&&";
-    ft[<int>FRAG_VBAR_VBAR] = "||";
+    ft[FRAG_LEFT_CURLY_VBAR] = "{|";
+    ft[FRAG_VBAR_RIGHT_CURLY] = "|}";
+    ft[FRAG_DOT_DOT_DOT] = "...";
+    ft[FRAG_DOT_DOT_LESS_THAN] = "..<";
+    ft[FRAG_EQUAL_EQUAL] = "==";
+    ft[FRAG_NOT_EQUAL] = "!=";
+    ft[FRAG_EQUAL_EQUAL_EQUAL] = "===";
+    ft[FRAG_NOT_EQUAL_EQUAL] = "!==";
+    ft[FRAG_LESS_THAN_EQUAL] = "<=";
+    ft[FRAG_GREATER_THAN_EQUAL] = ">=";
+    ft[FRAG_LESS_THAN_LESS_THAN] = "<<";
+    ft[FRAG_EQUAL_GREATER_THAN] = "=>";
+    ft[FRAG_PLUS_EQUAL] = "+=";
+    ft[FRAG_MINUS_EQUAL] = "-=";
+    ft[FRAG_ASTERISK_EQUAL] = "*=";
+    ft[FRAG_SLASH_EQUAL] = "/=";
+    ft[FRAG_AMPERSAND_EQUAL] = "&=";
+    ft[FRAG_VBAR_EQUAL] = "|=";
+    ft[FRAG_CIRCUMFLEX_EQUAL] = "^=";
+    ft[FRAG_LESS_THAN_LESS_THAN_EQUAL] = "<<=";
+    ft[FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = ">>=";
+    ft[FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = ">>>=";
+    ft[FRAG_AMPERSAND_AMPERSAND] = "&&";
+    ft[FRAG_VBAR_VBAR] = "||";
     foreach int cp in 0x20 ..< 0x80 {
         string s = checkpanic string:fromCodePointInt(cp);
         if s is SingleCharDelim {
@@ -209,8 +208,7 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, i
             fragmentIndex += 1;
         }
         else if code >= FRAG_FIXED_TOKEN {
-            // JBUG #33346 cast should not be needed
-            FixedToken? ft = fragTokens[<int>code];
+            FixedToken? ft = fragTokens[code];
             i += (<string>ft).length();
         }
         else {
@@ -235,12 +233,10 @@ function scanLineFragments(ScannedLine line) returns string[] {
             fragmentIndex += 1;
         }
         else if code >= FRAG_FIXED_TOKEN {
-            // JBUG #33346 cast should not be needed
-            lineContent.push(<string>fragTokens[<int>code]);
+            lineContent.push(<string>fragTokens[code]);
         }
         else {
-            // JBUG #33346 cast should not be needed
-            lineContent.push(<string>fragFixed[<int>code]);
+            lineContent.push(<string>fragFixed[code]);
         }
     }
     return lineContent;

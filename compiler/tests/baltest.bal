@@ -14,7 +14,7 @@ function testSubtype(string filename, string[] lines, string[] expected) returns
 function subtypeCaseProvider() returns map<SubtypeTestCase>|error {
     map<SubtypeTestCase> tests = {};
 
-    check from var entry in check file:readDir("tests/data")
+    from var entry in check file:readDir("tests/data")
         let string path = entry.absPath
         let string base = check file:basename(path)
         where path.endsWith(".bal")

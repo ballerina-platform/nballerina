@@ -8,28 +8,27 @@ type Alignment 1|8;
 // Pointer tagging
 const TAG_SHIFT = 56;
 const ALIGN_HEAP = 8;
-// JBUG #28334 type-descriptor is not needed
-const int POINTER_MASK = ((1 << TAG_SHIFT) - 1) & ~(ALIGN_HEAP - 1);
+const POINTER_MASK = ((1 << TAG_SHIFT) - 1) & ~(ALIGN_HEAP - 1);
 
-const int TAG_MASK     = 0x1f << TAG_SHIFT;
-const int TAG_NIL      = 0;
-const int TAG_BOOLEAN  = t:BT_BOOLEAN << TAG_SHIFT;
-const int TAG_INT      = t:BT_INT << TAG_SHIFT;
-const int TAG_FLOAT    = t:BT_FLOAT << TAG_SHIFT;
-const int TAG_DECIMAL  = t:BT_DECIMAL << TAG_SHIFT;
-const int TAG_STRING   = t:BT_STRING << TAG_SHIFT;
-const int TAG_ERROR    = t:BT_ERROR << TAG_SHIFT;
-const int TAG_FUNCTION = t:BT_FUNCTION << TAG_SHIFT;
+const TAG_MASK     = 0x1f << TAG_SHIFT;
+const TAG_NIL      = 0;
+const TAG_BOOLEAN  = t:BT_BOOLEAN << TAG_SHIFT;
+const TAG_INT      = t:BT_INT << TAG_SHIFT;
+const TAG_FLOAT    = t:BT_FLOAT << TAG_SHIFT;
+const TAG_DECIMAL  = t:BT_DECIMAL << TAG_SHIFT;
+const TAG_STRING   = t:BT_STRING << TAG_SHIFT;
+const TAG_ERROR    = t:BT_ERROR << TAG_SHIFT;
+const TAG_FUNCTION = t:BT_FUNCTION << TAG_SHIFT;
 
-const int TAG_LIST     = t:BT_LIST << TAG_SHIFT;
+const TAG_LIST     = t:BT_LIST << TAG_SHIFT;
 
-const int TAG_BASIC_TYPE_MASK = 0xf << TAG_SHIFT;
+const TAG_BASIC_TYPE_MASK = 0xf << TAG_SHIFT;
 
-const int FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
-const int FLAG_EXACT = 0x4;
+const FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
+const FLAG_EXACT = 0x4;
 
-const int IMMEDIATE_INT_MIN = -(1 << (TAG_SHIFT - 1));
-const int IMMEDIATE_INT_MAX = (1 << (TAG_SHIFT - 1)) - 1;
+const IMMEDIATE_INT_MIN = -(1 << (TAG_SHIFT - 1));
+const IMMEDIATE_INT_MAX = (1 << (TAG_SHIFT - 1)) - 1;
 
 const HEAP_ADDR_SPACE = 1;
 
