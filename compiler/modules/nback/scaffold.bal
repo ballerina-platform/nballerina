@@ -224,10 +224,6 @@ class Scaffold {
 
     function stackGuard() returns llvm:PointerValue => self.mod.stackGuard;
 
-    function innerScaffold(llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:Function defn, bir:FunctionCode code) returns Scaffold {
-        return new(self.mod, llFunc, diFunc, builder, defn, code);
-    }
-
     function getImportedFunction(bir:ExternalSymbol symbol) returns llvm:FunctionDecl? {
         ImportedFunction? fn = self.mod.importedFunctions[symbol];
         return fn == () ? () : fn.decl;

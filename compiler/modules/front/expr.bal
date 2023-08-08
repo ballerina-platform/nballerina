@@ -107,7 +107,7 @@ type CalledFunctionInfo record {|
 |};
 
 class ExprContext {
-    *FunctionContext;
+    *ClosureContext;
     final StmtContext? sc;
     final ModuleSymbols mod;
     final s:ModuleLevelDefn defn;
@@ -131,11 +131,6 @@ class ExprContext {
             return false;
         }
         return sc.isClosure();
-    }
-
-    function captureBinding(Binding binding) {
-        // TODO: this should probaly passed on to the Function
-        self.capturedBindings.push(binding);
     }
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
@@ -190,9 +185,12 @@ class ExprContext {
     }
 
     function lookupLocalVarRef(string varName, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
-        t:SingleValue|Binding|bir:FunctionRef result = check lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
-        if result is Binding && self.capturedBindings.indexOf(result) != () {
-            return self.unimplementedErr("variable capture not implemented", pos);
+        t:SingleValue|BindingLookupResult|bir:FunctionRef result = check lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
+        if result is BindingLookupResult {
+            if result.shouldCapture {
+                return self.unimplementedErr("variable capture not implemented", pos);
+            }
+            return result.binding;
         }
         return result;
     }
@@ -1598,7 +1596,7 @@ function codeGenTypeMerge(ExprContext cx, bir:BasicBlock block, BindingChain? bi
             continue;
         }
         Binding unnarrowed = originGroup.unnarrowed;
-        Binding existing = <Binding>envLookup(cx, unnarrowed.name, bindingLimit, pos);
+        var { binding: existing } = <BindingLookupResult>envLookup(cx, unnarrowed.name, bindingLimit, pos);
         if existing.reg.semType == originGroup.union {
             continue;
         }

@@ -30,15 +30,18 @@ type LoopContext record {|
     boolean continueIsBackward;
 |};
 
-type FunctionContext object {
+type BindingLookupResult record {|
+    Binding binding;
+    boolean shouldCapture;
+|};
+
+type ClosureContext object {
     *err:SemanticContext;
-    // TODO: remove this when we support closures (used to create the capture error)
     function isClosure() returns boolean;
-    function captureBinding(Binding binding);
 };
 
 class StmtContext {
-    *FunctionContext;
+    *ClosureContext;
     final Module mod;
     final ModuleSymbols syms;
     final s:SourceFile file;
@@ -59,10 +62,6 @@ class StmtContext {
         self.returnType = returnType;
         self.moduleLevelDefn = moduleLevelDefn;
         self.scopeStack.push({ scope: (), startPos: func.startPos, endPos: func.endPos });
-    }
-
-    function captureBinding(Binding binding) {
-        // We can use this to detect shadowing but they will anyway get a duplicate decleartion error
     }
 
     function isClosure() returns boolean {
@@ -1141,16 +1140,17 @@ function codeGenCheckingCond(ExprContext cx, bir:BasicBlock bb, bir:Register ope
 
 function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings, Position pos) returns Binding|CodeGenError {
     var b = check lookupLocalVarRef(cx, cx.syms, name, bindings, pos);
-    if b is Binding {
-        return b;
+    if b is BindingLookupResult {
+        // NOTE: we handle capture at the ExprContext level
+        return b.binding;
     }
     else {
         return cx.semanticErr("an lvalue can only refer to a variable definition", pos);
     }
 }
 
-function lookupLocalVarRef(FunctionContext cx, ModuleSymbols mod, string name, BindingChain? bindings, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
-    Binding? binding = envLookup(cx, name, bindings, pos);
+function lookupLocalVarRef(ClosureContext cx, ModuleSymbols mod, string name, BindingChain? bindings, Position pos) returns t:SingleValue|BindingLookupResult|bir:FunctionRef|CodeGenError {
+    BindingLookupResult? binding = envLookup(cx, name, bindings, pos);
     if binding == () {
         s:ModuleLevelDefn? defn = mod.defns[name];
         if defn == () {
@@ -1165,16 +1165,7 @@ function lookupLocalVarRef(FunctionContext cx, ModuleSymbols mod, string name, B
                 // Signature will not be () if we are in a function
                 return cx.semanticErr("variable reference in a const cannot refer to a function", pos);
             }
-            // TODO: we need a more efficient way to do this
-            int index = 0;
-            foreach var d in mod.defns {
-                if d.name == name {
-                    break;
-                }
-                if d is s:FunctionDefn {
-                    index += 1;
-                }
-            }
+            int index = <int>functionDefnIndex(mod, defn);
             return { index, signature, erasedSignature: signature };
         }
         else {
@@ -1189,20 +1180,20 @@ function lookupLocalVarRef(FunctionContext cx, ModuleSymbols mod, string name, B
     }
 }
 
-function envLookup(FunctionContext cx, string name, BindingChain? bindings, Position pos) returns Binding? {
-    Binding? binding = bindingsLookup(cx, name, bindings, pos);
-    if binding != () {
-        DeclBinding unnarrowed = unnarrowBinding(binding);
+function envLookup(ClosureContext cx, string name, BindingChain? bindings, Position pos) returns BindingLookupResult? {
+    BindingLookupResult? result = bindingsLookup(cx, name, bindings, pos);
+    if result != () {
+        DeclBinding unnarrowed = unnarrowBinding(result.binding);
         unnarrowed.used = true;
     }
-    return binding;
+    return result;
 }
 
-function envDefines(FunctionContext cx, string name, BindingChain? bindings, Position pos) returns boolean {
+function envDefines(ClosureContext cx, string name, BindingChain? bindings, Position pos) returns boolean {
     return bindingsLookup(cx, name, bindings, pos) != ();
 }
 
-function bindingsLookup(FunctionContext? cx, string name, BindingChain? bindings, Position pos) returns Binding? {
+function bindingsLookup(ClosureContext? cx, string name, BindingChain? bindings, Position pos) returns BindingLookupResult? {
     BindingChain? tem = bindings;
     boolean shouldCapture = false;
     boolean isClosure = cx != () && cx.isClosure();
@@ -1215,14 +1206,22 @@ function bindingsLookup(FunctionContext? cx, string name, BindingChain? bindings
             shouldCapture = true;
         }
         if head !is FunctionMarker && head.name == name {
-            if shouldCapture && cx != () {
-                cx.captureBinding(head);
-            }
-            return head;
+            return { binding: head, shouldCapture };
         }
         else {
             tem = tem.prev;
         }
+    }
+    return ();
+}
+
+function functionDefnIndex(ModuleSymbols mod, s:FunctionDefn defn) returns int? {
+    int index = 0;
+    foreach var d in mod.defns.filter(each => each is s:FunctionDefn) {
+        if d.name == defn.name {
+            return index;
+        }
+        index += 1;
     }
     return ();
 }

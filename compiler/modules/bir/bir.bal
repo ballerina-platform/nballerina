@@ -164,13 +164,14 @@ public function lastInsnRef(BasicBlock bb) returns InsnRef {
 public const PARAM_REGISTER_KIND = "param";
 public const VAR_REGISTER_KIND = "var";
 public const FINAL_REGISTER_KIND = "final";
+public const CAPTURE_REGISTER_KIND = "capture";
 
 public const NARROW_REGISTER_KIND = "narrow";
 public const TMP_REGISTER_KIND = "tmp";
 public const ASSIGN_TMP_REGISTER_KIND = "=tmp";
 
 public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
-public type RegisterKind DeclRegisterKind|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
+public type RegisterKind DeclRegisterKind|CAPTURE_REGISTER_KIND|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
 
 public type RegisterBase record {|
     RegisterKind kind;
@@ -207,6 +208,13 @@ public type TmpRegister readonly & record {|
 public type AssignTmpRegister readonly & record {|
     *RegisterBase;
     ASSIGN_TMP_REGISTER_KIND kind = ASSIGN_TMP_REGISTER_KIND;
+|};
+
+public type CaptureRegister readonly & record {|
+    *RegisterBase;
+    CAPTURE_REGISTER_KIND kind = CAPTURE_REGISTER_KIND;
+    DeclRegister|CaptureRegister captured;
+    RegisterScope scope;
 |};
 
 public type NarrowRegister readonly & record {|
@@ -353,7 +361,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn|FunctionConstructInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -683,13 +691,12 @@ public type CallIndirectInsn readonly & record {|
     boolean restParamIsList;
 |};
 
-// FIXME: I am not sure if this instruction should have a result? (reference to the function created)?
-# TODO: document
+# Create a closure by enclosing the first operand with the remaining operands.
 public type FunctionConstructInsn readonly & record {|
-    *InsnBase; 
+    *ResultInsnBase;
     INSN_FUNCTION_CONSTRUCT name = INSN_FUNCTION_CONSTRUCT;
-    // Index in the bir:Module functions
-    int operand; // TODO: this needs a proper operand (also fix verify.bal)
+    # Index of the function, capture registers
+    [int, CaptureRegister|DeclRegister...] operands;
 |};
 
 # Assign a value to a register.
