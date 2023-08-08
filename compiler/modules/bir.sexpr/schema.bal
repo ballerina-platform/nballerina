@@ -16,8 +16,10 @@ public type ModuleId [sexpr:String, sexpr:String, sexpr:String...];
 public type Signature [ts:Type, ts:Type[], ts:Type];
 public type FuncDecl [sexpr:String, FunctionTag, Signature];
 public type ModuleDecls [ModuleId, FuncDecl...];
-public type Function [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...], [ClosureTag, AnonFunction...]]];
-public type AnonFunction [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [ClosureTag, AnonFunction...]]];
+public type Function [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...], [ClosureTag, AnonFunction...]]]|
+                     [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
+public type AnonFunction [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [ClosureTag, AnonFunction...]]]|
+                         [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
 public type Register [sexpr:Symbol, bir:DeclRegisterKind|bir:TMP_REGISTER_KIND|bir:ASSIGN_TMP_REGISTER_KIND , ts:Type]|
                      [sexpr:Symbol, bir:NARROW_REGISTER_KIND, ts:Type, sexpr:Symbol];
 public type BlockPanic readonly & (["no-panic"]|["on-panic", Label]);

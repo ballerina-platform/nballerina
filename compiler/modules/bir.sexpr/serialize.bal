@@ -66,10 +66,16 @@ function fromFunction(SerializeContext sc, bir:Module mod, bir:FunctionDefn defn
                                 select check fromAnonFunction(sc, mod, child,
                                                               check mod.generateFunctionCode(child.index),
                                                               file);
-    return [name, access, ["function", fromSignature(fsc, defn.decl), ["file", { s: basename(file.filename()) }], ["loc", line, col],
-                          ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
-                          ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)],
-                          ["closures", ...closures]]];
+    if closures.length() > 0 {
+        return [name, access, ["function", fromSignature(fsc, defn.decl), ["file", { s: basename(file.filename()) }], ["loc", line, col],
+                              ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
+                              ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)],
+                              ["closures", ...closures]]];
+    }
+    // JBUG: cloneWithType
+    return checkpanic [name, access, ["function", fromSignature(fsc, defn.decl), ["file", { s: basename(file.filename()) }], ["loc", line, col],
+                                     ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
+                                     ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)]]].cloneWithType(Function);
 }
 
 function fromAnonFunction(SerializeContext sc, bir:Module mod, bir:AnonFunction func, bir:FunctionCode code, bir:File file) returns AnonFunction|err:Semantic|err:Unimplemented {
@@ -84,10 +90,16 @@ function fromAnonFunction(SerializeContext sc, bir:Module mod, bir:AnonFunction 
                                                               check mod.generateFunctionCode(child.index),
                                                               file);
     string name = string `f.${func.index}`;
-    return [name, ["function", fromSignature(fsc, func.decl), ["loc", line, col],
-                  ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
-                  ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)],
-                  ["closures", ...closures]]];
+    if closures.length() > 0 {
+        return [name, ["function", fromSignature(fsc, func.decl), ["loc", line, col],
+                      ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
+                      ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)],
+                      ["closures", ...closures]]];
+    }
+    // JBUG: cloneWithType
+    return checkpanic [name, ["function", fromSignature(fsc, func.decl), ["loc", line, col],
+                             ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
+                             ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)]]].cloneWithType(AnonFunction);
 }
 
 function functionChildern(bir:Module mod, bir:Function func) returns bir:AnonFunction[] {

@@ -110,6 +110,34 @@ class VirtualModule {
     }
 }
 
+type FunctionWithClosures [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...], [ClosureTag, AnonFunction...]]];
+type FunctionWithoutClosures [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
+type AnonFunctionDefn [bir:AnonFunction, t:FunctionSignature, FunctionCode, AnonFunctionDefn...];
+type AnonFunctionWithClosures [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [ClosureTag, AnonFunction...]]];
+type AnonFunctionWithoutClosures [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
+
+type FunctionPropsBase record {|
+    Signature signature; 
+    Block[] blocks;
+    Register[] registers;
+    AnonFunction[] closures;
+    int line;
+    int col;
+|};
+
+type FunctionDefnProps record {|
+    *FunctionPropsBase;
+    FunctionVisibility visibility;
+    sexpr:String identifier;
+    sexpr:String partIndex;
+|};
+
+type AnonFunctionProps record {|
+    *FunctionPropsBase;
+    string name;
+    bir:Function parent;
+|};
+
 public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Module {
     t:Env env = new;
     var tc = t:typeContext(env);
@@ -122,20 +150,17 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     t:FunctionSignature[] internalFuncDecl = [];
     FunctionCode[] funcCodes = [];
     [bir:FunctionDefn, AnonFunction][] nestedFunctions = [];
-    foreach var [identifier, visibility, [_, sig, [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks], [_, ...closures]]] in funcs { // JBUG: can't use { s: identifier }
-        t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
-        internalFuncDecl.push(signature);
-        bir:FunctionDefn funcDefn = { symbol: { isPublic: visibility is PublicVisibility , identifier: identifier.s },
-                                      index: funcDefns.length(),
-                                      decl: signature,
-                                      partIndex: vFilesByName.get(partIndex.s).partIndex(),
-                                      position: createPosition(line, col) };
-
-        funcDefns.push(funcDefn);
-        funcCodes.push({ registers, blocks });
-        foreach var closure in closures {
-            nestedFunctions.push([funcDefn, closure]);
+    foreach var func in funcs {
+        FunctionDefnProps props;
+        if func is FunctionWithClosures {
+            var [identifier, visibility, [_, signature, [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks], [_, ...closures]]] = func; // JBUG: can't use { s: identifier }
+            props = { signature, visibility, identifier, partIndex, blocks, registers, closures, line, col };
+        } else {
+            // JBUG: cast
+            var [identifier, visibility, [_, signature, [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks]]] = <FunctionWithoutClosures>func; // JBUG: can't use { s: identifier }
+            props = { signature, visibility, identifier, partIndex, blocks, registers, closures: [], line, col };
         }
+        accumFunctionDefn(env, atoms, vFilesByName, internalFuncDecl, funcDefns, funcCodes, nestedFunctions, props);
     }
     bir:AnonFunction[] anonFuncs = [];
     // NOTE: this is to ensure functions ends up in the same order in virtual module
@@ -157,7 +182,25 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     return mod;
 }
 
-type AnonFunctionDefn [bir:AnonFunction, t:FunctionSignature, FunctionCode, AnonFunctionDefn...];
+function accumFunctionDefn(t:Env env, t:AtomTable atoms, map<VirtualFile> vFilesByName,
+                           t:FunctionSignature[] internalFuncDecl, bir:FunctionDefn[] funcDefns,
+                           FunctionCode[] funcCodes, [bir:FunctionDefn, AnonFunction][] nestedFunctions,
+                           *FunctionDefnProps props) {
+    var { signature: sig, visibility, identifier, partIndex, blocks, registers, closures, line, col } = props;
+    t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
+    internalFuncDecl.push(signature);
+    bir:FunctionDefn funcDefn = { symbol: { isPublic: visibility is PublicVisibility , identifier: identifier.s },
+                                  index: funcDefns.length(),
+                                  decl: signature,
+                                  partIndex: vFilesByName.get(partIndex.s).partIndex(),
+                                  position: createPosition(line, col) };
+
+    funcDefns.push(funcDefn);
+    funcCodes.push({ registers, blocks });
+    foreach var closure in closures {
+        nestedFunctions.push([funcDefn, closure]);
+    }
+}
 
 function accumAnonFunctionDefn(bir:AnonFunction[] anonFuncs, FunctionCode[] funcCodes, t:FunctionSignature[] internalFunctionDecl, AnonFunctionDefn defn) {
     var [anonFunc, signature, functionCode, ...children] = defn;
@@ -170,8 +213,22 @@ function accumAnonFunctionDefn(bir:AnonFunction[] anonFuncs, FunctionCode[] func
 }
 
 function toAnonFunction(t:Env env, t:AtomTable atoms, bir:Function parent, AnonFunction func) returns AnonFunctionDefn {
-    var [name, [_, sig, [_, line, col], [_, ...registers], [_, ...blocks], [_, ...closures]]] = func;
-    t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
+    AnonFunctionProps props;
+    if func is AnonFunctionWithClosures {
+        var [name, [_, sig, [_, line, col], [_, ...registers], [_, ...blocks], [_, ...closures]]] = func;
+        props = { signature: sig, name, parent, closures, registers, blocks, line, col };
+    }
+    else {
+        // JBUG: cast
+        var [name, [_, sig, [_, line, col], [_, ...registers], [_, ...blocks]]] = <AnonFunctionWithoutClosures>func;
+        props = { signature: sig, name, parent, closures: [], registers, blocks, line, col };
+    }
+    return toAnonFunctionInner(env, atoms, props);
+}
+
+function toAnonFunctionInner(t:Env env, t:AtomTable atoms, *AnonFunctionProps props) returns AnonFunctionDefn {
+    var { signature: sexpr, name, parent, closures, registers, blocks, line, col } = props;
+    t:FunctionSignature signature = toFunctionSignature(env, atoms, sexpr);
     int index = checkpanic int:fromString(name.substring(2));
     bir:AnonFunction anonFunc = { parent, index, position: createPosition(line, col), decl: signature };
     AnonFunctionDefn[] children = [];
