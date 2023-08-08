@@ -6,6 +6,7 @@ import wso2/nballerina.types.sexpr as ts;
 public type FunctionTag "function";
 public type RegistersTag "registers";
 public type BlocksTag "blocks";
+public type ClosureTag "closures"; // TODO: this is probably the wrong name
 
 public type Position ["loc", int, int];
 public type File [sexpr:String, sexpr:String]|[sexpr:String, sexpr:String, sexpr:String]; // [name, path, ?dir]
@@ -15,7 +16,8 @@ public type ModuleId [sexpr:String, sexpr:String, sexpr:String...];
 public type Signature [ts:Type, ts:Type[], ts:Type];
 public type FuncDecl [sexpr:String, FunctionTag, Signature];
 public type ModuleDecls [ModuleId, FuncDecl...];
-public type Function [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
+public type Function [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...], [ClosureTag, AnonFunction...]]];
+public type AnonFunction [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [ClosureTag, AnonFunction...]]];
 public type Register [sexpr:Symbol, bir:DeclRegisterKind|bir:TMP_REGISTER_KIND|bir:ASSIGN_TMP_REGISTER_KIND , ts:Type]|
                      [sexpr:Symbol, bir:NARROW_REGISTER_KIND, ts:Type, sexpr:Symbol];
 public type BlockPanic readonly & (["no-panic"]|["on-panic", Label]);
@@ -32,7 +34,7 @@ public final ModuleVisibility MODULE_VISIBILITY = [];
 public type FunctionVisibility PublicVisibility|ModuleVisibility;
 
 public type ExternalFunctionRef readonly & ["module-get", ModuleId, sexpr:String];
-public type FunctionRef sexpr:String|ExternalFunctionRef;
+public type FunctionRef int|ExternalFunctionRef;
 public type MapEntry readonly & [sexpr:String, Operand];
 public type TypeMergePred readonly & [Label, Operand];
 

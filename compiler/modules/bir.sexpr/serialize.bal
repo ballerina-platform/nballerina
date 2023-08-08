@@ -33,12 +33,15 @@ public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Sema
     bir:Function[] functionDefns = mod.getFunctions();
     Function[] funcSexprs = [];
     foreach int i in 0 ..< functionDefns.length() {
-        // FIXME:
-        bir:FunctionDefn defn = <bir:FunctionDefn>functionDefns[i];
+        bir:Function func = functionDefns[i];
+        if func is bir:AnonFunction {
+            // NOTE: These are handled inside fromFunction (since anonFunction are nested
+            // inside the function in bir)
+            continue;
+        }
         bir:FunctionCode code = check mod.generateFunctionCode(i);
-        bir:File file = mod.getPartFile(defn.partIndex);
-        // FIXME: also add all the annonymous function generated here as well
-        funcSexprs.push(fromFunction(sc, defn, code, file));
+        bir:File file = mod.getPartFile(func.partIndex);
+        funcSexprs.push(check fromFunction(sc, mod, func, code, file));
     }
     [sexpr:String, ts:Atom][] atoms = from var [s, atom] in sc.atoms.entries() select [{ s }, atom];
     ModuleDecls[] decl = from var { id, funcs } in sc.decls
@@ -50,7 +53,7 @@ public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Sema
     return [["atoms", ...atoms], ["defns", ...funcSexprs], ["decls", ...decl], ["files", ...files]];
 }
 
-function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCode code, bir:File file) returns Function {
+function fromFunction(SerializeContext sc, bir:Module mod, bir:FunctionDefn defn, bir:FunctionCode code, bir:File file) returns Function|err:Semantic|err:Unimplemented{
     bir:BasicBlock[] blocks = code.blocks; // JBUG: NPE if destructuring is used
     bir:Register[] registers = code.registers;
     IdNames blockNames = differentiate("b", blocks.length(), i => let var { name, label } = blocks[i] in [name, label]);
@@ -59,9 +62,38 @@ function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCo
     sexpr:String name = { s: defn.symbol.identifier };
     FunctionVisibility access = defn.symbol.isPublic ? PUBLIC_VISIBILITY : MODULE_VISIBILITY;
     var [line, col] = file.lineColumn(defn.position);
+    AnonFunction[] closures = from var child in functionChildern(mod, defn) 
+                                select check fromAnonFunction(sc, mod, child,
+                                                              check mod.generateFunctionCode(child.index),
+                                                              file);
     return [name, access, ["function", fromSignature(fsc, defn.decl), ["file", { s: basename(file.filename()) }], ["loc", line, col],
                           ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
-                          ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)]]];
+                          ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)],
+                          ["closures", ...closures]]];
+}
+
+function fromAnonFunction(SerializeContext sc, bir:Module mod, bir:AnonFunction func, bir:FunctionCode code, bir:File file) returns AnonFunction|err:Semantic|err:Unimplemented {
+    bir:BasicBlock[] blocks = code.blocks; // JBUG: NPE if destructuring is used
+    bir:Register[] registers = code.registers;
+    IdNames blockNames = differentiate("b", blocks.length(), i => let var { name, label } = blocks[i] in [name, label]);
+    IdNames regNames = differentiate("r", registers.length(), i => let var reg = registers[i] in [bir:unnarrow(reg).name, reg.number]);
+    FuncSerializeContext fsc = { ...sc, blockNames, regNames };
+    var [line, col] = file.lineColumn(func.position);
+    AnonFunction[] closures = from var child in functionChildern(mod, func) 
+                                select check fromAnonFunction(sc, mod, child,
+                                                              check mod.generateFunctionCode(child.index),
+                                                              file);
+    string name = string `f.${func.index}`;
+    return [name, ["function", fromSignature(fsc, func.decl), ["loc", line, col],
+                  ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
+                  ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)],
+                  ["closures", ...closures]]];
+}
+
+function functionChildern(bir:Module mod, bir:Function func) returns bir:AnonFunction[] {
+    // JBUG: cast
+    return from var child in mod.getFunctions() where child is bir:AnonFunction && child.parent.index == func.index 
+                select <bir:AnonFunction>child;
 }
 
 function basename(string path) returns string {
@@ -146,6 +178,10 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
         }
         return ["type-merge", fromRegister(sc, insn.result), ...preds];
     }
+    else if insn is bir:FunctionConstructInsn {
+        // TODO: when we have implemented this remove the cast at bir:Operand[]? operands ...
+        panic error("FunctionConstructInsn not supported");
+    }
     else if insn is bir:PanicInsn {
         return ["panic", fromOperand(sc, insn.operand)];
     }
@@ -159,7 +195,8 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
     if operand != () {
         insnSexpr.push(fromOperand(sc, operand));
     }
-    bir:Operand[]? operands = insn?.operands;
+    // JBUG: cast
+    bir:Operand[]? operands = <bir:Operand[]?>insn?.operands;
     if operands != () {
         foreach var o in operands {
             insnSexpr.push(fromOperand(sc, o));
@@ -201,19 +238,14 @@ function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & 
 // Convert FunctionRef to a sexpr, accumulates external function signatures to sc.
 function fromFunctionRefAccum(FuncSerializeContext sc, bir:FunctionRef funcRef) returns FunctionRef {
     if funcRef is bir:InternalFunctionRef {
-        panic error("lambda not implemented");
+        return funcRef.index;
     }
-    bir:Symbol symbol = funcRef.symbol;
+    bir:ExternalSymbol symbol = funcRef.symbol;
     string identifier = symbol.identifier;
-    if symbol is bir:ExternalSymbol {
-        ModuleId & readonly id = formModuleId(symbol.module);
-        ModuleDeclsMemo decls = addGetModDecls(sc, id);
-        decls.funcs[identifier] = fromSignature(sc, funcRef.erasedSignature);
-        return ["module-get", id, { s: identifier }];
-    }
-    else {
-        return { s: identifier };
-    }
+    ModuleId & readonly id = formModuleId(symbol.module);
+    ModuleDeclsMemo decls = addGetModDecls(sc, id);
+    decls.funcs[identifier] = fromSignature(sc, funcRef.erasedSignature);
+    return ["module-get", id, { s: identifier }];
 }
 
 function addGetModDecls(FuncSerializeContext sc, readonly & ModuleId id) returns ModuleDeclsMemo {
