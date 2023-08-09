@@ -12,9 +12,32 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     if options.debugLevel > 0 {
         di = createModuleDI(llMod, partFiles, options.debugLevel == DEBUG_FULL);
     }
+    bir:Function[] functions = birMod.getFunctions();
     llvm:FunctionDefn[] llFuncs = [];
     DISubprogram[] diFuncs = [];
     llvm:FunctionType[] llFuncTypes = [];
+    // This is to generate all function codes and cache them in birMod, so that
+    // we know about all the anonFunctions before generating the function bodies.
+    from int i in 0 ..< functions.length() do { _ = check birMod.generateFunctionCode(i); };
+    foreach var func in functions {
+        llvm:FunctionType ty = buildFunctionSignature(func.decl);
+        llFuncTypes.push(ty);
+        var [mangledName, identifier] = functionIdentifiers(modId, func);
+        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
+        boolean isPublic = func is bir:AnonFunction ? false : func.symbol.isPublic;
+        if di != () {
+            DISubprogram diFunc = createFunctionDI(di, partFiles, func, llFunc, mangledName, identifier);
+            diFuncs.push(diFunc);
+            llFunc.setSubprogram(diFunc);
+        }
+        if !(options.gcName == ()) {
+            llFunc.setGC(options.gcName);
+        }
+        if !isPublic {
+            llFunc.setLinkage("internal");
+        }
+        llFuncs.push(llFunc);
+    }
     llvm:Builder builder = llContext.createBuilder();
     Module mod = {
         bir: birMod,
@@ -28,31 +51,8 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard")),
         llInitTypes: createInitTypes(llContext)
     };
-    bir:Function[] functions = birMod.getFunctions();
-    bir:FunctionCode[] functionCodes = from int i in 0 ..< functions.length()
-                                         select check birMod.generateFunctionCode(i);
     foreach int i in 0 ..< functions.length() {
-        bir:Function func = functions[i];
-        llvm:FunctionType ty = buildFunctionSignature(func.decl);
-        llFuncTypes.push(ty);
-        var [mangledName, identifier] = functionIdentifiers(modId, func);
-        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
-        boolean isPublic = func is bir:AnonFunction ? false : func.symbol.isPublic;
-        if di != () {
-            DISubprogram diFunc = createFunctionDI(di, partFiles, func, llFunc, mangledName, identifier);
-            diFuncs.push(diFunc);
-            llFunc.setSubprogram(diFunc);
-        }   
-        if !(options.gcName == ()) {
-            llFunc.setGC(options.gcName);
-        }
-        if !isPublic {
-            llFunc.setLinkage("internal");
-        }
-        llFuncs.push(llFunc);
-    }
-    foreach int i in 0 ..< functions.length() {
-        bir:FunctionCode code = i < functionCodes.length() ? functionCodes[i] : check birMod.generateFunctionCode(i);
+        bir:FunctionCode code = check birMod.generateFunctionCode(i);
         check buildFunction(builder, birMod, mod, di != () ? diFuncs[i] : (), llFuncs[i], functions[i], code);
     }
     check birMod.finish();

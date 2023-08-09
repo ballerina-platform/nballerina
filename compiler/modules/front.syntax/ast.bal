@@ -45,7 +45,7 @@ public type FunctionDefn record {|
     ModulePart part;
 |};
 
-public type Function FunctionDefn|Lambda;
+public type Function FunctionDefn|AnonFunction;
 
 public type FunctionParam record {|
     *PositionFields;
@@ -276,13 +276,13 @@ public type MethodCallExpr record {|
     Expr[] args;
 |};
 
-public type Lambda record {|
+public type AnonFunction record {|
     *FunctionDefnBase;
 |};
 
 public type ExplicitAnonymousFunctionExpr record {|
     *PositionFields;
-    Lambda lambda;
+    AnonFunction func;
 |};
 
 public type CheckingKeyword "check"|"checkpanic";

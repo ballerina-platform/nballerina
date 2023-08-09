@@ -164,14 +164,14 @@ public function lastInsnRef(BasicBlock bb) returns InsnRef {
 public const PARAM_REGISTER_KIND = "param";
 public const VAR_REGISTER_KIND = "var";
 public const FINAL_REGISTER_KIND = "final";
-public const CAPTURE_REGISTER_KIND = "capture";
+public const CAPTURED_REGISTER_KIND = "captured";
 
 public const NARROW_REGISTER_KIND = "narrow";
 public const TMP_REGISTER_KIND = "tmp";
 public const ASSIGN_TMP_REGISTER_KIND = "=tmp";
 
 public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
-public type RegisterKind DeclRegisterKind|CAPTURE_REGISTER_KIND|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
+public type RegisterKind DeclRegisterKind|CAPTURED_REGISTER_KIND|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
 
 public type RegisterBase record {|
     RegisterKind kind;
@@ -210,10 +210,10 @@ public type AssignTmpRegister readonly & record {|
     ASSIGN_TMP_REGISTER_KIND kind = ASSIGN_TMP_REGISTER_KIND;
 |};
 
-public type CaptureRegister readonly & record {|
+public type CapturedRegister readonly & record {|
     *RegisterBase;
-    CAPTURE_REGISTER_KIND kind = CAPTURE_REGISTER_KIND;
-    DeclRegister|CaptureRegister captured;
+    CAPTURED_REGISTER_KIND kind = CAPTURED_REGISTER_KIND;
+    DeclRegister|CapturedRegister captured;
     RegisterScope scope;
 |};
 
@@ -324,7 +324,7 @@ public enum InsnName {
     INSN_ABNORMAL_RET,
     INSN_CALL_DIRECT,
     INSN_CALL_INDIRECT,
-    INSN_FUNCTION_CONSTRUCT,
+    INSN_CAPTURE,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -361,7 +361,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn|FunctionConstructInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn|CaptureInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -692,11 +692,11 @@ public type CallIndirectInsn readonly & record {|
 |};
 
 # Create a closure by enclosing the first operand with the remaining operands.
-public type FunctionConstructInsn readonly & record {|
+public type CaptureInsn readonly & record {|
     *ResultInsnBase;
-    INSN_FUNCTION_CONSTRUCT name = INSN_FUNCTION_CONSTRUCT;
-    # Index of the function, capture registers
-    [int, CaptureRegister|DeclRegister...] operands;
+    INSN_CAPTURE name = INSN_CAPTURE;
+    # Index of the function, registers holding the free variables
+    [int, CapturedRegister|DeclRegister...] operands;
 |};
 
 # Assign a value to a register.

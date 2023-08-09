@@ -11,7 +11,7 @@ public function toBirText(bir:Module birMod) returns string|err:Semantic|err:Uni
 
 function indentAt(int[] index) returns boolean {
     match index {
-        [_, _]|[1, _, 2, 4]|[1, _, 2, 5]|[1, _, 2, 6]|[1, _, 2, 4, _]|[1, _, 2, 5, _] => {
+        [_, _]|[1, _, 2, 4]|[1, _, 2, 2]|[1, _, 2, 3]|[1, _, 2, 5]|[1, _, 2, 6]|[1, _, 2, 4, _]|[1, _, 2, 5, _] => {
             return true;
         }
         [var n]|[2, _, var n]|[3, 1, var n] => {
@@ -39,7 +39,7 @@ function closureIndentAt(int[] index) returns boolean {
 
 function closureIndentAtInner(int[] suffix) returns boolean {
     match suffix {
-        [_]|[_, 1, 3]|[_, 1, 3, _]|[_, 1, 4]|[_, 1, 4, _]|[_, 1, 5] => {
+        [_]|[_, 1, 2]|[_, 1, 3]|[_, 1, 3, _]|[_, 1, 4]|[_, 1, 4, _]|[_, 1, 5] => {
             return true;
         }
         [_, 1, 4, _, var n] => {
@@ -51,4 +51,3 @@ function closureIndentAtInner(int[] suffix) returns boolean {
     }
     return false;
 }
-

@@ -367,8 +367,8 @@ function parseExplicitAnonymousFunctionExpr(Tokenizer tok, Position startPos) re
     FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, params);
     StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
-    Lambda lambda = { startPos, endPos, params, body, typeDesc }; 
-    return { startPos, endPos, lambda };
+    AnonFunction func = { startPos, endPos, params, body, typeDesc };
+    return { startPos, endPos, func };
 }
 
 function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns Expr|err:Syntax {

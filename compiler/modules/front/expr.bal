@@ -114,7 +114,6 @@ class ExprContext {
     final BindingChain? bindings;
     final s:SourceFile file;
     final bir:FunctionCode code;
-    final Binding[] capturedBindings = [];
 
     function init(ModuleSymbols mod, s:ModuleLevelDefn defn, bir:FunctionCode code, BindingChain? bindings, StmtContext? sc) {
         self.mod = mod;
@@ -127,10 +126,7 @@ class ExprContext {
 
     function isClosure() returns boolean {
         StmtContext? sc = self.sc;
-        if sc == () {
-            return false;
-        }
-        return sc.isClosure();
+        return sc == () ? false : sc.isClosure();
     }
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
@@ -312,9 +308,9 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
                 return codeGenMethodCallExpr(cx, bb, callExpr);
             }
         }
-        var { lambda } => {
+        var { func } => {
             check cx.notInConst(expr);
-            return codeGenLambda(cx, bb, lambda, expr.startPos);
+            return codeGenAnonFunction(cx, bb, func, expr.startPos);
         }
         // Member access E[i]
         var { container, index, opPos: pos } => {
@@ -1533,12 +1529,11 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
                        func.signature.returnType, args, false, expr.namePos);
 }
 
-function codeGenLambda(ExprContext cx, bir:BasicBlock curBlock, s:Lambda lambda, bir:Position pos) returns CodeGenError|ExprEffect {
+function codeGenAnonFunction(ExprContext cx, bir:BasicBlock curBlock, s:AnonFunction func, bir:Position pos) returns CodeGenError|ExprEffect {
     StmtContext stmtContext = check cx.stmtContext();
-    // When it comes to errors we still use the name of the enclosing function
-    t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, stmtContext.moduleLevelDefn, lambda);
-    lambda.signature = signature;
-    var [ref, _] = check stmtContext.mod.addLambda(lambda, stmtContext.moduleLevelDefn, cx.bindings);
+    t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, stmtContext.moduleLevelDefn, func);
+    func.signature = signature;
+    var [ref, _] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);
     bir:FunctionConstOperand result = functionValOperand(cx.mod.tc, ref);
     return { result, block: curBlock };
 }
@@ -1596,7 +1591,7 @@ function codeGenTypeMerge(ExprContext cx, bir:BasicBlock block, BindingChain? bi
             continue;
         }
         Binding unnarrowed = originGroup.unnarrowed;
-        var { binding: existing } = <BindingLookupResult>envLookup(cx, unnarrowed.name, bindingLimit, pos);
+        var { binding: existing } = <BindingLookupResult>envLookup(cx, unnarrowed.name, bindingLimit);
         if existing.reg.semType == originGroup.union {
             continue;
         }

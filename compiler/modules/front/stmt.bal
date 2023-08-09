@@ -65,7 +65,7 @@ class StmtContext {
     }
 
     function isClosure() returns boolean {
-        return self.func is s:Lambda;
+        return self.func is s:AnonFunction;
     }
 
     function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
@@ -136,6 +136,10 @@ class StmtContext {
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.moduleLevelDefn.name);
+    }
+
+    function unimplementedErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Unimplemented {
+        return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.moduleLevelDefn.name);
     }
 
     private function location(Position|Range pos) returns d:Location {
@@ -234,7 +238,7 @@ function codeGenFunction(Module mod, s:Function func, s:FunctionDefn moduleLevel
     BindingChain bindings = { head: "func", prev: closureBindings };
     foreach int i in 0 ..< func.params.length() {
         var { name, namePos } = func.params[i];
-        if envDefines(cx, name, bindings, namePos) {
+        if envDefines(cx, name, bindings) {
             return cx.semanticErr(`duplicate declaration of ${name}`, namePos);
         }
         bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], namePos, name);
@@ -398,7 +402,7 @@ function unusedLocalVariables(StmtContext cx, BindingChain? blockBindings, Bindi
 
 function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain? initialBindings, s:ForeachStmt stmt) returns CodeGenError|StmtEffect {
     string varName = stmt.name;
-    if envDefines(cx, varName, initialBindings, stmt.namePos) {
+    if envDefines(cx, varName, initialBindings) {
         return cx.semanticErr(`duplicate declaration of ${varName}`, stmt.namePos);
     }
     s:RangeExpr range = stmt.range;
@@ -705,7 +709,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
 }
 
 function resolveConstMatchPattern(StmtContext cx, BindingChain? bindings, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|ResolveTypeError {
-    if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(cx, expr.name, bindings, expr.qNamePos) {
+    if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(cx, expr.name, bindings) {
         var [_, value] = check resolveConstExprForType(cx.syms, cx.moduleLevelDefn, expr, expectedType, "pattern will not be matched");
         return value;
     }
@@ -835,7 +839,7 @@ function codeGenVarDeclStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCh
         return codeGenWildcardDeclStmt(cx, startBlock, initialBindings, initExpr, td, stmt.opPos);
     }
     else {
-        if envDefines(cx, name, initialBindings, namePos) {
+        if envDefines(cx, name, initialBindings) {
             return cx.semanticErr(`duplicate declaration of ${name}`, namePos);
         }
         t:SemType semType = check cx.resolveTypeDesc(td);
@@ -1150,7 +1154,7 @@ function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings
 }
 
 function lookupLocalVarRef(ClosureContext cx, ModuleSymbols mod, string name, BindingChain? bindings, Position pos) returns t:SingleValue|BindingLookupResult|bir:FunctionRef|CodeGenError {
-    BindingLookupResult? binding = envLookup(cx, name, bindings, pos);
+    BindingLookupResult? binding = envLookup(cx, name, bindings);
     if binding == () {
         s:ModuleLevelDefn? defn = mod.defns[name];
         if defn == () {
@@ -1180,8 +1184,8 @@ function lookupLocalVarRef(ClosureContext cx, ModuleSymbols mod, string name, Bi
     }
 }
 
-function envLookup(ClosureContext cx, string name, BindingChain? bindings, Position pos) returns BindingLookupResult? {
-    BindingLookupResult? result = bindingsLookup(cx, name, bindings, pos);
+function envLookup(ClosureContext cx, string name, BindingChain? bindings) returns BindingLookupResult? {
+    BindingLookupResult? result = bindingsLookup(cx, name, bindings);
     if result != () {
         DeclBinding unnarrowed = unnarrowBinding(result.binding);
         unnarrowed.used = true;
@@ -1189,11 +1193,11 @@ function envLookup(ClosureContext cx, string name, BindingChain? bindings, Posit
     return result;
 }
 
-function envDefines(ClosureContext cx, string name, BindingChain? bindings, Position pos) returns boolean {
-    return bindingsLookup(cx, name, bindings, pos) != ();
+function envDefines(ClosureContext cx, string name, BindingChain? bindings) returns boolean {
+    return bindingsLookup(cx, name, bindings) != ();
 }
 
-function bindingsLookup(ClosureContext? cx, string name, BindingChain? bindings, Position pos) returns BindingLookupResult? {
+function bindingsLookup(ClosureContext? cx, string name, BindingChain? bindings) returns BindingLookupResult? {
     BindingChain? tem = bindings;
     boolean shouldCapture = false;
     boolean isClosure = cx != () && cx.isClosure();

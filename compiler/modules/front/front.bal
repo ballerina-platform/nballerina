@@ -12,19 +12,12 @@ public type ResolvedModule object {
     public function validMain() returns err:Diagnostic?;
 };
 
-type LambdaMemo record {|
-    s:Lambda lambda;
-    bir:AnonFunction birFunc;
-    BindingChain? bindings;
-|};
-
 class Module {
     *ResolvedModule;
     final bir:ModuleId id;
     final s:SourceFile[] files;
     final ModuleSymbols syms;
     final s:FunctionDefn[] functionDefnSource = [];
-    final LambdaMemo[] lambdaMemo = [];
     final bir:Function[] functions;
     final bir:Function[] parentStack = [];
     final bir:FunctionCode?[] functionCodes = [];
@@ -67,31 +60,18 @@ class Module {
         return functionCode;
     }
 
-    public function addLambda(s:Lambda lambda, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:FunctionRef, int]|CodeGenError {
-        // NOTE: we need to do caching in order to make bir roundtrip work
-        foreach var { lambda: l, birFunc } in self.lambdaMemo {
-            if l === lambda {
-                var { decl: signature, index } = birFunc;
-                return [{ index, signature, erasedSignature: signature }, birFunc.index];
-            }
-        }
+    public function addAnonFunction(s:AnonFunction func, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:FunctionRef, int]|CodeGenError {
         bir:Function parent = self.parentStack[self.parentStack.length() - 1];
-        t:FunctionSignature signature = <t:FunctionSignature>lambda.signature;
+        t:FunctionSignature signature = <t:FunctionSignature>func.signature;
         int index = self.functions.length();
         bir:InternalFunctionRef ref = { index, signature, erasedSignature: signature };
-        bir:AnonFunction birFunc =  {
-            index,
-            decl: signature,
-            position: lambda.startPos,
-            parent
-        };
+        bir:AnonFunction birFunc =  { index, decl: signature, position: func.startPos, parent };
         self.functions.push(birFunc);
         self.parentStack.push(birFunc);
-        // NOTE: we need to codegen the lambda in order to figureout it's capture group
-        bir:FunctionCode code = check codeGenFunction(self, lambda, moduleLevelDefn, <t:FunctionSignature>lambda.signature, bindings);
+        // NOTE: we need to codegen the func in order to figure out it's capture values
+        bir:FunctionCode code = check codeGenFunction(self, func, moduleLevelDefn, signature, bindings);
         _ = self.parentStack.pop();
         self.functionCodes[birFunc.index] = code;
-        self.lambdaMemo.push({ lambda, birFunc, bindings });
         return [ref, index];
     }
    

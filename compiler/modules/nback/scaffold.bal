@@ -102,7 +102,7 @@ type StringDefn llvm:ConstPointerValue;
 type DecimalDefn llvm:ConstPointerValue;
 
 type FunctionValueDefn record {|
-    readonly (bir:Symbol|int) key;
+    readonly (bir:ExternalSymbol|int) key;
     llvm:ConstPointerValue value;
 |};
 
@@ -137,7 +137,7 @@ type UsedSemType record {|
 
 class Scaffold {
     *Context;
-    final Module mod;
+    private final Module mod;
     private final bir:File file;
     private final llvm:FunctionDefn llFunc;
 
@@ -155,11 +155,9 @@ class Scaffold {
     private DIScaffold? diScaffold;
     final t:SemType returnType;
     private final BlockNarrowRegBuilder[] narrowRegBuilders = [];
-    final bir:FunctionCode code;
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:Function defn, bir:FunctionCode code) {
         self.mod = mod;
-        self.code = code;
         self.file = mod.partFiles[functionPartIndex(defn)];
         self.llFunc = llFunc;
         DIScaffold? diScaffold;
@@ -220,7 +218,6 @@ class Scaffold {
     function getFunctionDefn(int index) returns llvm:FunctionDefn => self.mod.functionDefns[index];
 
     function getModule() returns llvm:Module => self.mod.llMod;
-    function getBirModule() returns bir:Module => self.mod.bir;
 
     function stackGuard() returns llvm:PointerValue => self.mod.stackGuard;
 
@@ -264,11 +261,11 @@ class Scaffold {
         return self.getFunctionValue(func, signature, index);
     }
 
-    function getExternalFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:Symbol symbol) returns llvm:ConstPointerValue {
+    function getExternalFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:ExternalSymbol symbol) returns llvm:ConstPointerValue {
         return self.getFunctionValue(func, signature, symbol);
     }
 
-    private function getFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:Symbol|int key) returns llvm:ConstPointerValue {
+    private function getFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:ExternalSymbol|int key) returns llvm:ConstPointerValue {
         FunctionValueDefn? curDefn = self.mod.functionValueDefns[key];
         if curDefn != () {
             return curDefn.value;
@@ -276,7 +273,7 @@ class Scaffold {
         llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func,
                                                             self.getConstructType(t:functionSemType(self.typeContext(), signature)),
                                                             signature, self.mod.functionValueDefns.length());
-        self.mod.functionValueDefns.add({value, key });
+        self.mod.functionValueDefns.add({ value, key });
         return value;
     }
 
