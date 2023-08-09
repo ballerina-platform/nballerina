@@ -47,7 +47,8 @@ type ParseContext record {|
     t:Context tc;
     t:AtomTable atoms;
     ExternalFuncDecls extFuncDecl;
-    t:FunctionSignature[] internalFuncDecl;
+    map<bir:FunctionDefn> internalFuncDefns;
+    t:FunctionSignature[] internalFuncSignatures;
 |};
 
 type FuncParseContext record {|
@@ -147,9 +148,10 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     t:AtomTable atoms = t:atomTableFromSexpr(env, sexprAtoms);
     map<VirtualFile> vFilesByName = map from var [i, f] in files.enumerate() select [f[0].s, new(i, f[1].s, f.length() > 2 ? f[2].s : ())];
     bir:FunctionDefn[] funcDefns = [];
-    t:FunctionSignature[] internalFuncDecl = [];
+    t:FunctionSignature[] internalFuncSignatures = [];
     FunctionCode[] funcCodes = [];
     [bir:FunctionDefn, AnonFunction][] nestedFunctions = [];
+    map<bir:FunctionDefn> internalFuncDefns = {};
     foreach var func in funcs {
         FunctionDefnProps props;
         if func is FunctionWithClosures {
@@ -160,12 +162,13 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
             var [identifier, visibility, [_, signature, [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks]]] = <FunctionWithoutClosures>func; // JBUG: can't use { s: identifier }
             props = { signature, visibility, identifier, partIndex, blocks, registers, closures: [], line, col };
         }
-        accumFunctionDefn(env, atoms, vFilesByName, internalFuncDecl, funcDefns, funcCodes, nestedFunctions, props);
+        accumFunctionDefn(env, atoms, vFilesByName, internalFuncSignatures, funcDefns,
+                          funcCodes, nestedFunctions, internalFuncDefns, props);
     }
     bir:AnonFunction[] anonFuncs = [];
     // NOTE: this is to ensure functions ends up in the same order in virtual module
     foreach var [parent, func] in nestedFunctions {
-        accumAnonFunctionDefn(anonFuncs, funcCodes, internalFuncDecl, toAnonFunction(env, atoms, parent, func));
+        accumAnonFunctionDefn(anonFuncs, funcCodes, internalFuncSignatures, toAnonFunction(env, atoms, parent, func));
     }
     ExternalFuncDecls extFuncDecl = table[];
     foreach var [importedModId, ...funcDecls] in decl {
@@ -176,7 +179,7 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
             });
         }
     }
-    ParseContext pc = { tc, atoms, extFuncDecl, internalFuncDecl };
+    ParseContext pc = { tc, atoms, extFuncDecl, internalFuncSignatures, internalFuncDefns };
     VirtualFile[] vFiles = from var f in vFilesByName order by f.partIndex() select f;
     VirtualModule mod = new(pc, modId, funcDefns.cloneReadOnly(), anonFuncs.cloneReadOnly(), funcCodes, vFiles);
     return mod;
@@ -185,7 +188,7 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
 function accumFunctionDefn(t:Env env, t:AtomTable atoms, map<VirtualFile> vFilesByName,
                            t:FunctionSignature[] internalFuncDecl, bir:FunctionDefn[] funcDefns,
                            FunctionCode[] funcCodes, [bir:FunctionDefn, AnonFunction][] nestedFunctions,
-                           *FunctionDefnProps props) {
+                           map<bir:FunctionDefn> internalFuncDefns, *FunctionDefnProps props) {
     var { signature: sig, visibility, identifier, partIndex, blocks, registers, closures, line, col } = props;
     t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
     internalFuncDecl.push(signature);
@@ -197,6 +200,7 @@ function accumFunctionDefn(t:Env env, t:AtomTable atoms, map<VirtualFile> vFiles
 
     funcDefns.push(funcDefn);
     funcCodes.push({ registers, blocks });
+    internalFuncDefns[identifier.s] = funcDefn;
     foreach var closure in closures {
         nestedFunctions.push([funcDefn, closure]);
     }
@@ -493,8 +497,8 @@ type FunctionHandle bir:ExternalSymbol|int;
 
 function toCallInsn(FuncParseContext pc, FunctionRef|RegisterName symbolSexpr, Operand[] argsSexpr,
                     boolean restParamIsList, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallDirectInsn|bir:CallIndirectInsn {
-    FunctionHandle|bir:Register symbol = symbolSexpr is FunctionRef ? functionHandleFromSexpr(symbolSexpr):
-                                                                      lookupRegister(pc, symbolSexpr);
+    FunctionHandle|bir:Register symbol = symbolSexpr is sexpr:Symbol && symbolSexpr[0] == "r" ? lookupRegister(pc, symbolSexpr):
+                                                                                                functionHandleFromSexpr(pc, symbolSexpr);
     readonly & bir:Operand[] args = from var arg in argsSexpr select toOperand(pc, arg);
     var result = toResultRegister(pc, resultSexpr);
     if symbol is bir:Register {
@@ -518,9 +522,14 @@ function lookupLabel(FuncParseContext pc, string name) returns bir:Label {
     return pc.blockLabels.get(name);
 }
 
-function functionHandleFromSexpr(FunctionRef symbol) returns FunctionHandle {
-    if symbol is int {
-        return symbol;
+function functionHandleFromSexpr(FuncParseContext cx, FunctionRef symbol) returns FunctionHandle {
+    if symbol is sexpr:Symbol {
+        return checkpanic int:fromString(symbol.substring(2));
+    }
+    if symbol is sexpr:String {
+        string name = symbol.s;
+        bir:FunctionDefn funcDefn = cx.internalFuncDefns.get(name);
+        return funcDefn.index;
     }
     var [_, [org, nameFirst, ...nameRest], { s: identifier }] = symbol;
     bir:ModuleId module = { org: org.s, names: [nameFirst.s, ...from var { s } in nameRest select s] };
@@ -539,7 +548,7 @@ function toOperand(FuncParseContext pc, Operand operand) returns bir:Operand {
             return toConstOperand(pc, s);
         }
         ["function", var symbolSexpr] => {
-            FunctionHandle funcHandle = functionHandleFromSexpr(<FunctionRef>symbolSexpr);
+            FunctionHandle funcHandle = functionHandleFromSexpr(pc, <FunctionRef>symbolSexpr);
             t:FunctionSignature signature = lookupSignature(pc, funcHandle);
             t:SemType semType =  t:functionSemType(pc.tc, signature);
             return { value: functionRef(funcHandle, signature, signature), semType };
@@ -591,5 +600,5 @@ function createPosition(int line, int column) returns d:Position {
 
 function lookupSignature(FuncParseContext pc, FunctionHandle funcHandle) returns t:FunctionSignature {
     return funcHandle is bir:ExternalSymbol ? pc.extFuncDecl.get(funcHandle).signature:
-                                              pc.internalFuncDecl[funcHandle];
+                                              pc.internalFuncSignatures[funcHandle];
 }

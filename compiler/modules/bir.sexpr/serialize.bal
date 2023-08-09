@@ -13,6 +13,7 @@ type SerializeContext record {|
     t:Context tc;
     t:AtomTableSexpr atoms = {};
     table<ModuleDeclsMemo> key (id) decls = table[];
+    bir:Module mod;
 |};
 
 type IdName record {|
@@ -29,7 +30,7 @@ type FuncSerializeContext record {|
 |};
 
 public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Semantic|err:Unimplemented {
-    SerializeContext sc = { tc };
+    SerializeContext sc = { tc, mod };
     bir:Function[] functionDefns = mod.getFunctions();
     Function[] funcSexprs = [];
     foreach int i in 0 ..< functionDefns.length() {
@@ -250,7 +251,10 @@ function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & 
 // Convert FunctionRef to a sexpr, accumulates external function signatures to sc.
 function fromFunctionRefAccum(FuncSerializeContext sc, bir:FunctionRef funcRef) returns FunctionRef {
     if funcRef is bir:InternalFunctionRef {
-        return funcRef.index;
+        int index = funcRef.index;
+        bir:Function func = sc.mod.getFunctions()[index];
+        return func is bir:AnonFunction ? string `f.${index}`:
+                                          { s: func.symbol.identifier };
     }
     bir:ExternalSymbol symbol = funcRef.symbol;
     string identifier = symbol.identifier;

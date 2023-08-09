@@ -6,7 +6,7 @@ import wso2/nballerina.types.sexpr as ts;
 public type FunctionTag "function";
 public type RegistersTag "registers";
 public type BlocksTag "blocks";
-public type ClosureTag "closures"; // TODO: this is probably the wrong name
+public type ClosureTag "closures";
 
 public type Position ["loc", int, int];
 public type File [sexpr:String, sexpr:String]|[sexpr:String, sexpr:String, sexpr:String]; // [name, path, ?dir]
@@ -36,7 +36,7 @@ public final ModuleVisibility MODULE_VISIBILITY = [];
 public type FunctionVisibility PublicVisibility|ModuleVisibility;
 
 public type ExternalFunctionRef readonly & ["module-get", ModuleId, sexpr:String];
-public type FunctionRef int|ExternalFunctionRef;
+public type FunctionRef sexpr:String|sexpr:Symbol|ExternalFunctionRef;
 public type MapEntry readonly & [sexpr:String, Operand];
 public type TypeMergePred readonly & [Label, Operand];
 
