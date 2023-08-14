@@ -691,12 +691,13 @@ public type CallIndirectInsn readonly & record {|
     boolean restParamIsList;
 |};
 
-# Create a closure by enclosing the first operand with the remaining operands.
+# Create a function value from an AnonFunction.
+# The operands are the values for the captured registers.
 public type CaptureInsn readonly & record {|
     *ResultInsnBase;
     INSN_CAPTURE name = INSN_CAPTURE;
-    # Index of the function, registers holding the free variables
-    [int, CapturedRegister|DeclRegister...] operands;
+    int functionIndex;
+    [CapturedRegister|DeclRegister...] operands;
 |};
 
 # Assign a value to a register.

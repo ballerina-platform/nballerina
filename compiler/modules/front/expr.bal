@@ -47,7 +47,7 @@ type AssignmentBinding record {|
     Position pos;
 |};
 
-type FunctionMarker "func";
+type FunctionMarker "func"; // value is chosen such that it fits in a small string
 
 type OccurrenceBinding NarrowBinding|AssignmentBinding;
 type Binding DeclBinding|NarrowBinding|AssignmentBinding;
@@ -183,7 +183,7 @@ class ExprContext {
     function lookupLocalVarRef(string varName, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
         t:SingleValue|BindingLookupResult|bir:FunctionRef result = check lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
         if result is BindingLookupResult {
-            if result.shouldCapture {
+            if result.inOuterFunction {
                 return self.unimplementedErr("variable capture not implemented", pos);
             }
             return result.binding;

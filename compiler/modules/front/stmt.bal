@@ -32,7 +32,7 @@ type LoopContext record {|
 
 type BindingLookupResult record {|
     Binding binding;
-    boolean shouldCapture;
+    boolean inOuterFunction;
 |};
 
 type ClosureContext object {
@@ -1199,7 +1199,7 @@ function envDefines(ClosureContext cx, string name, BindingChain? bindings) retu
 
 function bindingsLookup(ClosureContext? cx, string name, BindingChain? bindings) returns BindingLookupResult? {
     BindingChain? tem = bindings;
-    boolean shouldCapture = false;
+    boolean inOuterFunction = false;
     boolean isClosure = cx != () && cx.isClosure();
     while true {
         if tem == () {
@@ -1207,10 +1207,10 @@ function bindingsLookup(ClosureContext? cx, string name, BindingChain? bindings)
         }
         Binding|FunctionMarker head = tem.head;
         if head is FunctionMarker && isClosure {
-            shouldCapture = true;
+            inOuterFunction = true;
         }
         if head !is FunctionMarker && head.name == name {
-            return { binding: head, shouldCapture };
+            return { binding: head, inOuterFunction };
         }
         else {
             tem = tem.prev;
