@@ -54,13 +54,13 @@ class Module {
         }
         self.parentStack.push(self.functions[i]);
         s:FunctionDefn defn = self.functionDefnSource[i];
-        bir:FunctionCode functionCode = check codeGenFunction(self, self.functionDefnSource[i], defn, self.functions[i].decl);
+        var [functionCode, _] = check codeGenFunction(self, self.functionDefnSource[i], defn, self.functions[i].decl);
         _ = self.parentStack.pop();
         self.functionCodes[i] = functionCode;
         return functionCode;
     }
 
-    public function addAnonFunction(s:AnonFunction func, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:FunctionRef, int]|CodeGenError {
+    public function addAnonFunction(s:AnonFunction func, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:InternalFunctionRef, bir:CapturedRegister|bir:DeclRegister...]|CodeGenError {
         bir:Function parent = self.parentStack[self.parentStack.length() - 1];
         t:FunctionSignature signature = <t:FunctionSignature>func.signature;
         int index = self.functions.length();
@@ -69,10 +69,10 @@ class Module {
         self.functions.push(birFunc);
         self.parentStack.push(birFunc);
         // NOTE: we need to codegen the func in order to figure out it's capture values
-        bir:FunctionCode code = check codeGenFunction(self, func, moduleLevelDefn, signature, bindings);
+        var [code, capturedBindings] = check codeGenFunction(self, func, moduleLevelDefn, signature, bindings);
         _ = self.parentStack.pop();
         self.functionCodes[birFunc.index] = code;
-        return [ref, index];
+        return [ref, ...from var { captured } in capturedBindings select captured.reg];
     }
    
     public function finish() returns err:Semantic? {

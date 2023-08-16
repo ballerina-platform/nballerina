@@ -110,6 +110,9 @@ function defnFromRegister(FuncSerializeContext sc, bir:Register reg) returns Reg
     if reg is bir:NarrowRegister {
         return [fromRegister(sc, reg), reg.kind, t:toSexpr(sc.tc, reg.semType, sc.atoms), fromRegister(sc, reg.underlying)];
     }
+    else if reg is bir:CapturedRegister {
+        panic error("not implemented");
+    }
     else {
         return [fromRegister(sc, reg), reg.kind, t:toSexpr(sc.tc, reg.semType, sc.atoms)];
     }

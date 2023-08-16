@@ -148,7 +148,7 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             check buildConvertToDecimal(builder, scaffold, insn);
         }
         else if insn is bir:CaptureInsn {
-            return scaffold.unimplementedErr("CaptureInsn not implemented");
+            // return scaffold.unimplementedErr("CaptureInsn not implemented");
         }
         else if insn is bir:TypeMergeInsn {
             panic err:impossible("type merge not at the head of basic block");

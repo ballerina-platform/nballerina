@@ -184,7 +184,7 @@ public type RegisterBase record {|
 |};
 
 public type DeclRegister ParamRegister|VarRegister|FinalRegister;
-public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister;
+public type Register DeclRegister|NarrowRegister|TmpRegister|AssignTmpRegister|CapturedRegister;
 
 public type RegisterScope readonly & record {|
     RegisterScope? scope;
@@ -255,6 +255,12 @@ public function createFinalRegister(FunctionCode code, SemType semType, Position
 
 public function createNarrowRegister(FunctionCode code, SemType semType, Register underlying, Position? pos = ()) returns NarrowRegister {
     NarrowRegister r = { number: code.registers.length(), underlying, semType, pos };
+    code.registers.push(r);
+    return r;
+}
+
+public function createCapturedRegister(FunctionCode code, SemType semType, DeclRegister|CapturedRegister captured, string? name, RegisterScope scope, Position? pos = ()) returns CapturedRegister {
+    CapturedRegister r = { number: code.registers.length(), captured, semType, pos, scope, name };
     code.registers.push(r);
     return r;
 }
@@ -697,7 +703,7 @@ public type CaptureInsn readonly & record {|
     *ResultInsnBase;
     INSN_CAPTURE name = INSN_CAPTURE;
     int functionIndex;
-    [CapturedRegister|DeclRegister...] operands;
+    [CapturedRegister|DeclRegister...] operands; // TODO: may be we need name for the is union like CapturableRegister
 |};
 
 # Assign a value to a register.
