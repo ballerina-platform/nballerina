@@ -69,16 +69,16 @@ function resolveDefn(ModuleSymbols mod, s:ModuleLevelDefn defn) returns ResolveT
     }
     else {
         // it's a FunctionDefn
-        defn.signature = check resolveFunctionSignature(mod, defn);
+        defn.signature = check resolveFunctionSignature(mod, defn, defn);
     }
 }
 
-function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) returns t:FunctionSignature|ResolveTypeError {
+function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn, s:Function func) returns t:FunctionSignature|ResolveTypeError {
     // JBUG doing this as a from/select panics if resolveSubsetTypeDesc returns an error
     // e.g.10-intersect/never2-e.bal
     t:SemType[] paramTypes = [];
     t:SemType? restParamType = ();
-    foreach var x in defn.params {
+    foreach var x in func.params {
         if x.isRest {
             restParamType = check resolveSubsetTypeDesc(mod, defn, x.td);
             t:ListDefinition d = new;
@@ -89,7 +89,7 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
             paramTypes.push(check resolveSubsetTypeDesc(mod, defn, x.td));
         }
     }
-    s:TypeDesc? retTy = defn.typeDesc.ret;
+    s:TypeDesc? retTy = func.typeDesc.ret;
     t:SemType ret = retTy != () ? check resolveSubsetTypeDesc(mod, defn, retTy) : t:NIL;
     return { paramTypes: paramTypes.cloneReadOnly(), returnType: ret, restParamType };
 }

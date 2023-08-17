@@ -11,7 +11,7 @@ public type Module object {
     // A SemType of a potentially recursive type uses integers to refer to definitions
     // which are in arrays in this.
     public function getTypeContext() returns t:Context;
-    public function getFunctionDefns() returns readonly & FunctionDefn[];
+    public function getFunctions() returns Function[];
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
     public function symbolToString(int partIndex, Symbol sym) returns string;
     // Get the File for a give part index
@@ -42,17 +42,28 @@ public type Label int;
 # A RegionIndex is an index of a region in the regions array.
 public type RegionIndex int;
 
+public type Function FunctionDefn | AnonFunction;
+
+public type FunctionBase record {|
+    FunctionDecl decl;
+    # The position of the definition
+    Position position;
+    # The index of the function in the module
+    int index;
+    readonly...;
+|};
+
 # The definition of a function.
 public type FunctionDefn readonly & record {|
     *ModuleDefn;
-    # Name within the module
-    InternalSymbol symbol;
-    FunctionDecl decl;
-
+    *FunctionBase;
     # Index of source part in which the definition occurs
     int partIndex;
-    # The position of the definition
-    Position position;
+|};
+
+public type AnonFunction readonly & record {|
+    *FunctionBase;
+    Function parent;
 |};
 
 public type InternalSymbol readonly & record {|
@@ -62,8 +73,16 @@ public type InternalSymbol readonly & record {|
 
 public type Symbol InternalSymbol|ExternalSymbol;
 
-public type FunctionRef readonly & record {|
-    Symbol symbol;
+public type FunctionRef ExternalFunctionRef | InternalFunctionRef;
+
+public type ExternalFunctionRef readonly & record {|
+    ExternalSymbol symbol;
+    t:FunctionSignature erasedSignature;
+    t:FunctionSignature signature;
+|};
+
+public type InternalFunctionRef readonly & record {|
+    int index;
     t:FunctionSignature erasedSignature;
     t:FunctionSignature signature;
 |};
@@ -145,13 +164,14 @@ public function lastInsnRef(BasicBlock bb) returns InsnRef {
 public const PARAM_REGISTER_KIND = "param";
 public const VAR_REGISTER_KIND = "var";
 public const FINAL_REGISTER_KIND = "final";
+public const CAPTURED_REGISTER_KIND = "captured";
 
 public const NARROW_REGISTER_KIND = "narrow";
 public const TMP_REGISTER_KIND = "tmp";
 public const ASSIGN_TMP_REGISTER_KIND = "=tmp";
 
 public type DeclRegisterKind PARAM_REGISTER_KIND|VAR_REGISTER_KIND|FINAL_REGISTER_KIND;
-public type RegisterKind DeclRegisterKind|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
+public type RegisterKind DeclRegisterKind|CAPTURED_REGISTER_KIND|NARROW_REGISTER_KIND|TMP_REGISTER_KIND|ASSIGN_TMP_REGISTER_KIND;
 
 public type RegisterBase record {|
     RegisterKind kind;
@@ -188,6 +208,13 @@ public type TmpRegister readonly & record {|
 public type AssignTmpRegister readonly & record {|
     *RegisterBase;
     ASSIGN_TMP_REGISTER_KIND kind = ASSIGN_TMP_REGISTER_KIND;
+|};
+
+public type CapturedRegister readonly & record {|
+    *RegisterBase;
+    CAPTURED_REGISTER_KIND kind = CAPTURED_REGISTER_KIND;
+    DeclRegister|CapturedRegister captured;
+    RegisterScope scope;
 |};
 
 public type NarrowRegister readonly & record {|
@@ -297,6 +324,7 @@ public enum InsnName {
     INSN_ABNORMAL_RET,
     INSN_CALL_DIRECT,
     INSN_CALL_INDIRECT,
+    INSN_CAPTURE,
     INSN_INVOKE,
     INSN_ASSIGN,
     INSN_TYPE_CAST,
@@ -333,7 +361,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallDirectInsn|CallIndirectInsn|CaptureInsn
     |AssignInsn|TypeCastInsn|TypeTestInsn|TypeMergeInsn
     |BranchInsn|TypeCondBranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
@@ -661,6 +689,15 @@ public type CallIndirectInsn readonly & record {|
     INSN_CALL_INDIRECT name = INSN_CALL_INDIRECT;
     [Register, Operand...] operands;
     boolean restParamIsList;
+|};
+
+# Create a function value from an AnonFunction.
+# The operands are the values for the captured registers.
+public type CaptureInsn readonly & record {|
+    *ResultInsnBase;
+    INSN_CAPTURE name = INSN_CAPTURE;
+    int functionIndex;
+    [CapturedRegister|DeclRegister...] operands;
 |};
 
 # Assign a value to a register.

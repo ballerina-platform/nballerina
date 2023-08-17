@@ -30,24 +30,42 @@ type LoopContext record {|
     boolean continueIsBackward;
 |};
 
-class StmtContext {
+type BindingLookupResult record {|
+    Binding binding;
+    boolean inOuterFunction;
+|};
+
+type ClosureContext object {
     *err:SemanticContext;
-    final ModuleSymbols mod;
+    function isClosure() returns boolean;
+};
+
+class StmtContext {
+    *ClosureContext;
+    final Module mod;
+    final ModuleSymbols syms;
     final s:SourceFile file;
-    final s:FunctionDefn functionDefn;
+    final s:Function func;
     final bir:FunctionCode code;
     final t:SemType returnType;
+    final s:FunctionDefn moduleLevelDefn;
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
 
-    function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
+    function init(Module mod, ModuleSymbols syms, s:Function func, s:FunctionDefn moduleLevelDefn, t:SemType returnType) {
         self.mod = mod;
-        self.functionDefn = functionDefn;
-        self.file = functionDefn.part.file;
+        self.syms = syms;
+        self.func = func;
+        self.file = moduleLevelDefn.part.file;
         self.code = {};
         self.returnType = returnType;
-        self.scopeStack.push({ scope: (), startPos: functionDefn.startPos, endPos: functionDefn.endPos });
+        self.moduleLevelDefn = moduleLevelDefn;
+        self.scopeStack.push({ scope: (), startPos: func.startPos, endPos: func.endPos });
+    }
+
+    function isClosure() returns boolean {
+        return self.func is s:AnonFunction;
     }
 
     function createVarRegister(bir:SemType t, Position pos, string name) returns bir:VarRegister {
@@ -117,11 +135,11 @@ class StmtContext {
     }
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
+        return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.moduleLevelDefn.name);
     }
 
     function unimplementedErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Unimplemented {
-        return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
+        return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.moduleLevelDefn.name);
     }
 
     private function location(Position|Range pos) returns d:Location {
@@ -189,7 +207,7 @@ class StmtContext {
     }
 
     function exprContext(BindingChain? bindings) returns ExprContext {
-        return new ExprContext(self.mod, self.functionDefn, self.code, bindings, self);
+        return new ExprContext(self.syms, self.moduleLevelDefn, self.code, bindings, self);
     }
 
     function codeGenExpr(bir:BasicBlock block, BindingChain? bindings, t:SemType? expectedType, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -209,26 +227,29 @@ class StmtContext {
     }
 
     function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
-        return resolveSubsetTypeDesc(self.mod, self.functionDefn, td);
+        return resolveSubsetTypeDesc(self.syms, self.moduleLevelDefn, td);
     }
 
 }
 
-function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, t:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
-    StmtContext cx = new(mod, defn, signature.returnType);
+function codeGenFunction(Module mod, s:Function func, s:FunctionDefn moduleLevelDefn, t:FunctionSignature signature, BindingChain? closureBindings = ()) returns bir:FunctionCode|CodeGenError {
+    StmtContext cx = new(mod, mod.syms, func, moduleLevelDefn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
-    BindingChain? bindings = ();
-    foreach int i in 0 ..< defn.params.length() {
-        var param = defn.params[i];
-        bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], param.namePos, param.name);
-        bindings = { head: { name: <string>param.name, reg, isFinal: true }, prev: bindings };
+    BindingChain bindings = { head: "func", prev: closureBindings };
+    foreach int i in 0 ..< func.params.length() {
+        var { name, namePos } = func.params[i];
+        if envDefines(cx, name, bindings) {
+            return cx.semanticErr(`duplicate declaration of ${name}`, namePos);
+        }
+        bir:ParamRegister reg = cx.createParamRegister(signature.paramTypes[i], namePos, name);
+        bindings = { head: { name: <string>name, reg, isFinal: true }, prev: bindings };
     }
-    var { block: endBlock } = check codeGenScope(cx, startBlock, bindings, defn.body);
+    var { block: endBlock } = check codeGenScope(cx, startBlock, bindings, func.body);
     if endBlock != () {
-        bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: defn.body.closeBracePos };
+        bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: func.body.closeBracePos };
         endBlock.insns.push(ret);
     }
-    codeGenOnPanic(cx, defn.body.closeBracePos);
+    codeGenOnPanic(cx, func.body.closeBracePos);
     return cx.code;
 }
 
@@ -310,7 +331,9 @@ function bindingsUpTo(BindingChain? bindingLimit, BindingChain? bindings) return
     while b !== bindingLimit {
         // Since `bindingLimit` is a sub-chain of `bindings`, we never reach nil on `b`.
         var { head, prev } = <BindingChain>b;
-        result.push(head);
+        if head !is FunctionMarker {
+            result.push(head);
+        }
         b = prev;
     }
     return result;
@@ -379,7 +402,7 @@ function unusedLocalVariables(StmtContext cx, BindingChain? blockBindings, Bindi
 
 function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain? initialBindings, s:ForeachStmt stmt) returns CodeGenError|StmtEffect {
     string varName = stmt.name;
-    if envDefines(varName, initialBindings) {
+    if envDefines(cx, varName, initialBindings) {
         return cx.semanticErr(`duplicate declaration of ${varName}`, stmt.namePos);
     }
     s:RangeExpr range = stmt.range;
@@ -418,7 +441,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCh
     }
     if loopStep != () {
         bir:TmpRegister nextLoopVal = cx.createTmpRegister(t:INT);
-        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: nextLoopVal };
+        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.syms.tc, 1)], result: nextLoopVal };
         bir:AssignInsn incrementAssign = { result: loopVar, operand: nextLoopVal, pos: stmt.kwPos };
         bir:BranchInsn backwardBranchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos, backward: true };
         loopStep.insns.push(increment, incrementAssign, backwardBranchToLoopHead);
@@ -527,7 +550,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
     ExprContext ec = cx.exprContext(initialBindings);
     final int startRegister = cx.nextRegisterNumber();
     var { result: matched, block: testBlock, binding } = check codeGenExpr(ec, startBlock, (), stmt.expr);
-    t:Context tc = cx.mod.tc;
+    t:Context tc = cx.syms.tc;
     t:SemType matchedType = operandSemType(tc, matched);
     // defaultCodeIndex is either () or the index of the last clause;
     // the latter case means that the match is exhaustive
@@ -583,7 +606,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
         precedingPatternsUnion = t:union(precedingPatternsUnion, clausePatternUnion);
         clauseUnmatchedLooksLike[i] = t:diff(matchedType , precedingPatternsUnion);
         clausePatternUnions[i] = clausePatternUnion;
-        if t:isSubtype(cx.mod.tc, matchedType, precedingPatternsUnion) {
+        if t:isSubtype(cx.syms.tc, matchedType, precedingPatternsUnion) {
             if i != stmt.clauses.length() - 1 {
                 return cx.semanticErr("match clause unmatchable because of previous wildcard match pattern", pos=s:range(stmt.clauses[i + 1]));
             }
@@ -686,8 +709,8 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChai
 }
 
 function resolveConstMatchPattern(StmtContext cx, BindingChain? bindings, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|ResolveTypeError {
-    if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(expr.name, bindings) {
-        var [_, value] = check resolveConstExprForType(cx.mod, cx.functionDefn, expr, expectedType, "pattern will not be matched");
+    if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(cx, expr.name, bindings) {
+        var [_, value] = check resolveConstExprForType(cx.syms, cx.moduleLevelDefn, expr, expectedType, "pattern will not be matched");
         return value;
     }
     return cx.semanticErr(`match pattern is not constant`, s:range(expr));
@@ -816,7 +839,7 @@ function codeGenVarDeclStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCh
         return codeGenWildcardDeclStmt(cx, startBlock, initialBindings, initExpr, td, stmt.opPos);
     }
     else {
-        if envDefines(name, initialBindings) {
+        if envDefines(cx, name, initialBindings) {
             return cx.semanticErr(`duplicate declaration of ${name}`, namePos);
         }
         t:SemType semType = check cx.resolveTypeDesc(td);
@@ -828,7 +851,7 @@ function codeGenVarDeclStmt(StmtContext cx, bir:BasicBlock startBlock, BindingCh
 
 function codeGenWildcardDeclStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain? initialBindings, s:Expr expr, s:TypeDesc td, Position pos) returns CodeGenError|StmtEffect {
     t:SemType semType = check cx.resolveTypeDesc(td);
-    if !t:isSubtype(cx.mod.tc, semType, t:ANY) {
+    if !t:isSubtype(cx.syms.tc, semType, t:ANY) {
         return cx.semanticErr("type descriptor of wildcard should be a subtype of any", pos);
     }
     bir:BasicBlock nextBlock = check codeGenAssign(cx, initialBindings, startBlock, cx.createVarRegister(semType, pos, "_"), expr, semType, pos);
@@ -928,8 +951,8 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
         }
         else {
             var { result: index, block: nextBlock } = check cx.codeGenExprForInt(block1, initialBindings, lValue.index);
-            t:SemType memberType = t:listMemberTypeInnerVal(cx.mod.tc, reg.semType, index.semType);
-            if t:isEmpty(cx.mod.tc, memberType) {
+            t:SemType memberType = t:listMemberTypeInnerVal(cx.syms.tc, reg.semType, index.semType);
+            if t:isEmpty(cx.syms.tc, memberType) {
                 return cx.semanticErr("index out of range", s:range(lValue.index));
             }
             { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, initialBindings, memberType, expr);
@@ -940,7 +963,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
     }
     else {
         var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, block1, initialBindings, lValue, reg.semType);
-        t:SemType memberType = t:mappingMemberTypeInnerVal(cx.mod.tc, reg.semType, index.semType);
+        t:SemType memberType = t:mappingMemberTypeInnerVal(cx.syms.tc, reg.semType, index.semType);
         { result: operand, block: nextBlock } = check cx.codeGenExpr(nextBlock, initialBindings, memberType, expr);
         bir:MappingSetInsn insn =  { operands: [ reg, index, operand], pos: lValue.opPos };
         nextBlock.insns.push(insn);
@@ -951,10 +974,10 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Bindin
 function codeGenLExprMappingKey(StmtContext cx, bir:BasicBlock block, BindingChain? initialBindings, s:MemberAccessLExpr|s:FieldAccessLExpr mappingLValue, t:SemType mappingType) returns CodeGenError|StringExprEffect {
     if mappingLValue is s:FieldAccessLExpr {
         string fieldName = mappingLValue.fieldName;
-        if t:containsUndef(t:mappingMemberTypeInner(cx.mod.tc, mappingType, t:stringConst(fieldName))) {
+        if t:containsUndef(t:mappingMemberTypeInner(cx.syms.tc, mappingType, t:stringConst(fieldName))) {
             return cx.semanticErr(`${fieldName} must be a required key`, pos=mappingLValue.opPos);
         }
-        return { result: singletonStringOperand(cx.mod.tc, fieldName), block };
+        return { result: singletonStringOperand(cx.syms.tc, fieldName), block };
     }
     else {
         return cx.codeGenExprForString(block, initialBindings, mappingLValue.index);
@@ -1008,8 +1031,8 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
                                            s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                            Position pos) returns CodeGenError|StmtEffect {
     var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, initialBindings, lValue.index);
-    t:SemType memberType = t:listMemberTypeInnerVal(cx.mod.tc, list.semType, index.semType);
-    if t:isEmpty(cx.mod.tc, memberType) {
+    t:SemType memberType = t:listMemberTypeInnerVal(cx.syms.tc, list.semType, index.semType);
+    if t:isEmpty(cx.syms.tc, memberType) {
         return cx.semanticErr("index out of range", s:range(lValue.index));
     }
     bir:TmpRegister member = cx.createTmpRegister(memberType, lValue.opPos);
@@ -1066,7 +1089,7 @@ function codeGenCallStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain
     else {
         return codeGenCheckingStmt(cx, startBlock, initialBindings, expr.checkingKeyword, expr.operand, expr.kwPos);
     }
-    if !t:isSubtype(cx.mod.tc, result.semType, t:NIL) {
+    if !t:isSubtype(cx.syms.tc, result.semType, t:NIL) {
         return cx.semanticErr("return type of function or method in call statement must be nil", stmt.startPos);
     }
     return { block: nextBlock };
@@ -1075,7 +1098,7 @@ function codeGenCallStmt(StmtContext cx, bir:BasicBlock startBlock, BindingChain
 function codeGenCheckingStmt(StmtContext cx, bir:BasicBlock bb, BindingChain? initialBindings, s:CheckingKeyword checkingKeyword, s:Expr expr, Position pos) returns CodeGenError|StmtEffect {
     // checking stmt falls into one of : 1) never err 2) always err 3) conditionally err
     var { result: o, block: nextBlock, binding } = check cx.codeGenExpr(bb, initialBindings, t:ERROR, expr);
-    t:SemType semType = operandSemType(cx.mod.tc, o);
+    t:SemType semType = operandSemType(cx.syms.tc, o);
     t:SemType errorType = t:intersect(semType, t:ERROR);
     bir:BasicBlock block;
     t:SemType resultType;
@@ -1120,17 +1143,18 @@ function codeGenCheckingCond(ExprContext cx, bir:BasicBlock bb, bir:Register ope
 }
 
 function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings, Position pos) returns Binding|CodeGenError {
-    var b = check lookupLocalVarRef(cx, cx.mod, name, bindings, pos);
-    if b is Binding {
-        return b;
+    var b = check lookupLocalVarRef(cx, cx.syms, name, bindings, pos);
+    if b is BindingLookupResult {
+        // NOTE: we handle capture at the ExprContext level
+        return b.binding;
     }
     else {
         return cx.semanticErr("an lvalue can only refer to a variable definition", pos);
     }
 }
 
-function lookupLocalVarRef(err:SemanticContext cx, ModuleSymbols mod, string name, BindingChain? bindings, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
-    Binding? binding = envLookup(name, bindings);
+function lookupLocalVarRef(ClosureContext cx, ModuleSymbols mod, string name, BindingChain? bindings, Position pos) returns t:SingleValue|BindingLookupResult|bir:FunctionRef|CodeGenError {
+    BindingLookupResult? binding = envLookup(cx, name, bindings);
     if binding == () {
         s:ModuleLevelDefn? defn = mod.defns[name];
         if defn == () {
@@ -1145,9 +1169,8 @@ function lookupLocalVarRef(err:SemanticContext cx, ModuleSymbols mod, string nam
                 // Signature will not be () if we are in a function
                 return cx.semanticErr("variable reference in a const cannot refer to a function", pos);
             }
-            boolean isPublic = defn.vis == "public";
-            bir:InternalSymbol symbol = { identifier: name, isPublic };
-            return { symbol, signature, erasedSignature: signature };
+            int index = <int>functionDefnIndex(mod, defn);
+            return { index, signature, erasedSignature: signature };
         }
         else {
             s:TypeDefn _ = defn;
@@ -1161,31 +1184,48 @@ function lookupLocalVarRef(err:SemanticContext cx, ModuleSymbols mod, string nam
     }
 }
 
-function envLookup(string name, BindingChain? bindings) returns Binding? {
-    Binding? binding = bindingsLookup(name, bindings);
-    if binding != () {
-        DeclBinding unnarrowed = unnarrowBinding(binding);
+function envLookup(ClosureContext cx, string name, BindingChain? bindings) returns BindingLookupResult? {
+    BindingLookupResult? result = bindingsLookup(cx, name, bindings);
+    if result != () {
+        DeclBinding unnarrowed = unnarrowBinding(result.binding);
         unnarrowed.used = true;
     }
-    return binding;
+    return result;
 }
 
-function envDefines(string name, BindingChain? bindings) returns boolean {
-    return bindingsLookup(name, bindings) != ();
+function envDefines(ClosureContext cx, string name, BindingChain? bindings) returns boolean {
+    return bindingsLookup(cx, name, bindings) != ();
 }
 
-function bindingsLookup(string name, BindingChain? bindings) returns Binding? {
+function bindingsLookup(ClosureContext? cx, string name, BindingChain? bindings) returns BindingLookupResult? {
     BindingChain? tem = bindings;
+    boolean inOuterFunction = false;
+    boolean isClosure = cx != () && cx.isClosure();
     while true {
         if tem == () {
             break;
         }
-        else if tem.head.name == name {
-            return tem.head;
+        Binding|FunctionMarker head = tem.head;
+        if head is FunctionMarker && isClosure {
+            inOuterFunction = true;
+        }
+        if head !is FunctionMarker && head.name == name {
+            return { binding: head, inOuterFunction };
         }
         else {
             tem = tem.prev;
         }
+    }
+    return ();
+}
+
+function functionDefnIndex(ModuleSymbols mod, s:FunctionDefn defn) returns int? {
+    int index = 0;
+    foreach var d in mod.defns.filter(each => each is s:FunctionDefn) {
+        if d.name == defn.name {
+            return index;
+        }
+        index += 1;
     }
     return ();
 }

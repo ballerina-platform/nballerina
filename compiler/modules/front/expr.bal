@@ -47,11 +47,13 @@ type AssignmentBinding record {|
     Position pos;
 |};
 
+type FunctionMarker "func"; // value is chosen such that it fits in a small string
+
 type OccurrenceBinding NarrowBinding|AssignmentBinding;
 type Binding DeclBinding|NarrowBinding|AssignmentBinding;
 
 type BindingChain record {|
-    Binding head;
+    Binding|FunctionMarker head;
     BindingChain? prev;
 |};
 
@@ -105,7 +107,7 @@ type CalledFunctionInfo record {|
 |};
 
 class ExprContext {
-    *err:SemanticContext;
+    *ClosureContext;
     final StmtContext? sc;
     final ModuleSymbols mod;
     final s:ModuleLevelDefn defn;
@@ -120,6 +122,11 @@ class ExprContext {
         self.file = defn.part.file;
         self.sc = sc;
         self.code = code;
+    }
+
+    function isClosure() returns boolean {
+        StmtContext? sc = self.sc;
+        return sc == () ? false : sc.isClosure();
     }
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
@@ -174,7 +181,14 @@ class ExprContext {
     }
 
     function lookupLocalVarRef(string varName, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
-        return lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
+        t:SingleValue|BindingLookupResult|bir:FunctionRef result = check lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
+        if result is BindingLookupResult {
+            if result.inOuterFunction {
+                return self.unimplementedErr("variable capture not implemented", pos);
+            }
+            return result.binding;
+        }
+        return result;
     }
 
     function notInConst(s:Expr expr) returns CodeGenError? {
@@ -186,7 +200,6 @@ class ExprContext {
     function exprContext(BindingChain? bindings) returns ExprContext {
         return new(self.mod, self.defn, self.code, bindings, self.sc);
     }
-
 }
 
 function codeGenExprForBoolean(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|BooleanExprEffect {
@@ -294,6 +307,10 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
             else {
                 return codeGenMethodCallExpr(cx, bb, callExpr);
             }
+        }
+        var { func } => {
+            check cx.notInConst(expr);
+            return codeGenAnonFunction(cx, bb, func, expr.startPos);
         }
         // Member access E[i]
         var { container, index, opPos: pos } => {
@@ -1512,6 +1529,15 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
                        func.signature.returnType, args, false, expr.namePos);
 }
 
+function codeGenAnonFunction(ExprContext cx, bir:BasicBlock curBlock, s:AnonFunction func, bir:Position pos) returns CodeGenError|ExprEffect {
+    StmtContext stmtContext = check cx.stmtContext();
+    t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, stmtContext.moduleLevelDefn, func);
+    func.signature = signature;
+    var [ref, _] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);
+    bir:FunctionConstOperand result = functionValOperand(cx.mod.tc, ref);
+    return { result, block: curBlock };
+}
+
 function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func, 
                      t:SemType returnType, bir:Operand[] args, boolean restParamIsList, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
@@ -1565,7 +1591,7 @@ function codeGenTypeMerge(ExprContext cx, bir:BasicBlock block, BindingChain? bi
             continue;
         }
         Binding unnarrowed = originGroup.unnarrowed;
-        Binding existing = <Binding>envLookup(unnarrowed.name, bindingLimit);
+        var { binding: existing } = <BindingLookupResult>envLookup(cx, unnarrowed.name, bindingLimit);
         if existing.reg.semType == originGroup.union {
             continue;
         }

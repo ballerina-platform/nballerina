@@ -332,6 +332,7 @@ primary-expr =
   | variable-reference-expr
   | list-constructor-expr
   | mapping-constructor-expr
+  | explicit-anonymous-function-expr
   | "(" expression ")"
 
 literal = nil-literal | boolean-literal | int-literal | floating-point-literal | string-literal
@@ -351,6 +352,8 @@ field-list = field ["," field ]*
 field = field-name ":" expression
 
 field-name = string-literal | identifier
+
+explicit-anonymous-function-expr = "function" signature stmt-block
 
 member-access-expr = primary-expr "[" expression "]"
 
@@ -415,11 +418,13 @@ Two kinds of `import` are supported.
 
 * `list-constructor-expr` and `mapping-constructor-expr` are not allowed within a `const-expr`.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
+* anonymous function does not support variable capture
 
 ## Additions from subset 14
 
 * Add support for `function` values
 * Add support for `object` type descriptors with restrictions
+* Add support for anonymous functions with restrictions
 
 ## Implemented spec changes since 2022R1
 

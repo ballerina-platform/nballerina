@@ -9,13 +9,23 @@ type Range d:Range;
 class VerifyContext {
     private final Module mod;
     private final t:Context tc;
-    private final FunctionDefn defn;
+    private final Function func;
+    private final FunctionDefn moduleDefn;
 
-    function init(Module mod, FunctionDefn defn) {
+    function init(Module mod, Function func) {
         self.mod = mod;
         t:Context tc  = mod.getTypeContext();
         self.tc = tc;
-        self.defn = defn;
+        self.func = func;
+        if func is FunctionDefn {
+            self.moduleDefn = func;
+        } else {
+            Function parent = func.parent;
+            while parent !is FunctionDefn {
+                parent = parent.parent;
+            }
+            self.moduleDefn = <FunctionDefn>parent;
+        }
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
@@ -43,25 +53,25 @@ class VerifyContext {
     }
 
     function semanticErr(d:Message msg, Position|Range pos) returns err:Semantic {
-        return err:semantic(msg, loc=self.location(pos), defnName=self.defn.symbol.identifier);
+        return err:semantic(msg, loc=self.location(pos), defnName=self.moduleDefn.symbol.identifier);
     }
 
     function invalidErr(d:Message m, Position|Range pos) returns err:Internal {
-        return err:internal("invalid BIR: " + d:messageToString(m), loc=self.location(pos), defnName=self.defn.symbol.identifier);
+        return err:internal("invalid BIR: " + d:messageToString(m), loc=self.location(pos), defnName=self.moduleDefn.symbol.identifier);
     }
 
     private function location(Position|Range pos) returns d:Location {
-        return d:location(self.mod.getPartFile(self.defn.partIndex), pos);
+        return d:location(self.mod.getPartFile(self.moduleDefn.partIndex), pos);
     }
 
-    function returnType() returns t:SemType => self.defn.decl.returnType;
+    function returnType() returns t:SemType => self.func.decl.returnType;
 
     function symbolToString(Symbol sym) returns string {
-        return self.mod.symbolToString(self.defn.partIndex, sym);
+        return self.mod.symbolToString(self.moduleDefn.partIndex, sym);
     }
 
     function verifyCodeContext(FunctionCode code) returns VerifyCodeContext|Error {
-        return new(self, code, self.defn.position);
+        return new(self, code, self.func.position);
     }
 }
 
@@ -102,8 +112,8 @@ type RegFlow record {|
     RegSet regs;
 |};
 
-public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
-    VerifyContext vc = new(mod, defn);
+public function verifyFunctionCode(Module mod, Function func, FunctionCode code) returns Error? {
+    VerifyContext vc = new(mod, func);
     Label entry = 0;
     // Checks are done in two DFS rounds. During first round, forward in degree is calculated for each block and stored in cx.
     VerifyCodeContext cx = check vc.verifyCodeContext(code);

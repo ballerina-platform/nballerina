@@ -309,6 +309,9 @@ function syntaxNodeFromExpr(Expr expr) returns SubSyntaxNode {
     else if expr is CheckingExpr {
         return syntaxNodeFromCheckingExpr(expr);
     }
+    else if expr is ExplicitAnonymousFunctionExpr {
+        return syntaxNodeFromExplicitAnonymousFunctionExpr(expr);
+    }
     else {
         return syntaxNodeFromUnaryExpr(expr);
     }
@@ -404,6 +407,13 @@ function syntaxNodeFromVarRefExpr(VarRefExpr expr) returns NonTerminalSyntaxNode
 function syntaxNodeFromCheckingExpr(CheckingExpr expr) returns NonTerminalSyntaxNode {
     return nonTerminalSyntaxNode(expr, { token: expr.checkingKeyword, pos: expr.kwPos },
                                        syntaxNodeFromExpr(expr.operand));
+}
+
+function syntaxNodeFromExplicitAnonymousFunctionExpr(ExplicitAnonymousFunctionExpr expr) returns NonTerminalSyntaxNode {
+    var { typeDesc, body } = expr.func;
+    return nonTerminalSyntaxNode(expr, { token: "function", pos: expr.startPos },
+                                       syntaxNodeFromFunctionTypeDesc(typeDesc, functionSignature = true),
+                                       syntaxNodeFromStmtBlock(body));
 }
 
 function syntaxNodeFromUnaryExpr(UnaryExpr expr) returns NonTerminalSyntaxNode {

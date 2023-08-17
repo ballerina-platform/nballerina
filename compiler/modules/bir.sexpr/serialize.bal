@@ -13,6 +13,7 @@ type SerializeContext record {|
     t:Context tc;
     t:AtomTableSexpr atoms = {};
     table<ModuleDeclsMemo> key (id) decls = table[];
+    bir:Module mod;
 |};
 
 type IdName record {|
@@ -29,15 +30,11 @@ type FuncSerializeContext record {|
 |};
 
 public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Semantic|err:Unimplemented {
-    SerializeContext sc = { tc };
-    bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
-    Function[] funcSexprs = [];
-    foreach int i in 0 ..< functionDefns.length() {
-        bir:FunctionDefn defn = functionDefns[i];
-        bir:FunctionCode code = check mod.generateFunctionCode(i);
-        bir:File file = mod.getPartFile(defn.partIndex);
-        funcSexprs.push(fromFunction(sc, defn, code, file));
-    }
+    SerializeContext sc = { tc, mod };
+    Function[] funcSexprs = from bir:Function func in mod.getFunctions()
+                              where func is bir:FunctionDefn
+                              select check fromFunction(sc, func, check mod.generateFunctionCode(func.index),
+                                                        mod.getPartFile(func.partIndex));
     [sexpr:String, ts:Atom][] atoms = from var [s, atom] in sc.atoms.entries() select [{ s }, atom];
     ModuleDecls[] decl = from var { id, funcs } in sc.decls
                          select [id, ...from var [name, sig] in funcs.entries()
@@ -48,18 +45,58 @@ public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Sema
     return [["atoms", ...atoms], ["defns", ...funcSexprs], ["decls", ...decl], ["files", ...files]];
 }
 
-function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCode code, bir:File file) returns Function {
+function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCode code, bir:File file) returns Function|err:Semantic|err:Unimplemented{
+    var { identifier, isPublic } = defn.symbol;
+    sexpr:String name = { s: identifier };
+    FunctionVisibility access = isPublic ? PUBLIC_VISIBILITY : MODULE_VISIBILITY;
+    var [signature, registers, blocks, closures, [line, col]] = check fromFunctionInner(sc, defn, code, file);
+    if closures.length() > 0 {
+        return [name, access, ["function", signature, ["file", { s: basename(file.filename()) }], ["loc", line, col],
+                              ["registers", ...registers],
+                              ["blocks", ...blocks],
+                              ["functions", ...closures]]];
+    }
+    // JBUG: cloneWithType
+    return checkpanic [name, access, ["function", signature, ["file", { s: basename(file.filename()) }], ["loc", line, col],
+                                     ["registers", ...registers],
+                                     ["blocks", ...blocks]]].cloneWithType();
+}
+
+function fromAnonFunction(SerializeContext sc, bir:AnonFunction func, bir:FunctionCode code, bir:File file) returns AnonFunction|err:Semantic|err:Unimplemented {
+    var [signature, registers, blocks, closures, [line, col]] = check fromFunctionInner(sc, func, code, file);
+    string name = string `f.${func.index}`;
+    if closures.length() > 0 {
+        return [name, ["function", signature, ["loc", line, col],
+                      ["registers", ...registers],
+                      ["blocks", ...blocks],
+                      ["functions", ...closures]]];
+    }
+    // JBUG: cloneWithType
+    return checkpanic [name, ["function", signature, ["loc", line, col],
+                             ["registers", ...registers],
+                             ["blocks", ...blocks]]].cloneWithType(AnonFunction);
+}
+
+function fromFunctionInner(SerializeContext sc, bir:Function func, bir:FunctionCode code, bir:File file) returns [Signature, Register[], Block[], AnonFunction[], [int, int]]|err:Semantic|err:Unimplemented {
     bir:BasicBlock[] blocks = code.blocks; // JBUG: NPE if destructuring is used
     bir:Register[] registers = code.registers;
     IdNames blockNames = differentiate("b", blocks.length(), i => let var { name, label } = blocks[i] in [name, label]);
     IdNames regNames = differentiate("r", registers.length(), i => let var reg = registers[i] in [bir:unnarrow(reg).name, reg.number]);
     FuncSerializeContext fsc = { ...sc, blockNames, regNames };
-    sexpr:String name = { s: defn.symbol.identifier };
-    FunctionVisibility access = defn.symbol.isPublic ? PUBLIC_VISIBILITY : MODULE_VISIBILITY;
-    var [line, col] = file.lineColumn(defn.position);
-    return [name, access, ["function", fromSignature(fsc, defn.decl), ["file", { s: basename(file.filename()) }], ["loc", line, col],
-                          ["registers", ...from var r in registers select defnFromRegister(fsc, r)],
-                          ["blocks", ...from var b in blocks select fromBasicBlock(fsc, b, file)]]];
+    bir:Module mod = sc.mod;
+    Register[] registerSexprs = from var r in registers select defnFromRegister(fsc, r);
+    Block[] blockSexprs = from var b in blocks select fromBasicBlock(fsc, b, file);
+    AnonFunction[] closures = from var child in functionChildren(mod, func)
+                                select check fromAnonFunction(sc, child,
+                                                              check mod.generateFunctionCode(child.index),
+                                                              file);
+    return [fromSignature(fsc, func.decl), registerSexprs, blockSexprs, closures, file.lineColumn(func.position)];
+}
+
+function functionChildren(bir:Module mod, bir:Function func) returns bir:AnonFunction[] {
+    // JBUG: cast
+    return from var child in mod.getFunctions() where child is bir:AnonFunction && child.parent.index == func.index 
+                select <bir:AnonFunction>child;
 }
 
 function basename(string path) returns string {
@@ -144,6 +181,10 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
         }
         return ["type-merge", fromRegister(sc, insn.result), ...preds];
     }
+    else if insn is bir:CaptureInsn {
+        // TODO: when we have implemented this remove the cast at bir:Operand[]? operands ...
+        panic err:unimplemented("CaptureInsn not supported", { file, range: insn.pos });
+    }
     else if insn is bir:PanicInsn {
         return ["panic", fromOperand(sc, insn.operand)];
     }
@@ -157,7 +198,8 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
     if operand != () {
         insnSexpr.push(fromOperand(sc, operand));
     }
-    bir:Operand[]? operands = insn?.operands;
+    // JBUG: cast
+    bir:Operand[]? operands = <bir:Operand[]?>insn?.operands;
     if operands != () {
         foreach var o in operands {
             insnSexpr.push(fromOperand(sc, o));
@@ -198,17 +240,17 @@ function fromOperand(FuncSerializeContext sc, bir:Operand op) returns Operand & 
 
 // Convert FunctionRef to a sexpr, accumulates external function signatures to sc.
 function fromFunctionRefAccum(FuncSerializeContext sc, bir:FunctionRef funcRef) returns FunctionRef {
-    bir:Symbol symbol = funcRef.symbol;
-    string identifier = symbol.identifier;
-    if symbol is bir:ExternalSymbol {
-        ModuleId & readonly id = formModuleId(symbol.module);
-        ModuleDeclsMemo decls = addGetModDecls(sc, id);
-        decls.funcs[identifier] = fromSignature(sc, funcRef.erasedSignature);
-        return ["module-get", id, { s: identifier }];
+    if funcRef is bir:InternalFunctionRef {
+        int index = funcRef.index;
+        bir:Function func = sc.mod.getFunctions()[index];
+        return func is bir:AnonFunction ? string `f.${index}`:
+                                          { s: func.symbol.identifier };
     }
-    else {
-        return { s: identifier };
-    }
+    var { identifier, module } = funcRef.symbol;
+    ModuleId & readonly id = formModuleId(module);
+    ModuleDeclsMemo decls = addGetModDecls(sc, id);
+    decls.funcs[identifier] = fromSignature(sc, funcRef.erasedSignature);
+    return ["module-get", id, { s: identifier }];
 }
 
 function addGetModDecls(FuncSerializeContext sc, readonly & ModuleId id) returns ModuleDeclsMemo {

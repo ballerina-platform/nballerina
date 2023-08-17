@@ -353,9 +353,22 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         endPos = tok.previousEndPos();
         return { startPos, endPos, opPos: startPos, fields };
     }
+    else if t == "function" {
+        check tok.advance();
+        return parseExplicitAnonymousFunctionExpr(tok, startPos);
+    }
     else {
         return parseError(tok);
     }
+}
+
+function parseExplicitAnonymousFunctionExpr(Tokenizer tok, Position startPos) returns ExplicitAnonymousFunctionExpr|err:Syntax {
+    FunctionParam [] params = [];
+    FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, params);
+    StmtBlock body = check parseStmtBlock(tok);
+    Position endPos = tok.previousEndPos();
+    AnonFunction func = { startPos, endPos, params, body, typeDesc };
+    return { startPos, endPos, func };
 }
 
 function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns Expr|err:Syntax {

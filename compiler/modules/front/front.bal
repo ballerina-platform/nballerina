@@ -18,17 +18,20 @@ class Module {
     final s:SourceFile[] files;
     final ModuleSymbols syms;
     final s:FunctionDefn[] functionDefnSource = [];
-    final readonly & bir:FunctionDefn[] functionDefns;
+    final bir:Function[] functions;
+    final bir:Function[] parentStack = [];
+    final bir:FunctionCode?[] functionCodes = [];
 
     function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
         self.id = id;
         self.files = files;
         self.syms = syms;
-        final bir:FunctionDefn[] functionDefns = [];
+        final bir:Function[] functionDefns = [];
         foreach var defn in syms.defns {
             if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
                 functionDefns.push({
+                    index: functionDefns.length(),
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
                     decl: <t:FunctionSignature>defn.signature,
@@ -37,7 +40,7 @@ class Module {
                 });
             }
         }
-        self.functionDefns = functionDefns.cloneReadOnly();
+        self.functions = functionDefns;
     }
 
     public function getId() returns bir:ModuleId => self.id;
@@ -45,7 +48,31 @@ class Module {
     public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        return codeGenFunction(self.syms, self.functionDefnSource[i], self.functionDefns[i].decl);
+        bir:FunctionCode? memo = i < self.functionCodes.length() ? self.functionCodes[i] : ();
+        if memo != () {
+            return memo;
+        }
+        self.parentStack.push(self.functions[i]);
+        s:FunctionDefn defn = self.functionDefnSource[i];
+        bir:FunctionCode functionCode = check codeGenFunction(self, self.functionDefnSource[i], defn, self.functions[i].decl);
+        _ = self.parentStack.pop();
+        self.functionCodes[i] = functionCode;
+        return functionCode;
+    }
+
+    public function addAnonFunction(s:AnonFunction func, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:FunctionRef, int]|CodeGenError {
+        bir:Function parent = self.parentStack[self.parentStack.length() - 1];
+        t:FunctionSignature signature = <t:FunctionSignature>func.signature;
+        int index = self.functions.length();
+        bir:InternalFunctionRef ref = { index, signature, erasedSignature: signature };
+        bir:AnonFunction birFunc =  { index, decl: signature, position: func.startPos, parent };
+        self.functions.push(birFunc);
+        self.parentStack.push(birFunc);
+        // NOTE: we need to codegen the func in order to figure out it's capture values
+        bir:FunctionCode code = check codeGenFunction(self, func, moduleLevelDefn, signature, bindings);
+        _ = self.parentStack.pop();
+        self.functionCodes[birFunc.index] = code;
+        return [ref, index];
     }
    
     public function finish() returns err:Semantic? {
@@ -59,8 +86,8 @@ class Module {
         }
     }
 
-    public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {
-        return self.functionDefns;
+    public function getFunctions() returns bir:Function[] {
+        return self.functions;
     }
 
     public function getPartFile(int partIndex) returns bir:File {

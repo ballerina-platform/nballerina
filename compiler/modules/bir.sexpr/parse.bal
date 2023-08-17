@@ -47,7 +47,8 @@ type ParseContext record {|
     t:Context tc;
     t:AtomTable atoms;
     ExternalFuncDecls extFuncDecl;
-    map<t:FunctionSignature> internalFuncDecl;
+    map<int> internalFuncDefnIndices;
+    t:FunctionSignature[] internalFuncSignatures;
 |};
 
 type FuncParseContext record {|
@@ -60,14 +61,14 @@ class VirtualModule {
     *bir:Module;
     final bir:ModuleId id;
     final VirtualFile[] files;
-    final readonly & bir:FunctionDefn[] functionDefns;
+    final bir:Function[] functions;
     final FunctionCode[] functionCodes;
     final ParseContext pc;
 
-    function init(ParseContext pc, bir:ModuleId id, readonly & bir:FunctionDefn[] functionDefns, FunctionCode[] code, VirtualFile[] files) {
+    function init(ParseContext pc, bir:ModuleId id, readonly & bir:FunctionDefn[] functionDefns, readonly & bir:AnonFunction[] anonFuncs, FunctionCode[] code, VirtualFile[] files) {
         self.id = id;
         self.files = files;
-        self.functionDefns = functionDefns;
+        self.functions = [...functionDefns, ...anonFuncs];
         self.functionCodes = code;
         self.pc = pc;
     }
@@ -83,8 +84,8 @@ class VirtualModule {
     public function finish() returns err:Semantic? {
     }
 
-    public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {
-        return self.functionDefns;
+    public function getFunctions() returns bir:Function[] {
+        return self.functions;
 
     }
 
@@ -119,16 +120,33 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
     t:AtomTable atoms = t:atomTableFromSexpr(env, sexprAtoms);
     map<VirtualFile> vFilesByName = map from var [i, f] in files.enumerate() select [f[0].s, new(i, f[1].s, f.length() > 2 ? f[2].s : ())];
     bir:FunctionDefn[] funcDefns = [];
-    map<t:FunctionSignature> internalFuncDecl = {};
-    FunctionCode[] funcCodes = [];
-    foreach var [identifier, visibility, [_, sig, [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks]]] in funcs { // JBUG: can't use { s: identifier }
+    t:FunctionSignature?[] internalFuncSignatures = [];
+    FunctionCode?[] funcCodes = [];
+    map<int> internalFuncDefnIndices = {};
+    bir:AnonFunction[] anonFuncs = [];
+    foreach var func in funcs {
+        FunctionProps props;
+        if func is FunctionWithClosures {
+            props = functionWithClosuresProps(func);
+        }
+        else {
+            // JBUG: cast
+            props = functionWithoutClosuresProps(<FunctionWithoutClosures>func);
+        }
+        var { identifier, visibility, sig, closures, line, col, blocks, registers, partIndex } = props;
         t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
-        internalFuncDecl[identifier.s] = signature;
-        funcDefns.push({ symbol: { isPublic: visibility is PublicVisibility , identifier: identifier.s },
-                         decl: signature,
-                         partIndex: vFilesByName.get(partIndex.s).partIndex(),
-                         position: createPosition(line, col) });
-        funcCodes.push({ registers, blocks });
+        int index = funcDefns.length();
+        internalFuncSignatures[index] = signature;
+        bir:FunctionDefn funcDefn = { symbol: { isPublic: visibility is PublicVisibility , identifier: identifier.s },
+                                      index, decl: signature,
+                                      partIndex: vFilesByName.get(partIndex.s).partIndex(),
+                                      position: createPosition(line, col) };
+        funcDefns.push(funcDefn);
+        funcCodes[index] = { registers, blocks };
+        internalFuncDefnIndices[identifier.s] = index;
+        foreach var closure in closures {
+            accumAnonFunctionDefn(anonFuncs, funcCodes, internalFuncSignatures, toAnonFunction(env, atoms, funcDefn, closure));
+        }
     }
     ExternalFuncDecls extFuncDecl = table[];
     foreach var [importedModId, ...funcDecls] in decl {
@@ -139,10 +157,78 @@ public function toModule(Module moduleSexpr, bir:ModuleId modId) returns bir:Mod
             });
         }
     }
-    ParseContext pc = { tc, atoms, extFuncDecl, internalFuncDecl };
+    ParseContext pc = { tc, atoms, extFuncDecl, internalFuncDefnIndices,
+                        internalFuncSignatures: from var sig in internalFuncSignatures select <t:FunctionSignature>sig };
     VirtualFile[] vFiles = from var f in vFilesByName order by f.partIndex() select f;
-    VirtualModule mod = new(pc, modId, funcDefns.cloneReadOnly(), funcCodes, vFiles);
+    VirtualModule mod = new(pc, modId, funcDefns.cloneReadOnly(), anonFuncs.cloneReadOnly(),
+                            from var each in funcCodes select <FunctionCode>each, vFiles);
     return mod;
+}
+
+type FunctionPropBase record {|
+    Signature sig;
+    int line;
+    int col;
+    Register[] registers;
+    Block[] blocks;
+    AnonFunction[] closures;
+|};
+
+type FunctionProps record {|
+    *FunctionPropBase;
+    sexpr:String identifier;
+    FunctionVisibility visibility;
+    sexpr:String partIndex;
+|};
+
+type AnonFunctionProps record {|
+    *FunctionPropBase;
+    string name;
+|};
+
+function functionWithClosuresProps(FunctionWithClosures func) returns FunctionProps {
+    var [identifier, visibility, [_, sig, [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks], [_, ...closures]]] = func; // JBUG: can't use { s: identifier }
+    return { identifier, visibility, sig, partIndex, line, col, registers, blocks, closures };
+}
+
+function functionWithoutClosuresProps(FunctionWithoutClosures func) returns FunctionProps {
+    var [identifier, visibility, [_, sig, [_, partIndex], [_, line, col], [_, ...registers], [_, ...blocks]]] = func; // JBUG: can't use { s: identifier }
+    return { identifier, visibility, sig, partIndex, line, col, registers, blocks, closures: [] };
+}
+
+function anonFunctionWithClosuresProps(AnonFunctionWithClosures func) returns AnonFunctionProps {
+    var [name, [_, sig, [_, line, col], [_, ...registers], [_, ...blocks], [_, ...closures]]] = func;
+    return { name, sig, line, col, registers, blocks, closures };
+}
+
+function anonFunctionWithoutClosuresProps(AnonFunctionWithoutClosures func) returns AnonFunctionProps {
+    var [name, [_, sig, [_, line, col], [_, ...registers], [_, ...blocks]]] = func;
+    return { name, sig, line, col, registers, blocks, closures: [] };
+}
+
+type AnonFunctionDefn [bir:AnonFunction, FunctionCode, AnonFunctionDefn...];
+
+function accumAnonFunctionDefn(bir:AnonFunction[] anonFuncs, FunctionCode?[] funcCodes, t:FunctionSignature?[] internalFunctionSignatures, AnonFunctionDefn defn) {
+    var [anonFunc, functionCode, ...children] = defn;
+    anonFuncs.push(anonFunc);
+    int index = anonFunc.index;
+    funcCodes[index] = functionCode;
+    internalFunctionSignatures[index] = anonFunc.decl;
+    foreach AnonFunctionDefn child in children {
+        accumAnonFunctionDefn(anonFuncs, funcCodes, internalFunctionSignatures, child);
+    }
+}
+
+function toAnonFunction(t:Env env, t:AtomTable atoms, bir:Function parent, AnonFunction func) returns AnonFunctionDefn {
+    // JBUG: cast
+    AnonFunctionProps props = func is AnonFunctionWithClosures ? anonFunctionWithClosuresProps(func):
+                                                                 anonFunctionWithoutClosuresProps(<AnonFunctionWithoutClosures>func);
+    var { name, sig, line, col, registers, blocks, closures } = props;
+    t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
+    int index = checkpanic int:fromString(name.substring(2));
+    bir:AnonFunction anonFunc = { parent, index, position: createPosition(line, col), decl: signature };
+    AnonFunctionDefn[] children = from AnonFunction closure in closures select toAnonFunction(env, atoms, anonFunc, closure);
+    return [anonFunc, { registers, blocks }, ...children];
 }
 
 function toFunctionSignature(t:Env env, t:AtomTable atoms, Signature sexpr) returns t:FunctionSignature {
@@ -396,10 +482,12 @@ type BirInsnBase readonly & record {|
     bir:Register result?;
 |};
 
+type FunctionHandle bir:ExternalSymbol|int;
+
 function toCallInsn(FuncParseContext pc, FunctionRef|RegisterName symbolSexpr, Operand[] argsSexpr,
                     boolean restParamIsList, sexpr:Symbol resultSexpr, Signature? sigSexpr = ()) returns bir:CallDirectInsn|bir:CallIndirectInsn {
-    bir:Symbol|bir:Register symbol = symbolSexpr is FunctionRef ? symbolFromSexpr(symbolSexpr):
-                                                                  lookupRegister(pc, symbolSexpr);
+    FunctionHandle|bir:Register symbol = symbolSexpr is sexpr:Symbol && symbolSexpr[0] == "r" ? lookupRegister(pc, symbolSexpr):
+                                                                                                functionHandleFromSexpr(pc, symbolSexpr);
     readonly & bir:Operand[] args = from var arg in argsSexpr select toOperand(pc, arg);
     var result = toResultRegister(pc, resultSexpr);
     if symbol is bir:Register {
@@ -414,7 +502,7 @@ function toCallInsn(FuncParseContext pc, FunctionRef|RegisterName symbolSexpr, O
     else {
         signature = erasedSignature;
     }
-    bir:FunctionConstOperand func = { value: { symbol, signature, erasedSignature },
+    bir:FunctionConstOperand func = { value: functionRef(symbol, erasedSignature, signature),
                                       semType: t:functionSemType(pc.tc, signature) };
     return { operands: [func, ...args], pos: 0, result };
 }
@@ -423,17 +511,17 @@ function lookupLabel(FuncParseContext pc, string name) returns bir:Label {
     return pc.blockLabels.get(name);
 }
 
-function symbolFromSexpr(FunctionRef symbol) returns bir:Symbol {
-    match symbol {
-        ["module-get", var [org, nameFirst, ...nameRest], var { s: identifier }] => {
-            bir:ModuleId module = { org: org.s, names: [nameFirst.s, ...from var { s } in nameRest select s] };
-            return { module, identifier };
-        }
-        var { s: identifier } => {
-            return { isPublic: false, identifier };
-        }
+function functionHandleFromSexpr(FuncParseContext cx, FunctionRef symbol) returns FunctionHandle {
+    if symbol is sexpr:Symbol {
+        return checkpanic int:fromString(symbol.substring(2));
     }
-    panic error("impossible");
+    if symbol is sexpr:String {
+        string name = symbol.s;
+        return cx.internalFuncDefnIndices.get(name);
+    }
+    var [_, [org, nameFirst, ...nameRest], { s: identifier }] = symbol;
+    bir:ModuleId module = { org: org.s, names: [nameFirst.s, ...from var { s } in nameRest select s] };
+    return { module, identifier };
 }
 
 function toOperand(FuncParseContext pc, Operand operand) returns bir:Operand {
@@ -448,10 +536,10 @@ function toOperand(FuncParseContext pc, Operand operand) returns bir:Operand {
             return toConstOperand(pc, s);
         }
         ["function", var symbolSexpr] => {
-            bir:Symbol symbol = symbolFromSexpr(<FunctionRef>symbolSexpr);
-            t:FunctionSignature signature = lookupSignature(pc, symbol);
+            FunctionHandle funcHandle = functionHandleFromSexpr(pc, <FunctionRef>symbolSexpr);
+            t:FunctionSignature signature = lookupSignature(pc, funcHandle);
             t:SemType semType =  t:functionSemType(pc.tc, signature);
-            return <bir:FunctionConstOperand>{ value: { symbol, signature, erasedSignature: signature }, semType };
+            return { value: functionRef(funcHandle, signature, signature), semType };
         }
         ["float", var f] => {
             return toConstOperand(pc, checkpanic float:fromString((<sexpr:String>f).s)); // JBUG: cast
@@ -464,6 +552,11 @@ function toOperand(FuncParseContext pc, Operand operand) returns bir:Operand {
             return toConstOperand(pc, <int|boolean>n);
         }
     }
+}
+
+function functionRef(FunctionHandle funcHandle, t:FunctionSignature erasedSignature, t:FunctionSignature signature) returns bir:FunctionRef {
+    return funcHandle is bir:ExternalSymbol ? { symbol: funcHandle, erasedSignature, signature }:
+                                              { index: funcHandle, erasedSignature, signature };
 }
 
 function toConstOperand(FuncParseContext pc, t:SingleValue value) returns bir:ConstOperand {
@@ -493,6 +586,7 @@ function createPosition(int line, int column) returns d:Position {
     return (line << 32) | column;
 }
 
-function lookupSignature(FuncParseContext pc, bir:Symbol symbol) returns t:FunctionSignature {
-    return symbol is bir:ExternalSymbol ? pc.extFuncDecl.get(symbol).signature : pc.internalFuncDecl.get(symbol.identifier);
+function lookupSignature(FuncParseContext pc, FunctionHandle funcHandle) returns t:FunctionSignature {
+    return funcHandle is bir:ExternalSymbol ? pc.extFuncDecl.get(funcHandle).signature:
+                                              pc.internalFuncSignatures[funcHandle];
 }
