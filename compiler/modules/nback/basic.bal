@@ -31,7 +31,7 @@ final RuntimeFunction stringConcatFunction = {
     attrs: []
 };
 
-function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
+function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) returns BuildError? {
     scaffold.setCurrentPosition(builder, pos);
     llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
     llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
@@ -40,7 +40,7 @@ function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos
     builder.positionAtEnd(overflowBlock);
     buildCallPanic(builder, scaffold, buildErrorForConstPanic(builder, scaffold, PANIC_STACK_OVERFLOW, pos));
     builder.positionAtEnd(firstBlock);
-    scaffold.saveParams(builder);
+    check scaffold.saveParams(builder);
 }
 
 function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock block) returns BuildError? {

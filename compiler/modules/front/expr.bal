@@ -1250,6 +1250,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
         else {
             var { binding: b, inOuterFunction } = v;
             bir:Register bindingReg = b.reg;
+            // FIXME: avoid updating these values (instead assign oce)
             result = constifyRegister(bindingReg);
             binding = result === bindingReg ? b : ();
             if inOuterFunction {
@@ -1260,6 +1261,8 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
                 CaptureBinding capturedBinding = { reg, captured: b, pos: ref.qNamePos, name: b.name };
                 capturedBindings.push(capturedBinding);
                 cx.addBindingToChain(<Binding>capturedBinding);
+                binding = capturedBinding;
+                result = constifyRegister(reg);
             }
         }
     }  

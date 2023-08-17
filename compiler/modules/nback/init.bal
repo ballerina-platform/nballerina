@@ -371,7 +371,8 @@ function createUniformFunction(llvm:Builder builder, InitModuleContext cx, t:Fun
     return func;
 }
 
-function convertToExactArg(llvm:Builder builder, InitModuleContext context,
+// TODO:Move this
+function convertToExactArg(llvm:Builder builder, InitModuleContext|Scaffold context,
                            llvm:PointerValue arg, t:SemType ty) returns llvm:Value {
     t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
     if t:isSubtypeSimple(w, t:INT) {

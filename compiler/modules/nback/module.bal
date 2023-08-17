@@ -20,7 +20,8 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     // we know about all the anonFunctions before generating the function bodies.
     from int i in 0 ..< functions.length() do { _ = check birMod.generateFunctionCode(i); };
     foreach var func in functions {
-        llvm:FunctionType ty = buildFunctionSignature(func.decl);
+        llvm:FunctionType ty = check isClosureFunction(birMod, func) ? buildClosureFunctionSignature(func.decl):
+                                                                       buildFunctionSignature(func.decl);
         llFuncTypes.push(ty);
         var [mangledName, identifier] = functionIdentifiers(modId, func);
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
@@ -59,6 +60,29 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     return [llMod, createTypeUsage(mod.usedSemTypes)];
 }
 
+function isClosureFunction(bir:Module mod, bir:Function func) returns boolean|BuildError {
+    if func is bir:FunctionDefn {
+        return false;
+    }
+    bir:FunctionCode code = check mod.generateFunctionCode(func.index);
+    foreach var register in code.registers {
+        if register is bir:CapturedRegister {
+            return true;
+        }
+    }
+    return false;
+}
+
+function buildClosureFunctionSignature(t:FunctionSignature signature) returns llvm:FunctionType {
+    llvm:Type[] paramTypes = [llUniformArgArrayType, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
+    RetRepr repr = semTypeRetRepr(signature.returnType);
+    llvm:FunctionType ty = {
+        returnType: repr.llvm,
+        paramTypes: paramTypes.cloneReadOnly()
+    };
+    return ty;
+}
+
 function functionIdentifiers(bir:ModuleId modId, bir:Function func) returns [string, string] {
     if func is bir:AnonFunction {
         string mangledName = anonFunctionSymbol(func.index);
@@ -73,7 +97,7 @@ function buildFunction(llvm:Builder builder, bir:Module birMod, Module mod, DISu
                        llvm:FunctionDefn llFunc, bir:Function birFunc, bir:FunctionCode code) returns BuildError? {
     check bir:verifyFunctionCode(birMod, birFunc, code);
     Scaffold scaffold = new(mod, llFunc, diFunc, builder, birFunc, code);
-    buildPrologue(builder, scaffold, birFunc.position);
+    check buildPrologue(builder, scaffold, birFunc.position);
     check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
 }
 

@@ -68,10 +68,11 @@ void _bal_function_call_closure() {
     exit(1);
 }
 
+// FIXME: this should take a FunctionPtr and FunctionDescPtr instead of FunctionValuePtr
 ClosureValuePtr _bal_function_create_closure(FunctionValuePtr funcValue, TaggedPtr* capturedValues) {
     ClosureValuePtr closure = _bal_alloc(sizeof(ClosureValue));
     // FIXME:
-    closure->func = _bal_function_call_closure;
+    closure->func = funcValue->func;
     closure->desc = funcValue->desc;
     closure->isClosure = 1;
     closure->capturedValues = capturedValues;

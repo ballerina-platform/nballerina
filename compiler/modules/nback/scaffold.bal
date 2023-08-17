@@ -140,7 +140,7 @@ class Scaffold {
     private final Module mod;
     private final bir:File file;
     private final llvm:FunctionDefn llFunc;
-
+    private final bir:Function defn;
     // Representation for each BIR register
     private final Repr[] reprs;
     private final RetRepr retRepr;
@@ -158,6 +158,7 @@ class Scaffold {
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:Function defn, bir:FunctionCode code) {
         self.mod = mod;
+        self.defn = defn;
         self.file = mod.partFiles[functionPartIndex(defn)];
         self.llFunc = llFunc;
         DIScaffold? diScaffold;
@@ -201,9 +202,28 @@ class Scaffold {
 
     function llContext() returns llvm:Context => self.mod.llContext;
 
-    function saveParams(llvm:Builder builder) {
-         foreach int i in 0 ..< self.nParams {
-            builder.store(self.llFunc.getParam(i), self.addresses[i]);
+    function saveParams(llvm:Builder builder) returns BuildError? {
+        boolean isClosure = check isClosureFunction(self.mod.bir, self.defn);
+        foreach int i in 0 ..< self.nParams {
+            llvm:Value param = isClosure ? self.llFunc.getParam(i + 1) : self.llFunc.getParam(i);
+            builder.store(param, self.addresses[i]);
+        }
+        if !isClosure {
+            return;
+        }
+        llvm:PointerValue uniformArgArray = <llvm:PointerValue>self.llFunc.getParam(0);
+        bir:FunctionCode code = check self.mod.bir.generateFunctionCode(self.defn.index);
+        int index = 0;
+        // FIXME: common with uniformCallFunc:init.bal
+        foreach int i in 0 ..< code.registers.length() {
+            bir:Register register = code.registers[i];
+            if register !is bir:CapturedRegister {
+                continue;
+            }
+            llvm:Value uniformArg = builder.load(builder.getElementPtr(uniformArgArray, [constIndex(self, index)]));
+            llvm:Value arg = convertToExactArg(builder, self, <llvm:PointerValue>uniformArg, register.semType);
+            builder.store(arg, self.addresses[i]);
+            index += 1;
         }
     }
 
