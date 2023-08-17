@@ -371,7 +371,15 @@ typedef struct {
 typedef GC struct FunctionValue {
     FunctionDescPtr desc;
     FunctionPtr func;
+    int64_t isClosure;
 } *FunctionValuePtr;
+
+typedef GC struct {
+    FunctionDescPtr desc;
+    FunctionPtr func;
+    int64_t isClosure;
+    TaggedPtr* capturedValues;
+} ClosureValue, *ClosureValuePtr;
 
 // Roundup to multiple of 8
 static inline int roundUpInt(int n) {

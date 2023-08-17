@@ -217,6 +217,8 @@ class Scaffold {
 
     function getFunctionDefn(int index) returns llvm:FunctionDefn => self.mod.functionDefns[index];
 
+    function getBirFunction(int index) returns bir:Function => self.mod.bir.getFunctions()[index];
+
     function getModule() returns llvm:Module => self.mod.llMod;
 
     function stackGuard() returns llvm:PointerValue => self.mod.stackGuard;
@@ -272,7 +274,7 @@ class Scaffold {
         }
         llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func,
                                                             self.getConstructType(t:functionSemType(self.typeContext(), signature)),
-                                                            signature, self.mod.functionValueDefns.length());
+                                                            self, signature, self.mod.functionValueDefns.length());
         self.mod.functionValueDefns.add({ value, key });
         return value;
     }
@@ -639,9 +641,9 @@ function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean
     return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
 }
 
-function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Function func, llvm:ConstPointerValue funcDesc,
+function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Function func, llvm:ConstPointerValue funcDesc, Scaffold scaffold,
                               t:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
-    llvm:ConstValue initValue = context.constStruct([funcDesc, func]);
+    llvm:ConstValue initValue = context.constStruct([funcDesc, func, constI64(scaffold, 0)]);
     llvm:ConstPointerValue ptr = llMod.addGlobal(functionValueType(signature),
                                                  functionDefnSymbol(defnIndex),
                                                  initializer = initValue,
@@ -655,5 +657,7 @@ function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Func
 
 function functionValueType(t:FunctionSignature signature) returns llvm:StructType {
     return llvm:structType([llvm:pointerType(llFunctionDescType),
-                            llvm:pointerType(buildFunctionSignature(signature))]);
+                            llvm:pointerType(buildFunctionSignature(signature)),
+                            "i64"]);
 }
+

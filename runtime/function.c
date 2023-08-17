@@ -1,4 +1,6 @@
 #include "balrt.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     if ((getTag(p) & UT_MASK) != TAG_FUNCTION) {
@@ -24,6 +26,11 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
 
 bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
     return desc == value->desc;
+}
+
+// FIXME: directly use a GEP in compiler
+bool _bal_function_is_closure(FunctionValuePtr value) {
+    return value->isClosure != 0;
 }
 
 // nArgs = requiredArgCount + restArgCount
@@ -54,4 +61,19 @@ void _bal_function_add_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uni
             _bal_panic_internal(err);
         }
     }
+}
+
+void _bal_function_call_closure() {
+    printf("Calling closure\n");
+    exit(1);
+}
+
+ClosureValuePtr _bal_function_create_closure(FunctionValuePtr funcValue, TaggedPtr* capturedValues) {
+    ClosureValuePtr closure = _bal_alloc(sizeof(ClosureValue));
+    // FIXME:
+    closure->func = _bal_function_call_closure;
+    closure->desc = funcValue->desc;
+    closure->isClosure = 1;
+    closure->capturedValues = capturedValues;
+    return closure;
 }
