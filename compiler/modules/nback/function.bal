@@ -142,7 +142,7 @@ function buildCallIndirectInner(llvm:Builder builder, Scaffold scaffold, bir:Ope
         t:SemType returnType = <t:SemType>t:functionReturnType(scaffold.typeContext(), funcTy,
                                                                t:tupleTypeWrappedRo(tc.env, ...argTypes));
         return buildCallInexact(builder, scaffold, result, funcDescPtr, funcPtr, uniformFuncPtr,
-                                uniformArgArray, nArgs, capturedValues, returnType );
+                                uniformArgArray, nArgs, capturedValues, returnType);
     }
     // If the function type is atomic, we have to check for the exactness at runtime
     // and decide whether to use exact call or inexact call.

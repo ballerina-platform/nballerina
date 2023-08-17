@@ -680,4 +680,3 @@ function functionValueType(t:FunctionSignature signature) returns llvm:StructTyp
                             llvm:pointerType(buildFunctionSignature(signature)),
                             "i64"]);
 }
-

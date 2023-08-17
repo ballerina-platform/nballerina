@@ -54,7 +54,7 @@ class Module {
         }
         self.parentStack.push(self.functions[i]);
         s:FunctionDefn defn = self.functionDefnSource[i];
-        var [functionCode, _] = check codeGenFunction(self, self.functionDefnSource[i], defn, self.functions[i].decl);
+        bir:FunctionCode functionCode = check codeGenFunction(self, self.functionDefnSource[i], defn, self.functions[i].decl);
         _ = self.parentStack.pop();
         self.functionCodes[i] = functionCode;
         return functionCode;
@@ -69,10 +69,10 @@ class Module {
         self.functions.push(birFunc);
         self.parentStack.push(birFunc);
         // NOTE: we need to codegen the func in order to figure out it's capture values
-        var [code, capturedBindings] = check codeGenFunction(self, func, moduleLevelDefn, signature, bindings);
+        bir:FunctionCode code = check codeGenFunction(self, func, moduleLevelDefn, signature, bindings);
         _ = self.parentStack.pop();
         self.functionCodes[birFunc.index] = code;
-        return [ref, ...from var { captured } in capturedBindings select captured.reg];
+        return [ref, ...from var reg in code.registers where reg is bir:CapturedRegister select reg.captured];
     }
    
     public function finish() returns err:Semantic? {
