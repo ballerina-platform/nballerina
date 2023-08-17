@@ -107,11 +107,9 @@ function basename(string path) returns string {
 
 // Register definition.
 function defnFromRegister(FuncSerializeContext sc, bir:Register reg) returns Register {
-    if reg is bir:NarrowRegister {
-        return [fromRegister(sc, reg), reg.kind, t:toSexpr(sc.tc, reg.semType, sc.atoms), fromRegister(sc, reg.underlying)];
-    }
-    else if reg is bir:CapturedRegister {
-        panic error("not implemented");
+    if reg is bir:NarrowRegister|bir:CapturedRegister {
+        bir:Register parent = reg is bir:NarrowRegister ? reg.underlying : reg.captured;
+        return [fromRegister(sc, reg), reg.kind, t:toSexpr(sc.tc, reg.semType, sc.atoms), fromRegister(sc, parent)];
     }
     else {
         return [fromRegister(sc, reg), reg.kind, t:toSexpr(sc.tc, reg.semType, sc.atoms)];
@@ -185,8 +183,7 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
         return ["type-merge", fromRegister(sc, insn.result), ...preds];
     }
     else if insn is bir:CaptureInsn {
-        // TODO: when we have implemented this remove the cast at bir:Operand[]? operands ...
-        panic err:unimplemented("CaptureInsn not supported", { file, range: insn.pos });
+        return ["capture", fromRegister(sc, insn.result), string `f.${insn.functionIndex}`, ...from var arg in insn.operands select fromOperand(sc, arg)];
     }
     else if insn is bir:PanicInsn {
         return ["panic", fromOperand(sc, insn.operand)];
@@ -201,8 +198,7 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
     if operand != () {
         insnSexpr.push(fromOperand(sc, operand));
     }
-    // JBUG: cast
-    bir:Operand[]? operands = <bir:Operand[]?>insn?.operands;
+    bir:Operand[]? operands = insn?.operands;
     if operands != () {
         foreach var o in operands {
             insnSexpr.push(fromOperand(sc, o));

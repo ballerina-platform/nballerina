@@ -312,6 +312,17 @@ function toRegister(ParseContext pc, map<bir:Register> prevRegs, int number, Reg
             }
             return [name, <bir:NarrowRegister>{ pos, underlying, number, semType: toSemType(pc, semType) }];
         }
+        [var nameSexpr, bir:CAPTURED_REGISTER_KIND, var semType, var capturedName] => {
+            bir:Register? captured = prevRegs[capturedName];
+            string name = toMaybeName(nameSexpr) ?: "_";
+            if captured == () {
+                panic error("capture reg must appear after it's captured register");
+            }
+            if captured !is bir:DeclRegister|bir:CapturedRegister {
+                panic error("unexpected captured register kind");
+            }
+            return [nameSexpr, <bir:CapturedRegister>{ pos, captured, number, semType: toSemType(pc, semType), name, scope }];
+        }
         [var nameSexpr, var kind, var semTypeSexpr] => {
             string? name = toMaybeName(nameSexpr);
             t:SemType semType = toSemType(pc, semTypeSexpr);
@@ -443,6 +454,16 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
             return <bir:ListGetInsn>{
                 result: toResultRegister(pc, <sexpr:Symbol>result),
                 operands: [lookupRegister(pc, <sexpr:Symbol>list), <bir:IntOperand>toOperand(pc, <Operand>index)],
+                pos
+            };
+        }
+        ["capture", var result, var funcRef, ...var operandSexprs] => {
+            int functionIndex = <int>functionHandleFromSexpr(pc, <FunctionRef>funcRef);            
+            (bir:CapturedRegister|bir:DeclRegister)[] & readonly operands = from var operand in operandSexprs select <bir:CapturedRegister|bir:DeclRegister>lookupRegister(pc, <sexpr:Symbol>operand);
+            return <bir:CaptureInsn>{
+                result: toResultRegister(pc, <sexpr:Symbol>result),
+                functionIndex, 
+                operands,
                 pos
             };
         }
