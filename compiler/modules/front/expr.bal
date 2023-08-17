@@ -1250,12 +1250,12 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
         else {
             var { binding: b, inOuterFunction } = v;
             bir:Register bindingReg = b.reg;
-            // FIXME: avoid updating these values (instead assign oce)
-            result = constifyRegister(bindingReg);
-            binding = result === bindingReg ? b : ();
             if inOuterFunction {
                 if bindingReg !is bir:DeclRegister|bir:CapturedRegister || b !is DeclBinding|CaptureBinding {
-                    panic error("unexpected underlying register to capture"); // TODO: better errro
+                    panic err:impossible("unexpected underlying register/binding to capture");
+                }
+                if bindingReg is bir:DeclRegister && bindingReg !is bir:FinalRegister|bir:ParamRegister {
+                    return cx.unimplementedErr("capturing non-final variables not implemented", ref.qNamePos);
                 }
                 bir:CapturedRegister reg = cx.createCaptureRegister(bindingReg.semType, bindingReg, ref.qNamePos);
                 CaptureBinding capturedBinding = { reg, captured: b, pos: ref.qNamePos, name: b.name };
@@ -1263,6 +1263,10 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
                 cx.addBindingToChain(<Binding>capturedBinding);
                 binding = capturedBinding;
                 result = constifyRegister(reg);
+            }
+            else {
+                result = constifyRegister(bindingReg);
+                binding = result === bindingReg ? b : ();
             }
         }
     }  
