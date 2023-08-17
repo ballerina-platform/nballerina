@@ -90,8 +90,8 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
 
 function buildCallDirect(llvm:Builder builder, Scaffold scaffold, bir:CallDirectInsn insn) returns BuildError? {
     var { func, signature, erasedSignature } = check buildDirectFunctionValue(scaffold, insn.operands[0]);
-    return buildCallExact(builder, scaffold, func, erasedSignature, signature, 
-                          insn.operands.slice(1), insn.result, erasedSignature.returnType, buildFunctionCall);
+    return buildCallExact(builder, scaffold, func, (), erasedSignature, signature, 
+                          insn.operands.slice(1), insn.result, erasedSignature.returnType);
 }
 
 function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns BuildError? {
@@ -107,13 +107,17 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
                                         [builder.addrSpaceCast(funcValuePtr, heapPointerType(llFunctionType))]);
     builder.condBr(isClosure, ifClosure, ifNotClosure);
     builder.positionAtEnd(ifClosure);
+    llvm:PointerValue closureValuePtr = builder.bitCast(funcValuePtr, llvm:pointerType(llClosureType));
+    llvm:PointerValue capturedValues = <llvm:PointerValue>builder.load(builder.getElementPtr(closureValuePtr, [constIndex(scaffold, 0),
+                                                                                                               constIndex(scaffold, 3)],
+                                                                       "inbounds"));
     check buildCallIndirectInner(builder, scaffold, args, result, funcOperand, funcValuePtr, funcDescPtr, funcPtr,
-                                 uniformFuncPtr, nArgs, uniformArgArray, createClosureCallBuilder(builder, scaffold, funcValuePtr));
+                                 uniformFuncPtr, nArgs, uniformArgArray, capturedValues);
 
     builder.br(afterCall);
     builder.positionAtEnd(ifNotClosure);
     check buildCallIndirectInner(builder, scaffold, args, result, funcOperand, funcValuePtr, funcDescPtr, funcPtr,
-                                  uniformFuncPtr, nArgs, uniformArgArray, buildFunctionCall);
+                                  uniformFuncPtr, nArgs, uniformArgArray, ());
     builder.br(afterCall);
     builder.positionAtEnd(afterCall);
 }
@@ -121,7 +125,7 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
 function buildCallIndirectInner(llvm:Builder builder, Scaffold scaffold, bir:Operand[] args, bir:Register result,
                                 bir:Register funcOperand, llvm:PointerValue funcValuePtr, llvm:PointerValue funcDescPtr,
                                 llvm:PointerValue funcPtr, llvm:PointerValue uniformFuncPtr, llvm:Value nArgs, 
-                                llvm:PointerValue uniformArgArray, FunctionCallBuilderFn callBuilder) returns BuildError? {
+                                llvm:PointerValue uniformArgArray, llvm:PointerValue? capturedValues) returns BuildError? {
     t:SemType funcTy = funcOperand.semType;
     t:FunctionAtomicType? atomic = t:functionAtomicType(scaffold.typeContext(), funcTy);
     // We say a function call is exact if the compile time type of the function variable
@@ -138,7 +142,7 @@ function buildCallIndirectInner(llvm:Builder builder, Scaffold scaffold, bir:Ope
         t:SemType returnType = <t:SemType>t:functionReturnType(scaffold.typeContext(), funcTy,
                                                                t:tupleTypeWrappedRo(tc.env, ...argTypes));
         return buildCallInexact(builder, scaffold, result, funcDescPtr, funcPtr, uniformFuncPtr,
-                                uniformArgArray, nArgs, returnType, callBuilder);
+                                uniformArgArray, nArgs, capturedValues, returnType );
     }
     // If the function type is atomic, we have to check for the exactness at runtime
     // and decide whether to use exact call or inexact call.
@@ -151,12 +155,12 @@ function buildCallIndirectInner(llvm:Builder builder, Scaffold scaffold, bir:Ope
     llvm:BasicBlock afterCall = scaffold.addBasicBlock();
     builder.condBr(isExact, ifExact, ifNotExact);
     builder.positionAtEnd(ifExact);
-    check buildCallExact(builder, scaffold, funcPtr, signature, signature,
-                         args, result, signature.returnType, callBuilder);
+    check buildCallExact(builder, scaffold, funcPtr, capturedValues, signature, signature,
+                         args, result, signature.returnType);
     builder.br(afterCall);
     builder.positionAtEnd(ifNotExact);
     check buildCallInexact(builder, scaffold, result, funcDescPtr, funcPtr, uniformFuncPtr,
-                           uniformArgArray, nArgs, signature.returnType, buildFunctionCall);
+                           uniformArgArray, nArgs, capturedValues, signature.returnType);
     builder.br(afterCall);
     builder.positionAtEnd(afterCall);
 }
@@ -206,12 +210,12 @@ function functionValuePtrType(Scaffold scaffold, t:SemType funcType) returns llv
     return llvm:pointerType(functionValueType(signature));
 }
 
-function buildCallExact(llvm:Builder builder, Scaffold scaffold, llvm:Function|llvm:PointerValue func,
+function buildCallExact(llvm:Builder builder, Scaffold scaffold, llvm:Function|llvm:PointerValue func, llvm:PointerValue? capturedValues,
                         t:FunctionSignature erasedSignature, t:FunctionSignature signature,
-                        bir:Operand[] args, bir:Register result, t:SemType returnTy, FunctionCallBuilderFn callBuilder) returns BuildError? {
+                        bir:Operand[] args, bir:Register result, t:SemType returnTy) returns BuildError? {
     llvm:Value[] argValues = check buildFunctionCallArgs(builder, scaffold, erasedSignature.paramTypes,
                                                          signature.paramTypes, args);
-    llvm:Value? retValue = callBuilder(builder, scaffold, func, argValues);
+    llvm:Value? retValue = buildFunctionCall(builder, scaffold, func,capturedValues != () ? [capturedValues, ...argValues] : argValues);
     buildStoreRet(builder, scaffold, semTypeRetRepr(returnTy), retValue, result);
 }
 
@@ -267,13 +271,10 @@ function buildUniformArgArrayInner(llvm:Builder builder, Scaffold scaffold, bir:
 // the call site return type.
 function buildCallInexact(llvm:Builder builder, Scaffold scaffold, bir:Register result,
                           llvm:PointerValue funcDescPtr, llvm:PointerValue funcPtr, llvm:PointerValue uniformFuncPtr,
-                          llvm:PointerValue uniformArgArray, llvm:Value nArgs, t:SemType returnType, FunctionCallBuilderFn callBuilder) returns BuildError? {
-    // FIXME: how to handle uniform call?
-    // 1. We can pass as the second argument (we will pass the closure as the first implicitly the closure
-    // by swapping the callBuilder) wether it is anon or not). Then in the uniform call we can pass through
-    // the clsoure fields
-    llvm:Value? returnVal = callBuilder(builder, scaffold, <llvm:PointerValue>builder.load(uniformFuncPtr),
-                                        [funcPtr, uniformArgArray, nArgs]);
+                          llvm:PointerValue uniformArgArray, llvm:Value nArgs, llvm:PointerValue? capturedValues, t:SemType returnType) returns BuildError? {
+    llvm:Value[] args = capturedValues != () ? [funcPtr, uniformArgArray, nArgs, constBoolean(scaffold, true), capturedValues]:
+                                               [funcPtr, uniformArgArray, nArgs, constBoolean(scaffold, false), constNil(scaffold)];
+    llvm:Value? returnVal = buildFunctionCall(builder, scaffold, <llvm:PointerValue>builder.load(uniformFuncPtr), args);
     if returnVal !is llvm:PointerValue {
         panic err:impossible("uniform call must return a tagged pointer");
     }
@@ -298,20 +299,4 @@ function buildFunctionCallArgs(llvm:Builder builder, Scaffold scaffold, t:SemTyp
                                t:SemType[] instantiatedParamTypes, bir:Operand[] args) returns llvm:Value[]|BuildError {
     return from int i in 0 ..< args.length()
            select check buildWideRepr(builder, scaffold, args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]);
-}
-
-function createClosureCallBuilder(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue funcValuePtr) returns FunctionCallBuilderFn {
-    llvm:PointerValue closureValuePtr = builder.bitCast(funcValuePtr, llvm:pointerType(llClosureType));
-    llvm:PointerValue capturedValues = <llvm:PointerValue>builder.load(builder.getElementPtr(closureValuePtr, [constIndex(scaffold, 0),
-                                                                                                               constIndex(scaffold, 3)],
-                                                                       "inbounds"));
-    return function(llvm:Builder innerBuilder, Context context, llvm:Function|llvm:PointerValue fn, llvm:Value[] args) returns llvm:Value? {
-        if fn is llvm:Function {
-            panic err:impossible("closure call on a function");
-        }
-        context.useDebugLocation(builder, DEBUG_USAGE_CALL);
-        llvm:Value? result = builder.call(fn, [capturedValues, ...args]);
-        context.clearDebugLocation(builder);
-        return result;
-    };
 }

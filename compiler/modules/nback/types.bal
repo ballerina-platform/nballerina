@@ -22,8 +22,10 @@ final llvm:PointerType llTypeIdDescPtrType = llvm:pointerType(llTypeIdDescType);
 final llvm:PointerType llFunctionPtrType = llvm:pointerType(llvm:functionType("void", []));
 final llvm:FunctionType llUniformFunctionType = llvm:functionType(LLVM_TAGGED_PTR,
                                                                   [llFunctionPtrType,
-                                                                   llvm:pointerType(LLVM_TAGGED_PTR),
-                                                                   "i64"]);
+                                                                   llUniformArgArrayType,
+                                                                   "i64",
+                                                                   LLVM_BOOLEAN,
+                                                                   llUniformArgArrayType]);
 final llvm:StructType llFunctionDescType = llvm:structType([LLVM_TID,
                                                             llvm:pointerType(llUniformFunctionType),
                                                             LLVM_MEMBER_TYPE,
