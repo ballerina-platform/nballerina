@@ -33,13 +33,7 @@ final llvm:StructType llFunctionDescType = llvm:structType([LLVM_TID,
                                                             LLVM_INT,
                                                             llvm:pointerType(LLVM_MEMBER_TYPE)]);
 final llvm:StructType llFunctionType = llvm:structType([llvm:pointerType(llFunctionDescType),
-                                                        llFunctionPtrType,
-                                                        "i64"]);
-
-final llvm:StructType llClosureType = llvm:structType([llvm:pointerType(llFunctionDescType),
-                                                       llFunctionPtrType,
-                                                       "i64",
-                                                       llUniformArgArrayType]);
+                                                        llFunctionPtrType]);
 
 // This is an approximation, to share type between init.bal and types.bal
 final llvm:PointerType fillerDescPtrType = llvm:pointerType(llvm:structType(

@@ -359,27 +359,19 @@ typedef void (*FunctionPtr)();
 typedef TaggedPtr (*UniformFunctionPtr)(FunctionPtr func, uint64_t nArgs, TaggedPtr* uniformArgs, bool isClosure, TaggedPtr *capturedValues);
 
 // This extends TypeIdDesc
-typedef struct {
+typedef struct FunctionDesc {
     Tid tid;
     UniformFunctionPtr uniformFunction;
     MemberType returnType;
     MemberType restType;
     int64_t nRequiredParams;
     MemberType paramTypes[];
-} FunctionDesc, *FunctionDescPtr;
-
-typedef GC struct FunctionValue {
-    FunctionDescPtr desc;
-    FunctionPtr func;
-    int64_t isClosure;
-} *FunctionValuePtr;
+} *FunctionDescPtr;
 
 typedef GC struct {
     FunctionDescPtr desc;
     FunctionPtr func;
-    int64_t isClosure;
-    TaggedPtr* capturedValues;
-} ClosureValue, *ClosureValuePtr;
+} FunctionValue, *FunctionValuePtr;
 
 // Roundup to multiple of 8
 static inline int roundUpInt(int n) {

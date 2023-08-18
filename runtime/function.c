@@ -1,6 +1,7 @@
 #include "balrt.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 
 bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     if ((getTag(p) & UT_MASK) != TAG_FUNCTION) {
@@ -69,12 +70,27 @@ void _bal_function_call_closure() {
 }
 
 // FIXME: this should take a FunctionPtr and FunctionDescPtr instead of FunctionValuePtr
-ClosureValuePtr _bal_function_create_closure(FunctionValuePtr funcValue, TaggedPtr* capturedValues) {
-    ClosureValuePtr closure = _bal_alloc(sizeof(ClosureValue));
-    // FIXME:
-    closure->func = funcValue->func;
-    closure->desc = funcValue->desc;
-    closure->isClosure = 1;
-    closure->capturedValues = capturedValues;
+FunctionValuePtr _bal_function_create_closure(FunctionPtr fnPtr, FunctionDescPtr desc) {
+    FunctionValuePtr closure = _bal_alloc(sizeof(FunctionValue));
+    closure->func = fnPtr;
+    closure->desc = desc;
+    closure->isClosure = 0;
     return closure;
+}
+
+// i386 https://github.com/gcc-mirror/gcc/blob/fab08d12b40ad637c5a4ce8e026fb43cd3f0fad1/gcc/config/i386/i386.h#L1659
+// aarch64 https://github.com/gcc-mirror/gcc/blob/fab08d12b40ad637c5a4ce8e026fb43cd3f0fad1/gcc/config/aarch64/aarch64.h#L1082C9-L1082C24
+// NOTE: If we are to properly select this we need to pass in to the allocation function the size, since we support cross compilation
+#define TRAMPOLINE_SIZE 40 // picking the largest of the two 
+
+// TODO: how to link this to GC?
+void *_bal_function_allocate_trampoline_in_heap() {
+    int protection = PROT_READ | PROT_WRITE | PROT_EXEC;
+    int flags = MAP_ANONYMOUS | MAP_PRIVATE;
+    void *p = mmap(NULL, TRAMPOLINE_SIZE, protection, flags, -1, 0);
+    if (p != MAP_FAILED)
+        return p;
+    fprintf(stderr, "failed to allocate trampoline\n");
+    fflush(stderr);
+    abort();
 }
