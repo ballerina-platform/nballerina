@@ -330,6 +330,19 @@ public class Module {
                                      ["nocallback", "nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
 
         }
+        // TODO: may be it is a good idea to add type alias even though llvm no longer care about the actual type of the pointer anymore
+        else if name == "init.trampoline" {
+            return self.addIntrinsic(name,
+                                     { returnType: "void", paramTypes: [pointerType("i8"), "function", pointerType("i8")] },
+                                     []);
+
+        }
+        else if name == "adjust.trampoline" {
+            return self.addIntrinsic(name,
+                                     { returnType: pointerType("i8"), paramTypes: [pointerType("i8")] },
+                                     []);
+
+        }
         else {
             return self.addIntrinsic(name,
                                      { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] },
@@ -595,7 +608,10 @@ public class FunctionDefn {
         self.paramValues = [];
         self.nameCounter = functionType.paramTypes.length() + 1;
         foreach int i in 0 ..< functionType.paramTypes.length() {
-            final Type paramType = functionType.paramTypes[i];
+            final Type|"function" paramType = functionType.paramTypes[i];
+            if paramType == "function" {
+                panic err:illegalArgument("parameters with arbitary function type not implemented"); 
+            }
             string register = "%" + i.toString();
             Value arg = new (paramType, register);
             self.paramValues.push(arg);
@@ -1584,11 +1600,16 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
         string[] typeStringBody = [];
         typeStringBody.push(typeToString(ty.returnType, context), "(");
         foreach int i in 0 ..< ty.paramTypes.length() {
-            final Type paramType = ty.paramTypes[i];
+            final Type|"function" paramType = ty.paramTypes[i];
             if i > 0 {
                 typeStringBody.push(",");
             }
-            typeStringBody.push(typeToString(paramType, context));
+            if paramType is "function" {
+                typeStringBody.push("ptr");
+            }
+            else {
+                typeStringBody.push(typeToString(paramType, context));
+            }
         }
         typeStringBody.push(")");
         return createLine(typeStringBody, "");
@@ -1616,7 +1637,10 @@ function includeNamedType(RetType ty, Context context) {
         includeNamedType(ty.elementType, context);
     }
     else if ty is FunctionType {
-        foreach Type paramType in ty.paramTypes {
+        foreach Type|"function" paramType in ty.paramTypes {
+            if paramType is "function" {
+                continue;
+            }
             includeNamedType(paramType, context);
         }
         includeNamedType(ty.returnType, context);
@@ -1661,11 +1685,11 @@ function functionHeader(Function fn) returns string {
     words.push("@" + fn.functionName);
     words.push("(");
     foreach int i in 0 ..< fn.functionType.paramTypes.length() {
-        final Type ty = fn.functionType.paramTypes[i];
+        final Type|"function" ty = fn.functionType.paramTypes[i];
         if i > 0 {
             words.push(",");
         }
-        words.push(typeToString(ty, fn.context));
+        words.push(ty == "function" ? "ptr" : typeToString(ty, fn.context));
         foreach int j in 0 ..< fn.paramAttributes[i].length() {
             words.push(fn.paramAttributes[i][j]);
         }

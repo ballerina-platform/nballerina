@@ -58,7 +58,7 @@ public type RetType Type|"void";
 # Corresponds to llvm::FunctionType class
 public type FunctionType readonly & record {|
     RetType returnType;
-    Type[] paramTypes;
+    (Type|"function")[] paramTypes; // FIXME: how to represent any function type (not an arbitrary function)?
 |};
 
 public function functionType(RetType returnType, Type[] paramTypes) returns FunctionType {
@@ -69,7 +69,7 @@ public function functionType(RetType returnType, Type[] paramTypes) returns Func
 public type Linkage "internal"|"external";
 
 public type FunctionEnumAttribute "nocallback"|"nofree"|"nosync"|"readnone"|"noreturn"|"cold"|"nounwind"|"readnone"|"readonly"|"speculatable"|"willreturn";
-public type ParamEnumAttribute "signext"|"zeroext";
+public type ParamEnumAttribute "signext"|"zeroext"|"nest";
 public type ReturnEnumAttribute "signext"|"zeroext"|"noalias";
 public type EnumAttribute FunctionEnumAttribute | (readonly & [int, ParamEnumAttribute]) | (readonly & ["return", ReturnEnumAttribute]);
 
@@ -92,7 +92,7 @@ public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sl
 // Corresponds to LLVMRealPredicate
 public type FloatPredicate "false"|"oeq"|"ogt"|"oge"|"olt"|"ole"|"one"|"ord"|"ueq"|"ugt"|"uge"|"ult"|"ule"|"une"|"uno"|"true";
 public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64.i64"|"ssub.with.overflow.i64.i64"|"smul.with.overflow.i64.i64";
-public type GeneralIntrinsicName "ptrmask.p1.i64";
+public type GeneralIntrinsicName "ptrmask.p1.i64"|"init.trampoline"|"adjust.trampoline";
 type DebugIntrinsicName "dbg.value"|"dbg.declare";
 
 public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsicName;
