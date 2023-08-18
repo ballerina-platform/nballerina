@@ -364,16 +364,10 @@ function createUniformFunction(llvm:Builder builder, InitModuleContext cx, t:Fun
                                      [builder.load(restArgArrayPtr), uniformArgArray, startingOffset, nRestArgs]);
     }
     llvm:FunctionType funcTy = buildFunctionSignature(signature);
-    llvm:BasicBlock ifClosure = func.appendBasicBlock();
-    llvm:BasicBlock ifNotClosure = func.appendBasicBlock();
-    llvm:Value[] args = from var each in exactArgs select builder.load(each);
-    llvm:PointerValue funcPtr = <llvm:PointerValue>func.getParam(0);
-    builder.condBr(func.getParam(3), ifClosure, ifNotClosure);
-    builder.positionAtEnd(ifClosure);
-    llvm:Value captureValues = func.getParam(4);
-    finishCreateUniformFunction(builder, cx, funcPtr, funcTy, [captureValues, ...args], signature.returnType);
-    builder.positionAtEnd(ifNotClosure);
-    finishCreateUniformFunction(builder, cx, funcPtr, funcTy, args, signature.returnType);
+    llvm:Value? retValue = builder.call(builder.bitCast(<llvm:PointerValue>func.getParam(0), llvm:pointerType(funcTy)),
+                                        from var each in exactArgs select builder.load(each));
+    builder.ret(retValue == () ? constNilTaggedPtr(cx) :
+                                 convertToTaggedValue(builder, cx, retValue, signature.returnType));
     return func;
 }
 
@@ -383,7 +377,7 @@ function finishCreateUniformFunction(llvm:Builder builder, InitModuleContext cx,
                                  convertToTaggedValue(builder, cx, retValue, returnTy));
 }
 
-// TODO:Move this
+// TODO:remove the union type
 function convertToExactArg(llvm:Builder builder, InitModuleContext|Scaffold context,
                            llvm:PointerValue arg, t:SemType ty) returns llvm:Value {
     t:BasicTypeBitSet w = t:widenToBasicTypes(ty);

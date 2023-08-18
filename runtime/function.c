@@ -29,11 +29,6 @@ bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
     return desc == value->desc;
 }
 
-// FIXME: directly use a GEP in compiler
-bool _bal_function_is_closure(FunctionValuePtr value) {
-    return value->isClosure != 0;
-}
-
 // nArgs = requiredArgCount + restArgCount
 // We are using uint64_t to avoid overflow in case of restArgCount close to INT64_MAX. This means indexing uniform arg array
 // must also be done using uint64_t
@@ -64,17 +59,10 @@ void _bal_function_add_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uni
     }
 }
 
-void _bal_function_call_closure() {
-    printf("Calling closure\n");
-    exit(1);
-}
-
-// FIXME: this should take a FunctionPtr and FunctionDescPtr instead of FunctionValuePtr
 FunctionValuePtr _bal_function_create_closure(FunctionPtr fnPtr, FunctionDescPtr desc) {
     FunctionValuePtr closure = _bal_alloc(sizeof(FunctionValue));
     closure->func = fnPtr;
     closure->desc = desc;
-    closure->isClosure = 0;
     return closure;
 }
 

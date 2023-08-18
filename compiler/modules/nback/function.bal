@@ -8,7 +8,7 @@ final llvm:PointerType llUniformArgArrayType = llvm:pointerType(LLVM_TAGGED_PTR)
 final RuntimeFunction functionAllocateTrampoline = {
     name: "function_allocate_trampoline_in_heap",
     ty: {
-        returnType: llvm:pointerType("i8"), // FIXME: how to represent void* in LLVM?
+        returnType: llvm:pointerType("i8"), // this is really a void*
         paramTypes: []
     },
     attrs: []
@@ -19,15 +19,6 @@ final RuntimeFunction functionCreateClosure = {
     ty: {
         returnType: llvm:pointerType(llFunctionType),
         paramTypes: [llFunctionPtrType, llvm:pointerType(llFunctionDescType)]
-    },
-    attrs: []
-};
-
-final RuntimeFunction functionIsClosure = {
-    name: "function_is_closure",
-    ty: {
-        returnType: LLVM_BOOLEAN,
-        paramTypes: [heapPointerType(llFunctionType)]
     },
     attrs: []
 };
