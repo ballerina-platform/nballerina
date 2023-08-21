@@ -243,3 +243,19 @@ function buildFunctionCall(llvm:Builder builder, Context context, llvm:Function|
     context.clearDebugLocation(builder);
     return result;
 }
+
+// TODO: better name (used for both uniform arg array and clsoure struct ty)
+function exactArgType(t:SemType ty) returns llvm:SingleValueType {
+    t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
+    if t:isSubtypeSimple(w, t:INT) {
+        return LLVM_INT;
+    }
+    else if t:isSubtypeSimple(ty, t:FLOAT) {
+        return LLVM_FLOAT;
+    }
+    else if t:isSubtypeSimple(ty, t:BOOLEAN) {
+        return LLVM_BOOLEAN;
+    }
+    return LLVM_TAGGED_PTR;
+}
+

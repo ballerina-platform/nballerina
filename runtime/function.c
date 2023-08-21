@@ -32,11 +32,11 @@ bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
 // nArgs = requiredArgCount + restArgCount
 // We are using uint64_t to avoid overflow in case of restArgCount close to INT64_MAX. This means indexing uniform arg array
 // must also be done using uint64_t
+// TODO: this needs a better name and maybe return a untyped pointer (used for both creating the uniform arg array and clsoure struct)
 GC TaggedPtr *_bal_function_alloc_uniform_args(uint64_t nArgs) {
     GC TaggedPtr *arr = _bal_alloc(sizeof(TaggedPtr) * nArgs);
     return arr;
 }
-
 void _bal_function_add_to_uniform_args(TaggedPtr *uniformArgArray, const TaggedPtr restArgArray, int64_t startingOffset) {
     ListPtr lp = taggedToPtr(restArgArray);
     int64_t len = lp->tpArray.length;
@@ -65,6 +65,8 @@ FunctionValuePtr _bal_function_create_closure(FunctionPtr fnPtr, FunctionDescPtr
     closure->desc = desc;
     return closure;
 }
+// i386 https://github.com/gcc-mirror/gcc/blob/fab08d12b40ad637c5a4ce8e026fb43cd3f0fad1/gcc/config/i386/i386.h#L1659
+// aarch64 https://github.com/gcc-mirror/gcc/blob/fab08d12b40ad637c5a4ce8e026fb43cd3f0fad1/gcc/config/aarch64/aarch64.h#L1082C9-L1082C24
 
 // i386 https://github.com/gcc-mirror/gcc/blob/fab08d12b40ad637c5a4ce8e026fb43cd3f0fad1/gcc/config/i386/i386.h#L1659
 // aarch64 https://github.com/gcc-mirror/gcc/blob/fab08d12b40ad637c5a4ce8e026fb43cd3f0fad1/gcc/config/aarch64/aarch64.h#L1082C9-L1082C24

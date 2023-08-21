@@ -20,7 +20,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     // we know about all the anonFunctions before generating the function bodies.
     from int i in 0 ..< functions.length() do { _ = check birMod.generateFunctionCode(i); };
     foreach var func in functions {
-        llvm:FunctionType ty = check isClosureFunction(birMod, func) ? buildClosureFunctionSignature(func.decl):
+        llvm:FunctionType ty = check isClosureFunction(birMod, func) ? buildClosureFunctionSignature(func.decl, check clsoureCaputredRegisters(birMod, <bir:AnonFunction>func)):
                                                                        buildFunctionSignature(func.decl);
         llFuncTypes.push(ty);
         var [mangledName, identifier] = functionIdentifiers(modId, func);
@@ -60,6 +60,11 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     return [llMod, createTypeUsage(mod.usedSemTypes)];
 }
 
+function clsoureCaputredRegisters(bir:Module mod, bir:AnonFunction func) returns bir:Register[]|BuildError {
+    bir:FunctionCode code = check mod.generateFunctionCode(func.index);
+    return from var register in code.registers where register is bir:CapturedRegister select register;
+}
+
 function isClosureFunction(bir:Module mod, bir:Function func) returns boolean|BuildError {
     if func is bir:FunctionDefn {
         return false;
@@ -73,8 +78,9 @@ function isClosureFunction(bir:Module mod, bir:Function func) returns boolean|Bu
     return false;
 }
 
-function buildClosureFunctionSignature(t:FunctionSignature signature) returns llvm:FunctionType {
-    llvm:Type[] paramTypes = [llUniformArgArrayType, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
+function buildClosureFunctionSignature(t:FunctionSignature signature, bir:Operand[] capturedValues) returns llvm:FunctionType {
+    llvm:PointerType llClosurePtrTy = llvm:pointerType(clsoureType(capturedValues), 1);
+    llvm:Type[] paramTypes = [llClosurePtrTy, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
     RetRepr repr = semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {
         returnType: repr.llvm,

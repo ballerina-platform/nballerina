@@ -211,7 +211,7 @@ class Scaffold {
         if !isClosure {
             return;
         }
-        llvm:PointerValue uniformArgArray = <llvm:PointerValue>self.llFunc.getParam(0);
+        llvm:PointerValue closure = <llvm:PointerValue>self.llFunc.getParam(0);
         bir:FunctionCode code = check self.mod.bir.generateFunctionCode(self.defn.index);
         int index = 0;
         // FIXME: common with uniformCallFunc:init.bal
@@ -220,8 +220,7 @@ class Scaffold {
             if register !is bir:CapturedRegister {
                 continue;
             }
-            llvm:Value uniformArg = builder.load(builder.getElementPtr(uniformArgArray, [constIndex(self, index)]));
-            llvm:Value arg = convertToExactArg(builder, self, <llvm:PointerValue>uniformArg, register.semType);
+            llvm:Value arg = builder.load(builder.getElementPtr(closure, [constIndex(self, 0), constIndex(self, index)]));
             builder.store(arg, self.addresses[i]);
             index += 1;
         }
@@ -679,3 +678,9 @@ function functionValueType(t:FunctionSignature signature) returns llvm:StructTyp
     return llvm:structType([llvm:pointerType(llFunctionDescType),
                             llvm:pointerType(buildFunctionSignature(signature))]);
 }
+
+function clsoureType(bir:Operand[] capturedValues) returns llvm:StructType {
+    llvm:Type[] capturedTys = from var each in capturedValues select exactArgType(each.semType);
+    return llvm:structType(capturedTys);
+}
+

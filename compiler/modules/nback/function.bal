@@ -72,24 +72,30 @@ type IndirectFunctionValue record {|
     llvm:PointerValue uniformFuncPtr;
 |};
 
-type FunctionCallBuilderFn function(llvm:Builder, Context, llvm:Function|llvm:PointerValue, llvm:Value[]) returns llvm:Value?;
-
 function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn insn) returns BuildError? {
     var { functionIndex, operands, result } = insn;
-    var [_, capturedValues] = check buildUniformArgArrayInner(builder, scaffold, operands, ());
-    llvm:FunctionDefn lambda = scaffold.getFunctionDefn(functionIndex);
-    lambda.addEnumAttribute([0, "nest"]); // FIXME: is this the correct place to do this, or should we do this hidden inside scaffold?
+    [Repr, llvm:Value][] capturedVals = from var operand in operands select check buildReprValue(builder, scaffold, operand);
+    llvm:PointerType llClosurePtrTy = llvm:pointerType(clsoureType(operands));
+    llvm:PointerValue closurePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,
+                                                                               allocUniformArgArrayFunction, [constIndex(scaffold, operands.length())]);
+    llvm:PointerValue closure = builder.bitCast(closurePtr, llClosurePtrTy);
+    foreach int i in 0 ..< capturedVals.length() {
+        builder.store(capturedVals[i][1], builder.getElementPtr(closure, [constIndex(scaffold, 0),
+                                                                          constIndex(scaffold, i)],
+                                                                "inbounds"));
+    }
+    llvm:FunctionDefn anonFunction = scaffold.getFunctionDefn(functionIndex);
+    // FIXME: is this the correct place to do this, or should we do this hidden inside scaffold?
+    anonFunction.addEnumAttribute([0, "nest"]);
     llvm:PointerValue trampoline = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionAllocateTrampoline, []);
     // XXX: when we know closure never escape the stack we can allocate this in the stack
-    // llvm:PointerValue trampoline = builder.alloca(llvm:pointerType(llvm:arrayType("i8", 40)), 4);
-    llvm:FunctionDecl initTrampoline = scaffold.getIntrinsicFunction("init.trampoline");
-    _ = <()>builder.call(initTrampoline, [trampoline, lambda, capturedValues]);
+    // llvm:PointerValue trampoline = builder.alloca(llvm:pointerType(llvm:arrayType("i8", 40)));
+    _ = <()>builder.call(scaffold.getIntrinsicFunction("init.trampoline"), [trampoline, anonFunction, closure]);
     llvm:PointerValue fnPtr = builder.bitCast(trampoline, llvm:pointerType(llFunctionType));
-    bir:Function birFunc = scaffold.getBirFunction(functionIndex);
-    llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(), birFunc.decl));
+    llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),
+                                                            scaffold.getBirFunction(functionIndex).decl));
     llvm:PointerValue funcValuePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionCreateClosure, [fnPtr, fnDescPtr]); 
-    llvm:PointerValue closure = builder.addrSpaceCast(funcValuePtr, LLVM_TAGGED_PTR);
-    builder.store(closure, scaffold.address(result));
+    builder.store(builder.addrSpaceCast(funcValuePtr, LLVM_TAGGED_PTR), scaffold.address(result));
 }
 
 function buildCallDirect(llvm:Builder builder, Scaffold scaffold, bir:CallDirectInsn insn) returns BuildError? {
@@ -205,33 +211,28 @@ function buildCallExact(llvm:Builder builder, Scaffold scaffold, llvm:Function|l
 // that list into individual arguments in the uniform argument array.
 function buildUniformArgArray(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns [llvm:Value, llvm:PointerValue]|BuildError {
     bir:Operand[] args = insn.operands.slice(1);
-    if insn.restParamIsList {
-        return buildUniformArgArrayInner(builder, scaffold, args.slice(0, args.length() - 1),
-                                         <bir:TmpRegister>args[args.length() - 1]);
-    }
-    return buildUniformArgArrayInner(builder, scaffold, args, ());
-}
-
-function buildUniformArgArrayInner(llvm:Builder builder, Scaffold scaffold, bir:Operand[] args, bir:TmpRegister? rest) returns [llvm:Value, llvm:PointerValue]|BuildError {
-    llvm:Value[] uniformArgs = from var arg in args select buildClearExact(builder, scaffold,
-                                                                           (check buildRepr(builder, scaffold, arg, REPR_ANY)),
-                                                                           arg.semType);
+    int requiredArgCount = insn.restParamIsList ? args.length() - 1 : args.length();
+    llvm:Value[] uniformArgs = from int i in 0 ..< requiredArgCount
+                                    select buildClearExact(builder, scaffold,
+                                                           (check buildRepr(builder, scaffold, args[i], REPR_ANY)),
+                                                           args[i].semType);
     llvm:Value nArgs;
     llvm:PointerValue? restArgs;
-    if rest != () {
+    if insn.restParamIsList {
+        // rest is represented as a temporary array
         llvm:PointerValue restArrayPtr = buildUntagPointer(builder, scaffold,
-                                                           scaffold.address(rest));
+                                                           scaffold.address(<bir:TmpRegister>args[requiredArgCount]));
         llvm:PointerValue restArgArray = builder.bitCast(restArrayPtr, heapPointerType(llListType));
         llvm:Value restArgCount = builder.load(builder.getElementPtr(restArgArray,
                                                                      [constIndex(scaffold, 0), constIndex(scaffold, 1)],
                                                                      "inbounds"));
         // since both requiredArgCount and restArgCount are singed64 this addition will not overflow as long as
         // runtime treats nArgs as unsigned64 (note llvm don't distinguish signed and unsigned integer types)
-        nArgs = builder.iArithmeticWrap("add", constInt(scaffold, args.length()), restArgCount);
+        nArgs = builder.iArithmeticWrap("add", constInt(scaffold, requiredArgCount), restArgCount);
         restArgs = restArgArray;
     }
     else {
-        nArgs = constInt(scaffold, args.length());
+        nArgs = constInt(scaffold, requiredArgCount);
         restArgs = ();
     }
     llvm:PointerValue uniformArgArray = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,

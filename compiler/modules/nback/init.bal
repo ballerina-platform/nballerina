@@ -407,20 +407,6 @@ function convertToTaggedValue(llvm:Builder builder, InitModuleContext context, l
     return val;
 }
 
-function exactArgType(t:SemType ty) returns llvm:SingleValueType {
-    t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
-    if t:isSubtypeSimple(w, t:INT) {
-        return LLVM_INT;
-    }
-    else if t:isSubtypeSimple(ty, t:FLOAT) {
-        return LLVM_FLOAT;
-    }
-    else if t:isSubtypeSimple(ty, t:BOOLEAN) {
-        return LLVM_BOOLEAN;
-    }
-    return LLVM_TAGGED_PTR;
-}
-
 function requiredParamCount(t:FunctionSignature signature) returns int {
     return signature.restParamType == () ? signature.paramTypes.length() :
                                            signature.paramTypes.length() - 1;
