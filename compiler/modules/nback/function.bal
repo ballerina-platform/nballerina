@@ -91,12 +91,12 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     // XXX: when we know closure never escape the stack we can allocate this in the stack
     // llvm:PointerValue trampoline = builder.alloca(llvm:pointerType(llvm:arrayType("i8", 40)));
     _ = <()>builder.call(scaffold.getIntrinsicFunction("init.trampoline"), [trampoline, anonFunction, closure]);
-    // XXX: calling adjust.trampoline don't make the memory excutable, if it is allocated in heap
+    // XXX: calling adjust.trampoline don't make the memory executable, if it is allocated in heap
     trampoline = <llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("adjust.trampoline"), [trampoline]);
     llvm:PointerValue fnPtr = builder.bitCast(trampoline, llvm:pointerType(llFunctionType));
     llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),
                                                             scaffold.getBirFunction(functionIndex).decl));
-    llvm:PointerValue funcValuePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionCreateClosure, [fnPtr, fnDescPtr]); 
+    llvm:PointerValue funcValuePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionCreateClosure, [fnPtr, fnDescPtr]);
     builder.store(builder.addrSpaceCast(funcValuePtr, LLVM_TAGGED_PTR), scaffold.address(result));
 }
 
@@ -149,12 +149,6 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
                            uniformArgArray, nArgs, signature.returnType);
     builder.br(afterCall);
     builder.positionAtEnd(afterCall);
-}
-
-function buildCallIndirectInner(llvm:Builder builder, Scaffold scaffold, bir:Operand[] args, bir:Register result,
-                                bir:Register funcOperand, llvm:PointerValue funcValuePtr, llvm:PointerValue funcDescPtr,
-                                llvm:PointerValue funcPtr, llvm:PointerValue uniformFuncPtr, llvm:Value nArgs, 
-                                llvm:PointerValue uniformArgArray, llvm:PointerValue? capturedValues) returns BuildError? {
 }
 
 function buildIndirectFunctionValue(llvm:Builder builder, Scaffold scaffold, bir:Register operand) returns IndirectFunctionValue|BuildError {
@@ -256,7 +250,7 @@ function buildUniformArgArray(llvm:Builder builder, Scaffold scaffold, bir:CallI
 function buildCallInexact(llvm:Builder builder, Scaffold scaffold, bir:Register result,
                           llvm:PointerValue funcDescPtr, llvm:PointerValue funcPtr, llvm:PointerValue uniformFuncPtr,
                           llvm:PointerValue uniformArgArray, llvm:Value nArgs, t:SemType returnType) returns BuildError? {
-    llvm:Value? returnVal = buildFunctionCall(builder, scaffold, <llvm:PointerValue>builder.load(uniformFuncPtr), 
+    llvm:Value? returnVal = buildFunctionCall(builder, scaffold, <llvm:PointerValue>builder.load(uniformFuncPtr),
                                               [funcPtr, uniformArgArray, nArgs]);
     if returnVal !is llvm:PointerValue {
         panic err:impossible("uniform call must return a tagged pointer");

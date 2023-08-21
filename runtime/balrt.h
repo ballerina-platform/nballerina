@@ -356,17 +356,17 @@ typedef GC struct LargeString {
 } *LargeStringPtr;
 
 typedef void (*FunctionPtr)();
-typedef TaggedPtr (*UniformFunctionPtr)(FunctionPtr func, uint64_t nArgs, TaggedPtr* uniformArgs, bool isClosure, TaggedPtr *capturedValues);
+typedef TaggedPtr (*UniformFunctionPtr)(FunctionPtr func, uint64_t nArgs, TaggedPtr uniformArgs);
 
 // This extends TypeIdDesc
-typedef struct FunctionDesc {
+typedef struct {
     Tid tid;
     UniformFunctionPtr uniformFunction;
     MemberType returnType;
     MemberType restType;
     int64_t nRequiredParams;
     MemberType paramTypes[];
-} *FunctionDescPtr;
+} FunctionDesc, *FunctionDescPtr;
 
 typedef GC struct {
     FunctionDescPtr desc;

@@ -277,22 +277,22 @@ class Scaffold {
         return newDefn;
     }
 
-    function getLocalFunctionValue(llvm:Function|llvm:PointerValue func, t:FunctionSignature signature, int index) returns llvm:ConstPointerValue {
+    function getLocalFunctionValue(llvm:Function func, t:FunctionSignature signature, int index) returns llvm:ConstPointerValue {
         return self.getFunctionValue(func, signature, index);
     }
 
-    function getExternalFunctionValue(llvm:Function|llvm:PointerValue func, t:FunctionSignature signature, bir:ExternalSymbol symbol) returns llvm:ConstPointerValue {
+    function getExternalFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:ExternalSymbol symbol) returns llvm:ConstPointerValue {
         return self.getFunctionValue(func, signature, symbol);
     }
 
-    private function getFunctionValue(llvm:Function|llvm:PointerValue func, t:FunctionSignature signature, bir:ExternalSymbol|int key) returns llvm:ConstPointerValue {
+    private function getFunctionValue(llvm:Function func, t:FunctionSignature signature, bir:ExternalSymbol|int key) returns llvm:ConstPointerValue {
         FunctionValueDefn? curDefn = self.mod.functionValueDefns[key];
         if curDefn != () {
             return curDefn.value;
         }
         llvm:ConstPointerValue value = addFunctionValueDefn(self.llContext(), self.getModule(), func,
                                                             self.getConstructType(t:functionSemType(self.typeContext(), signature)),
-                                                            self, signature, self.mod.functionValueDefns.length());
+                                                            signature, self.mod.functionValueDefns.length());
         self.mod.functionValueDefns.add({ value, key });
         return value;
     }
@@ -659,7 +659,7 @@ function isIntConstrainedToImmediate(t:IntSubtypeConstraints? c) returns boolean
     return IMMEDIATE_INT_MIN <= c.min && c.max <= IMMEDIATE_INT_MAX;
 }
 
-function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Function|llvm:PointerValue func, llvm:ConstPointerValue funcDesc, Scaffold scaffold,
+function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Function func, llvm:ConstPointerValue funcDesc,
                               t:FunctionSignature signature, int defnIndex) returns llvm:ConstPointerValue {
     llvm:ConstValue initValue = context.constStruct([funcDesc, func]);
     llvm:ConstPointerValue ptr = llMod.addGlobal(functionValueType(signature),

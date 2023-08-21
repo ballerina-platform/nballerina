@@ -1524,10 +1524,7 @@ function genLocalFunction(ExprContext cx, string funcName, Position pos) returns
         return { operand: functionConstOperand(cx, ref), signature: ref.signature };
     }
     else if ref is BindingLookupResult {
-        var { binding, inOuterFunction } = ref;
-        if inOuterFunction {
-            panic error("unexpected");
-        }
+        var { binding } = ref;
         bir:Register bindingReg = binding.reg;
         t:SemType semType = bindingReg.semType;
         t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
@@ -2106,7 +2103,7 @@ function narrow(BindingChain? bindings, Binding binding, bir:NarrowRegister reg,
 
 function unnarrowBinding(Binding binding) returns DeclBinding {
     if binding is CaptureBinding {
-        panic error("unimplemented");
+        return unnarrowBinding(binding.captured);
     }
     return binding is DeclBinding ? binding : binding.unnarrowed;
 }

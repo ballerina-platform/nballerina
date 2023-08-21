@@ -371,14 +371,7 @@ function createUniformFunction(llvm:Builder builder, InitModuleContext cx, t:Fun
     return func;
 }
 
-function finishCreateUniformFunction(llvm:Builder builder, InitModuleContext cx, llvm:PointerValue func, llvm:Type funcTy, llvm:Value[] args, t:SemType returnTy) {
-    llvm:Value? retValue = builder.call(builder.bitCast(func, llvm:pointerType(funcTy)), args);
-    builder.ret(retValue == () ? constNilTaggedPtr(cx) :
-                                 convertToTaggedValue(builder, cx, retValue, returnTy));
-}
-
-// TODO:remove the union type
-function convertToExactArg(llvm:Builder builder, InitModuleContext|Scaffold context,
+function convertToExactArg(llvm:Builder builder, InitModuleContext context,
                            llvm:PointerValue arg, t:SemType ty) returns llvm:Value {
     t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
     if t:isSubtypeSimple(w, t:INT) {
