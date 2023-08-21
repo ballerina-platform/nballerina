@@ -75,7 +75,7 @@ type IndirectFunctionValue record {|
 function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn insn) returns BuildError? {
     var { functionIndex, operands, result } = insn;
     [Repr, llvm:Value][] capturedVals = from var operand in operands select check buildReprValue(builder, scaffold, operand);
-    llvm:PointerType llClosurePtrTy = llvm:pointerType(clsoureType(operands));
+    llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(operands));
     llvm:PointerValue closurePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,
                                                                                allocUniformArgArrayFunction, [constIndex(scaffold, operands.length())]);
     llvm:PointerValue closure = builder.bitCast(closurePtr, llClosurePtrTy);
@@ -91,6 +91,8 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     // XXX: when we know closure never escape the stack we can allocate this in the stack
     // llvm:PointerValue trampoline = builder.alloca(llvm:pointerType(llvm:arrayType("i8", 40)));
     _ = <()>builder.call(scaffold.getIntrinsicFunction("init.trampoline"), [trampoline, anonFunction, closure]);
+    // XXX: calling adjust.trampoline don't make the memory excutable, if it is allocated in heap
+    trampoline = <llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("adjust.trampoline"), [trampoline]);
     llvm:PointerValue fnPtr = builder.bitCast(trampoline, llvm:pointerType(llFunctionType));
     llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),
                                                             scaffold.getBirFunction(functionIndex).decl));
