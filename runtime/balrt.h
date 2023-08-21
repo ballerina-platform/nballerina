@@ -421,6 +421,7 @@ typedef struct {
 // Don't declare functions here if they are balrt_inline.c
 
 extern UntypedPtr _bal_alloc(uint64_t nBytes);
+extern void *_bal_alloc_exec(uint64_t nBytes);
 extern NORETURN void _bal_panic(TaggedPtr tp);
 
 extern bool _bal_float_eq(double, double);
