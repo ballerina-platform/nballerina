@@ -36,13 +36,13 @@ type DeclBinding record {|
 type NarrowBinding record {|
     string name;
     bir:NarrowRegister reg;
-    DeclBinding unnarrowed;
+    DeclBinding|CaptureBinding unnarrowed;
 |};
 
 type AssignmentBinding record {|
     string name;
     bir:DeclRegister reg; // same as unnarrowed.reg and invalidates.underlying.underling...
-    DeclBinding unnarrowed;
+    DeclBinding|CaptureBinding unnarrowed;
     bir:NarrowRegister invalidates;
     Position pos;
 |};
@@ -1565,7 +1565,7 @@ function codeGenAnonFunction(ExprContext cx, bir:BasicBlock curBlock, s:AnonFunc
     var [ref, ...operands] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);
     if operands.length() == 0 {
         bir:FunctionConstOperand result = functionValOperand(cx.mod.tc, ref);
-        return { result, block: curBlock }; // NOTE: creating a lambda don't add captures
+        return { result, block: curBlock };
     }
     bir:TmpRegister result = cx.createTmpRegister(t:functionSemType(cx.mod.tc, signature));
     bir:CaptureInsn insn = { functionIndex: ref.index, result, operands: operands.cloneReadOnly(), pos };
@@ -1604,7 +1604,7 @@ function codeGenTypeMergeFromMerger(ExprContext cx, TypeMerger merger, Position 
 type MergeOriginGroup record {|
     // Same as unnarrowed.number
     readonly int number;
-    DeclBinding unnarrowed;
+    DeclBinding|CaptureBinding unnarrowed;
     t:SemType union;
     bir:Register[] narrowedRegs;
     bir:Label[] origins;
@@ -2101,11 +2101,8 @@ function narrow(BindingChain? bindings, Binding binding, bir:NarrowRegister reg,
     return { head: { name: binding.name, reg, unnarrowed: unnarrowBinding(binding) }, prev: bindings };
 }
 
-function unnarrowBinding(Binding binding) returns DeclBinding {
-    if binding is CaptureBinding {
-        return unnarrowBinding(binding.captured);
-    }
-    return binding is DeclBinding ? binding : binding.unnarrowed;
+function unnarrowBinding(Binding binding) returns DeclBinding|CaptureBinding {
+    return binding is DeclBinding|CaptureBinding ? binding : binding.unnarrowed;
 }
 
 function lookupImportedVarRef(ExprContext cx, string prefix, string identifier, Position pos) returns t:SingleValue|bir:FunctionRef|err:Semantic {

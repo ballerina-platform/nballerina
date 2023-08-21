@@ -300,7 +300,7 @@ function flowOriginating(RegFlow[] flows, Label origin) returns RegFlow? {
 }
 
 function verifyOperandInitialized(VerifyCodeContext cx, Operand op, RegSet regs, Position usagePos) returns Error? {
-    if op is Register && !regs[op.number] {
+    if op is Register && op !is CapturedRegister && !regs[op.number] {
         return cx.invalidErr("operand register not initialized ", usagePos);
     }
 }
