@@ -246,9 +246,20 @@ public distinct class Module {
 
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         int id = intrinsicNameToId(name);
-        FunctionType fnType = name is IntegerArithmeticIntrinsicName ? {returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"]} :
-                                                                       {returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"]};
-        PointerPointer paramTypes = PointerPointerFromTypes(self.context, fnType.paramTypes);
+        FunctionType fnType;
+        if name is IntegerArithmeticIntrinsicName {
+            fnType = { returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"] };
+        }
+        else if name == "init.trampoline" {
+            fnType = { returnType: "void", paramTypes: [pointerType("i8"), pointerType("i8"), pointerType("i8")] };
+        }
+        else if name == "adjust.trampoline" {
+            fnType = { returnType: pointerType("i8"), paramTypes: [pointerType("i8")] };
+        }
+        else {
+            fnType = { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] };
+        }
+        PointerPointer paramTypes = PointerPointerFromTypes(self.context, from var each in fnType.paramTypes select each);
         int paramCount = fnType.paramTypes.length();
         return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, paramCount), fnType, self.context,
                     jLLVMIntrinsicGetType(self.context.LLVMContext, id, paramTypes.jObject, paramCount));

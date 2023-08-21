@@ -58,7 +58,7 @@ public type RetType Type|"void";
 # Corresponds to llvm::FunctionType class
 public type FunctionType readonly & record {|
     RetType returnType;
-    (Type|"function")[] paramTypes; // FIXME: how to represent any function type (not an arbitrary function)?
+    Type[] paramTypes;
 |};
 
 public function functionType(RetType returnType, Type[] paramTypes) returns FunctionType {
