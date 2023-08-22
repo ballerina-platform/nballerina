@@ -7,6 +7,7 @@ public type FunctionTag "function";
 public type RegistersTag "registers";
 public type BlocksTag "blocks";
 public type FunctionsTag "functions";
+public type CapturingFunctionTag "capturing-function";
 
 public type Position ["loc", int, int];
 public type File [sexpr:String, sexpr:String]|[sexpr:String, sexpr:String, sexpr:String]; // [name, path, ?dir]
@@ -19,11 +20,14 @@ public type ModuleDecls [ModuleId, FuncDecl...];
 public type Function FunctionWithClosures|FunctionWithoutClosures;
 public type FunctionWithClosures [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...], [FunctionsTag, AnonFunction...]]];
 public type FunctionWithoutClosures [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
-public type AnonFunction AnonFunctionWithClosures|AnonFunctionWithoutClosures;
-public type AnonFunctionWithClosures [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [FunctionsTag, AnonFunction...]]];
-public type AnonFunctionWithoutClosures [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
-public type Register [sexpr:Symbol, bir:DeclRegisterKind|bir:TMP_REGISTER_KIND|bir:ASSIGN_TMP_REGISTER_KIND , ts:Type]|
-                     [sexpr:Symbol, bir:NARROW_REGISTER_KIND|bir:CAPTURED_REGISTER_KIND, ts:Type, sexpr:Symbol];
+public type AnonFunction AnonFunctionWithClosures|AnonFunctionWithoutClosures|CapturingAnonFunctionWithClosures|CapturingAnonFunctionWithoutClosures;
+public type AnonFunctionWithClosures [string, [FunctionTag, AnonFunctionSignature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [FunctionsTag, AnonFunction...]]];
+public type AnonFunctionWithoutClosures [string, [FunctionTag, AnonFunctionSignature, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
+public type CapturingAnonFunctionWithoutClosures [CapturingFunctionTag, string, [FunctionTag, AnonFunctionSignature, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
+public type CapturingAnonFunctionWithClosures [CapturingFunctionTag, string, [FunctionTag, AnonFunctionSignature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [FunctionsTag, AnonFunction...]]];
+public type AnonFunctionSignature Signature|[ts:Type[], ts:Type, ts:Type[], ts:Type];
+public type Register [sexpr:Symbol, bir:DeclRegisterKind|bir:TMP_REGISTER_KIND|bir:ASSIGN_TMP_REGISTER_KIND|bir:CAPTURED_REGISTER_KIND, ts:Type]|
+                     [sexpr:Symbol, bir:NARROW_REGISTER_KIND, ts:Type, sexpr:Symbol];
 public type BlockPanic readonly & (["no-panic"]|["on-panic", Label]);
 public type Block readonly & [sexpr:Symbol, BlockPanic, (Position|Insn)...];
 public type RegisterName sexpr:Symbol;
