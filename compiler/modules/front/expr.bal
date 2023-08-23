@@ -169,8 +169,11 @@ class ExprContext {
     }
 
     function createCaptureRegister(bir:SemType t, bir:DeclRegister|bir:CapturedRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
-        StmtContext sc = <StmtContext>self.sc; // TODO: proper error message
-        return bir:createCapturedRegister(self.code, t, underlying, underlying.name, sc.getCurrentScope(), pos);
+        StmtContext? sc = self.sc;
+        if sc == () {
+            panic err:impossible("attempt to capture register in constant expression");
+        }
+        return sc.createCaptureRegister(t, underlying, pos);
     }
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {

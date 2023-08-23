@@ -40,6 +40,11 @@ type ClosureContext object {
     function isClosure() returns boolean;
 };
 
+type CapturedRegisterMemo readonly & record {|
+    int captured;
+    bir:CapturedRegister reg;
+|};
+
 class StmtContext {
     *ClosureContext;
     final Module mod;
@@ -83,6 +88,16 @@ class StmtContext {
 
     function createParamRegister(bir:SemType t, Position pos, string name) returns bir:ParamRegister {
         return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
+    }
+
+    function createCaptureRegister(bir:SemType t, bir:DeclRegister|bir:CapturedRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
+        CapturedRegisterMemo? memo = self.capturedRegisters[underlying.number];
+        if memo != () {
+            return memo.reg;
+        }
+        bir:CapturedRegister register = bir:createCapturedRegister(self.code, t, underlying, underlying.name, self.getCurrentScope(), pos);
+        self.capturedRegisters.add({ captured: underlying.number, reg: register });
+        return register;
     }
 
     public function getCurrentScope() returns bir:RegisterScope {
