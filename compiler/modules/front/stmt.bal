@@ -896,8 +896,8 @@ function codeGenAssignToVar(StmtContext cx, bir:BasicBlock startBlock, BindingCh
 
 function lookupVarRefForAssign(StmtContext cx, BindingChain? initialBindings, string varName, Position pos) returns CodeGenError|[bir:VarRegister, BindingChain?] {
     Binding binding = check lookupVarRefBinding(cx, varName, initialBindings, pos);
-    DeclBinding|CaptureBinding unnarrowed = unnarrowBinding(binding);
-    if  unnarrowed is DeclBinding && unnarrowed.isFinal {
+    DeclBinding unnarrowed = unnarrowBinding(binding);
+    if unnarrowed.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`, pos);
     }
     bir:VarRegister unnarrowedReg = <bir:VarRegister>unnarrowed.reg; // assigning to final or param registers are semantic errors
@@ -1202,10 +1202,8 @@ function lookupLocalVarRef(ClosureContext cx, ModuleSymbols mod, string name, Bi
 function envLookup(ClosureContext cx, string name, BindingChain? bindings) returns BindingLookupResult? {
     BindingLookupResult? result = bindingsLookup(cx, name, bindings);
     if result != () {
-        DeclBinding|CaptureBinding unnarrowed = unnarrowBinding(result.binding);
-        if unnarrowed is DeclBinding {
-            unnarrowed.used = true;
-        }
+        DeclBinding unnarrowed = unnarrowBinding(result.binding);
+        unnarrowed.used = true;
     }
     return result;
 }

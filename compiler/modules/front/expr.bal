@@ -36,28 +36,21 @@ type DeclBinding record {|
 type NarrowBinding record {|
     string name;
     bir:NarrowRegister reg;
-    DeclBinding|CaptureBinding unnarrowed;
+    DeclBinding unnarrowed;
 |};
 
 type AssignmentBinding record {|
     string name;
     bir:DeclRegister reg; // same as unnarrowed.reg and invalidates.underlying.underling...
-    DeclBinding|CaptureBinding unnarrowed;
+    DeclBinding unnarrowed;
     bir:NarrowRegister invalidates;
-    Position pos;
-|};
-
-type CaptureBinding record {|
-    string name;
-    bir:CapturedRegister reg;
-    DeclBinding|CaptureBinding captured;
     Position pos;
 |};
 
 type FunctionMarker "func"; // value is chosen such that it fits in a small string
 
 type OccurrenceBinding NarrowBinding|AssignmentBinding;
-type Binding DeclBinding|NarrowBinding|AssignmentBinding|CaptureBinding;
+type Binding DeclBinding|NarrowBinding|AssignmentBinding;
 
 type BindingChain record {|
     Binding|FunctionMarker head;
@@ -1218,14 +1211,14 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             var { binding: b, inOuterFunction } = v;
             bir:Register bindingReg = b.reg;
             if inOuterFunction {
-                if bindingReg !is bir:DeclRegister|bir:CapturedRegister || b !is DeclBinding|CaptureBinding {
+                if bindingReg !is bir:DeclRegister|bir:CapturedRegister {
                     panic err:impossible("unexpected underlying register/binding to capture");
                 }
                 if bindingReg is bir:DeclRegister && bindingReg !is bir:FinalRegister|bir:ParamRegister {
                     return cx.unimplementedErr("capturing non-final variables not implemented", ref.qNamePos);
                 }
                 bir:CapturedRegister reg = cx.createCaptureRegister(bindingReg.semType, bindingReg, ref.qNamePos);
-                binding = { reg, captured: b, pos: ref.qNamePos, name: b.name };
+                binding = ();
                 result = constifyRegister(reg);
             }
             else {
@@ -1600,7 +1593,7 @@ function codeGenTypeMergeFromMerger(ExprContext cx, TypeMerger merger, Position 
 type MergeOriginGroup record {|
     // Same as unnarrowed.number
     readonly int number;
-    DeclBinding|CaptureBinding unnarrowed;
+    DeclBinding unnarrowed;
     t:SemType union;
     bir:Register[] narrowedRegs;
     bir:Label[] origins;
@@ -2097,8 +2090,8 @@ function narrow(BindingChain? bindings, Binding binding, bir:NarrowRegister reg,
     return { head: { name: binding.name, reg, unnarrowed: unnarrowBinding(binding) }, prev: bindings };
 }
 
-function unnarrowBinding(Binding binding) returns DeclBinding|CaptureBinding {
-    return binding is DeclBinding|CaptureBinding ? binding : binding.unnarrowed;
+function unnarrowBinding(Binding binding) returns DeclBinding {
+    return binding is DeclBinding ? binding : binding.unnarrowed;
 }
 
 function lookupImportedVarRef(ExprContext cx, string prefix, string identifier, Position pos) returns t:SingleValue|bir:FunctionRef|err:Semantic {
