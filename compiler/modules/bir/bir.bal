@@ -702,8 +702,9 @@ public type CallIndirectInsn readonly & record {|
 public type CaptureInsn readonly & record {|
     *ResultInsnBase;
     INSN_CAPTURE name = INSN_CAPTURE;
+    # Given functionIndex could be used in only one CaptureInsn
     int functionIndex;
-    [CapturedRegister|DeclRegister...] operands; // TODO: may be we need name for the is union like CapturableRegister
+    [CapturedRegister|DeclRegister...] operands;
 |};
 
 # Assign a value to a register.

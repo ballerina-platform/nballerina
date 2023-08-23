@@ -7,10 +7,11 @@ import wso2/nballerina.comm.diagnostic as d;
 type Range d:Range;
 
 class VerifyContext {
-    private final Module mod;
     private final t:Context tc;
     private final Function func;
     private final FunctionDefn moduleDefn;
+    final Module mod;
+    final int[] capturedFunctions = [];
 
     function init(Module mod, Function func) {
         self.mod = mod;
@@ -413,6 +414,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     else if insn is TypeCondBranchInsn {
         check verifyTypeCondBranch(vc, insn);
     }
+    else if insn is CaptureInsn {
+        check verifyCaptureInsn(vc, insn);
+    }
 }
 
 function verifyTypeMerge(VerifyContext vc, TypeMergeInsn insn) returns err:Internal? {
@@ -446,6 +450,16 @@ function verifyTypeCondBranch(VerifyContext vc, TypeCondBranchInsn insn) returns
     if !vc.isSubtype(t:diff(insn.operand.semType, insn.semType), insn.ifFalseRegister.semType) {
         return vc.invalidErr("false register is not a subtype of the tested type complement", insn.pos);
     }
+}
+
+function verifyCaptureInsn(VerifyContext vc, CaptureInsn insn) returns err:Internal? {
+    if vc.capturedFunctions.indexOf(insn.functionIndex) != () {
+        return vc.invalidErr("function can't be captured more than once", insn.pos);
+    }
+    if vc.mod.getFunctions()[insn.functionIndex] !is AnonFunction {
+        return vc.invalidErr("only AnonFunctions can capture values", insn.pos);
+    }
+    vc.capturedFunctions.push(insn.functionIndex);
 }
 
 function verifyCallDirect(VerifyContext vc, CallDirectInsn insn) returns err:Internal? {
