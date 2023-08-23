@@ -18,7 +18,7 @@ void *_bal_alloc_exec(uint64_t nBytes) {
     void *p = mmap(NULL, nBytes, protection, flags, -1, 0);
     if (p != MAP_FAILED)
         return p;
-    fprintf(stderr, "failed to allocate trampoline\n");
+    fprintf(stderr, "failed to allocate executable memory\n");
     fflush(stderr);
     abort();
 }

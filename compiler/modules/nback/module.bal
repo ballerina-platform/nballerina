@@ -21,7 +21,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     from int i in 0 ..< functions.length() do { _ = check birMod.generateFunctionCode(i); };
     foreach var func in functions {
         llvm:FunctionType ty = check isClosureFunction(birMod, func) ? buildClosureFunctionSignature(func.decl, check closureCapturedRegisters(birMod, <bir:AnonFunction>func)):
-                                                                       buildFunctionSignature(func.decl);
+                                                                                  buildFunctionSignature(func.decl);
         llFuncTypes.push(ty);
         var [mangledName, identifier] = functionIdentifiers(modId, func);
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);

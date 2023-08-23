@@ -118,9 +118,9 @@ class ExprContext {
     final StmtContext? sc;
     final ModuleSymbols mod;
     final s:ModuleLevelDefn defn;
+    final BindingChain? bindings;
     final s:SourceFile file;
     final bir:FunctionCode code;
-    BindingChain? bindings;
 
     function init(ModuleSymbols mod, s:ModuleLevelDefn defn, bir:FunctionCode code, BindingChain? bindings, StmtContext? sc) {
         self.mod = mod;
@@ -200,11 +200,6 @@ class ExprContext {
         if self.sc == () {
             return self.semanticErr("expression is not constant", s:range(expr));
         }
-    }
-
-    function addBindingToChain(Binding b) {
-        BindingChain bindings = <BindingChain>self.bindings;
-        self.bindings = { prev: bindings, head: b };
     }
 
     function exprContext(BindingChain? bindings) returns ExprContext {
@@ -1227,9 +1222,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
                     return cx.unimplementedErr("capturing non-final variables not implemented", ref.qNamePos);
                 }
                 bir:CapturedRegister reg = cx.createCaptureRegister(bindingReg.semType, bindingReg, ref.qNamePos);
-                CaptureBinding capturedBinding = { reg, captured: b, pos: ref.qNamePos, name: b.name };
-                cx.addBindingToChain(<Binding>capturedBinding);
-                binding = capturedBinding;
+                binding = { reg, captured: b, pos: ref.qNamePos, name: b.name };
                 result = constifyRegister(reg);
             }
             else {

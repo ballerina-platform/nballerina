@@ -356,7 +356,7 @@ function toRegister(ParseContext pc, map<bir:Register> prevRegs, map<bir:Registe
             bir:Register? captured = parentRegs[nameSexpr];
             string name = toMaybeName(nameSexpr) ?: "_";
             if captured == () {
-                panic error("capture reg must appear after it's captured register");
+                panic error("parent function doesn't have the corresponding register to capture");
             }
             if captured !is bir:DeclRegister|bir:CapturedRegister {
                 panic error("unexpected captured register kind");
@@ -498,11 +498,11 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
             };
         }
         ["capture", var result, var funcRef, ...var operandSexprs] => {
-            int functionIndex = <int>functionHandleFromSexpr(pc, <FunctionRef>funcRef);            
+            int functionIndex = <int>functionHandleFromSexpr(pc, <FunctionRef>funcRef);
             (bir:CapturedRegister|bir:DeclRegister)[] & readonly operands = from var operand in operandSexprs select <bir:CapturedRegister|bir:DeclRegister>lookupRegister(pc, <sexpr:Symbol>operand);
             return <bir:CaptureInsn>{
                 result: toResultRegister(pc, <sexpr:Symbol>result),
-                functionIndex, 
+                functionIndex,
                 operands,
                 pos
             };

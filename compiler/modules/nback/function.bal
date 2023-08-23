@@ -5,6 +5,15 @@ import wso2/nballerina.print.llvm;
 
 final llvm:PointerType llUniformArgArrayType = llvm:pointerType(LLVM_TAGGED_PTR);
 
+final RuntimeFunction functionAllocateClosureStruct = {
+    name: "function_alloc_closure_struct",
+    ty: {
+        returnType: llvm:pointerType("i8"), // this is really a void*
+        paramTypes: ["i64"]
+    },
+    attrs: []
+};
+
 final RuntimeFunction functionAllocateTrampoline = {
     name: "function_allocate_trampoline_in_heap",
     ty: {
@@ -14,8 +23,8 @@ final RuntimeFunction functionAllocateTrampoline = {
     attrs: []
 };
 
-final RuntimeFunction functionCreateClosure = {
-    name: "function_create_closure",
+final RuntimeFunction functionConstructClosure = {
+    name: "function_construct_closure",
     ty: {
         returnType: llvm:pointerType(llFunctionType),
         paramTypes: [llFunctionPtrType, llvm:pointerType(llFunctionDescType)]
@@ -77,7 +86,7 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     [Repr, llvm:Value][] capturedVals = from var operand in operands select check buildReprValue(builder, scaffold, operand);
     llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(operands));
     llvm:PointerValue closurePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,
-                                                                               allocUniformArgArrayFunction, [constIndex(scaffold, operands.length())]);
+                                                                               functionAllocateClosureStruct, [constIndex(scaffold, operands.length())]);
     llvm:PointerValue closure = builder.bitCast(closurePtr, llClosurePtrTy);
     foreach int i in 0 ..< capturedVals.length() {
         builder.store(capturedVals[i][1], builder.getElementPtr(closure, [constIndex(scaffold, 0),
@@ -85,18 +94,16 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
                                                                 "inbounds"));
     }
     llvm:FunctionDefn anonFunction = scaffold.getFunctionDefn(functionIndex);
-    // FIXME: is this the correct place to do this, or should we do this hidden inside scaffold?
     anonFunction.addEnumAttribute([0, "nest"]);
     llvm:PointerValue trampoline = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionAllocateTrampoline, []);
-    // XXX: when we know closure never escape the stack we can allocate this in the stack
+    // TODO: when we have escape analysis we can allocate this in the stack
     // llvm:PointerValue trampoline = builder.alloca(llvm:pointerType(llvm:arrayType("i8", 40)));
     _ = <()>builder.call(scaffold.getIntrinsicFunction("init.trampoline"), [trampoline, anonFunction, closure]);
-    // XXX: calling adjust.trampoline don't make the memory executable, if it is allocated in heap
     trampoline = <llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("adjust.trampoline"), [trampoline]);
     llvm:PointerValue fnPtr = builder.bitCast(trampoline, llvm:pointerType(llFunctionType));
     llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),
                                                             scaffold.getBirFunction(functionIndex).decl));
-    llvm:PointerValue funcValuePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionCreateClosure, [fnPtr, fnDescPtr]);
+    llvm:PointerValue funcValuePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionConstructClosure, [fnPtr, fnDescPtr]);
     builder.store(builder.addrSpaceCast(funcValuePtr, LLVM_TAGGED_PTR), scaffold.address(result));
 }
 

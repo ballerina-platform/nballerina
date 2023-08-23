@@ -31,7 +31,6 @@ bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
 // nArgs = requiredArgCount + restArgCount
 // We are using uint64_t to avoid overflow in case of restArgCount close to INT64_MAX. This means indexing uniform arg array
 // must also be done using uint64_t
-// TODO: this needs a better name and maybe return a untyped pointer (used for both creating the uniform arg array and clsoure struct)
 GC TaggedPtr *_bal_function_alloc_uniform_args(uint64_t nArgs) {
     GC TaggedPtr *arr = _bal_alloc(sizeof(TaggedPtr) * nArgs);
     return arr;
@@ -58,7 +57,14 @@ void _bal_function_add_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uni
     }
 }
 
-FunctionValuePtr _bal_function_create_closure(FunctionPtr fnPtr, FunctionDescPtr desc) {
+// This is to allocated untyped memory in address space 0 (llvm trampoline doesn't work with other address spaces)
+// for holding the captured values. Compiler must bitcast this to appropriate type before using.
+void* _bal_function_alloc_closure_struct(uint64_t nValues) {
+    void* ptr = (void*)_bal_alloc(sizeof(TaggedPtr) * nValues);
+    return ptr;
+}
+
+FunctionValuePtr _bal_function_construct_closure(FunctionPtr fnPtr, FunctionDescPtr desc) {
     FunctionValuePtr closure = _bal_alloc(sizeof(FunctionValue));
     closure->func = fnPtr;
     closure->desc = desc;
@@ -72,9 +78,9 @@ FunctionValuePtr _bal_function_create_closure(FunctionPtr fnPtr, FunctionDescPtr
 static void* trampoline_buffer = NULL;
 uint64_t offset = 0;
 
+// We are using a bump allocator to allocate a whole page of executable memory in one go and break it up as needed.
 void *_bal_function_allocate_trampoline_in_heap() {
     uint64_t page_size = sysconf(_SC_PAGESIZE);
-    assert(page_size >= TRAMPOLINE_SIZE); // I think this is always true
     if ((offset + 1) * TRAMPOLINE_SIZE >= page_size || trampoline_buffer == NULL) {
         trampoline_buffer = _bal_alloc_exec(page_size);
         offset = 0;

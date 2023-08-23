@@ -52,6 +52,7 @@ class StmtContext {
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
+    table<CapturedRegisterMemo> key(captured) capturedRegisters = table [];
 
     function init(Module mod, ModuleSymbols syms, s:Function func, s:FunctionDefn moduleLevelDefn, t:SemType returnType) {
         self.mod = mod;
