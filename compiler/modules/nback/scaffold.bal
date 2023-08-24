@@ -679,7 +679,7 @@ function functionValueType(t:FunctionSignature signature) returns llvm:StructTyp
 }
 
 function closureType(bir:Operand[] capturedValues) returns llvm:StructType {
-    llvm:Type[] capturedTys = from var each in capturedValues select exactArgType(each.semType);
+    llvm:Type[] capturedTys = from var each in capturedValues select exactValueType(each.semType);
     return llvm:structType(capturedTys);
 }
 

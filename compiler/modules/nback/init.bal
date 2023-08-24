@@ -345,7 +345,7 @@ function createUniformFunction(llvm:Builder builder, InitModuleContext cx, t:Fun
     llvm:BasicBlock bb = func.appendBasicBlock();
     builder.positionAtEnd(bb);
     llvm:PointerValue[] exactArgs = from t:SemType paramType in signature.paramTypes
-                                      select builder.alloca(exactArgType(paramType));
+                                      select builder.alloca(exactValueType(paramType));
     llvm:PointerValue uniformArgArray = <llvm:PointerValue>func.getParam(1);
     int nRequiredParams = requiredParamCount(signature);
     foreach int i in 0 ..< nRequiredParams {
