@@ -9,5 +9,5 @@ function addTo(int x) returns F {
 
 public function main() {
     F add2 = addTo(2);
-    io:println(add2(3)); // @output 5
+io:println(add2(3)); // @output 5
 }
