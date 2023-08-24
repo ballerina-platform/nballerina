@@ -104,7 +104,9 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),
                                                             scaffold.getBirFunction(functionIndex).decl));
     llvm:PointerValue funcValuePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionConstructClosure, [fnPtr, fnDescPtr]);
-    builder.store(builder.addrSpaceCast(funcValuePtr, LLVM_TAGGED_PTR), scaffold.address(result));
+    funcValuePtr = builder.getElementPtr(builder.addrSpaceCast(funcValuePtr, LLVM_TAGGED_PTR),
+                                         [constInt(scaffold, TAG_FUNCTION)]);
+    builder.store(funcValuePtr, scaffold.address(result));
 }
 
 function buildCallDirect(llvm:Builder builder, Scaffold scaffold, bir:CallDirectInsn insn) returns BuildError? {

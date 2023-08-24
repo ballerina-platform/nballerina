@@ -1,17 +1,22 @@
 import ballerina/io;
-type F function(int) returns int;
+type F function(int) returns int|F;
 
 function foo(int a) returns F {
-    return function(int x) returns int {
+    return function(int x) returns F {
         final int b = a * 2;
-        F g = function(int y) returns int {
+        return function(int y) returns int {
             return x + y + a + b;
         };
-        return g(x);
     };
 }
 public function main() {
     F f = foo(5);
-    io:println(f(5)); // @output 25
+    F|int res = f(5);
+    if res is F {
+        io:println(res(5)); // @output 25
+    }
+    if res is int {
+        io:println(res);
+    }
 }
 
