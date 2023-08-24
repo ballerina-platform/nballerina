@@ -9,7 +9,7 @@ final RuntimeFunction functionAllocateClosureStruct = {
     name: "function_alloc_closure_struct",
     ty: {
         returnType: llvm:pointerType("i8"), // this is really a void*
-        paramTypes: ["i64"]
+        paramTypes: ["i32"]
     },
     attrs: []
 };
@@ -85,8 +85,14 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     var { functionIndex, operands, result } = insn;
     [Repr, llvm:Value][] capturedVals = from var operand in operands select check buildReprValue(builder, scaffold, operand);
     llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(operands));
+    int nOperands = operands.length();
+    if nOperands > int:UNSIGNED32_MAX_VALUE {
+        // We are using a struct for captured values (since each value has different type) and we can't
+        // index values larger than this
+        panic err:impossible("too many captured values");
+    }
     llvm:PointerValue closurePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,
-                                                                               functionAllocateClosureStruct, [constIndex(scaffold, operands.length())]);
+                                                                               functionAllocateClosureStruct, [constIndex(scaffold, nOperands)]);
     llvm:PointerValue closure = builder.bitCast(closurePtr, llClosurePtrTy);
     foreach int i in 0 ..< capturedVals.length() {
         builder.store(capturedVals[i][1], builder.getElementPtr(closure, [constIndex(scaffold, 0),

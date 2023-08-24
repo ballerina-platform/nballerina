@@ -1212,7 +1212,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             bir:Register bindingReg = b.reg;
             if inOuterFunction {
                 if bindingReg !is bir:DeclRegister|bir:CapturedRegister {
-                    panic err:impossible("unexpected underlying register/binding to capture");
+                    panic err:impossible("unexpected underlying register to capture");
                 }
                 if bindingReg is bir:DeclRegister && bindingReg !is bir:FinalRegister|bir:ParamRegister {
                     return cx.unimplementedErr("capturing non-final variables not implemented", ref.qNamePos);

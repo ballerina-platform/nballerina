@@ -60,7 +60,7 @@ void _bal_function_add_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uni
 
 // This is to allocated untyped memory in address space 0 (llvm trampoline doesn't work with other address spaces)
 // for holding the captured values. Compiler must bitcast this to appropriate type before using.
-void* _bal_function_alloc_closure_struct(uint64_t nValues) {
+void* _bal_function_alloc_closure_struct(uint32_t nValues) {
     void* ptr = (void*)_bal_alloc(sizeof(TaggedPtr) * nValues);
     return ptr;
 }
