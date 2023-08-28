@@ -141,7 +141,7 @@ typedef struct GenericFillerDesc {
     TaggedPtr genericValue;
 } *GenericFillerDescPtr;
 
-// All mapping and list values start with this
+// All mapping, list and function values start with this
 typedef GC struct {
     TypeIdDescPtr desc;
 } Structure, *StructurePtr;
@@ -369,14 +369,20 @@ typedef struct {
     MemberType paramTypes[];
 } FunctionDesc, *FunctionDescPtr;
 
+// This extends Structure
+// Represents function value in memory. Before calling a function variable that points
+// to this, caller must first check both variable and value have the same FunctionDesc (ie. their types are identical).
+// If so caller can directly use the FunctionPtr. Otherwise caller must call the FunctionPtr by passing
+// it to the UniformFunctionPtr in the FunctionDesc of function value.
 typedef GC struct {
     FunctionDescPtr desc;
     FunctionPtr func;
 } FunctionValue, *FunctionValuePtr;
 
+// This extends FunctionValue to support anonymous functions that capture values from the environment.
 typedef GC struct {
     FunctionDescPtr desc;
-    FunctionPtr func; // This pointes to the trampoline
+    FunctionPtr func; // This points to the trampoline
     uint64_t nCaptured;
     // Actual type of each of the captured values will depend on the value being captured.
     // However size of captured is guaranteed to be 64*nCaptured bits
