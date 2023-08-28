@@ -351,7 +351,7 @@ function toRegister(ParseContext pc, map<bir:Register> prevRegs, map<bir:Registe
         }
         [var nameSexpr, bir:CAPTURED_REGISTER_KIND, var semType] => {
             if parentRegs == () {
-                panic error("capture reg must appear inside a nested function");
+                panic error("capture register must appear inside a nested function");
             }
             bir:Register? captured = parentRegs[nameSexpr];
             string name = toMaybeName(nameSexpr) ?: "_";

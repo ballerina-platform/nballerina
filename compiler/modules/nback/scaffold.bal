@@ -91,6 +91,8 @@ type ImportedFunction record {|
 
 type ImportedFunctionTable table<ImportedFunction> key(symbol);
 
+const FUNCTION_VARIANT_NON_CAPTURING = 0;
+const FUNCTION_VARIANT_CAPTURING = 1;
 
 //const STRING_VARIANT_SMALL = 0;
 const STRING_VARIANT_MEDIUM = 0;
@@ -670,7 +672,7 @@ function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Func
                                                  unnamedAddr=true,
                                                  linkage= "internal");
     return context.constGetElementPtr(context.constAddrSpaceCast(ptr, LLVM_TAGGED_PTR),
-                                      [context.constInt(LLVM_INT, TAG_FUNCTION)]);
+                                      [context.constInt(LLVM_INT, TAG_FUNCTION | FUNCTION_VARIANT_NON_CAPTURING)]);
 }
 
 function functionValueType(t:FunctionSignature signature) returns llvm:StructType {
@@ -678,8 +680,15 @@ function functionValueType(t:FunctionSignature signature) returns llvm:StructTyp
                             llvm:pointerType(buildFunctionSignature(signature))]);
 }
 
-function closureType(bir:Operand[] capturedValues) returns llvm:StructType {
-    llvm:Type[] capturedTys = from var each in capturedValues select exactValueType(each.semType);
+function closureValueType(t:FunctionSignature signature, t:SemType[] capturedTypes) returns llvm:StructType {
+    return llvm:structType([llvm:pointerType(llFunctionDescType),
+                            llvm:pointerType(buildFunctionSignature(signature)),
+                            LLVM_INT,
+                            closureType(capturedTypes)]);
+}
+
+function closureType(t:SemType[] capturedValTypes) returns llvm:StructType {
+    llvm:Type[] capturedTys = from var each in capturedValTypes select exactValueType(each);
     return llvm:structType(capturedTys);
 }
 

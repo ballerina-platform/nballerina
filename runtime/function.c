@@ -1,5 +1,4 @@
 #include "balrt.h"
-#include <assert.h>
 #include <unistd.h>
 
 bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
@@ -58,17 +57,8 @@ void _bal_function_add_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uni
     }
 }
 
-// This is to allocated untyped memory in address space 0 (llvm trampoline doesn't work with other address spaces)
-// for holding the captured values. Compiler must bitcast this to appropriate type before using.
-void* _bal_function_alloc_closure_struct(uint32_t nValues) {
-    void* ptr = (void*)_bal_alloc(sizeof(TaggedPtr) * nValues);
-    return ptr;
-}
-
-FunctionValuePtr _bal_function_construct_closure(FunctionPtr fnPtr, FunctionDescPtr desc) {
-    FunctionValuePtr closure = _bal_alloc(sizeof(FunctionValue));
-    closure->func = fnPtr;
-    closure->desc = desc;
+ClosureValuePtr _bal_function_alloc_closure_val(uint32_t nValues) {
+    ClosureValuePtr closure = _bal_alloc(sizeof(ClosureValue) + sizeof(TaggedPtr) * nValues);
     return closure;
 }
 
@@ -76,17 +66,17 @@ FunctionValuePtr _bal_function_construct_closure(FunctionPtr fnPtr, FunctionDesc
 // aarch64 https://github.com/gcc-mirror/gcc/blob/fab08d12b40ad637c5a4ce8e026fb43cd3f0fad1/gcc/config/aarch64/aarch64.h#L1082C9-L1082C24
 #define TRAMPOLINE_SIZE 40 // picking the largest of the two
 
-static void* trampoline_buffer = NULL;
+static UntypedExecPtr trampoline_buffer = NULL;
 uint64_t offset = 0;
 
 // We are using a bump allocator to allocate a whole page of executable memory in one go and break it up as needed.
-void *_bal_function_allocate_trampoline_in_heap() {
+UntypedExecPtr _bal_function_allocate_trampoline_in_heap() {
     uint64_t page_size = sysconf(_SC_PAGESIZE);
     if ((offset + 1) * TRAMPOLINE_SIZE >= page_size || trampoline_buffer == NULL) {
         trampoline_buffer = _bal_alloc_exec(page_size);
         offset = 0;
     }
-    void *trampoline = trampoline_buffer + (offset * TRAMPOLINE_SIZE);
+    UntypedExecPtr trampoline = trampoline_buffer + (offset * TRAMPOLINE_SIZE);
     offset += 1;
     return trampoline;
 }

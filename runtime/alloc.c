@@ -12,12 +12,12 @@ UntypedPtr _bal_alloc(uint64_t nBytes) {
     abort();
 }
 
-void *_bal_alloc_exec(uint64_t nBytes) {
+UntypedExecPtr _bal_alloc_exec(uint64_t nBytes) {
     int protection = PROT_READ | PROT_WRITE | PROT_EXEC;
     int flags = MAP_ANONYMOUS | MAP_PRIVATE;
     void *p = mmap(NULL, nBytes, protection, flags, -1, 0);
     if (p != MAP_FAILED)
-        return p;
+        return (UntypedExecPtr)p;
     fprintf(stderr, "failed to allocate executable memory\n");
     fflush(stderr);
     abort();

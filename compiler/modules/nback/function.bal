@@ -5,11 +5,21 @@ import wso2/nballerina.print.llvm;
 
 final llvm:PointerType llUniformArgArrayType = llvm:pointerType(LLVM_TAGGED_PTR);
 
-final RuntimeFunction functionAllocateClosureStruct = {
-    name: "function_alloc_closure_struct",
+final RuntimeFunction functionAllocateClosureVal = {
+    name: "function_alloc_closure_val",
     ty: {
-        returnType: llvm:pointerType("i8"), // this is really a void*
+        returnType: llvm:pointerType(llClosureType, 1),
         paramTypes: ["i32"]
+    },
+    attrs: []
+};
+
+final RuntimeFunction functionSetClosureVal = {
+    name: "function_set_closure_val",
+    ty: {
+        returnType: "void",
+        paramTypes: [llvm:pointerType(llClosureType, 1), llFunctionPtrType,
+                     llvm:pointerType(llFunctionDescType), LLVM_INDEX]
     },
     attrs: []
 };
@@ -17,17 +27,8 @@ final RuntimeFunction functionAllocateClosureStruct = {
 final RuntimeFunction functionAllocateTrampoline = {
     name: "function_allocate_trampoline_in_heap",
     ty: {
-        returnType: llvm:pointerType("i8"), // this is really a void*
+        returnType: llvm:pointerType("i8", 1), // this is really a void*
         paramTypes: []
-    },
-    attrs: []
-};
-
-final RuntimeFunction functionConstructClosure = {
-    name: "function_construct_closure",
-    ty: {
-        returnType: llvm:pointerType(llFunctionType),
-        paramTypes: [llFunctionPtrType, llvm:pointerType(llFunctionDescType)]
     },
     attrs: []
 };
@@ -84,16 +85,21 @@ type IndirectFunctionValue record {|
 function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn insn) returns BuildError? {
     var { functionIndex, operands, result } = insn;
     [Repr, llvm:Value][] capturedVals = from var operand in operands select check buildReprValue(builder, scaffold, operand);
-    llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(operands));
+    t:FunctionSignature signature = scaffold.getBirFunction(functionIndex).decl;
+    llvm:PointerType llClosureValTy = llvm:pointerType(closureValueType(signature, from var each in operands select each.semType));
     int nOperands = operands.length();
     if nOperands > int:UNSIGNED32_MAX_VALUE {
         // We are using a struct for captured values (since each value has different type) and we can't
         // index values larger than this
         panic err:impossible("too many captured values");
     }
-    llvm:PointerValue closurePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,
-                                                                               functionAllocateClosureStruct, [constIndex(scaffold, nOperands)]);
-    llvm:PointerValue closure = builder.bitCast(closurePtr, llClosurePtrTy);
+    llvm:PointerValue closureVal = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionAllocateClosureVal,
+                                                                               [constIndex(scaffold, nOperands)]);
+    closureVal = builder.addrSpaceCast(closureVal, llClosureValTy);
+    llvm:PointerValue closure = builder.getElementPtr(closureVal, [constIndex(scaffold, 0),
+                                                                   constIndex(scaffold, 3)],
+                                                      "inbounds");
+    // llvm:PointerValue closure = builder.bitCast(closurePtr, llClosurePtrTy);
     foreach int i in 0 ..< capturedVals.length() {
         builder.store(capturedVals[i][1], builder.getElementPtr(closure, [constIndex(scaffold, 0),
                                                                           constIndex(scaffold, i)],
@@ -102,16 +108,26 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     llvm:FunctionDefn anonFunction = scaffold.getFunctionDefn(functionIndex);
     anonFunction.addEnumAttribute([0, "nest"]);
     llvm:PointerValue trampoline = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionAllocateTrampoline, []);
+    trampoline = builder.addrSpaceCast(trampoline, llvm:pointerType("i8"));
     // TODO: when we have escape analysis we can allocate this in the stack
     // llvm:PointerValue trampoline = builder.alloca(llvm:pointerType(llvm:arrayType("i8", 40)));
     _ = <()>builder.call(scaffold.getIntrinsicFunction("init.trampoline"), [trampoline, anonFunction, closure]);
     trampoline = <llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("adjust.trampoline"), [trampoline]);
-    llvm:PointerValue fnPtr = builder.bitCast(trampoline, llvm:pointerType(llFunctionType));
+    llvm:PointerValue fnPtr = builder.bitCast(trampoline, llvm:pointerType(buildFunctionSignature(signature)));
     llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),
                                                             scaffold.getBirFunction(functionIndex).decl));
-    llvm:PointerValue funcValuePtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionConstructClosure, [fnPtr, fnDescPtr]);
-    funcValuePtr = builder.getElementPtr(builder.addrSpaceCast(funcValuePtr, LLVM_TAGGED_PTR),
-                                         [constInt(scaffold, TAG_FUNCTION)]);
+    fnDescPtr = builder.bitCast(fnDescPtr, llvm:pointerType(llFunctionDescType));
+    builder.store(fnDescPtr, builder.getElementPtr(closureVal, [constIndex(scaffold, 0),
+                                                                constIndex(scaffold, 0)],
+                                                   "inbounds"));
+    builder.store(fnPtr, builder.getElementPtr(closureVal, [constIndex(scaffold, 0),
+                                                            constIndex(scaffold, 1)],
+                                               "inbounds"));
+    builder.store(constInt(scaffold, nOperands), builder.getElementPtr(closureVal, [constIndex(scaffold, 0),
+                                                                                    constIndex(scaffold, 2)],
+                                                                       "inbounds"));
+    llvm:PointerValue funcValuePtr = builder.getElementPtr(builder.addrSpaceCast(closureVal, LLVM_TAGGED_PTR),
+                                                           [constInt(scaffold, (TAG_FUNCTION | FUNCTION_VARIANT_CAPTURING))]);
     builder.store(funcValuePtr, scaffold.address(result));
 }
 

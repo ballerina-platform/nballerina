@@ -79,7 +79,7 @@ function isClosureFunction(bir:Module mod, bir:Function func) returns boolean|Bu
 }
 
 function buildClosureFunctionSignature(t:FunctionSignature signature, bir:Operand[] capturedValues) returns llvm:FunctionType {
-    llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(capturedValues), 1);
+    llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(from var each in capturedValues select each.semType), 1);
     llvm:Type[] paramTypes = [llClosurePtrTy, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
     RetRepr repr = semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {

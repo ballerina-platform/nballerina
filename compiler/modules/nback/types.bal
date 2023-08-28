@@ -33,6 +33,11 @@ final llvm:StructType llFunctionDescType = llvm:structType([LLVM_TID,
 final llvm:StructType llFunctionType = llvm:structType([llvm:pointerType(llFunctionDescType),
                                                         llFunctionPtrType]);
 
+final llvm:StructType llClosureType = llvm:structType([llvm:pointerType(llFunctionDescType),
+                                                       llFunctionPtrType,
+                                                       LLVM_INT,
+                                                       LLVM_TAGGED_PTR]);
+
 // This is an approximation, to share type between init.bal and types.bal
 final llvm:PointerType fillerDescPtrType = llvm:pointerType(llvm:structType(
                                                 [llvm:pointerType(llvm:functionType(LLVM_TAGGED_PTR,

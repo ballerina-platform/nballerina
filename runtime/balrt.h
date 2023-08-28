@@ -76,6 +76,7 @@ extern char *_bal_stack_guard;
 
 typedef GC char NODEREF *TaggedPtr;
 typedef GC void *UntypedPtr;
+typedef GC void *UntypedExecPtr;
 typedef GC int64_t *IntPtr;
 typedef GC double *FloatPtr;
 
@@ -373,6 +374,15 @@ typedef GC struct {
     FunctionPtr func;
 } FunctionValue, *FunctionValuePtr;
 
+typedef GC struct {
+    FunctionDescPtr desc;
+    FunctionPtr func; // This pointes to the trampoline
+    uint64_t nCaptured;
+    // Actual type of each of the captured values will depend on the value being captured.
+    // However size of captured is guaranteed to be 64*nCaptured bits
+    TaggedPtr captured[];
+} ClosureValue, *ClosureValuePtr;
+
 // Roundup to multiple of 8
 static inline int roundUpInt(int n) {
     return (n + 7) & ~7;
@@ -421,7 +431,7 @@ typedef struct {
 // Don't declare functions here if they are balrt_inline.c
 
 extern UntypedPtr _bal_alloc(uint64_t nBytes);
-extern void *_bal_alloc_exec(uint64_t nBytes);
+extern UntypedExecPtr _bal_alloc_exec(uint64_t nBytes);
 extern NORETURN void _bal_panic(TaggedPtr tp);
 
 extern bool _bal_float_eq(double, double);
