@@ -5,7 +5,7 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     if ((getTag(p) & UT_MASK) != TAG_FUNCTION) {
         return false;
     }
-    FunctionValuePtr fp = taggedToPtr(p);
+    FunctionPtr fp = taggedToPtr(p);
     FunctionDescPtr fdp = fp->desc;
     EasyFunctionSubtypePtr fstp = (EasyFunctionSubtypePtr)stp;
     int64_t maxRequiredParams = (fstp->nRequiredParams > fdp->nRequiredParams) ? fstp->nRequiredParams : fdp->nRequiredParams;
@@ -23,7 +23,7 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     return true;
 }
 
-bool _bal_function_is_exact(FunctionDescPtr desc, FunctionValuePtr value) {
+bool _bal_function_is_exact(FunctionDescPtr desc, FunctionPtr value) {
     return desc == value->desc;
 }
 
@@ -57,8 +57,8 @@ void _bal_function_add_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uni
     }
 }
 
-ClosureValuePtr _bal_function_alloc_closure_val(uint32_t nValues) {
-    ClosureValuePtr closure = _bal_alloc(sizeof(ClosureValue) + sizeof(TaggedPtr) * nValues);
+ClosurePtr _bal_function_alloc_closure_val(uint32_t nValues) {
+    ClosurePtr closure = _bal_alloc(sizeof(Closure) + sizeof(TaggedPtr) * nValues);
     return closure;
 }
 

@@ -356,8 +356,8 @@ typedef GC struct LargeString {
     char bytes[];
 } *LargeStringPtr;
 
-typedef void (*FunctionPtr)();
-typedef TaggedPtr (*UniformFunctionPtr)(FunctionPtr func, uint64_t nArgs, TaggedPtr uniformArgs);
+typedef void (*ExecCodePtr)();
+typedef TaggedPtr (*UniformFunctionPtr)(ExecCodePtr func, uint64_t nArgs, TaggedPtr uniformArgs);
 
 // This extends TypeIdDesc
 typedef struct {
@@ -372,22 +372,22 @@ typedef struct {
 // This extends Structure
 // Represents function value in memory. Before calling a function variable that points
 // to this, caller must first check both variable and value have the same FunctionDesc (ie. their types are identical).
-// If so caller can directly use the FunctionPtr. Otherwise caller must call the FunctionPtr by passing
-// it to the UniformFunctionPtr in the FunctionDesc of function value.
+// If so caller can directly use the ExecCodePtr. Otherwise caller must jump the ExecCodePtr via the
+// UniformFunctionPtr in the FunctionDesc of function value.
 typedef GC struct {
     FunctionDescPtr desc;
-    FunctionPtr func;
-} FunctionValue, *FunctionValuePtr;
+    ExecCodePtr code;
+} Function, *FunctionPtr;
 
-// This extends FunctionValue to support anonymous functions that capture values from the environment.
+// This extends Function to support anonymous functions that capture values from the environment.
 typedef GC struct {
     FunctionDescPtr desc;
-    FunctionPtr func; // This points to the trampoline
+    ExecCodePtr func;
     uint64_t nCaptured;
     // Actual type of each of the captured values will depend on the value being captured.
     // However size of captured is guaranteed to be 64*nCaptured bits
     TaggedPtr captured[];
-} ClosureValue, *ClosureValuePtr;
+} Closure, *ClosurePtr;
 
 // Roundup to multiple of 8
 static inline int roundUpInt(int n) {
