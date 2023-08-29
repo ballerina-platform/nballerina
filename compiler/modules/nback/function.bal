@@ -23,25 +23,6 @@ final RuntimeFunction functionAllocateClosureVal = {
     attrs: []
 };
 
-final RuntimeFunction functionSetClosureVal = {
-    name: "function_set_closure_val",
-    ty: {
-        returnType: "void",
-        paramTypes: [llvm:pointerType(llClosureType, 1), llFunctionPtrType,
-                     llvm:pointerType(llFunctionDescType), LLVM_INDEX]
-    },
-    attrs: []
-};
-
-final RuntimeFunction functionAllocateTrampoline = {
-    name: "function_allocate_trampoline_in_heap",
-    ty: {
-        returnType: llvm:pointerType("i8", 1), // this is really a void*
-        paramTypes: []
-    },
-    attrs: []
-};
-
 final RuntimeFunction functionIsExactFunction = {
     name: "function_is_exact",
     ty: {
@@ -115,27 +96,15 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
                                                                 "inbounds"));
     }
     llvm:FunctionDefn anonFunction = scaffold.getFunctionDefn(functionIndex);
-    // anonFunction.addEnumAttribute([0, "nest"]);
-
-    // TODO: wrap this under some flag (based on target?)
-    // llvm:PointerValue trampoline = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionAllocateTrampoline, []);
-    // trampoline = builder.addrSpaceCast(trampoline, llvm:pointerType("i8"));
-    // TODO: when we have escape analysis we can allocate this in the stack
-    // llvm:PointerValue trampoline = builder.alloca(llvm:pointerType(llvm:arrayType("i8", 40)));
-    // _ = <()>builder.call(scaffold.getIntrinsicFunction("init.trampoline"), [trampoline, anonFunction, closure]);
-    // trampoline = <llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("adjust.trampoline"), [trampoline]);
-    // llvm:PointerValue fnPtr = builder.bitCast(trampoline, llvm:pointerType(buildFunctionSignature(signature)));
-
-    llvm:Value fnPtr = anonFunction;
     llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),
                                                             scaffold.getBirFunction(functionIndex).decl));
     fnDescPtr = builder.bitCast(fnDescPtr, llvm:pointerType(llFunctionDescType));
     builder.store(fnDescPtr, builder.getElementPtr(closureVal, [constIndex(scaffold, 0),
                                                                 constIndex(scaffold, 0)],
                                                    "inbounds"));
-    builder.store(fnPtr, builder.getElementPtr(closureVal, [constIndex(scaffold, 0),
-                                                            constIndex(scaffold, 1)],
-                                               "inbounds"));
+    builder.store(anonFunction, builder.getElementPtr(closureVal, [constIndex(scaffold, 0),
+                                                                   constIndex(scaffold, 1)],
+                                                      "inbounds"));
     builder.store(constInt(scaffold, nOperands), builder.getElementPtr(closureVal, [constIndex(scaffold, 0),
                                                                                     constIndex(scaffold, 2)],
                                                                        "inbounds"));

@@ -77,7 +77,6 @@ extern char *_bal_stack_guard;
 
 typedef GC char NODEREF *TaggedPtr;
 typedef GC void *UntypedPtr;
-typedef GC void *UntypedExecPtr;
 typedef GC int64_t *IntPtr;
 typedef GC double *FloatPtr;
 
@@ -374,7 +373,7 @@ typedef struct {
 // This extends Structure
 // Represents function value in memory. Before calling a function variable that points
 // to this, caller must first check both variable and value have the same FunctionDesc (ie. their types are identical).
-// If so caller can directly use the ExecCodePtr. Otherwise caller must jump the ExecCodePtr via the
+// If so caller can directly use the ExecCodePtr. Otherwise caller must jump to the ExecCodePtr via the
 // UniformFunctionPtr in the FunctionDesc of function value.
 typedef GC struct {
     FunctionDescPtr desc;
@@ -439,7 +438,6 @@ typedef struct {
 // Don't declare functions here if they are balrt_inline.c
 
 extern UntypedPtr _bal_alloc(uint64_t nBytes);
-extern UntypedExecPtr _bal_alloc_exec(uint64_t nBytes);
 extern NORETURN void _bal_panic(TaggedPtr tp);
 
 extern bool _bal_float_eq(double, double);

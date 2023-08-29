@@ -1,5 +1,4 @@
 #include "balrt.h"
-#include <unistd.h>
 
 bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     if ((getTag(p) & UT_MASK) != TAG_FUNCTION) {
@@ -23,9 +22,9 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     return true;
 }
 
-bool _bal_function_is_closure(const TaggedPtr fp) {
+bool READONLY _bal_function_is_closure(const TaggedPtr fp) {
     uint64_t bits = taggedPtrBits(fp);
-    if ((bits & FUNCTION_CLOSURE_FLAG) == 0) {
+    if (likely((bits & FUNCTION_CLOSURE_FLAG) == 0)) {
         return false;
     }
     return true;
@@ -68,23 +67,4 @@ void _bal_function_add_to_rest_args(TaggedPtr restArgArray, const TaggedPtr *uni
 ClosurePtr _bal_function_alloc_closure_val(uint32_t nValues) {
     ClosurePtr closure = _bal_alloc(sizeof(Closure) + sizeof(TaggedPtr) * nValues);
     return closure;
-}
-
-// i386 https://github.com/gcc-mirror/gcc/blob/fab08d12b40ad637c5a4ce8e026fb43cd3f0fad1/gcc/config/i386/i386.h#L1659
-// aarch64 https://github.com/gcc-mirror/gcc/blob/fab08d12b40ad637c5a4ce8e026fb43cd3f0fad1/gcc/config/aarch64/aarch64.h#L1082C9-L1082C24
-#define TRAMPOLINE_SIZE 40 // picking the largest of the two
-
-static UntypedExecPtr trampoline_buffer = NULL;
-uint64_t offset = 0;
-
-// We are using a bump allocator to allocate a whole page of executable memory in one go and break it up as needed.
-UntypedExecPtr _bal_function_allocate_trampoline_in_heap() {
-    uint64_t page_size = sysconf(_SC_PAGESIZE);
-    if ((offset + 1) * TRAMPOLINE_SIZE >= page_size || trampoline_buffer == NULL) {
-        trampoline_buffer = _bal_alloc_exec(page_size);
-        offset = 0;
-    }
-    UntypedExecPtr trampoline = trampoline_buffer + (offset * TRAMPOLINE_SIZE);
-    offset += 1;
-    return trampoline;
 }

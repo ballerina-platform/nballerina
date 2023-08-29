@@ -250,12 +250,6 @@ public distinct class Module {
         if name is IntegerArithmeticIntrinsicName {
             fnType = { returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"] };
         }
-        else if name == "init.trampoline" {
-            fnType = { returnType: "void", paramTypes: [pointerType("i8"), pointerType("i8"), pointerType("i8")] };
-        }
-        else if name == "adjust.trampoline" {
-            fnType = { returnType: pointerType("i8"), paramTypes: [pointerType("i8")] };
-        }
         else {
             fnType = { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] };
         }

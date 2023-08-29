@@ -330,19 +330,6 @@ public class Module {
                                      ["nocallback", "nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
 
         }
-        else if name == "init.trampoline" {
-            // Function pointer type is an approximation
-            return self.addIntrinsic(name,
-                                     { returnType: "void", paramTypes: [pointerType("i8"), pointerType("i8"), pointerType("i8")] },
-                                     []);
-
-        }
-        else if name == "adjust.trampoline" {
-            return self.addIntrinsic(name,
-                                     { returnType: pointerType("i8"), paramTypes: [pointerType("i8")] },
-                                     []);
-
-        }
         else {
             return self.addIntrinsic(name,
                                      { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] },
