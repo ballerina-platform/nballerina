@@ -364,11 +364,26 @@ function createUniformFunction(llvm:Builder builder, InitModuleContext cx, t:Fun
                                      [builder.load(restArgArrayPtr), uniformArgArray, startingOffset, nRestArgs]);
     }
     llvm:FunctionType funcTy = buildFunctionSignature(signature);
-    llvm:Value? retValue = builder.call(builder.bitCast(<llvm:PointerValue>func.getParam(0), llvm:pointerType(funcTy)),
-                                        from var each in exactArgs select builder.load(each));
-    builder.ret(retValue == () ? constNilTaggedPtr(cx) :
-                                 convertToTaggedValue(builder, cx, retValue, signature.returnType));
+    llvm:PointerValue funcPtr = builder.bitCast(<llvm:PointerValue>func.getParam(0), llvm:pointerType(funcTy));
+    llvm:Value[] args = from var each in exactArgs select builder.load(each);
+    llvm:Value isClosure = func.getParam(3);
+    // TODO: branch predictor hints
+    llvm:BasicBlock ifClosure = func.appendBasicBlock();
+    llvm:BasicBlock ifNotClosure = func.appendBasicBlock();
+    builder.condBr(isClosure, ifClosure, ifNotClosure);
+    builder.positionAtEnd(ifClosure);
+    finishcreateUniformFunction(builder, cx, funcPtr, [func.getParam(4), ...args], signature.returnType);
+    builder.positionAtEnd(ifNotClosure);
+    finishcreateUniformFunction(builder, cx, funcPtr, args, signature.returnType);
     return func;
+}
+
+function finishcreateUniformFunction(llvm:Builder builder, InitModuleContext cx, llvm:PointerValue funcPtr,
+                                     llvm:Value[] args, t:SemType returnType) {
+    llvm:Value? retValue = builder.call(funcPtr, args);
+    builder.ret(retValue == () ? constNilTaggedPtr(cx) :
+                                 convertToTaggedValue(builder, cx, retValue, returnType));
+
 }
 
 function convertToExactArg(llvm:Builder builder, InitModuleContext context,

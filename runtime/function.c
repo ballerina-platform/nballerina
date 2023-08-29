@@ -23,6 +23,14 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     return true;
 }
 
+bool _bal_function_is_closure(const TaggedPtr fp) {
+    uint64_t bits = taggedPtrBits(fp);
+    if ((bits & FUNCTION_CLOSURE_FLAG) == 0) {
+        return false;
+    }
+    return true;
+}
+
 bool _bal_function_is_exact(FunctionDescPtr desc, FunctionPtr value) {
     return desc == value->desc;
 }

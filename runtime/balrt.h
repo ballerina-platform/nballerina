@@ -28,6 +28,7 @@ typedef int64_t CompareResult;
 #define EXACT_FLAG ((uint64_t)0x4)
 
 #define STRING_LARGE_FLAG 1
+#define FUNCTION_CLOSURE_FLAG 1
 
 #ifdef __clang__
 #define NODEREF __attribute__((noderef))
@@ -357,7 +358,8 @@ typedef GC struct LargeString {
 } *LargeStringPtr;
 
 typedef void (*ExecCodePtr)();
-typedef TaggedPtr (*UniformFunctionPtr)(ExecCodePtr func, uint64_t nArgs, TaggedPtr uniformArgs);
+typedef TaggedPtr (*UniformFunctionPtr)(ExecCodePtr func, uint64_t nArgs, TaggedPtr uniformArgs,
+                                        bool isClosure, TaggedPtr* capturedValues);
 
 // This extends TypeIdDesc
 typedef struct {

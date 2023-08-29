@@ -23,7 +23,9 @@ final llvm:PointerType llFunctionPtrType = llvm:pointerType(llvm:functionType("v
 final llvm:FunctionType llUniformFunctionType = llvm:functionType(LLVM_TAGGED_PTR,
                                                                   [llFunctionPtrType,
                                                                    llUniformArgArrayType,
-                                                                   "i64"]);
+                                                                   "i64",
+                                                                   LLVM_BOOLEAN,
+                                                                   LLVM_TAGGED_PTR]);
 final llvm:StructType llFunctionDescType = llvm:structType([LLVM_TID,
                                                             llvm:pointerType(llUniformFunctionType),
                                                             LLVM_MEMBER_TYPE,

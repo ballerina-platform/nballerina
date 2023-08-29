@@ -20,8 +20,8 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     // we know about all the anonFunctions before generating the function bodies.
     from int i in 0 ..< functions.length() do { _ = check birMod.generateFunctionCode(i); };
     foreach var func in functions {
-        llvm:FunctionType ty = check isClosureFunction(birMod, func) ? buildClosureFunctionSignature(func.decl, check closureCapturedRegisters(birMod, <bir:AnonFunction>func)):
-                                                                                  buildFunctionSignature(func.decl);
+        llvm:FunctionType ty = check isClosureFunction(birMod, func) ? buildClosureFunctionSignature(func.decl, from var register in check closureCapturedRegisters(birMod, <bir:AnonFunction>func) select register.semType):
+                                                                       buildFunctionSignature(func.decl);
         llFuncTypes.push(ty);
         var [mangledName, identifier] = functionIdentifiers(modId, func);
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
@@ -78,13 +78,13 @@ function isClosureFunction(bir:Module mod, bir:Function func) returns boolean|Bu
     return false;
 }
 
-function buildClosureFunctionSignature(t:FunctionSignature signature, bir:Operand[] capturedValues) returns llvm:FunctionType {
-    llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(from var each in capturedValues select each.semType), 1);
-    llvm:Type[] paramTypes = [llClosurePtrTy, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
+function buildClosureFunctionSignature(t:FunctionSignature signature, t:SemType[] capturedValueTys) returns llvm:FunctionType {
+    llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(from var each in capturedValueTys select each), 1);
+    llvm:Type[] & readonly paramTypes = [llClosurePtrTy, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
     RetRepr repr = semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {
         returnType: repr.llvm,
-        paramTypes: paramTypes.cloneReadOnly()
+        paramTypes
     };
     return ty;
 }

@@ -682,7 +682,7 @@ function functionValueType(t:FunctionSignature signature) returns llvm:StructTyp
 
 function closureValueType(t:FunctionSignature signature, t:SemType[] capturedTypes) returns llvm:StructType {
     return llvm:structType([llvm:pointerType(llFunctionDescType),
-                            llvm:pointerType(buildFunctionSignature(signature)),
+                            llvm:pointerType(buildClosureFunctionSignature(signature, capturedTypes)),
                             LLVM_INT,
                             closureType(capturedTypes)]);
 }
