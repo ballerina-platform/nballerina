@@ -22,18 +22,6 @@ bool _bal_function_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     return true;
 }
 
-bool READONLY _bal_function_is_closure(const TaggedPtr fp) {
-    uint64_t bits = taggedPtrBits(fp);
-    if (likely((bits & FUNCTION_CLOSURE_FLAG) == 0)) {
-        return false;
-    }
-    return true;
-}
-
-bool _bal_function_is_exact(FunctionDescPtr desc, FunctionPtr value) {
-    return desc == value->desc;
-}
-
 // nArgs = requiredArgCount + restArgCount
 // We are using uint64_t to avoid overflow in case of restArgCount close to INT64_MAX. This means indexing uniform arg array
 // must also be done using uint64_t

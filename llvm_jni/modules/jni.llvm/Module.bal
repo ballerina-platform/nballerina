@@ -250,6 +250,9 @@ public distinct class Module {
         if name is IntegerArithmeticIntrinsicName {
             fnType = { returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"] };
         }
+        else if name == "expect.i1" {
+            fnType = { returnType: "i1", paramTypes: ["i1", "i1"] };
+        }
         else {
             fnType = { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] };
         }
