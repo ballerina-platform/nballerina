@@ -85,13 +85,22 @@ class VirtualModule {
         bir:FunctionCode code;
         bir:Function func = self.functions[i];
         if func is bir:AnonFunction {
-            int parentIndex = func.parent.index;
-            bir:FunctionCode parent = check self.generateFunctionCode(parentIndex);
             map<bir:Register> parentRegs = {};
-            foreach var reg in parent.registers {
-                string? name = reg.name;
-                if name != () {
-                    parentRegs[string `r.${name}`] = reg;
+            int parentIndex = func.parent.index;
+            while true {
+                bir:FunctionCode parent = check self.generateFunctionCode(parentIndex);
+                foreach var reg in parent.registers {
+                    string? name = reg.name;
+                    if name != () {
+                        parentRegs[string `r.${name}`] = reg;
+                    }
+                }
+                bir:Function parentFunc = self.functions[parentIndex];
+                if parentFunc is bir:FunctionDefn {
+                   break;
+                }
+                else {
+                    parentIndex = parentFunc.parent.index;
                 }
             }
             code = toFunctionCode(self.pc, self.functionCodes[i], parentRegs);
