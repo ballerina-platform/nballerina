@@ -383,7 +383,7 @@ typedef GC struct {
 // This extends Function to support anonymous functions that capture values from the environment.
 typedef GC struct {
     FunctionDescPtr desc;
-    ExecCodePtr func;
+    ExecCodePtr code;
     uint64_t nCaptured;
     // Actual type of each of the captured values will depend on the value being captured.
     // However size of captured is guaranteed to be 64*nCaptured bits
