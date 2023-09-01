@@ -90,9 +90,19 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
                                                                    constIndex(scaffold, 3)],
                                                       "inbounds");
     foreach int i in 0 ..< capturedVals.length() {
-        builder.store(capturedVals[i][1], builder.getElementPtr(closure, [constIndex(scaffold, 0),
-                                                                          constIndex(scaffold, i)],
-                                                                "inbounds"));
+        llvm:PointerValue heapPtr = builder.getElementPtr(closure, [constIndex(scaffold, 0),
+                                                                    constIndex(scaffold, i)],
+                                                          "inbounds");
+        builder.store(capturedVals[i][1], heapPtr);
+        bir:Register capturedReg = operands[i];
+        // TODO: factor this logic out so we can do this by going over functions recurisively
+        // FIXME: is it correct to deal with bir:CaptureRegisters like this?
+        if capturedReg !is bir:CapturedRegister|bir:FinalRegister|bir:ParamRegister {
+            // NOTE: we need to change the local pointer to point to the heap pointer
+            // problem is we can't do something like store to change the pointer? so we are going to change what scafold points to
+            scaffold.changeAddress(capturedReg, heapPtr);
+            // builder.store(heapPtr, builder.getElementPtr(scaffold.address(capturedReg), [constIndex(scaffold, 0)]));
+        }
     }
     llvm:FunctionDefn anonFunction = scaffold.getFunctionDefn(functionIndex);
     llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),

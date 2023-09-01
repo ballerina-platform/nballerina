@@ -894,26 +894,33 @@ function codeGenAssignToVar(StmtContext cx, bir:BasicBlock startBlock, BindingCh
     return { block: nextBlock, bindings };
 }
 
-function lookupVarRefForAssign(StmtContext cx, BindingChain? initialBindings, string varName, Position pos) returns CodeGenError|[bir:VarRegister, BindingChain?] {
-    Binding binding = check lookupVarRefBinding(cx, varName, initialBindings, pos);
+function lookupVarRefForAssign(StmtContext cx, BindingChain? initialBindings, string varName, Position pos) returns CodeGenError|[bir:VarRegister|bir:CapturedRegister, BindingChain?] {
+    var { binding, inOuterFunction } = check lookupVarRefBinding(cx, varName, initialBindings, pos);
     DeclBinding unnarrowed = unnarrowBinding(binding);
     if unnarrowed.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`, pos);
     }
+    bir:VarRegister|bir:CapturedRegister reg;
     bir:VarRegister unnarrowedReg = <bir:VarRegister>unnarrowed.reg; // assigning to final or param registers are semantic errors
+    if inOuterFunction {
+        reg = cx.createCaptureRegister(unnarrowedReg.semType, unnarrowedReg, pos);
+    }
+    else {
+        reg = unnarrowedReg;
+    }
     BindingChain? bindings;
     if binding is NarrowBinding {
         // create an assignment binding shadowing the narrowed binding
-        bindings = { head: { name: varName, reg: unnarrowedReg, unnarrowed, pos, invalidates: binding.reg }, prev: initialBindings };
+        bindings = { head: { name: varName, reg, unnarrowed, pos, invalidates: binding.reg }, prev: initialBindings };
     }
     else {
         // no narrowed binding in effect
         bindings = ();
     }
-    return [unnarrowedReg, bindings];
+    return [reg, bindings];
 }
 
-function codeGenAssign(StmtContext cx, BindingChain? initialBindings, bir:BasicBlock block, bir:VarRegister|bir:FinalRegister result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
+function codeGenAssign(StmtContext cx, BindingChain? initialBindings, bir:BasicBlock block, bir:VarRegister|bir:FinalRegister|bir:CapturedRegister result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(block, initialBindings, semType, expr);
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
@@ -924,7 +931,11 @@ function codeGenLExpr(StmtContext cx, bir:BasicBlock startBlock, BindingChain? i
     bir:Register reg;
     bir:BasicBlock block;
     if container is s:VarRefExpr {
-        reg = (check lookupVarRefBinding(cx, container.name, initialBindings, container.startPos)).reg;
+        var { binding, inOuterFunction } = check lookupVarRefBinding(cx, container.name, initialBindings, container.startPos);
+        if inOuterFunction {
+            panic error("unimplemented");
+        }
+        reg = (binding).reg;
         block = startBlock;
     }
     else  {
@@ -1158,10 +1169,10 @@ function codeGenCheckingCond(ExprContext cx, bir:BasicBlock bb, bir:Register ope
     return { result, block: okBlock };
 }
 
-function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings, Position pos) returns Binding|CodeGenError {
+function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings, Position pos) returns BindingLookupResult|CodeGenError {
     var b = check lookupLocalVarRef(cx, cx.syms, name, bindings, pos);
     if b is BindingLookupResult {
-        return b.binding;
+        return b;
     }
     else {
         return cx.semanticErr("an lvalue can only refer to a variable definition", pos);

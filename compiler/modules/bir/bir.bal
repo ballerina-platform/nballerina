@@ -713,7 +713,7 @@ public type CaptureInsn readonly & record {|
 public type AssignInsn readonly & record {|
     *InsnBase;
     INSN_ASSIGN name = INSN_ASSIGN;
-    AssignTmpRegister|VarRegister|FinalRegister result;
+    AssignTmpRegister|VarRegister|FinalRegister|CapturedRegister result;
     Operand operand;
 |};
 

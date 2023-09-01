@@ -41,7 +41,8 @@ type NarrowBinding record {|
 
 type AssignmentBinding record {|
     string name;
-    bir:DeclRegister reg; // same as unnarrowed.reg and invalidates.underlying.underling...
+    // TODO: maybe fix the comment
+    bir:DeclRegister|bir:CapturedRegister reg; // same as unnarrowed.reg and invalidates.underlying.underling...
     DeclBinding unnarrowed;
     bir:NarrowRegister invalidates;
     Position pos;
@@ -1213,9 +1214,6 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             if inOuterFunction {
                 if bindingReg !is bir:DeclRegister|bir:CapturedRegister {
                     panic err:impossible("unexpected underlying register to capture");
-                }
-                if bindingReg is bir:DeclRegister && bindingReg !is bir:FinalRegister|bir:ParamRegister {
-                    return cx.unimplementedErr("capturing non-final variables not implemented", ref.qNamePos);
                 }
                 bir:CapturedRegister reg = cx.createCaptureRegister(bindingReg.semType, bindingReg, ref.qNamePos);
                 binding = ();

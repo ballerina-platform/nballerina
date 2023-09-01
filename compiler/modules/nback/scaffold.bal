@@ -221,10 +221,20 @@ class Scaffold {
             if register !is bir:CapturedRegister {
                 continue;
             }
-            llvm:Value arg = builder.load(builder.getElementPtr(closure, [constIndex(self, 0), constIndex(self, index)]));
-            builder.store(arg, self.address(register));
+            bir:Register capturedReg = register.captured;
+            llvm:PointerValue heapPtr = builder.getElementPtr(closure, [constIndex(self, 0),
+                                                                        constIndex(self, index)]);
+            if capturedReg !is bir:CapturedRegister|bir:FinalRegister|bir:ParamRegister {
+                self.changeAddress(register, heapPtr);
+            }
+            else {
+                builder.store(builder.load(heapPtr), self.address(register));
+            }
             index += 1;
         }
+    }
+    function changeAddress(bir:Register r, llvm:PointerValue ptr) {
+        self.addresses[r.number] = ptr;
     }
 
     function address(bir:Register r) returns llvm:PointerValue => self.addresses[r.number];
