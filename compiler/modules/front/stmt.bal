@@ -40,6 +40,11 @@ type ClosureContext object {
     function isClosure() returns boolean;
 };
 
+type CapturedRegisterMemo readonly & record {|
+    int captured;
+    bir:CapturedRegister reg;
+|};
+
 class StmtContext {
     *ClosureContext;
     final Module mod;
@@ -52,6 +57,7 @@ class StmtContext {
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
+    table<CapturedRegisterMemo> key(captured) capturedRegisters = table [];
 
     function init(Module mod, ModuleSymbols syms, s:Function func, s:FunctionDefn moduleLevelDefn, t:SemType returnType) {
         self.mod = mod;
@@ -82,6 +88,16 @@ class StmtContext {
 
     function createParamRegister(bir:SemType t, Position pos, string name) returns bir:ParamRegister {
         return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
+    }
+
+    function createCaptureRegister(bir:SemType t, bir:DeclRegister|bir:CapturedRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
+        CapturedRegisterMemo? memo = self.capturedRegisters[underlying.number];
+        if memo != () {
+            return memo.reg;
+        }
+        bir:CapturedRegister register = bir:createCapturedRegister(self.code, t, underlying, underlying.name, self.getCurrentScope(), pos);
+        self.capturedRegisters.add({ captured: underlying.number, reg: register });
+        return register;
     }
 
     public function getCurrentScope() returns bir:RegisterScope {
@@ -1145,7 +1161,6 @@ function codeGenCheckingCond(ExprContext cx, bir:BasicBlock bb, bir:Register ope
 function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings, Position pos) returns Binding|CodeGenError {
     var b = check lookupLocalVarRef(cx, cx.syms, name, bindings, pos);
     if b is BindingLookupResult {
-        // NOTE: we handle capture at the ExprContext level
         return b.binding;
     }
     else {

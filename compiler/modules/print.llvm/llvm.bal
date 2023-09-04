@@ -328,7 +328,11 @@ public class Module {
             return self.addIntrinsic(name,
                                      { returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"] },
                                      ["nocallback", "nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
-
+        }
+        else if name == "expect.i1" {
+            return self.addIntrinsic(name,
+                                     { returnType: "i1", paramTypes: ["i1", "i1"] },
+                                     ["nocallback", "nofree", "nosync", "nounwind", "willreturn", ["memory", "none"]]);
         }
         else {
             return self.addIntrinsic(name,
@@ -500,13 +504,22 @@ public class Module {
 # Corresponds to an LLVMValueRef that corresponds to an llvm::Function
 public type Function FunctionDecl|FunctionDefn;
 
+type FunctionAttribute FunctionEnumAttribute|"memory(none)";
+
+type FunctionBase object {
+    function addFunctionAttribute(FunctionAttribute attribute);
+    function addReturnAttribute(ReturnEnumAttribute attribute);
+    function addParamAttribute(int paramIndex, ParamEnumAttribute attribute);
+};
+
 public class FunctionDecl {
+    *FunctionBase;
     final false isDefn = false;
     final FunctionType functionType;
     final string functionName;
     final Context context;
     string? gcName = ();
-    final FunctionEnumAttribute[] functionAttributes = [];
+    final FunctionAttribute[] functionAttributes = [];
     final ReturnEnumAttribute[] returnAttributes = [];
     final ParamEnumAttribute[][] paramAttributes = [];
     Metadata? metadata = ();
@@ -529,23 +542,22 @@ public class FunctionDecl {
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
-        if attribute is FunctionEnumAttribute {
-            self.addAttributeToSet(self.functionAttributes, attribute);
+        addEnumAttributeInner(attribute, self);
+    }
+
+    function addFunctionAttribute(FunctionAttribute attribute) {
+        self.addAttributeToSet(self.functionAttributes, attribute);
+    }
+
+    function addReturnAttribute(ReturnEnumAttribute attribute) {
+        self.addAttributeToSet(self.returnAttributes, attribute);
+    }
+
+    function addParamAttribute(int paramIndex, ParamEnumAttribute attribute) {
+        if self.paramAttributes.length() <= paramIndex {
+            panic err:illegalArgument("Invalid index for parameter attribute");
         }
-        else {
-            if attribute is (readonly & ["return", ReturnEnumAttribute]) {
-                ReturnEnumAttribute attrib = attribute[1];
-                self.addAttributeToSet(self.returnAttributes, attrib);
-            } else {
-                ParamEnumAttribute attrib = attribute[1];
-                int paramIndex = attribute[0];
-                if paramIndex >= self.paramAttributes.length() {
-                    panic err:illegalArgument("Invalid index for parameter attribute");
-                } else {
-                    self.addAttributeToSet(self.paramAttributes[paramIndex], attrib);
-                }
-            }
-        }
+        self.addAttributeToSet(self.paramAttributes[paramIndex], attribute);
     }
 
     private function addAttributeToSet(string[] container, string attribute) {
@@ -566,10 +578,11 @@ public class FunctionDecl {
 }
 
 public class FunctionDefn {
+    *FunctionBase;
     final true isDefn = true;
     final FunctionType functionType;
     final string functionName;
-    final FunctionEnumAttribute[] functionAttributes = [];
+    final FunctionAttribute[] functionAttributes = [];
     final ReturnEnumAttribute[] returnAttributes = [];
     final ParamEnumAttribute[][] paramAttributes = [];
     final Context context;
@@ -690,23 +703,22 @@ public class FunctionDefn {
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
-        if attribute is FunctionEnumAttribute {
-            self.addAttributeToSet(self.functionAttributes, attribute);
+        addEnumAttributeInner(attribute, self);
+    }
+
+    function addFunctionAttribute(FunctionAttribute attribute) {
+        self.addAttributeToSet(self.functionAttributes, attribute);
+    }
+
+    function addReturnAttribute(ReturnEnumAttribute attribute) {
+        self.addAttributeToSet(self.returnAttributes, attribute);
+    }
+
+    function addParamAttribute(int paramIndex, ParamEnumAttribute attribute) {
+        if self.paramAttributes.length() <= paramIndex {
+            panic err:illegalArgument("Invalid index for parameter attribute");
         }
-        else {
-            if attribute is (readonly & ["return", ReturnEnumAttribute]) {
-                ReturnEnumAttribute attrib = attribute[1];
-                self.addAttributeToSet(self.returnAttributes, attrib);
-            } else {
-                ParamEnumAttribute attrib = attribute[1];
-                int paramIndex = attribute[0];
-                if paramIndex >= self.paramAttributes.length() {
-                    panic err:illegalArgument("Invalid index for parameter attribute");
-                } else {
-                    self.addAttributeToSet(self.paramAttributes[paramIndex], attrib);
-                }
-            }
-        }
+        self.addAttributeToSet(self.paramAttributes[paramIndex], attribute);
     }
 
     private function addAttributeToSet(string[] container, string attribute) {
@@ -760,6 +772,24 @@ public class FunctionDefn {
     // Corresponds to LLVMSetSubprogram
     public function setSubprogram(Metadata metadata) {
         self.metadata = metadata;
+    }
+}
+
+function addEnumAttributeInner(EnumAttribute attribute, FunctionBase func) {
+    if attribute is FunctionEnumAttribute {
+        func.addFunctionAttribute(attribute);
+    }
+    else if attribute is (readonly & ["memory", MemoryAttribure]) {
+        MemoryAttribure attrib = attribute[1];
+        func.addFunctionAttribute(<FunctionAttribute>string `memory(${attrib})`);
+    }
+    else if attribute is (readonly & ["return", ReturnEnumAttribute]) {
+        ReturnEnumAttribute attrib = attribute[1];
+        func.addReturnAttribute(attrib);
+    } else {
+        ParamEnumAttribute attrib = attribute[1];
+        int paramIndex = attribute[0];
+        func.addParamAttribute(paramIndex, attrib);
     }
 }
 

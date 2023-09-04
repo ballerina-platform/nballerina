@@ -91,6 +91,8 @@ type ImportedFunction record {|
 
 type ImportedFunctionTable table<ImportedFunction> key(symbol);
 
+const FUNCTION_VARIANT_NON_CAPTURING = 0;
+const FUNCTION_VARIANT_CAPTURING = 1;
 
 //const STRING_VARIANT_SMALL = 0;
 const STRING_VARIANT_MEDIUM = 0;
@@ -140,7 +142,7 @@ class Scaffold {
     private final Module mod;
     private final bir:File file;
     private final llvm:FunctionDefn llFunc;
-
+    private final bir:Function defn;
     // Representation for each BIR register
     private final Repr[] reprs;
     private final RetRepr retRepr;
@@ -158,6 +160,7 @@ class Scaffold {
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:Function defn, bir:FunctionCode code) {
         self.mod = mod;
+        self.defn = defn;
         self.file = mod.partFiles[functionPartIndex(defn)];
         self.llFunc = llFunc;
         DIScaffold? diScaffold;
@@ -201,9 +204,26 @@ class Scaffold {
 
     function llContext() returns llvm:Context => self.mod.llContext;
 
-    function saveParams(llvm:Builder builder) {
-         foreach int i in 0 ..< self.nParams {
-            builder.store(self.llFunc.getParam(i), self.addresses[i]);
+    function saveParams(llvm:Builder builder) returns BuildError? {
+        boolean isClosure = check isClosureFunction(self.mod.bir, self.defn);
+        foreach int i in 0 ..< self.nParams {
+            llvm:Value param = isClosure ? self.llFunc.getParam(i + 1) : self.llFunc.getParam(i);
+            builder.store(param, self.addresses[i]);
+        }
+        if !isClosure {
+            return;
+        }
+        llvm:PointerValue closure = <llvm:PointerValue>self.llFunc.getParam(0);
+        bir:FunctionCode code = check self.mod.bir.generateFunctionCode(self.defn.index);
+        int index = 0;
+        foreach int i in 0 ..< code.registers.length() {
+            bir:Register register = code.registers[i];
+            if register !is bir:CapturedRegister {
+                continue;
+            }
+            llvm:Value arg = builder.load(builder.getElementPtr(closure, [constIndex(self, 0), constIndex(self, index)]));
+            builder.store(arg, self.address(register));
+            index += 1;
         }
     }
 
@@ -216,6 +236,8 @@ class Scaffold {
     function getRetRepr() returns RetRepr => self.retRepr;
 
     function getFunctionDefn(int index) returns llvm:FunctionDefn => self.mod.functionDefns[index];
+
+    function getBirFunction(int index) returns bir:Function => self.mod.bir.getFunctions()[index];
 
     function getModule() returns llvm:Module => self.mod.llMod;
 
@@ -650,10 +672,23 @@ function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Func
                                                  unnamedAddr=true,
                                                  linkage= "internal");
     return context.constGetElementPtr(context.constAddrSpaceCast(ptr, LLVM_TAGGED_PTR),
-                                      [context.constInt(LLVM_INT, TAG_FUNCTION)]);
+                                      [context.constInt(LLVM_INT, TAG_FUNCTION | FUNCTION_VARIANT_NON_CAPTURING)]);
 }
 
 function functionValueType(t:FunctionSignature signature) returns llvm:StructType {
     return llvm:structType([llvm:pointerType(llFunctionDescType),
                             llvm:pointerType(buildFunctionSignature(signature))]);
 }
+
+function closureValueType(t:FunctionSignature signature, t:SemType[] capturedTypes) returns llvm:StructType {
+    return llvm:structType([llvm:pointerType(llFunctionDescType),
+                            llvm:pointerType(buildClosureFunctionSignature(signature, capturedTypes)),
+                            LLVM_INT,
+                            closureType(capturedTypes)]);
+}
+
+function closureType(t:SemType[] capturedValTypes) returns llvm:StructType {
+    llvm:Type[] capturedTys = from var each in capturedValTypes select exactValueType(each);
+    return llvm:structType(capturedTys);
+}
+

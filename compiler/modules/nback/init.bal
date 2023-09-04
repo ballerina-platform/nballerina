@@ -345,7 +345,7 @@ function createUniformFunction(llvm:Builder builder, InitModuleContext cx, t:Fun
     llvm:BasicBlock bb = func.appendBasicBlock();
     builder.positionAtEnd(bb);
     llvm:PointerValue[] exactArgs = from t:SemType paramType in signature.paramTypes
-                                      select builder.alloca(exactArgType(paramType));
+                                      select builder.alloca(exactValueType(paramType));
     llvm:PointerValue uniformArgArray = <llvm:PointerValue>func.getParam(1);
     int nRequiredParams = requiredParamCount(signature);
     foreach int i in 0 ..< nRequiredParams {
@@ -364,11 +364,25 @@ function createUniformFunction(llvm:Builder builder, InitModuleContext cx, t:Fun
                                      [builder.load(restArgArrayPtr), uniformArgArray, startingOffset, nRestArgs]);
     }
     llvm:FunctionType funcTy = buildFunctionSignature(signature);
-    llvm:Value? retValue = builder.call(builder.bitCast(<llvm:PointerValue>func.getParam(0), llvm:pointerType(funcTy)),
-                                        from var each in exactArgs select builder.load(each));
-    builder.ret(retValue == () ? constNilTaggedPtr(cx) :
-                                 convertToTaggedValue(builder, cx, retValue, signature.returnType));
+    llvm:PointerValue funcPtr = builder.bitCast(<llvm:PointerValue>func.getParam(0), llvm:pointerType(funcTy));
+    llvm:Value[] args = from var each in exactArgs select builder.load(each);
+    llvm:Value isClosure = func.getParam(3);
+    llvm:BasicBlock ifClosure = func.appendBasicBlock();
+    llvm:BasicBlock ifNotClosure = func.appendBasicBlock();
+    builder.condBr(isClosure, ifClosure, ifNotClosure);
+    builder.positionAtEnd(ifClosure);
+    finishCreateUniformFunction(builder, cx, funcPtr, [func.getParam(4), ...args], signature.returnType);
+    builder.positionAtEnd(ifNotClosure);
+    finishCreateUniformFunction(builder, cx, funcPtr, args, signature.returnType);
     return func;
+}
+
+function finishCreateUniformFunction(llvm:Builder builder, InitModuleContext cx, llvm:PointerValue funcPtr,
+                                     llvm:Value[] args, t:SemType returnType) {
+    llvm:Value? retValue = builder.call(funcPtr, args);
+    builder.ret(retValue == () ? constNilTaggedPtr(cx) :
+                                 convertToTaggedValue(builder, cx, retValue, returnType));
+
 }
 
 function convertToExactArg(llvm:Builder builder, InitModuleContext context,
@@ -398,20 +412,6 @@ function convertToTaggedValue(llvm:Builder builder, InitModuleContext context, l
         return buildTaggedBoolean(builder, context, val);
     }
     return val;
-}
-
-function exactArgType(t:SemType ty) returns llvm:SingleValueType {
-    t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
-    if t:isSubtypeSimple(w, t:INT) {
-        return LLVM_INT;
-    }
-    else if t:isSubtypeSimple(ty, t:FLOAT) {
-        return LLVM_FLOAT;
-    }
-    else if t:isSubtypeSimple(ty, t:BOOLEAN) {
-        return LLVM_BOOLEAN;
-    }
-    return LLVM_TAGGED_PTR;
 }
 
 function requiredParamCount(t:FunctionSignature signature) returns int {

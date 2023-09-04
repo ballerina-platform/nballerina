@@ -63,6 +63,7 @@ class VirtualModule {
     final VirtualFile[] files;
     final bir:Function[] functions;
     final FunctionCode[] functionCodes;
+    final bir:FunctionCode?[] birFunctionCodes = [];
     final ParseContext pc;
 
     function init(ParseContext pc, bir:ModuleId id, readonly & bir:FunctionDefn[] functionDefns, readonly & bir:AnonFunction[] anonFuncs, FunctionCode[] code, VirtualFile[] files) {
@@ -78,7 +79,37 @@ class VirtualModule {
     public function getTypeContext() returns t:Context => self.pc.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        return toFunctionCode(self.pc, self.functionCodes[i]);
+        if i < self.birFunctionCodes.length() && self.birFunctionCodes[i] != () {
+            return <bir:FunctionCode>self.birFunctionCodes[i];
+        }
+        bir:FunctionCode code;
+        bir:Function func = self.functions[i];
+        if func is bir:AnonFunction {
+            map<bir:Register> parentRegs = {};
+            int parentIndex = func.parent.index;
+            while true {
+                bir:FunctionCode parent = check self.generateFunctionCode(parentIndex);
+                foreach var reg in parent.registers {
+                    string? name = reg.name;
+                    if name != () {
+                        parentRegs[string `r.${name}`] = reg;
+                    }
+                }
+                bir:Function parentFunc = self.functions[parentIndex];
+                if parentFunc is bir:FunctionDefn {
+                   break;
+                }
+                else {
+                    parentIndex = parentFunc.parent.index;
+                }
+            }
+            code = toFunctionCode(self.pc, self.functionCodes[i], parentRegs);
+        }
+        else {
+            code = toFunctionCode(self.pc, self.functionCodes[i], ());
+        }
+        self.birFunctionCodes[i] = code;
+        return code;
     }
 
     public function finish() returns err:Semantic? {
@@ -198,12 +229,20 @@ function functionWithoutClosuresProps(FunctionWithoutClosures func) returns Func
 
 function anonFunctionWithClosuresProps(AnonFunctionWithClosures func) returns AnonFunctionProps {
     var [name, [_, sig, [_, line, col], [_, ...registers], [_, ...blocks], [_, ...closures]]] = func;
-    return { name, sig, line, col, registers, blocks, closures };
+    if sig is [ts:Type[], ts:Type, ts:Type[], ts:Type] {
+        return { name, sig: checkpanic sig.slice(1).cloneWithType(), line, col, registers, blocks, closures };
+    }
+    // JBUG: cast
+    return { name, sig: <Signature>sig, line, col, registers, blocks, closures };
 }
 
 function anonFunctionWithoutClosuresProps(AnonFunctionWithoutClosures func) returns AnonFunctionProps {
     var [name, [_, sig, [_, line, col], [_, ...registers], [_, ...blocks]]] = func;
-    return { name, sig, line, col, registers, blocks, closures: [] };
+    if sig is [ts:Type[], ts:Type, ts:Type[], ts:Type] {
+        return { name, sig: checkpanic sig.slice(1).cloneWithType(), line, col, registers, blocks, closures: [] };
+    }
+    // JBUG: cast
+    return { name, sig: <Signature>sig, line, col, registers, blocks, closures: [] };
 }
 
 type AnonFunctionDefn [bir:AnonFunction, FunctionCode, AnonFunctionDefn...];
@@ -220,9 +259,16 @@ function accumAnonFunctionDefn(bir:AnonFunction[] anonFuncs, FunctionCode?[] fun
 }
 
 function toAnonFunction(t:Env env, t:AtomTable atoms, bir:Function parent, AnonFunction func) returns AnonFunctionDefn {
+    AnonFunctionWithClosures|AnonFunctionWithoutClosures unwrappedFunc;
+    if func is AnonFunctionWithClosures|AnonFunctionWithoutClosures {
+        unwrappedFunc = func;
+    }
+    else {
+        unwrappedFunc = checkpanic func.slice(1).cloneWithType();
+    }
     // JBUG: cast
-    AnonFunctionProps props = func is AnonFunctionWithClosures ? anonFunctionWithClosuresProps(func):
-                                                                 anonFunctionWithoutClosuresProps(<AnonFunctionWithoutClosures>func);
+    AnonFunctionProps props = unwrappedFunc is AnonFunctionWithClosures ? anonFunctionWithClosuresProps(unwrappedFunc):
+                                                                          anonFunctionWithoutClosuresProps(<AnonFunctionWithoutClosures>unwrappedFunc);
     var { name, sig, line, col, registers, blocks, closures } = props;
     t:FunctionSignature signature = toFunctionSignature(env, atoms, sig);
     int index = checkpanic int:fromString(name.substring(2));
@@ -239,13 +285,13 @@ function toFunctionSignature(t:Env env, t:AtomTable atoms, Signature sexpr) retu
              restParamType: restParamType != t:NEVER ? restParamType : () };
 }
 
-function toFunctionCode(ParseContext pc, FunctionCode code) returns bir:FunctionCode {
+function toFunctionCode(ParseContext pc, FunctionCode code, map<bir:Register>? parentRegMap) returns bir:FunctionCode {
     var { blocks, registers } = code;
     map<bir:Register> regMap = {};
     bir:Register[] regList = [];
     int regIndex = 0;
     foreach var regSexpr in registers {
-        var [name, reg] = toRegister(pc, regMap, regIndex, regSexpr);
+        var [name, reg] = toRegister(pc, regMap, parentRegMap, regIndex, regSexpr);
         regList.push(reg);
         regMap[name] = reg;
         regIndex += 1;
@@ -292,7 +338,7 @@ function toAttributes(FuncParseContext pc, BlockPanic attrib) returns bir:Label?
     }
 }
 
-function toRegister(ParseContext pc, map<bir:Register> prevRegs, int number, Register regSexpr) returns [string, bir:Register] {
+function toRegister(ParseContext pc, map<bir:Register> prevRegs, map<bir:Register>? parentRegs, int number, Register regSexpr) returns [string, bir:Register] {
     bir:RegisterScope scope = { scope: (), startPos: 0, endPos: 0 };
     bir:Position pos = 0;
     match regSexpr {
@@ -311,6 +357,20 @@ function toRegister(ParseContext pc, map<bir:Register> prevRegs, int number, Reg
                 panic error("narrow reg must appear after it's underlying register");
             }
             return [name, <bir:NarrowRegister>{ pos, underlying, number, semType: toSemType(pc, semType) }];
+        }
+        [var nameSexpr, bir:CAPTURED_REGISTER_KIND, var semType] => {
+            if parentRegs == () {
+                panic error("capture register must appear inside a nested function");
+            }
+            bir:Register? captured = parentRegs[nameSexpr];
+            string name = toMaybeName(nameSexpr) ?: "_";
+            if captured == () {
+                panic error("parent function doesn't have the corresponding register to capture");
+            }
+            if captured !is bir:DeclRegister|bir:CapturedRegister {
+                panic error("unexpected captured register kind");
+            }
+            return [nameSexpr, <bir:CapturedRegister>{ pos, captured, number, semType: toSemType(pc, semType), name, scope }];
         }
         [var nameSexpr, var kind, var semTypeSexpr] => {
             string? name = toMaybeName(nameSexpr);
@@ -443,6 +503,16 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
             return <bir:ListGetInsn>{
                 result: toResultRegister(pc, <sexpr:Symbol>result),
                 operands: [lookupRegister(pc, <sexpr:Symbol>list), <bir:IntOperand>toOperand(pc, <Operand>index)],
+                pos
+            };
+        }
+        ["capture", var result, var funcRef, ...var operandSexprs] => {
+            int functionIndex = <int>functionHandleFromSexpr(pc, <FunctionRef>funcRef);
+            (bir:CapturedRegister|bir:DeclRegister)[] & readonly operands = from var operand in operandSexprs select <bir:CapturedRegister|bir:DeclRegister>lookupRegister(pc, <sexpr:Symbol>operand);
+            return <bir:CaptureInsn>{
+                result: toResultRegister(pc, <sexpr:Symbol>result),
+                functionIndex,
+                operands,
                 pos
             };
         }

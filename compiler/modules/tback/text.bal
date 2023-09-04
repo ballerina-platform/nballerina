@@ -36,17 +36,17 @@ function closureIndentAt(int[] index) returns boolean {
     }
     return false;
 }
-
 function closureIndentAtInner(int[] suffix) returns boolean {
     match suffix {
-        [_]|[_, 1, 2]|[_, 1, 3]|[_, 1, 3, _]|[_, 1, 4]|[_, 1, 4, _]|[_, 1, 5] => {
+        [_]|[_, 1, 2]|[_, 1, 3]|[_, 1, 3, _]|[_, 1, 4]|[_, 1, 4, _]|[_, 1, 5]|[_, 1, 5, _]|
+        [_, 2, 2]|[_, 2, 3]|[_, 2, 3, _]|[_, 2, 4]|[_, 2, 4, _]|[_, 2, 5]|[_, 2, 5, _] => {
             return true;
         }
-        [_, 1, 4, _, var n] => {
+        [_, 1, 4, _, var n]|[_, 2, 4, _, var n] => {
             return n > 1;
         }
     }
-    if suffix.length() > 4 && suffix.slice(1, 3) == [1, 5] {
+    if suffix.length() > 4 && suffix[2] == 5 {
         return closureIndentAtInner(suffix.slice(3));
     }
     return false;

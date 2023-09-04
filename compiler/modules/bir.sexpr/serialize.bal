@@ -27,6 +27,7 @@ type FuncSerializeContext record {|
     *SerializeContext;
     IdNames blockNames = table[];
     IdNames regNames = table[];
+    IdNames? parentRegNames;
 |};
 
 public function fromModule(t:Context tc, bir:Module mod) returns Module|err:Semantic|err:Unimplemented {
@@ -49,7 +50,7 @@ function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCo
     var { identifier, isPublic } = defn.symbol;
     sexpr:String name = { s: identifier };
     FunctionVisibility access = isPublic ? PUBLIC_VISIBILITY : MODULE_VISIBILITY;
-    var [signature, registers, blocks, closures, [line, col]] = check fromFunctionInner(sc, defn, code, file);
+    var [signature, registers, blocks, closures, [line, col], _] = check fromFunctionInner(sc, (), defn, code, file);
     if closures.length() > 0 {
         return [name, access, ["function", signature, ["file", { s: basename(file.filename()) }], ["loc", line, col],
                               ["registers", ...registers],
@@ -62,9 +63,22 @@ function fromFunction(SerializeContext sc, bir:FunctionDefn defn, bir:FunctionCo
                                      ["blocks", ...blocks]]].cloneWithType();
 }
 
-function fromAnonFunction(SerializeContext sc, bir:AnonFunction func, bir:FunctionCode code, bir:File file) returns AnonFunction|err:Semantic|err:Unimplemented {
-    var [signature, registers, blocks, closures, [line, col]] = check fromFunctionInner(sc, func, code, file);
+function fromAnonFunction(SerializeContext sc, IdNames parentRegNames, bir:AnonFunction func, bir:FunctionCode code, bir:File file) returns AnonFunction|err:Semantic|err:Unimplemented {
+    var [baseSig, registers, blocks, closures, [line, col], fsc] = check fromFunctionInner(sc, parentRegNames, func, code, file);
+    AnonFunctionSignature signature = anonFunctionSignature(fsc, code, baseSig);
     string name = string `f.${func.index}`;
+    AnonFunction body = anonFunctionBody(name, signature, registers, blocks, closures, line, col);
+    if signature is Signature {
+        return body;
+    }
+    if body is AnonFunctionWithClosures {
+        return ["capturing-function", ...body];
+    }
+    // JBUG: cast
+    return ["capturing-function", ...<AnonFunctionWithoutClosures>body];
+}
+
+function anonFunctionBody(string name, AnonFunctionSignature signature, Register[] registers, Block[] blocks, AnonFunction[] closures, int line, int col) returns AnonFunction {
     if closures.length() > 0 {
         return [name, ["function", signature, ["loc", line, col],
                       ["registers", ...registers],
@@ -75,22 +89,31 @@ function fromAnonFunction(SerializeContext sc, bir:AnonFunction func, bir:Functi
     return checkpanic [name, ["function", signature, ["loc", line, col],
                              ["registers", ...registers],
                              ["blocks", ...blocks]]].cloneWithType(AnonFunction);
+
 }
 
-function fromFunctionInner(SerializeContext sc, bir:Function func, bir:FunctionCode code, bir:File file) returns [Signature, Register[], Block[], AnonFunction[], [int, int]]|err:Semantic|err:Unimplemented {
+function anonFunctionSignature(FuncSerializeContext sc, bir:FunctionCode code, Signature baseSig) returns AnonFunctionSignature {
+    ts:Type[]&readonly captureTypes = from var register in code.registers where register is bir:CapturedRegister select fromType(sc, register.semType);
+    if captureTypes.length() == 0 {
+        return baseSig;
+    }
+    return [captureTypes, ...baseSig];
+}
+
+function fromFunctionInner(SerializeContext sc, IdNames? parentRegNames, bir:Function func, bir:FunctionCode code, bir:File file) returns [Signature, Register[], Block[], AnonFunction[], [int, int], FuncSerializeContext]|err:Semantic|err:Unimplemented {
     bir:BasicBlock[] blocks = code.blocks; // JBUG: NPE if destructuring is used
     bir:Register[] registers = code.registers;
     IdNames blockNames = differentiate("b", blocks.length(), i => let var { name, label } = blocks[i] in [name, label]);
     IdNames regNames = differentiate("r", registers.length(), i => let var reg = registers[i] in [bir:unnarrow(reg).name, reg.number]);
-    FuncSerializeContext fsc = { ...sc, blockNames, regNames };
+    FuncSerializeContext fsc = { ...sc, blockNames, regNames, parentRegNames };
     bir:Module mod = sc.mod;
     Register[] registerSexprs = from var r in registers select defnFromRegister(fsc, r);
     Block[] blockSexprs = from var b in blocks select fromBasicBlock(fsc, b, file);
     AnonFunction[] closures = from var child in functionChildren(mod, func)
-                                select check fromAnonFunction(sc, child,
+                                select check fromAnonFunction(sc, regNames, child,
                                                               check mod.generateFunctionCode(child.index),
                                                               file);
-    return [fromSignature(fsc, func.decl), registerSexprs, blockSexprs, closures, file.lineColumn(func.position)];
+    return [fromSignature(fsc, func.decl), registerSexprs, blockSexprs, closures, file.lineColumn(func.position), fsc];
 }
 
 function functionChildren(bir:Module mod, bir:Function func) returns bir:AnonFunction[] {
@@ -182,8 +205,7 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
         return ["type-merge", fromRegister(sc, insn.result), ...preds];
     }
     else if insn is bir:CaptureInsn {
-        // TODO: when we have implemented this remove the cast at bir:Operand[]? operands ...
-        panic err:unimplemented("CaptureInsn not supported", { file, range: insn.pos });
+        return ["capture", fromRegister(sc, insn.result), string `f.${insn.functionIndex}`, ...from var arg in insn.operands select fromOperand(sc, arg)];
     }
     else if insn is bir:PanicInsn {
         return ["panic", fromOperand(sc, insn.operand)];
@@ -198,8 +220,7 @@ function formInsn(FuncSerializeContext sc, bir:Insn insn, bir:File file) returns
     if operand != () {
         insnSexpr.push(fromOperand(sc, operand));
     }
-    // JBUG: cast
-    bir:Operand[]? operands = <bir:Operand[]?>insn?.operands;
+    bir:Operand[]? operands = insn?.operands;
     if operands != () {
         foreach var o in operands {
             insnSexpr.push(fromOperand(sc, o));

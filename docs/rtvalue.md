@@ -78,6 +78,20 @@ Medium and large strings are pointers. The Z bit is set for large strings.
 
 Medium and large strings are always 8-byte aligned, and are zero-padded so their total size in bytes (including the two lengths) is a multiple of 8.
 
+### Function
+
+Functions are never immediate. There are two kinds of functions: functions that capture values (closures), and those that don't capture values.
+
+In both cases function data structure consists of
+1. A pointer to a function descriptor
+2. Function pointer
+
+In addition to these closure data structure will have
+1. Number of variables captured
+2. Flexible array member to store captured variables
+
+The Z bit is set for closures.
+
 ### List
 
 Lists are never immediate.

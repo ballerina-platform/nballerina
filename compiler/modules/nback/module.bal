@@ -20,7 +20,8 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     // we know about all the anonFunctions before generating the function bodies.
     from int i in 0 ..< functions.length() do { _ = check birMod.generateFunctionCode(i); };
     foreach var func in functions {
-        llvm:FunctionType ty = buildFunctionSignature(func.decl);
+        llvm:FunctionType ty = check isClosureFunction(birMod, func) ? buildClosureFunctionSignature(func.decl, from var register in check closureCapturedRegisters(birMod, <bir:AnonFunction>func) select register.semType):
+                                                                       buildFunctionSignature(func.decl);
         llFuncTypes.push(ty);
         var [mangledName, identifier] = functionIdentifiers(modId, func);
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
@@ -59,6 +60,35 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     return [llMod, createTypeUsage(mod.usedSemTypes)];
 }
 
+function closureCapturedRegisters(bir:Module mod, bir:AnonFunction func) returns bir:Register[]|BuildError {
+    bir:FunctionCode code = check mod.generateFunctionCode(func.index);
+    return from var register in code.registers where register is bir:CapturedRegister select register;
+}
+
+function isClosureFunction(bir:Module mod, bir:Function func) returns boolean|BuildError {
+    if func is bir:FunctionDefn {
+        return false;
+    }
+    bir:FunctionCode code = check mod.generateFunctionCode(func.index);
+    foreach var register in code.registers {
+        if register is bir:CapturedRegister {
+            return true;
+        }
+    }
+    return false;
+}
+
+function buildClosureFunctionSignature(t:FunctionSignature signature, t:SemType[] capturedValueTys) returns llvm:FunctionType {
+    llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(from var each in capturedValueTys select each), 1);
+    llvm:Type[] & readonly paramTypes = [llClosurePtrTy, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
+    RetRepr repr = semTypeRetRepr(signature.returnType);
+    llvm:FunctionType ty = {
+        returnType: repr.llvm,
+        paramTypes
+    };
+    return ty;
+}
+
 function functionIdentifiers(bir:ModuleId modId, bir:Function func) returns [string, string] {
     if func is bir:AnonFunction {
         string mangledName = anonFunctionSymbol(func.index);
@@ -73,7 +103,7 @@ function buildFunction(llvm:Builder builder, bir:Module birMod, Module mod, DISu
                        llvm:FunctionDefn llFunc, bir:Function birFunc, bir:FunctionCode code) returns BuildError? {
     check bir:verifyFunctionCode(birMod, birFunc, code);
     Scaffold scaffold = new(mod, llFunc, diFunc, builder, birFunc, code);
-    buildPrologue(builder, scaffold, birFunc.position);
+    check buildPrologue(builder, scaffold, birFunc.position);
     check buildFunctionBody(builder, scaffold, code.blocks, calculateBuildOrder(code.blocks));
 }
 

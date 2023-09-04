@@ -161,6 +161,14 @@ class ExprContext {
         return bir:createNarrowRegister(self.code, t, underlying, pos);
     }
 
+    function createCaptureRegister(bir:SemType t, bir:DeclRegister|bir:CapturedRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
+        StmtContext? sc = self.sc;
+        if sc == () {
+            panic err:impossible("attempt to capture register in constant expression");
+        }
+        return sc.createCaptureRegister(t, underlying, pos);
+    }
+
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {
         return bir:createBasicBlock(self.code, name);
     }
@@ -180,15 +188,8 @@ class ExprContext {
         return <StmtContext>self.sc;
     }
 
-    function lookupLocalVarRef(string varName, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
-        t:SingleValue|BindingLookupResult|bir:FunctionRef result = check lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
-        if result is BindingLookupResult {
-            if result.inOuterFunction {
-                return self.unimplementedErr("variable capture not implemented", pos);
-            }
-            return result.binding;
-        }
-        return result;
+    function lookupLocalVarRef(string varName, Position pos) returns t:SingleValue|BindingLookupResult|bir:FunctionRef|CodeGenError {
+        return check lookupLocalVarRef(self, self.mod, varName, self.bindings, pos);
     }
 
     function notInConst(s:Expr expr) returns CodeGenError? {
@@ -1207,8 +1208,23 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             binding = ();
         }
         else {
-            result = constifyRegister(v.reg);
-            binding = result === v.reg ? v : ();
+            var { binding: b, inOuterFunction } = v;
+            bir:Register bindingReg = b.reg;
+            if inOuterFunction {
+                if bindingReg !is bir:DeclRegister|bir:CapturedRegister {
+                    panic err:impossible("unexpected underlying register to capture");
+                }
+                if bindingReg is bir:DeclRegister && bindingReg !is bir:FinalRegister|bir:ParamRegister {
+                    return cx.unimplementedErr("capturing non-final variables not implemented", ref.qNamePos);
+                }
+                bir:CapturedRegister reg = cx.createCaptureRegister(bindingReg.semType, bindingReg, ref.qNamePos);
+                binding = ();
+                result = constifyRegister(reg);
+            }
+            else {
+                result = constifyRegister(bindingReg);
+                binding = result === bindingReg ? b : ();
+            }
         }
     }  
     return { result, block: bb, binding };
@@ -1496,15 +1512,17 @@ function genLocalFunction(ExprContext cx, string funcName, Position pos) returns
     if ref is bir:FunctionRef {
         return { operand: functionConstOperand(cx, ref), signature: ref.signature };
     }
-    else if ref is Binding {
-        t:SemType semType = ref.reg.semType;
+    else if ref is BindingLookupResult {
+        var { binding } = ref;
+        bir:Register bindingReg = binding.reg;
+        t:SemType semType = bindingReg.semType;
         t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
         if atom != () {
             t:FunctionSignature signature = t:functionSignature(cx.mod.tc, atom);
-            return { operand: ref.reg, signature };
+            return { operand: bindingReg, signature };
         }
         if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) {
-            return { operand: ref.reg, signature: () };
+            return { operand: bindingReg, signature: () };
         }
     }
     return cx.semanticErr("only a value of function type can be called", pos);
@@ -1533,12 +1551,18 @@ function codeGenAnonFunction(ExprContext cx, bir:BasicBlock curBlock, s:AnonFunc
     StmtContext stmtContext = check cx.stmtContext();
     t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, stmtContext.moduleLevelDefn, func);
     func.signature = signature;
-    var [ref, _] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);
-    bir:FunctionConstOperand result = functionValOperand(cx.mod.tc, ref);
+    var [ref, ...operands] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);
+    if operands.length() == 0 {
+        bir:FunctionConstOperand result = functionValOperand(cx.mod.tc, ref);
+        return { result, block: curBlock };
+    }
+    bir:TmpRegister result = cx.createTmpRegister(t:functionSemType(cx.mod.tc, signature));
+    bir:CaptureInsn insn = { functionIndex: ref.index, result, operands: operands.cloneReadOnly(), pos };
+    curBlock.insns.push(insn);
     return { result, block: curBlock };
 }
 
-function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func, 
+function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionOperand func,
                      t:SemType returnType, bir:Operand[] args, boolean restParamIsList, Position pos) returns ExprEffect {
     bir:TmpRegister reg = cx.createTmpRegister(returnType, pos);
     bir:CallIndirectInsn|bir:CallDirectInsn insn;

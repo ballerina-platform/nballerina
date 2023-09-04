@@ -7,6 +7,7 @@ public type FunctionTag "function";
 public type RegistersTag "registers";
 public type BlocksTag "blocks";
 public type FunctionsTag "functions";
+public type CapturingFunctionTag "capturing-function";
 
 public type Position ["loc", int, int];
 public type File [sexpr:String, sexpr:String]|[sexpr:String, sexpr:String, sexpr:String]; // [name, path, ?dir]
@@ -19,10 +20,13 @@ public type ModuleDecls [ModuleId, FuncDecl...];
 public type Function FunctionWithClosures|FunctionWithoutClosures;
 public type FunctionWithClosures [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...], [FunctionsTag, AnonFunction...]]];
 public type FunctionWithoutClosures [sexpr:String, FunctionVisibility, [FunctionTag, Signature, FileRef, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
-public type AnonFunction AnonFunctionWithClosures|AnonFunctionWithoutClosures;
-public type AnonFunctionWithClosures [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [FunctionsTag, AnonFunction...]]];
-public type AnonFunctionWithoutClosures [string, [FunctionTag, Signature, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
-public type Register [sexpr:Symbol, bir:DeclRegisterKind|bir:TMP_REGISTER_KIND|bir:ASSIGN_TMP_REGISTER_KIND , ts:Type]|
+public type AnonFunction AnonFunctionWithClosures|AnonFunctionWithoutClosures|CapturingAnonFunctionWithClosures|CapturingAnonFunctionWithoutClosures;
+public type AnonFunctionWithClosures [string, [FunctionTag, AnonFunctionSignature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [FunctionsTag, AnonFunction...]]];
+public type AnonFunctionWithoutClosures [string, [FunctionTag, AnonFunctionSignature, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
+public type CapturingAnonFunctionWithoutClosures [CapturingFunctionTag, string, [FunctionTag, AnonFunctionSignature, Position, [RegistersTag, Register...], [BlocksTag, Block...]]];
+public type CapturingAnonFunctionWithClosures [CapturingFunctionTag, string, [FunctionTag, AnonFunctionSignature, Position, [RegistersTag, Register...], [BlocksTag, Block...], [FunctionsTag, AnonFunction...]]];
+public type AnonFunctionSignature Signature|[ts:Type[], ts:Type, ts:Type[], ts:Type];
+public type Register [sexpr:Symbol, bir:DeclRegisterKind|bir:TMP_REGISTER_KIND|bir:ASSIGN_TMP_REGISTER_KIND|bir:CAPTURED_REGISTER_KIND, ts:Type]|
                      [sexpr:Symbol, bir:NARROW_REGISTER_KIND, ts:Type, sexpr:Symbol];
 public type BlockPanic readonly & (["no-panic"]|["on-panic", Label]);
 public type Block readonly & [sexpr:Symbol, BlockPanic, (Position|Insn)...];
@@ -43,7 +47,7 @@ public type MapEntry readonly & [sexpr:String, Operand];
 public type TypeMergePred readonly & [Label, Operand];
 
 public type Insn ResultInsn|OperandInsn|Unimpl|
-                 CallInsn|CallRestListInsn|CallGenericInsn|TypeCondBranchInsn|BranchInsn|TypeCastInsn|TypeTestInsn|CondBranchInsn|MappingConstructInsn|ListConstructInsn|TypeMergeInsn|ListGetInsn;
+                 CallInsn|CallRestListInsn|CallGenericInsn|TypeCondBranchInsn|BranchInsn|TypeCastInsn|TypeTestInsn|CondBranchInsn|MappingConstructInsn|ListConstructInsn|TypeMergeInsn|ListGetInsn|CaptureInsn;
 public type CallInsn readonly & ["call", FunctionRef|RegisterName, Result, Operand...];
 public type CallRestListInsn readonly & ["call-rest-list", FunctionRef|RegisterName, Result, Operand...];
 public type CallGenericInsn readonly & ["call-generic", FunctionRef, Signature, Result, Operand...];
@@ -51,6 +55,7 @@ public type TypeCondBranchInsn readonly & ["type-cond-branch", Operand, ts:Type,
 public type TypeCastInsn readonly & ["type-cast", Result, ts:Type, Operand];
 public type TypeTestInsn readonly & ["type-test", Result, ts:Type, Operand, boolean];
 public type CondBranchInsn readonly & ["cond-branch", Result, Label, Label];
+public type CaptureInsn readonly & ["capture", Result, FunctionRef, Operand...];
 public type MappingConstructInsn readonly & ["mapping-construct", Result, MapEntry...];
 public type ListConstructInsn readonly & ["list-construct", Result, Operand...];
 public type TypeMergeInsn readonly & ["type-merge", Result, [Label, Operand]...];

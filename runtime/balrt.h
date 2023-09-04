@@ -28,6 +28,7 @@ typedef int64_t CompareResult;
 #define EXACT_FLAG ((uint64_t)0x4)
 
 #define STRING_LARGE_FLAG 1
+#define FUNCTION_CLOSURE_FLAG 1
 
 #ifdef __clang__
 #define NODEREF __attribute__((noderef))
@@ -140,7 +141,7 @@ typedef struct GenericFillerDesc {
     TaggedPtr genericValue;
 } *GenericFillerDescPtr;
 
-// All mapping and list values start with this
+// All mapping, list and function values start with this
 typedef GC struct {
     TypeIdDescPtr desc;
 } Structure, *StructurePtr;
@@ -355,8 +356,9 @@ typedef GC struct LargeString {
     char bytes[];
 } *LargeStringPtr;
 
-typedef void (*FunctionPtr)();
-typedef TaggedPtr (*UniformFunctionPtr)(FunctionPtr func, uint64_t nArgs, TaggedPtr uniformArgs);
+typedef void (*ExecCodePtr)();
+typedef TaggedPtr (*UniformFunctionPtr)(ExecCodePtr func, uint64_t nArgs, TaggedPtr uniformArgs,
+                                        bool isClosure, TaggedPtr* capturedValues);
 
 // This extends TypeIdDesc
 typedef struct {
@@ -368,10 +370,25 @@ typedef struct {
     MemberType paramTypes[];
 } FunctionDesc, *FunctionDescPtr;
 
-typedef GC struct FunctionValue {
+// This extends Structure
+// Represents function value in memory. Before calling a function variable that points
+// to this, caller must first check both variable and value have the same FunctionDesc (ie. their types are identical).
+// If so caller can directly use the ExecCodePtr. Otherwise caller must jump to the ExecCodePtr via the
+// UniformFunctionPtr in the FunctionDesc of function value.
+typedef GC struct {
     FunctionDescPtr desc;
-    FunctionPtr func;
-} *FunctionValuePtr;
+    ExecCodePtr code;
+} Function, *FunctionPtr;
+
+// This extends Function to support anonymous functions that capture values from the environment.
+typedef GC struct {
+    FunctionDescPtr desc;
+    ExecCodePtr code;
+    uint64_t nCaptured;
+    // Actual type of each of the captured values will depend on the value being captured.
+    // However size of captured is guaranteed to be 64*nCaptured bits
+    TaggedPtr captured[];
+} Closure, *ClosurePtr;
 
 // Roundup to multiple of 8
 static inline int roundUpInt(int n) {

@@ -60,7 +60,7 @@ class Module {
         return functionCode;
     }
 
-    public function addAnonFunction(s:AnonFunction func, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:FunctionRef, int]|CodeGenError {
+    public function addAnonFunction(s:AnonFunction func, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:InternalFunctionRef, bir:CapturedRegister|bir:DeclRegister...]|CodeGenError {
         bir:Function parent = self.parentStack[self.parentStack.length() - 1];
         t:FunctionSignature signature = <t:FunctionSignature>func.signature;
         int index = self.functions.length();
@@ -72,7 +72,7 @@ class Module {
         bir:FunctionCode code = check codeGenFunction(self, func, moduleLevelDefn, signature, bindings);
         _ = self.parentStack.pop();
         self.functionCodes[birFunc.index] = code;
-        return [ref, index];
+        return [ref, ...from var reg in code.registers where reg is bir:CapturedRegister select reg.captured];
     }
    
     public function finish() returns err:Semantic? {

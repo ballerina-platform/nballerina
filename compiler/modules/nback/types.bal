@@ -22,8 +22,10 @@ final llvm:PointerType llTypeIdDescPtrType = llvm:pointerType(llTypeIdDescType);
 final llvm:PointerType llFunctionPtrType = llvm:pointerType(llvm:functionType("void", []));
 final llvm:FunctionType llUniformFunctionType = llvm:functionType(LLVM_TAGGED_PTR,
                                                                   [llFunctionPtrType,
-                                                                   llvm:pointerType(LLVM_TAGGED_PTR),
-                                                                   "i64"]);
+                                                                   llUniformArgArrayType,
+                                                                   "i64",
+                                                                   LLVM_BOOLEAN,
+                                                                   LLVM_TAGGED_PTR]);
 final llvm:StructType llFunctionDescType = llvm:structType([LLVM_TID,
                                                             llvm:pointerType(llUniformFunctionType),
                                                             LLVM_MEMBER_TYPE,
@@ -32,6 +34,11 @@ final llvm:StructType llFunctionDescType = llvm:structType([LLVM_TID,
                                                             llvm:pointerType(LLVM_MEMBER_TYPE)]);
 final llvm:StructType llFunctionType = llvm:structType([llvm:pointerType(llFunctionDescType),
                                                         llFunctionPtrType]);
+
+final llvm:StructType llClosureType = llvm:structType([llvm:pointerType(llFunctionDescType),
+                                                       llFunctionPtrType,
+                                                       LLVM_INT,
+                                                       LLVM_TAGGED_PTR]);
 
 // This is an approximation, to share type between init.bal and types.bal
 final llvm:PointerType fillerDescPtrType = llvm:pointerType(llvm:structType(
@@ -241,3 +248,18 @@ function buildFunctionCall(llvm:Builder builder, Context context, llvm:Function|
     context.clearDebugLocation(builder);
     return result;
 }
+
+function exactValueType(t:SemType ty) returns llvm:SingleValueType {
+    t:BasicTypeBitSet w = t:widenToBasicTypes(ty);
+    if t:isSubtypeSimple(w, t:INT) {
+        return LLVM_INT;
+    }
+    else if t:isSubtypeSimple(ty, t:FLOAT) {
+        return LLVM_FLOAT;
+    }
+    else if t:isSubtypeSimple(ty, t:BOOLEAN) {
+        return LLVM_BOOLEAN;
+    }
+    return LLVM_TAGGED_PTR;
+}
+
