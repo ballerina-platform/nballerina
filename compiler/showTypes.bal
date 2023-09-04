@@ -19,7 +19,7 @@ function subtypeRels(front:SourcePart[] sources) returns string[]|err:Diagnostic
 
     var tc = t:typeContext(env);
 
-    var entries = from var [name, t] in m.entries() order by name select [name, t];
+    [string, t:SemType][] entries = from var [name, t] in m.entries() order by name select [name, t];
     [string, string][] results = [];
     foreach int i in 0 ..< entries.length() {
         foreach int j in i + 1 ..< entries.length() {
