@@ -367,7 +367,7 @@ function toRegister(ParseContext pc, map<bir:Register> prevRegs, map<bir:Registe
             if captured == () {
                 panic error("parent function doesn't have the corresponding register to capture");
             }
-            if captured !is bir:DeclRegister|bir:CapturedRegister {
+            if captured !is bir:CapturableRegister {
                 panic error("unexpected captured register kind");
             }
             return [nameSexpr, <bir:CapturedRegister>{ pos, captured, number, semType: toSemType(pc, semType), name, scope }];

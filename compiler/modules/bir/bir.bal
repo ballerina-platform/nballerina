@@ -697,6 +697,8 @@ public type CallIndirectInsn readonly & record {|
     boolean restParamIsList;
 |};
 
+public type CapturableRegister CapturedRegister|DeclRegister;
+
 # Create a function value from an AnonFunction.
 # The operands are the values for the captured registers.
 public type CaptureInsn readonly & record {|
@@ -704,7 +706,7 @@ public type CaptureInsn readonly & record {|
     INSN_CAPTURE name = INSN_CAPTURE;
     # Given functionIndex could be used in only one CaptureInsn
     int functionIndex;
-    [CapturedRegister|DeclRegister...] operands;
+    [CapturableRegister...] operands;
 |};
 
 # Assign a value to a register.

@@ -76,7 +76,7 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     var { functionIndex, operands, result } = insn;
     [Repr, llvm:Value][] capturedVals = from var operand in operands select check buildReprValue(builder, scaffold, operand);
     t:FunctionSignature signature = scaffold.getBirFunction(functionIndex).decl;
-    llvm:PointerType llClosureValTy = llvm:pointerType(closureValueType(signature, from var each in operands select each.semType));
+    llvm:PointerType llClosureValTy = llvm:pointerType(closureValueType(signature, from var each in operands select each is bir:CapturedRegister ? capturedRegister(each) : each));
     int nOperands = operands.length();
     if nOperands > int:UNSIGNED32_MAX_VALUE {
         // We are using a struct for captured values (since each value has different type) and we can't
@@ -90,18 +90,21 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
                                                                    constIndex(scaffold, 3)],
                                                       "inbounds");
     foreach int i in 0 ..< capturedVals.length() {
-        llvm:PointerValue heapPtr = builder.getElementPtr(closure, [constIndex(scaffold, 0),
-                                                                    constIndex(scaffold, i)],
-                                                          "inbounds");
-        builder.store(capturedVals[i][1], heapPtr);
-        bir:Register capturedReg = operands[i];
-        // TODO: factor this logic out so we can do this by going over functions recurisively
-        // FIXME: is it correct to deal with bir:CaptureRegisters like this?
+        llvm:PointerValue closurePtr = builder.getElementPtr(closure, [constIndex(scaffold, 0),
+                                                                       constIndex(scaffold, i)],
+                                                             "inbounds");
+        // FIXME: recurse
+        bir:CapturableRegister capturedReg = operands[i];
         if capturedReg !is bir:CapturedRegister|bir:FinalRegister|bir:ParamRegister {
             // NOTE: we need to change the local pointer to point to the heap pointer
             // problem is we can't do something like store to change the pointer? so we are going to change what scafold points to
+            llvm:PointerValue heapPtr = scaffold.getCapturedHearpPtr(builder, capturedReg);
+            builder.store(capturedVals[i][1], heapPtr);
+            builder.store(heapPtr, closurePtr);
             scaffold.changeAddress(capturedReg, heapPtr);
-            // builder.store(heapPtr, builder.getElementPtr(scaffold.address(capturedReg), [constIndex(scaffold, 0)]));
+        }
+        else {
+            builder.store(capturedVals[i][1], closurePtr);
         }
     }
     llvm:FunctionDefn anonFunction = scaffold.getFunctionDefn(functionIndex);

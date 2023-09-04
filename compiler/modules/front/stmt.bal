@@ -90,7 +90,7 @@ class StmtContext {
         return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
-    function createCaptureRegister(bir:SemType t, bir:DeclRegister|bir:CapturedRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
+    function createCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
         CapturedRegisterMemo? memo = self.capturedRegisters[underlying.number];
         if memo != () {
             return memo.reg;

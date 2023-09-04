@@ -162,7 +162,7 @@ class ExprContext {
         return bir:createNarrowRegister(self.code, t, underlying, pos);
     }
 
-    function createCaptureRegister(bir:SemType t, bir:DeclRegister|bir:CapturedRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
+    function createCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
         StmtContext? sc = self.sc;
         if sc == () {
             panic err:impossible("attempt to capture register in constant expression");
@@ -1212,7 +1212,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             var { binding: b, inOuterFunction } = v;
             bir:Register bindingReg = b.reg;
             if inOuterFunction {
-                if bindingReg !is bir:DeclRegister|bir:CapturedRegister {
+                if bindingReg !is bir:CapturableRegister {
                     panic err:impossible("unexpected underlying register to capture");
                 }
                 bir:CapturedRegister reg = cx.createCaptureRegister(bindingReg.semType, bindingReg, ref.qNamePos);

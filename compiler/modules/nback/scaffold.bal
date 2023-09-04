@@ -108,6 +108,11 @@ type FunctionValueDefn record {|
     llvm:ConstPointerValue value;
 |};
 
+type ReferenceCapture readonly & record {|
+    bir:DeclRegister captured;
+    llvm:PointerValue heapPtr;
+|};
+
 type Module record {|
     llvm:Context llContext;
     llvm:Module llMod;
@@ -125,6 +130,8 @@ type Module record {|
     bir:File[] partFiles;
     ModuleDI? di;
     table<UsedSemType> key(semType) usedSemTypes = table [];
+    // NOTE: Ideally I would like to make this a FunctionDecl level thing but not sure how to do that
+    table<ReferenceCapture> key(captured) capturedByReference = table [];
     InitTypes llInitTypes;
 |};
 
@@ -136,6 +143,16 @@ type UsedSemType record {|
     llvm:ConstPointerValue? exactify = ();
     llvm:ConstPointerValue? called = ();
 |};
+
+
+final RuntimeFunction functionAllocHeapCapture = {
+    name: "function_alloc_heap_capture",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: []
+    },
+    attrs: []
+};
 
 class Scaffold {
     *Context;
@@ -221,11 +238,14 @@ class Scaffold {
             if register !is bir:CapturedRegister {
                 continue;
             }
-            bir:Register capturedReg = register.captured;
+            // FIXME: recurse
             llvm:PointerValue heapPtr = builder.getElementPtr(closure, [constIndex(self, 0),
                                                                         constIndex(self, index)]);
-            if capturedReg !is bir:CapturedRegister|bir:FinalRegister|bir:ParamRegister {
-                self.changeAddress(register, heapPtr);
+            bir:DeclRegister capturedReg = capturedRegister(register);
+            if capturedReg !is bir:FinalRegister|bir:ParamRegister {
+                // TODO: better name
+                llvm:PointerValue tmp = <llvm:PointerValue>builder.load(heapPtr);
+                self.changeAddress(register, tmp);
             }
             else {
                 builder.store(builder.load(heapPtr), self.address(register));
@@ -233,6 +253,18 @@ class Scaffold {
             index += 1;
         }
     }
+
+    function getCapturedHearpPtr(llvm:Builder builder, bir:DeclRegister captured) returns llvm:PointerValue {
+        ReferenceCapture? memo = self.mod.capturedByReference[captured];
+        if memo != () {
+            return memo.heapPtr;
+        }
+        llvm:PointerValue heapPtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, self, functionAllocHeapCapture, []);
+        heapPtr = builder.bitCast(heapPtr, llvm:pointerType(exactValueType(captured.semType), 1));
+        self.mod.capturedByReference.add({ captured, heapPtr });
+        return heapPtr;
+    }
+
     function changeAddress(bir:Register r, llvm:PointerValue ptr) {
         self.addresses[r.number] = ptr;
     }
@@ -690,15 +722,30 @@ function functionValueType(t:FunctionSignature signature) returns llvm:StructTyp
                             llvm:pointerType(buildFunctionSignature(signature))]);
 }
 
-function closureValueType(t:FunctionSignature signature, t:SemType[] capturedTypes) returns llvm:StructType {
+function closureValueType(t:FunctionSignature signature, bir:DeclRegister[] capturedValues) returns llvm:StructType {
+    llvm:Type[] capturedTypes = [];
+    foreach var capturedValue in capturedValues {
+        if capturedValue is bir:FinalRegister|bir:ParamRegister {
+            capturedTypes.push(exactValueType(capturedValue.semType));
+        }
+        else {
+            capturedTypes.push(llvm:pointerType(exactValueType(capturedValue.semType), 1));
+        }
+    }
     return llvm:structType([llvm:pointerType(llFunctionDescType),
                             llvm:pointerType(buildClosureFunctionSignature(signature, capturedTypes)),
                             LLVM_INT,
                             closureType(capturedTypes)]);
 }
 
-function closureType(t:SemType[] capturedValTypes) returns llvm:StructType {
-    llvm:Type[] capturedTys = from var each in capturedValTypes select exactValueType(each);
+function closureType(llvm:Type[] capturedTys) returns llvm:StructType {
     return llvm:structType(capturedTys);
 }
 
+function capturedRegister(bir:CapturedRegister register) returns bir:DeclRegister {
+    bir:CapturedRegister|bir:DeclRegister captured = register.captured;
+    while captured is bir:CapturedRegister {
+        captured = captured.captured;
+    }
+    return <bir:DeclRegister>captured;
+}
