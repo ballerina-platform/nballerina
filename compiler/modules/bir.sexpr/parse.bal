@@ -112,6 +112,19 @@ class VirtualModule {
         return code;
     }
 
+
+    public function isEnclosingFunction(int i) returns boolean {
+        bir:FunctionCode code = checkpanic self.generateFunctionCode(i);
+        foreach bir:BasicBlock bb in code.blocks {
+            foreach bir:Insn insn in bb.insns {
+                if insn is bir:CaptureInsn {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public function finish() returns err:Semantic? {
     }
 

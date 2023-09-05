@@ -203,6 +203,8 @@ class Scaffold {
         builder.positionAtEnd(entry);
         self.addresses = [];
         self.setCurrentPosition(builder, defn.position);
+        bir:Module birMod = mod.bir;
+        bir:DeclRegister[] capturedDeclRegisters = birMod.isEnclosingFunction(defn.index)? capturedRegisters(birMod, code) : [];
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
             string? name;
@@ -212,7 +214,15 @@ class Scaffold {
             else {
                 name = register.name;
             }
-            self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
+            if register is bir:DeclRegister && capturedDeclRegisters.indexOf(register) != () {
+                llvm:PointerValue heapPtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, self, functionAllocHeapCapture, []);
+                heapPtr = builder.bitCast(heapPtr, llvm:pointerType(exactValueType(register.semType), 1), name);
+                // TODO: this needs to be a global and somehow cached (start with module)
+                self.addresses.push(heapPtr);
+            }
+            else {
+                self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
+            }
         }
         if moduleDI !is () && moduleDI.debugFull {
             declareVariables(self, <DIScaffold>diScaffold, entry, code.registers);
@@ -238,12 +248,11 @@ class Scaffold {
             if register !is bir:CapturedRegister {
                 continue;
             }
-            // FIXME: recurse
             llvm:PointerValue heapPtr = builder.getElementPtr(closure, [constIndex(self, 0),
                                                                         constIndex(self, index)]);
             bir:DeclRegister capturedReg = capturedRegister(register);
             if capturedReg !is bir:FinalRegister|bir:ParamRegister {
-                // TODO: better name
+                // TODO: We shouldn't have allocated these registers in the first place
                 llvm:PointerValue tmp = <llvm:PointerValue>builder.load(heapPtr);
                 self.changeAddress(register, tmp);
             }
@@ -254,6 +263,7 @@ class Scaffold {
         }
     }
 
+    // TODO: remove this
     function getCapturedHearpPtr(llvm:Builder builder, bir:DeclRegister captured) returns llvm:PointerValue {
         ReferenceCapture? memo = self.mod.capturedByReference[captured];
         if memo != () {
@@ -748,4 +758,33 @@ function capturedRegister(bir:CapturedRegister register) returns bir:DeclRegiste
         captured = captured.captured;
     }
     return <bir:DeclRegister>captured;
+}
+
+function capturedRegisters(bir:Module mod, bir:FunctionCode code) returns bir:DeclRegister[] {
+    bir:Register[] parentRegisters = code.registers;
+    return capturedRegistersInner(mod, code, parentRegisters);
+}
+
+function capturedRegistersInner(bir:Module mod, bir:FunctionCode code,
+                                bir:Register[] parentRegisters) returns bir:DeclRegister[] {
+    bir:DeclRegister[] capturedRegisters = [];
+    foreach bir:BasicBlock bb in code.blocks {
+        foreach bir:Insn insn in bb.insns {
+            if insn !is bir:CaptureInsn {
+                continue;
+            }
+            bir:DeclRegister[] captured = from bir:CapturableRegister reg in insn.operands
+                                            select reg is bir:DeclRegister ? reg : capturedRegister(reg);
+            foreach var reg in captured {
+                int index = reg.number;
+                if index < parentRegisters.length() && parentRegisters[index] === reg {
+                    capturedRegisters.push(reg);
+                }
+            }
+            // By this stage function code is already generated so we should not get any errors
+            capturedRegisters.push(...capturedRegistersInner(mod, checkpanic mod.generateFunctionCode(insn.functionIndex),
+                                                             parentRegisters));
+        }
+    }
+    return capturedRegisters;
 }

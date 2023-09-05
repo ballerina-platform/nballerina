@@ -459,13 +459,12 @@ function verifyCaptureInsn(VerifyContext vc, CaptureInsn insn) returns err:Inter
     if vc.mod.getFunctions()[insn.functionIndex] !is AnonFunction {
         return vc.invalidErr("only AnonFunctions can capture values", insn.pos);
     }
-    int[] capturedRegisters = [];
+    CapturableRegister[] capturedRegisters = [];
     foreach Operand each in insn.operands {
-        int regNum = each.number;
-        if capturedRegisters.indexOf(regNum) != () {
+        if capturedRegisters.indexOf(each) != () {
             return vc.invalidErr("same value is captured more than once", insn.pos);
         }
-        capturedRegisters.push(regNum);
+        capturedRegisters.push(each);
     }
     vc.capturedFunctions.push(insn.functionIndex);
 }

@@ -41,7 +41,7 @@ type ClosureContext object {
 };
 
 type CapturedRegisterMemo readonly & record {|
-    int captured;
+    bir:CapturableRegister captured;
     bir:CapturedRegister reg;
 |};
 
@@ -54,10 +54,10 @@ class StmtContext {
     final bir:FunctionCode code;
     final t:SemType returnType;
     final s:FunctionDefn moduleLevelDefn;
+    final CapturedRegisterMemo[] capturedRegisters = [];
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
-    table<CapturedRegisterMemo> key(captured) capturedRegisters = table [];
 
     function init(Module mod, ModuleSymbols syms, s:Function func, s:FunctionDefn moduleLevelDefn, t:SemType returnType) {
         self.mod = mod;
@@ -90,13 +90,14 @@ class StmtContext {
         return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
-    function createCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
-        CapturedRegisterMemo? memo = self.capturedRegisters[underlying.number];
-        if memo != () {
-            return memo.reg;
+    function getCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
+        foreach var { captured, reg } in self.capturedRegisters {
+            if captured === underlying {
+                return reg;
+            }
         }
         bir:CapturedRegister register = bir:createCapturedRegister(self.code, t, underlying, underlying.name, self.getCurrentScope(), pos);
-        self.capturedRegisters.add({ captured: underlying.number, reg: register });
+        self.capturedRegisters.push({ captured: underlying, reg: register });
         return register;
     }
 
@@ -903,7 +904,7 @@ function lookupVarRefForAssign(StmtContext cx, BindingChain? initialBindings, st
     bir:VarRegister|bir:CapturedRegister reg;
     bir:VarRegister unnarrowedReg = <bir:VarRegister>unnarrowed.reg; // assigning to final or param registers are semantic errors
     if inOuterFunction {
-        reg = cx.createCaptureRegister(unnarrowedReg.semType, unnarrowedReg, pos);
+        reg = cx.getCaptureRegister(unnarrowedReg.semType, unnarrowedReg, pos);
     }
     else {
         reg = unnarrowedReg;

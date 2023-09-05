@@ -73,16 +73,25 @@ type IndirectFunctionValue record {|
 |};
 
 function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn insn) returns BuildError? {
-    var { functionIndex, operands, result } = insn;
-    [Repr, llvm:Value][] capturedVals = from var operand in operands select check buildReprValue(builder, scaffold, operand);
-    t:FunctionSignature signature = scaffold.getBirFunction(functionIndex).decl;
-    llvm:PointerType llClosureValTy = llvm:pointerType(closureValueType(signature, from var each in operands select each is bir:CapturedRegister ? capturedRegister(each) : each));
+    // JBUG: npe when trying to use operands
+    var { functionIndex, result } = insn;
+    bir:CapturableRegister[] operands = insn.operands;
+    // bir:DeclRegister[] capturedRegisters = from var each in operands select each is bir:CapturedRegister ? capturedRegister(each) : each;
+    bir:DeclRegister[] capturedRegisters = [];
+    foreach bir:CapturableRegister operand in operands {
+        capturedRegisters.push(operand is bir:CapturedRegister ? capturedRegister(operand) : operand);
+    }
     int nOperands = operands.length();
     if nOperands > int:UNSIGNED32_MAX_VALUE {
         // We are using a struct for captured values (since each value has different type) and we can't
         // index values larger than this
         panic err:impossible("too many captured values");
     }
+    llvm:Value[] capturedVals = from int i in 0 ..< nOperands let var capturedRegister = capturedRegisters[i]
+                                  select capturedRegister is bir:ParamRegister|bir:FinalRegister ? (check buildReprValue(builder, scaffold, operands[i]))[1]:
+                                                                                                   scaffold.address(capturedRegister);
+    t:FunctionSignature signature = scaffold.getBirFunction(functionIndex).decl;
+    llvm:PointerType llClosureValTy = llvm:pointerType(closureValueType(signature, capturedRegisters));
     llvm:PointerValue closureVal = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionAllocateClosureVal,
                                                                                [constIndex(scaffold, nOperands)]);
     closureVal = builder.addrSpaceCast(closureVal, llClosureValTy);
@@ -93,19 +102,7 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
         llvm:PointerValue closurePtr = builder.getElementPtr(closure, [constIndex(scaffold, 0),
                                                                        constIndex(scaffold, i)],
                                                              "inbounds");
-        // FIXME: recurse
-        bir:CapturableRegister capturedReg = operands[i];
-        if capturedReg !is bir:CapturedRegister|bir:FinalRegister|bir:ParamRegister {
-            // NOTE: we need to change the local pointer to point to the heap pointer
-            // problem is we can't do something like store to change the pointer? so we are going to change what scafold points to
-            llvm:PointerValue heapPtr = scaffold.getCapturedHearpPtr(builder, capturedReg);
-            builder.store(capturedVals[i][1], heapPtr);
-            builder.store(heapPtr, closurePtr);
-            scaffold.changeAddress(capturedReg, heapPtr);
-        }
-        else {
-            builder.store(capturedVals[i][1], closurePtr);
-        }
+        builder.store(capturedVals[i], closurePtr);
     }
     llvm:FunctionDefn anonFunction = scaffold.getFunctionDefn(functionIndex);
     llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),
