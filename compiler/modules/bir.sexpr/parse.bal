@@ -91,8 +91,9 @@ class VirtualModule {
                 bir:FunctionCode parent = check self.generateFunctionCode(parentIndex);
                 foreach var reg in parent.registers {
                     string? name = reg.name;
-                    if name != () {
-                        parentRegs[string `r.${name}`] = reg;
+                    string? regName = name != () ? string `r.${name}` : (); 
+                    if regName != () && !parentRegs.hasKey(regName) {
+                        parentRegs[regName] = reg;
                     }
                 }
                 bir:Function parentFunc = self.functions[parentIndex];

@@ -250,7 +250,7 @@ class Scaffold {
             }
             llvm:PointerValue heapPtr = builder.getElementPtr(closure, [constIndex(self, 0),
                                                                         constIndex(self, index)]);
-            bir:DeclRegister capturedReg = capturedRegister(register);
+            bir:DeclRegister capturedReg = bir:valueRegister(register);
             if capturedReg !is bir:FinalRegister|bir:ParamRegister {
                 // TODO: We shouldn't have allocated these registers in the first place
                 llvm:PointerValue tmp = <llvm:PointerValue>builder.load(heapPtr);
@@ -752,14 +752,6 @@ function closureType(llvm:Type[] capturedTys) returns llvm:StructType {
     return llvm:structType(capturedTys);
 }
 
-function capturedRegister(bir:CapturedRegister register) returns bir:DeclRegister {
-    bir:CapturedRegister|bir:DeclRegister captured = register.captured;
-    while captured is bir:CapturedRegister {
-        captured = captured.captured;
-    }
-    return <bir:DeclRegister>captured;
-}
-
 function capturedRegisters(bir:Module mod, bir:FunctionCode code) returns bir:DeclRegister[] {
     bir:Register[] parentRegisters = code.registers;
     return capturedRegistersInner(mod, code, parentRegisters);
@@ -774,7 +766,7 @@ function capturedRegistersInner(bir:Module mod, bir:FunctionCode code,
                 continue;
             }
             bir:DeclRegister[] captured = from bir:CapturableRegister reg in insn.operands
-                                            select reg is bir:DeclRegister ? reg : capturedRegister(reg);
+                                            select reg is bir:DeclRegister ? reg : bir:valueRegister(reg);
             foreach var reg in captured {
                 int index = reg.number;
                 if index < parentRegisters.length() && parentRegisters[index] === reg {

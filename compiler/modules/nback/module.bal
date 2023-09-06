@@ -23,7 +23,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         llvm:FunctionType ty;
         if check isClosureFunction(birMod, func) {
             bir:DeclRegister[] capturedRegisters = from var register in check closureCapturedRegisters(birMod, <bir:AnonFunction>func)
-                                                     select capturedRegister(register);
+                                                     select bir:valueRegister(register);
 
             llvm:Type[] capturedTypes = [];
             // FIXME: duplicate code in scaffold

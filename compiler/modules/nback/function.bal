@@ -79,7 +79,7 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     // bir:DeclRegister[] capturedRegisters = from var each in operands select each is bir:CapturedRegister ? capturedRegister(each) : each;
     bir:DeclRegister[] capturedRegisters = [];
     foreach bir:CapturableRegister operand in operands {
-        capturedRegisters.push(operand is bir:CapturedRegister ? capturedRegister(operand) : operand);
+        capturedRegisters.push(operand is bir:CapturedRegister ? bir:valueRegister(operand) : operand);
     }
     int nOperands = operands.length();
     if nOperands > int:UNSIGNED32_MAX_VALUE {
@@ -89,7 +89,7 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     }
     llvm:Value[] capturedVals = from int i in 0 ..< nOperands let var capturedRegister = capturedRegisters[i]
                                   select capturedRegister is bir:ParamRegister|bir:FinalRegister ? (check buildReprValue(builder, scaffold, operands[i]))[1]:
-                                                                                                   scaffold.address(capturedRegister);
+                                                                                                   scaffold.address(operands[i]);
     t:FunctionSignature signature = scaffold.getBirFunction(functionIndex).decl;
     llvm:PointerType llClosureValTy = llvm:pointerType(closureValueType(signature, capturedRegisters));
     llvm:PointerValue closureVal = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionAllocateClosureVal,

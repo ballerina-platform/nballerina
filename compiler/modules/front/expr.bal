@@ -158,6 +158,21 @@ class ExprContext {
         return bir:createAssignTmpRegister(self.code, t, pos);
     }
 
+    // TODO: better name
+    function captureOperand(bir:CapturableRegister capturedReg) returns bir:CapturableRegister {
+        // NOTE: this is used when creating bir:CaptureInsn (ie. from the parent function).
+        // we need to check if the register captured by the child is in this function
+        // if not we need to capture that register as well
+        if self.registerInCurrentFunction(capturedReg) {
+            return capturedReg;
+        }
+        return self.getCaptureRegister(capturedReg.semType, capturedReg);
+    }
+
+    private function registerInCurrentFunction(bir:Register reg) returns boolean {
+        return reg.number < self.code.registers.length() && self.code.registers[reg.number] === reg;
+    }
+
     function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos = ()) returns bir:NarrowRegister {
         return bir:createNarrowRegister(self.code, t, underlying, pos);
     }
@@ -1549,13 +1564,14 @@ function codeGenAnonFunction(ExprContext cx, bir:BasicBlock curBlock, s:AnonFunc
     StmtContext stmtContext = check cx.stmtContext();
     t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, stmtContext.moduleLevelDefn, func);
     func.signature = signature;
-    var [ref, ...operands] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);
-    if operands.length() == 0 {
+    var [ref, ...capturedOperands] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);
+    if capturedOperands.length() == 0 {
         bir:FunctionConstOperand result = functionValOperand(cx.mod.tc, ref);
         return { result, block: curBlock };
     }
     bir:TmpRegister result = cx.createTmpRegister(t:functionSemType(cx.mod.tc, signature));
-    bir:CaptureInsn insn = { functionIndex: ref.index, result, operands: operands.cloneReadOnly(), pos };
+    bir:CapturableRegister[] & readonly operands = from var operand in capturedOperands select cx.captureOperand(operand);
+    bir:CaptureInsn insn = { functionIndex: ref.index, result, operands, pos };
     curBlock.insns.push(insn);
     return { result, block: curBlock };
 }
@@ -2107,3 +2123,9 @@ function lookupImportedVarRef(ExprContext cx, string prefix, string identifier, 
     }
     return cx.semanticErr(`no public definition for ${prefix + ":" + identifier}`, cx.qNameRange(pos));
 }
+
+function captureRegisterByValue(bir:CapturableRegister register) returns boolean {
+    bir:DeclRegister valueReg = register is bir:DeclRegister ? register : bir:valueRegister(register);
+    return valueReg is bir:ParamRegister|bir:FinalRegister;
+}
+

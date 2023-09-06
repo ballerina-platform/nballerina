@@ -870,3 +870,12 @@ final readonly & map<true> PPI_INSNS = {
 public function isInsnPotentiallyPanicking(Insn insn) returns boolean {
     return PPI_INSNS[insn.name] == true;
 }
+
+public function valueRegister(CapturedRegister register) returns DeclRegister {
+    CapturedRegister|DeclRegister captured = register.captured;
+    while captured is CapturedRegister {
+        captured = captured.captured;
+    }
+    return <DeclRegister>captured;
+}
+
