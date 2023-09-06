@@ -41,7 +41,6 @@ type NarrowBinding record {|
 
 type AssignmentBinding record {|
     string name;
-    // TODO: maybe fix the comment
     bir:DeclRegister|bir:CapturedRegister reg; // same as unnarrowed.reg and invalidates.underlying.underling...
     DeclBinding unnarrowed;
     bir:NarrowRegister invalidates;
@@ -158,9 +157,8 @@ class ExprContext {
         return bir:createAssignTmpRegister(self.code, t, pos);
     }
 
-    // TODO: better name
     function captureOperand(bir:CapturableRegister capturedReg) returns bir:CapturableRegister {
-        // NOTE: this is used when creating bir:CaptureInsn (ie. from the parent function).
+        // NOTE: this used when creating bir:CaptureInsn (ie. from the parent function).
         // we need to check if the register captured by the child is in this function
         // if not we need to capture that register as well
         if self.registerInCurrentFunction(capturedReg) {
@@ -2123,9 +2121,3 @@ function lookupImportedVarRef(ExprContext cx, string prefix, string identifier, 
     }
     return cx.semanticErr(`no public definition for ${prefix + ":" + identifier}`, cx.qNameRange(pos));
 }
-
-function captureRegisterByValue(bir:CapturableRegister register) returns boolean {
-    bir:DeclRegister valueReg = register is bir:DeclRegister ? register : bir:valueRegister(register);
-    return valueReg is bir:ParamRegister|bir:FinalRegister;
-}
-

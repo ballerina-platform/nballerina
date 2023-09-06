@@ -86,23 +86,12 @@ class VirtualModule {
         bir:Function func = self.functions[i];
         if func is bir:AnonFunction {
             map<bir:Register> parentRegs = {};
-            int parentIndex = func.parent.index;
-            while true {
-                bir:FunctionCode parent = check self.generateFunctionCode(parentIndex);
-                foreach var reg in parent.registers {
-                    string? name = reg.name;
-                    string? regName = name != () ? string `r.${name}` : (); 
-                    if regName != () && !parentRegs.hasKey(regName) {
-                        parentRegs[regName] = reg;
-                    }
+            bir:FunctionCode parent = check self.generateFunctionCode(func.parent.index);
+            foreach bir:Register reg in parent.registers {
+                if reg !is bir:CapturableRegister {
+                    continue;
                 }
-                bir:Function parentFunc = self.functions[parentIndex];
-                if parentFunc is bir:FunctionDefn {
-                   break;
-                }
-                else {
-                    parentIndex = parentFunc.parent.index;
-                }
+                parentRegs[string `r.${reg.name}`] = reg;
             }
             code = toFunctionCode(self.pc, self.functionCodes[i], parentRegs);
         }
@@ -522,7 +511,7 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
         }
         ["capture", var result, var funcRef, ...var operandSexprs] => {
             int functionIndex = <int>functionHandleFromSexpr(pc, <FunctionRef>funcRef);
-            (bir:CapturedRegister|bir:DeclRegister)[] & readonly operands = from var operand in operandSexprs select <bir:CapturedRegister|bir:DeclRegister>lookupRegister(pc, <sexpr:Symbol>operand);
+            bir:CapturableRegister[] & readonly operands = from var operand in operandSexprs select <bir:CapturableRegister>lookupRegister(pc, <sexpr:Symbol>operand);
             return <bir:CaptureInsn>{
                 result: toResultRegister(pc, <sexpr:Symbol>result),
                 functionIndex,

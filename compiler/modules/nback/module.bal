@@ -23,19 +23,9 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         llvm:FunctionType ty;
         if check isClosureFunction(birMod, func) {
             bir:DeclRegister[] capturedRegisters = from var register in check closureCapturedRegisters(birMod, <bir:AnonFunction>func)
-                                                     select bir:valueRegister(register);
-
-            llvm:Type[] capturedTypes = [];
-            // FIXME: duplicate code in scaffold
-            foreach var capturedValue in capturedRegisters {
-                if capturedValue is bir:FinalRegister|bir:ParamRegister {
-                    capturedTypes.push(exactValueType(capturedValue.semType));
-                }
-                else {
-                    capturedTypes.push(llvm:pointerType(exactValueType(capturedValue.semType), 1));
-                }
-            }
-            ty = buildClosureFunctionSignature(func.decl, capturedTypes);
+                                                     select capturedRegister(register);
+            ty = buildClosureFunctionSignature(func.decl, llvm:pointerType(closureStructType(capturedRegisters),
+                                                                           HEAP_ADDR_SPACE));
         }
         else {
             ty = buildFunctionSignature(func.decl);
@@ -96,8 +86,7 @@ function isClosureFunction(bir:Module mod, bir:Function func) returns boolean|Bu
     return false;
 }
 
-function buildClosureFunctionSignature(t:FunctionSignature signature, llvm:Type[] capturedValueTys) returns llvm:FunctionType {
-    llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(from var each in capturedValueTys select each), 1);
+function buildClosureFunctionSignature(t:FunctionSignature signature, llvm:PointerType llClosurePtrTy) returns llvm:FunctionType {
     llvm:Type[] & readonly paramTypes = [llClosurePtrTy, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
     RetRepr repr = semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {

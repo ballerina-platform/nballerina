@@ -57,8 +57,6 @@ ClosurePtr _bal_function_alloc_closure_val(uint32_t nValues) {
     return closure;
 }
 
-// NOTE: ideally I would like to use some sort of function decl level areana allocator
-// What we are trying to do hear is to allocate 64-bits in addressspace 1 and get a ptr to that, not specific to tagged ptr
 GC TaggedPtr *_bal_function_alloc_heap_capture() {
     GC TaggedPtr *ptr = _bal_alloc(sizeof(TaggedPtr));
     return ptr;

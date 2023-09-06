@@ -216,6 +216,7 @@ public type CapturedRegister readonly & record {|
     CAPTURED_REGISTER_KIND kind = CAPTURED_REGISTER_KIND;
     DeclRegister|CapturedRegister captured;
     RegisterScope scope;
+    string name;
 |};
 
 public type NarrowRegister readonly & record {|
@@ -260,7 +261,7 @@ public function createNarrowRegister(FunctionCode code, SemType semType, Registe
     return r;
 }
 
-public function createCapturedRegister(FunctionCode code, SemType semType, DeclRegister|CapturedRegister captured, string? name, RegisterScope scope, Position? pos = ()) returns CapturedRegister {
+public function createCapturedRegister(FunctionCode code, SemType semType, DeclRegister|CapturedRegister captured, string name, RegisterScope scope, Position? pos = ()) returns CapturedRegister {
     CapturedRegister r = { number: code.registers.length(), captured, semType, pos, scope, name };
     code.registers.push(r);
     return r;
@@ -870,12 +871,3 @@ final readonly & map<true> PPI_INSNS = {
 public function isInsnPotentiallyPanicking(Insn insn) returns boolean {
     return PPI_INSNS[insn.name] == true;
 }
-
-public function valueRegister(CapturedRegister register) returns DeclRegister {
-    CapturedRegister|DeclRegister captured = register.captured;
-    while captured is CapturedRegister {
-        captured = captured.captured;
-    }
-    return <DeclRegister>captured;
-}
-

@@ -108,11 +108,6 @@ type FunctionValueDefn record {|
     llvm:ConstPointerValue value;
 |};
 
-type ReferenceCapture readonly & record {|
-    bir:DeclRegister captured;
-    llvm:PointerValue heapPtr;
-|};
-
 type Module record {|
     llvm:Context llContext;
     llvm:Module llMod;
@@ -130,8 +125,6 @@ type Module record {|
     bir:File[] partFiles;
     ModuleDI? di;
     table<UsedSemType> key(semType) usedSemTypes = table [];
-    // NOTE: Ideally I would like to make this a FunctionDecl level thing but not sure how to do that
-    table<ReferenceCapture> key(captured) capturedByReference = table [];
     InitTypes llInitTypes;
 |};
 
@@ -143,7 +136,6 @@ type UsedSemType record {|
     llvm:ConstPointerValue? exactify = ();
     llvm:ConstPointerValue? called = ();
 |};
-
 
 final RuntimeFunction functionAllocHeapCapture = {
     name: "function_alloc_heap_capture",
@@ -204,7 +196,7 @@ class Scaffold {
         self.addresses = [];
         self.setCurrentPosition(builder, defn.position);
         bir:Module birMod = mod.bir;
-        bir:DeclRegister[] capturedDeclRegisters = birMod.isEnclosingFunction(defn.index)? capturedRegisters(birMod, code) : [];
+        bir:DeclRegister[] capturedDeclRegisters = birMod.isEnclosingFunction(defn.index) ? capturedRegisters(birMod, code) : [];
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
             string? name;
@@ -216,9 +208,13 @@ class Scaffold {
             }
             if register is bir:DeclRegister && capturedDeclRegisters.indexOf(register) != () {
                 llvm:PointerValue heapPtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, self, functionAllocHeapCapture, []);
-                heapPtr = builder.bitCast(heapPtr, llvm:pointerType(exactValueType(register.semType), 1), name);
-                // TODO: this needs to be a global and somehow cached (start with module)
+                heapPtr = builder.bitCast(heapPtr, llvm:pointerType(exactValueType(register.semType), HEAP_ADDR_SPACE), name);
                 self.addresses.push(heapPtr);
+            }
+            else if register is bir:CapturedRegister && !captureByValue(capturedRegister(register)) {
+                // These are heap allocated values that are passed in from the closure.
+                // We change them to the correct pointer when we save parameters
+                self.addresses.push(constNilTaggedPtr(self));
             }
             else {
                 self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
@@ -250,29 +246,15 @@ class Scaffold {
             }
             llvm:PointerValue heapPtr = builder.getElementPtr(closure, [constIndex(self, 0),
                                                                         constIndex(self, index)]);
-            bir:DeclRegister capturedReg = bir:valueRegister(register);
-            if capturedReg !is bir:FinalRegister|bir:ParamRegister {
-                // TODO: We shouldn't have allocated these registers in the first place
-                llvm:PointerValue tmp = <llvm:PointerValue>builder.load(heapPtr);
-                self.changeAddress(register, tmp);
+            bir:DeclRegister capturedReg = capturedRegister(register);
+            if !captureByValue(capturedReg) {
+                self.changeAddress(register, <llvm:PointerValue>builder.load(heapPtr));
             }
             else {
                 builder.store(builder.load(heapPtr), self.address(register));
             }
             index += 1;
         }
-    }
-
-    // TODO: remove this
-    function getCapturedHearpPtr(llvm:Builder builder, bir:DeclRegister captured) returns llvm:PointerValue {
-        ReferenceCapture? memo = self.mod.capturedByReference[captured];
-        if memo != () {
-            return memo.heapPtr;
-        }
-        llvm:PointerValue heapPtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, self, functionAllocHeapCapture, []);
-        heapPtr = builder.bitCast(heapPtr, llvm:pointerType(exactValueType(captured.semType), 1));
-        self.mod.capturedByReference.add({ captured, heapPtr });
-        return heapPtr;
     }
 
     function changeAddress(bir:Register r, llvm:PointerValue ptr) {
@@ -500,6 +482,10 @@ class Scaffold {
     function scheduleBlockNarrowReg(bir:Label label, bir:NarrowRegister reg) {
         self.narrowRegBuilders[label].schedule(reg);
     }
+}
+
+function captureByValue(bir:CapturableRegister reg) returns boolean {
+    return reg is bir:ParamRegister|bir:FinalRegister;
 }
 
 function functionPartIndex(bir:Function func) returns int {
@@ -733,32 +719,29 @@ function functionValueType(t:FunctionSignature signature) returns llvm:StructTyp
 }
 
 function closureValueType(t:FunctionSignature signature, bir:DeclRegister[] capturedValues) returns llvm:StructType {
-    llvm:Type[] capturedTypes = [];
-    foreach var capturedValue in capturedValues {
-        if capturedValue is bir:FinalRegister|bir:ParamRegister {
-            capturedTypes.push(exactValueType(capturedValue.semType));
-        }
-        else {
-            capturedTypes.push(llvm:pointerType(exactValueType(capturedValue.semType), 1));
-        }
-    }
+    llvm:StructType closureTy = closureStructType(capturedValues);
     return llvm:structType([llvm:pointerType(llFunctionDescType),
-                            llvm:pointerType(buildClosureFunctionSignature(signature, capturedTypes)),
+                            llvm:pointerType(buildClosureFunctionSignature(signature, llvm:pointerType(closureTy, HEAP_ADDR_SPACE))),
                             LLVM_INT,
-                            closureType(capturedTypes)]);
+                            closureTy]);
 }
 
-function closureType(llvm:Type[] capturedTys) returns llvm:StructType {
-    return llvm:structType(capturedTys);
+function closureStructType(bir:DeclRegister[] capturedValues) returns llvm:StructType {
+    llvm:Type[] capturedTypes = [];
+    foreach var capturedValue in capturedValues {
+        llvm:Type valueTy = exactValueType(capturedValue.semType);
+        if captureByValue(capturedValue) {
+            capturedTypes.push(valueTy);
+        }
+        else {
+            capturedTypes.push(llvm:pointerType(valueTy, HEAP_ADDR_SPACE));
+        }
+    }
+    return llvm:structType(capturedTypes);
 }
 
 function capturedRegisters(bir:Module mod, bir:FunctionCode code) returns bir:DeclRegister[] {
     bir:Register[] parentRegisters = code.registers;
-    return capturedRegistersInner(mod, code, parentRegisters);
-}
-
-function capturedRegistersInner(bir:Module mod, bir:FunctionCode code,
-                                bir:Register[] parentRegisters) returns bir:DeclRegister[] {
     bir:DeclRegister[] capturedRegisters = [];
     foreach bir:BasicBlock bb in code.blocks {
         foreach bir:Insn insn in bb.insns {
@@ -766,17 +749,23 @@ function capturedRegistersInner(bir:Module mod, bir:FunctionCode code,
                 continue;
             }
             bir:DeclRegister[] captured = from bir:CapturableRegister reg in insn.operands
-                                            select reg is bir:DeclRegister ? reg : bir:valueRegister(reg);
+                                            select reg is bir:DeclRegister ? reg : capturedRegister(reg);
             foreach var reg in captured {
                 int index = reg.number;
                 if index < parentRegisters.length() && parentRegisters[index] === reg {
                     capturedRegisters.push(reg);
                 }
             }
-            // By this stage function code is already generated so we should not get any errors
-            capturedRegisters.push(...capturedRegistersInner(mod, checkpanic mod.generateFunctionCode(insn.functionIndex),
-                                                             parentRegisters));
         }
     }
     return capturedRegisters;
 }
+
+function capturedRegister(bir:CapturedRegister register) returns bir:DeclRegister {
+    bir:CapturableRegister captured = register.captured;
+    while captured is bir:CapturedRegister {
+        captured = captured.captured;
+    }
+    return <bir:DeclRegister>captured;
+}
+

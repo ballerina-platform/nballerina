@@ -5,7 +5,8 @@ function foo(boolean flag, int offset) returns F {
     return function(int x) returns int {
         if (flag) {
             return x + offset;
-        } else {
+        }
+        else {
             return x - offset;
         }
     };

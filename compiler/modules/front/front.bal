@@ -76,10 +76,8 @@ class Module {
         bir:FunctionCode code = check codeGenFunction(self, func, moduleLevelDefn, signature, bindings);
         _ = self.parentStack.pop();
         self.functionCodes[birFunc.index] = code;
-        bir:CapturableRegister[] capturedRegisters = from var reg in code.registers where reg is bir:CapturedRegister select reg.captured;
-        return [ref, ...capturedRegisters];
+        return [ref, ...from var reg in code.registers where reg is bir:CapturedRegister select reg.captured];
     }
-
 
     public function isEnclosingFunction(int i) returns boolean {
         return self.enclosingFunction[i];

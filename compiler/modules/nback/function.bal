@@ -17,7 +17,7 @@ final RuntimeFunction functionIsClosureFunction = {
 final RuntimeFunction functionAllocateClosureVal = {
     name: "function_alloc_closure_val",
     ty: {
-        returnType: llvm:pointerType(llClosureType, 1),
+        returnType: llvm:pointerType(llClosureType, HEAP_ADDR_SPACE),
         paramTypes: ["i32"]
     },
     attrs: []
@@ -73,14 +73,12 @@ type IndirectFunctionValue record {|
 |};
 
 function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn insn) returns BuildError? {
-    // JBUG: npe when trying to use operands
+    // JBUG: npe when trying to get operands in destructuring
     var { functionIndex, result } = insn;
     bir:CapturableRegister[] operands = insn.operands;
-    // bir:DeclRegister[] capturedRegisters = from var each in operands select each is bir:CapturedRegister ? capturedRegister(each) : each;
-    bir:DeclRegister[] capturedRegisters = [];
-    foreach bir:CapturableRegister operand in operands {
-        capturedRegisters.push(operand is bir:CapturedRegister ? bir:valueRegister(operand) : operand);
-    }
+    bir:DeclRegister[] capturedRegisters = from var operand in operands
+                                             select operand is bir:CapturedRegister ? capturedRegister(operand):
+                                                                                      operand;
     int nOperands = operands.length();
     if nOperands > int:UNSIGNED32_MAX_VALUE {
         // We are using a struct for captured values (since each value has different type) and we can't
@@ -88,8 +86,8 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
         panic err:impossible("too many captured values");
     }
     llvm:Value[] capturedVals = from int i in 0 ..< nOperands let var capturedRegister = capturedRegisters[i]
-                                  select capturedRegister is bir:ParamRegister|bir:FinalRegister ? (check buildReprValue(builder, scaffold, operands[i]))[1]:
-                                                                                                   scaffold.address(operands[i]);
+                                  select captureByValue(capturedRegister) ? (check buildReprValue(builder, scaffold, operands[i]))[1]:
+                                                                            scaffold.address(operands[i]);
     t:FunctionSignature signature = scaffold.getBirFunction(functionIndex).decl;
     llvm:PointerType llClosureValTy = llvm:pointerType(closureValueType(signature, capturedRegisters));
     llvm:PointerValue closureVal = <llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold, functionAllocateClosureVal,

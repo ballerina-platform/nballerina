@@ -54,7 +54,7 @@ class StmtContext {
     final bir:FunctionCode code;
     final t:SemType returnType;
     final s:FunctionDefn moduleLevelDefn;
-    final CapturedRegisterMemo[] capturedRegisters = [];
+    final table<CapturedRegisterMemo> key(captured) capturedRegisters = table[];
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
@@ -91,13 +91,12 @@ class StmtContext {
     }
 
     function getCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
-        foreach var { captured, reg } in self.capturedRegisters {
-            if captured === underlying {
-                return reg;
-            }
+        CapturedRegisterMemo? memo = self.capturedRegisters[underlying];
+        if memo != () {
+            return memo.reg;
         }
         bir:CapturedRegister register = bir:createCapturedRegister(self.code, t, underlying, underlying.name, self.getCurrentScope(), pos);
-        self.capturedRegisters.push({ captured: underlying, reg: register });
+        self.capturedRegisters.add({ captured: underlying, reg: register });
         return register;
     }
 
@@ -933,10 +932,13 @@ function codeGenLExpr(StmtContext cx, bir:BasicBlock startBlock, BindingChain? i
     bir:BasicBlock block;
     if container is s:VarRefExpr {
         var { binding, inOuterFunction } = check lookupVarRefBinding(cx, container.name, initialBindings, container.startPos);
+        bir:Register underlying = binding.reg;
         if inOuterFunction {
-            panic error("unimplemented");
+            reg = cx.getCaptureRegister(underlying.semType, <bir:CapturableRegister>underlying);
         }
-        reg = (binding).reg;
+        else {
+            reg = underlying;
+        }
         block = startBlock;
     }
     else  {
