@@ -22,6 +22,7 @@ class Module {
     final bir:Function[] parentStack = [];
     final bir:FunctionCode?[] functionCodes = [];
     final boolean[] enclosingFunction = [];
+    final [s:AnonFunction, bir:InternalFunctionRef][] anonFunctionCache = [];
 
     function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
         self.id = id;
@@ -63,6 +64,12 @@ class Module {
     }
 
     public function addAnonFunction(s:AnonFunction func, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:InternalFunctionRef, bir:CapturableRegister...]|CodeGenError {
+        foreach var [cachedFunc, ref] in self.anonFunctionCache {
+            if func === cachedFunc {
+                bir:FunctionCode code = check self.generateFunctionCode(ref.index);
+                return [ref, ...from var reg in code.registers where reg is bir:CapturedRegister select reg.captured];
+            }
+        }
         bir:Function parent = self.parentStack[self.parentStack.length() - 1];
         self.enclosingFunction[parent.index] = true;
         t:FunctionSignature signature = <t:FunctionSignature>func.signature;
@@ -70,6 +77,7 @@ class Module {
         self.enclosingFunction[index] = false;
         bir:InternalFunctionRef ref = { index, signature, erasedSignature: signature };
         bir:AnonFunction birFunc =  { index, decl: signature, position: func.startPos, parent };
+        self.anonFunctionCache.push([func, ref]);
         self.functions.push(birFunc);
         self.parentStack.push(birFunc);
         // NOTE: we need to codegen the func in order to figure out it's capture values
