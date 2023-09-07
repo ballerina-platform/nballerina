@@ -12,7 +12,7 @@ public type Module object {
     // which are in arrays in this.
     public function getTypeContext() returns t:Context;
     public function getFunctions() returns Function[];
-    public function isEnclosingFunction(int i) returns boolean;
+    public function hasCaptureInsn(int i) returns boolean;
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
     public function symbolToString(int partIndex, Symbol sym) returns string;
     // Get the File for a give part index

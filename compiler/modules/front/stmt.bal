@@ -41,8 +41,8 @@ type ClosureContext object {
 };
 
 type CapturedRegisterMemo readonly & record {|
-    bir:CapturableRegister captured;
-    bir:CapturedRegister reg;
+    bir:CapturableRegister outerRegister;
+    bir:CapturedRegister innerRegister;
 |};
 
 class StmtContext {
@@ -54,7 +54,7 @@ class StmtContext {
     final bir:FunctionCode code;
     final t:SemType returnType;
     final s:FunctionDefn moduleLevelDefn;
-    final table<CapturedRegisterMemo> key(captured) capturedRegisters = table[];
+    final table<CapturedRegisterMemo> key(outerRegister) capturedRegisters = table[];
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
@@ -91,12 +91,13 @@ class StmtContext {
     }
 
     function getCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
+        // We need to ensure for a given register in the outer function, there is only one captured register.
         CapturedRegisterMemo? memo = self.capturedRegisters[underlying];
         if memo != () {
-            return memo.reg;
+            return memo.innerRegister;
         }
         bir:CapturedRegister register = bir:createCapturedRegister(self.code, t, underlying, underlying.name, self.getCurrentScope(), pos);
-        self.capturedRegisters.add({ captured: underlying, reg: register });
+        self.capturedRegisters.add({ outerRegister: underlying, innerRegister: register });
         return register;
     }
 

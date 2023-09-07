@@ -87,7 +87,7 @@ class Module {
         return [ref, ...from var reg in code.registers where reg is bir:CapturedRegister select reg.captured];
     }
 
-    public function isEnclosingFunction(int i) returns boolean {
+    public function hasCaptureInsn(int i) returns boolean {
         return self.enclosingFunction[i];
     }
 

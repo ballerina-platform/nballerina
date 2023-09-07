@@ -77,7 +77,7 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
     var { functionIndex, result } = insn;
     bir:CapturableRegister[] operands = insn.operands;
     bir:DeclRegister[] capturedRegisters = from var operand in operands
-                                             select operand is bir:CapturedRegister ? capturedRegister(operand):
+                                             select operand is bir:CapturedRegister ? underlyingRegister(operand):
                                                                                       operand;
     int nOperands = operands.length();
     if nOperands > int:UNSIGNED32_MAX_VALUE {

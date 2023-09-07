@@ -103,7 +103,7 @@ class VirtualModule {
     }
 
 
-    public function isEnclosingFunction(int i) returns boolean {
+    public function hasCaptureInsn(int i) returns boolean {
         bir:FunctionCode code = checkpanic self.generateFunctionCode(i);
         foreach bir:BasicBlock bb in code.blocks {
             foreach bir:Insn insn in bb.insns {

@@ -196,7 +196,7 @@ class Scaffold {
         self.addresses = [];
         self.setCurrentPosition(builder, defn.position);
         bir:Module birMod = mod.bir;
-        bir:DeclRegister[] capturedDeclRegisters = birMod.isEnclosingFunction(defn.index) ? capturedRegisters(birMod, code) : [];
+        bir:DeclRegister[] capturedDeclRegisters = birMod.hasCaptureInsn(defn.index) ? capturedRegisters(birMod, code) : [];
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
             string? name;
@@ -211,7 +211,7 @@ class Scaffold {
                 heapPtr = builder.bitCast(heapPtr, llvm:pointerType(exactValueType(register.semType), HEAP_ADDR_SPACE), name);
                 self.addresses.push(heapPtr);
             }
-            else if register is bir:CapturedRegister && !captureByValue(capturedRegister(register)) {
+            else if register is bir:CapturedRegister && !captureByValue(underlyingRegister(register)) {
                 // These are heap allocated values that are passed in from the closure.
                 // We change them to the correct pointer when we save parameters
                 self.addresses.push(constNilTaggedPtr(self));
@@ -246,7 +246,7 @@ class Scaffold {
             }
             llvm:PointerValue heapPtr = builder.getElementPtr(closure, [constIndex(self, 0),
                                                                         constIndex(self, index)]);
-            bir:DeclRegister capturedReg = capturedRegister(register);
+            bir:DeclRegister capturedReg = underlyingRegister(register);
             if !captureByValue(capturedReg) {
                 self.changeAddress(register, <llvm:PointerValue>builder.load(heapPtr));
             }
@@ -749,7 +749,7 @@ function capturedRegisters(bir:Module mod, bir:FunctionCode code) returns bir:De
                 continue;
             }
             bir:DeclRegister[] captured = from bir:CapturableRegister reg in insn.operands
-                                            select reg is bir:DeclRegister ? reg : capturedRegister(reg);
+                                            select reg is bir:DeclRegister ? reg : underlyingRegister(reg);
             foreach var reg in captured {
                 int index = reg.number;
                 if index < parentRegisters.length() && parentRegisters[index] === reg {
@@ -761,11 +761,10 @@ function capturedRegisters(bir:Module mod, bir:FunctionCode code) returns bir:De
     return capturedRegisters;
 }
 
-function capturedRegister(bir:CapturedRegister register) returns bir:DeclRegister {
+function underlyingRegister(bir:CapturedRegister register) returns bir:DeclRegister {
     bir:CapturableRegister captured = register.captured;
     while captured is bir:CapturedRegister {
         captured = captured.captured;
     }
     return <bir:DeclRegister>captured;
 }
-

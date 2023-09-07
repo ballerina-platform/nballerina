@@ -23,7 +23,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         llvm:FunctionType ty;
         if check isClosureFunction(birMod, func) {
             bir:DeclRegister[] capturedRegisters = from var register in check closureCapturedRegisters(birMod, <bir:AnonFunction>func)
-                                                     select capturedRegister(register);
+                                                     select underlyingRegister(register);
             ty = buildClosureFunctionSignature(func.decl, llvm:pointerType(closureStructType(capturedRegisters),
                                                                            HEAP_ADDR_SPACE));
         }
