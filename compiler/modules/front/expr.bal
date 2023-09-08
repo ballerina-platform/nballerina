@@ -1524,16 +1524,18 @@ function genLocalFunction(ExprContext cx, string funcName, Position pos) returns
         return { operand: functionConstOperand(cx, ref), signature: ref.signature };
     }
     else if ref is BindingLookupResult {
-        var { binding } = ref;
+        var { binding, inOuterFunction } = ref;
         bir:Register bindingReg = binding.reg;
         t:SemType semType = bindingReg.semType;
+        bir:Register operand = inOuterFunction ? cx.getCaptureRegister(semType, <bir:CapturableRegister>bindingReg):
+                                                 bindingReg;
         t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
         if atom != () {
             t:FunctionSignature signature = t:functionSignature(cx.mod.tc, atom);
-            return { operand: bindingReg, signature };
+            return { operand, signature };
         }
         if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) {
-            return { operand: bindingReg, signature: () };
+            return { operand, signature: () };
         }
     }
     return cx.semanticErr("only a value of function type can be called", pos);
