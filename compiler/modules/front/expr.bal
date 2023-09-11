@@ -162,9 +162,17 @@ class ExprContext {
         // we need to check if the register captured by the child is in this function
         // if not we need to capture that register as well
         if self.registerInCurrentFunction(capturedReg) {
+            if capturedReg is bir:VarRegister {
+                StmtContext sc = self.stmtContext();
+                sc.markAsCaptured(capturedReg);
+            }
             return capturedReg;
         }
         return self.getCaptureRegister(capturedReg.semType, capturedReg);
+    }
+
+    function isCaptured(bir:VarRegister register) returns boolean {
+        return self.stmtContext().isCaptured(register);
     }
 
     private function registerInCurrentFunction(bir:Register reg) returns boolean {
@@ -198,7 +206,7 @@ class ExprContext {
         }
     }
 
-    function stmtContext() returns StmtContext|CodeGenError {
+    function stmtContext() returns StmtContext {
         return <StmtContext>self.sc;
     }
 
@@ -1229,21 +1237,25 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
                     panic err:impossible("unexpected underlying register to capture");
                 }
                 t:SemType semType = bindingReg.semType;
-                bir:Position pos = ref.qNamePos;
-                bir:CapturedRegister capturedReg = cx.getCaptureRegister(semType, bindingReg, pos);
-                bir:AssignTmpRegister reg = cx.createAssignTmpRegister(semType, pos);
-                bir:AssignInsn insn = { operand: capturedReg, result: reg, pos };
-                bb.insns.push(insn);
+                bir:CapturedRegister reg = cx.getCaptureRegister(semType, bindingReg, ref.qNamePos);
                 binding = ();
-                result = constifyRegister(reg);
+                result = createLocalCopy(cx, bb, reg, ref.qNamePos);
             }
             else {
-                result = constifyRegister(bindingReg);
+                result = bindingReg is bir:VarRegister && cx.isCaptured(bindingReg) ? createLocalCopy(cx, bb, bindingReg, ref.qNamePos):
+                                                                                      constifyRegister(bindingReg);
                 binding = result === bindingReg ? b : ();
             }
         }
     }
     return { result, block: bb, binding };
+}
+
+function createLocalCopy(ExprContext cx, bir:BasicBlock block, bir:CapturableRegister register, bir:Position pos) returns bir:Operand {
+    bir:AssignTmpRegister localCopy = cx.createAssignTmpRegister(register.semType, pos);
+    bir:AssignInsn insn = { operand: register, result: localCopy, pos };
+    block.insns.push(insn);
+    return constifyRegister(localCopy);
 }
 
 function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
@@ -1566,7 +1578,7 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
 }
 
 function codeGenAnonFunction(ExprContext cx, bir:BasicBlock curBlock, s:AnonFunction func, bir:Position pos) returns CodeGenError|ExprEffect {
-    StmtContext stmtContext = check cx.stmtContext();
+    StmtContext stmtContext = cx.stmtContext();
     t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, stmtContext.moduleLevelDefn, func);
     func.signature = signature;
     var [ref, ...capturedOperands] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);

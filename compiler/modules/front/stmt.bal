@@ -58,6 +58,7 @@ class StmtContext {
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
+    int[] capturedRegisterNumbers = [];
 
     function init(Module mod, ModuleSymbols syms, s:Function func, s:FunctionDefn moduleLevelDefn, t:SemType returnType) {
         self.mod = mod;
@@ -99,6 +100,15 @@ class StmtContext {
         bir:CapturedRegister register = bir:createCapturedRegister(self.code, t, underlying, underlying.name, self.getCurrentScope(), pos);
         self.capturedRegisters.add({ outerRegister: underlying, innerRegister: register });
         return register;
+    }
+
+    function markAsCaptured(bir:VarRegister register) {
+        // FIXME: avoid duplicate additions
+        self.capturedRegisterNumbers.push(register.number);
+    }
+
+    function isCaptured(bir:VarRegister register) returns boolean {
+        return self.capturedRegisterNumbers.indexOf(register.number) != ();
     }
 
     public function getCurrentScope() returns bir:RegisterScope {
