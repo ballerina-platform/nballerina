@@ -11,6 +11,13 @@ public function main() {
         val = val + a(p);
         return val;
     };
-    io:println(b(3)); // @output 43
+    F c = function(int p) returns int {
+        val = a(p) + val;
+        return val;
+    };
+    io:println(b(3)); // @output 33
+    io:println(val); // @output 33
+    val = 10;
+    io:println(c(3)); // @output 43
     io:println(val); // @output 43
 }

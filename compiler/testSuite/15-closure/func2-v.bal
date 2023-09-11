@@ -26,6 +26,6 @@ public function main() {
     if f !is F {
         return;
     }
-    io:println(f(p)); // @output 59
-    io:println(val); // @output 49
+    io:println(f(p)); // @output 49
+    io:println(val); // @output 39
 }

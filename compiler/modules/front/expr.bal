@@ -1228,7 +1228,12 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
                 if bindingReg !is bir:CapturableRegister {
                     panic err:impossible("unexpected underlying register to capture");
                 }
-                bir:CapturedRegister reg = cx.getCaptureRegister(bindingReg.semType, bindingReg, ref.qNamePos);
+                t:SemType semType = bindingReg.semType;
+                bir:Position pos = ref.qNamePos;
+                bir:CapturedRegister capturedReg = cx.getCaptureRegister(semType, bindingReg, pos);
+                bir:AssignTmpRegister reg = cx.createAssignTmpRegister(semType, pos);
+                bir:AssignInsn insn = { operand: capturedReg, result: reg, pos };
+                bb.insns.push(insn);
                 binding = ();
                 result = constifyRegister(reg);
             }
@@ -1237,7 +1242,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
                 binding = result === bindingReg ? b : ();
             }
         }
-    }  
+    }
     return { result, block: bb, binding };
 }
 
