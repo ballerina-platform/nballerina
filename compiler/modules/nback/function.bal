@@ -97,10 +97,9 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
                                                                    constIndex(scaffold, 3)],
                                                       "inbounds");
     foreach int i in 0 ..< capturedVals.length() {
-        llvm:PointerValue closurePtr = builder.getElementPtr(closure, [constIndex(scaffold, 0),
+        builder.store(capturedVals[i], builder.getElementPtr(closure, [constIndex(scaffold, 0),
                                                                        constIndex(scaffold, i)],
-                                                             "inbounds");
-        builder.store(capturedVals[i], closurePtr);
+                                                             "inbounds"));
     }
     llvm:FunctionDefn anonFunction = scaffold.getFunctionDefn(functionIndex);
     llvm:PointerValue fnDescPtr = scaffold.getConstructType(t:functionSemType(scaffold.typeContext(),

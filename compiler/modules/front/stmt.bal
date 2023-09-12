@@ -38,7 +38,6 @@ type BindingLookupResult record {|
 type ClosureContext object {
     *err:SemanticContext;
     function isClosure() returns boolean;
-    function createAssignTmpRegister(bir:SemType t, Position? pos) returns bir:AssignTmpRegister;
 };
 
 type CapturedRegisterMemo readonly & record {|
@@ -52,13 +51,12 @@ type BlockState readonly & record {|
 |};
 
 type StmtContextState record {|
-    int blockCount;
     int registerCount;
     int regionCount;
     int openRegionCount;
     table<BlockState> key(label) blockState;
     table<CapturedRegisterMemo> key(outerRegister) capturedRegisters;
-    int capturedRegisterCount;
+    int innerCapturedRegisterCount;
 |};
 
 class StmtContext {
@@ -67,10 +65,10 @@ class StmtContext {
     final ModuleSymbols syms;
     final s:SourceFile file;
     final s:Function func;
+    final bir:FunctionCode code;
     final t:SemType returnType;
     final s:FunctionDefn moduleLevelDefn;
-    table<CapturedRegisterMemo> key(outerRegister) capturedRegisters = table[];
-    bir:FunctionCode code;
+    table<CapturedRegisterMemo> key(outerRegister) outerCapturedRegisters = table[];
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
@@ -109,54 +107,46 @@ class StmtContext {
         return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
-    function createAssignTmpRegister(bir:SemType t, Position? pos = ()) returns bir:AssignTmpRegister {
-        return bir:createAssignTmpRegister(self.code, t, pos);
-    }
-
     function getCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
         // We need to ensure for a given register in the outer function, there is only one captured register.
-        CapturedRegisterMemo? memo = self.capturedRegisters[underlying];
+        CapturedRegisterMemo? memo = self.outerCapturedRegisters[underlying];
         if memo != () {
             return memo.innerRegister;
         }
         bir:CapturedRegister register = bir:createCapturedRegister(self.code, t, underlying, underlying.name, self.getCurrentScope(), pos);
-        self.capturedRegisters.add({ outerRegister: underlying, innerRegister: register });
+        self.outerCapturedRegisters.add({ outerRegister: underlying, innerRegister: register });
         return register;
     }
 
     function currentState() returns StmtContextState {
-        int blockCount = self.code.blocks.length();
         int registerCount = self.code.registers.length();
         int regionCount = self.code.regions.length();
         table<BlockState> key(label) blockState = table key(label) from var block in self.code.blocks select { label: block.label, instructionCount: block.insns.length() };
         int openRegionCount = self.openRegions.length();
-        table<CapturedRegisterMemo> key(outerRegister) capturedRegisters = self.capturedRegisters.clone();
-        int capturedRegisterCount = self.capturedRegisterNumbers.length();
-        return { blockCount, registerCount, regionCount, blockState,
-                 openRegionCount, capturedRegisters, capturedRegisterCount };
+        table<CapturedRegisterMemo> key(outerRegister) capturedRegisters = self.outerCapturedRegisters.clone();
+        int innerCapturedRegisterCount = self.innerCapturedRegisters.length();
+        return { registerCount, regionCount, blockState, openRegionCount, capturedRegisters, innerCapturedRegisterCount };
     }
 
     function restoreState(StmtContextState state) {
-        var { blockCount, registerCount, regionCount, blockState, openRegionCount,
-              capturedRegisters, capturedRegisterCount } = state;
-        self.code.blocks = self.code.blocks.slice(0, blockCount);
+        var { registerCount, regionCount, blockState, openRegionCount, capturedRegisters, innerCapturedRegisterCount } = state;
+        self.code.blocks = self.code.blocks.slice(0, blockState.length());
         self.code.registers = self.code.registers.slice(0, registerCount);
         self.code.regions = self.code.regions.slice(0, regionCount);
         foreach bir:BasicBlock bb in self.code.blocks {
             bb.insns = bb.insns.slice(0, blockState.get(bb.label).instructionCount);
         }
         self.openRegions = self.openRegions.slice(0, openRegionCount);
-        self.capturedRegisters = capturedRegisters;
-        self.capturedRegisterNumbers = self.capturedRegisterNumbers.slice(0, capturedRegisterCount);
+        self.outerCapturedRegisters = capturedRegisters;
+        self.innerCapturedRegisters = self.innerCapturedRegisters.slice(0, innerCapturedRegisterCount);
     }
 
     function markAsCaptured(bir:VarRegister register) {
-        // FIXME: avoid duplicate additions
-        self.capturedRegisterNumbers.push(register.number);
+        uniquePush(self.innerCapturedRegisters, register.number);
     }
 
     function markAsDirectRef(bir:VarRegister register) {
-        self.directRefVarRegisters.push(register.number);
+        uniquePush(self.directRefVarRegisters, register.number);
     }
 
     function markCaptureInsn() {
@@ -164,7 +154,7 @@ class StmtContext {
     }
 
     function isCaptured(bir:VarRegister register) returns boolean {
-        return self.capturedRegisterNumbers.indexOf(register.number) != ();
+        return self.innerCapturedRegisters.indexOf(register.number) != ();
     }
 
     public function getCurrentScope() returns bir:RegisterScope {
@@ -458,6 +448,7 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bin
     }
     bir:VarRegister[] shouldCopyRegisters = registersToBeLocallyStored(cx, initialState);
     cx.directRefVarRegisters = cx.directRefVarRegisters.slice(0, directRefVarRegisterCount);
+    cx.newCaptureInsn = false;
     if shouldCopyRegisters.length() != 0 {
         cx.restoreState(initialState);
         foreach var register in shouldCopyRegisters {
@@ -466,23 +457,6 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bin
         return check codeGenStmt(cx, curBlock, bindings, stmt);
     }
     return result;
-}
-
-function removeBindingRange(BindingChain bindings, BindingChain rangeStart, BindingChain? rangeEnd) returns BindingChain? {
-    BindingChain? previous = (); // last one before the range
-    BindingChain? current = bindings;
-    while current != rangeStart {
-        previous = current;
-        current = current?.prev;
-    }
-    while current != rangeEnd {
-        current = current?.prev;
-    }
-    if previous == () {
-        return current;
-    }
-    previous.prev = current;
-    return previous;
 }
 
 function codeGenScopedStmt(StmtContext cx, bir:BasicBlock curBlock, BindingChain? bindings, ScopedStmt stmt) returns CodeGenError|StmtEffect {
@@ -1374,10 +1348,19 @@ function registersToBeLocallyStored(StmtContext sc, StmtContextState initialStat
         foreach bir:Insn insn in newInsns {
             if insn is bir:CaptureInsn {
                 registers.push(...from var register in insn.operands
-                                    where register is bir:VarRegister && registers.indexOf(register) == ()
+                                    where register is bir:VarRegister &&
+                                          directRefVarRegisters.indexOf(register.number) != () &&
+                                          registers.indexOf(register) == ()
                                     select register);
             }
         }
     }
     return registers;
+}
+
+function uniquePush(int[] buffer, int val) {
+    if buffer.indexOf(val) != () {
+        return;
+    }
+    buffer.push(val);
 }

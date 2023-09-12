@@ -158,7 +158,7 @@ class ExprContext {
     }
 
     function captureOperand(bir:CapturableRegister capturedReg) returns bir:CapturableRegister {
-        // NOTE: this used when creating bir:CaptureInsn (ie. from the parent function).
+        // NOTE: this is used when creating bir:CaptureInsn (ie. from the parent function).
         // we need to check if the register captured by the child is in this function
         // if not we need to capture that register as well
         if self.registerInCurrentFunction(capturedReg) {
@@ -171,8 +171,7 @@ class ExprContext {
     }
 
     function markAsDirectRef(bir:VarRegister register) {
-        StmtContext sc = self.stmtContext();
-        sc.markAsDirectRef(register);
+        self.stmtContext().markAsDirectRef(register);
     }
 
     function markCaptureInsn() {
@@ -192,11 +191,7 @@ class ExprContext {
     }
 
     function getCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
-        StmtContext? sc = self.sc;
-        if sc == () {
-            panic err:impossible("attempt to capture register in constant expression");
-        }
-        return sc.getCaptureRegister(t, underlying, pos);
+        return self.stmtContext().getCaptureRegister(t, underlying, pos);
     }
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {
@@ -1269,7 +1264,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
     return { result, block: bb, binding };
 }
 
-function createLocalCopy(ClosureContext cx, bir:BasicBlock block, bir:CapturableRegister register, bir:Position pos) returns bir:Operand {
+function createLocalCopy(ExprContext cx, bir:BasicBlock block, bir:CapturableRegister register, bir:Position pos) returns bir:Operand {
     bir:AssignTmpRegister localCopy = cx.createAssignTmpRegister(register.semType, pos);
     bir:AssignInsn insn = { operand: register, result: localCopy, pos };
     block.insns.push(insn);
