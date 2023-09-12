@@ -45,6 +45,13 @@ type CapturedRegisterMemo readonly & record {|
     bir:CapturedRegister innerRegister;
 |};
 
+type StmtContextState readonly & record {|
+    bir:FunctionCode code;
+    bir:RegionIndex[] openRegions;
+    table<CapturedRegisterMemo> key(outerRegister) capturedRegisters;
+    int[] capturedRegisterNumbers;
+|};
+
 class StmtContext {
     *ClosureContext;
     final Module mod;
@@ -58,7 +65,9 @@ class StmtContext {
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
-    int[] capturedRegisterNumbers = [];
+    int[] innerCapturedRegisters = [];
+    boolean newCaptureInsn = false;
+    int[] directRefVarRegisters = [];
 
     function init(Module mod, ModuleSymbols syms, s:Function func, s:FunctionDefn moduleLevelDefn, t:SemType returnType) {
         self.mod = mod;
@@ -102,9 +111,30 @@ class StmtContext {
         return register;
     }
 
+    // TODO: we need a more efficient way to do this since we need to do this for each stmt
+    function currentState() returns StmtContextState {
+        bir:FunctionCode & readonly code = self.code.cloneReadOnly();
+        bir:RegionIndex[] & readonly openRegions = self.openRegions.cloneReadOnly();
+        table<CapturedRegisterMemo> key(outerRegister) & readonly capturedRegisters = self.capturedRegisters.cloneReadOnly();
+        int[] & readonly capturedRegisterNumbers = self.capturedRegisterNumbers.cloneReadOnly();
+        return { code, openRegions, capturedRegisters, capturedRegisterNumbers };
+    }
+
     function markAsCaptured(bir:VarRegister register) {
         // FIXME: avoid duplicate additions
         self.capturedRegisterNumbers.push(register.number);
+    }
+
+    function markAsDirectRef(bir:VarRegister register) {
+        self.directRefVarRegisterNumbers.push(register.number);
+    }
+
+    function clearDirectRefVarRegisters() {
+        self.directRefVarRegisterNumbers = [];
+    }
+
+    function markCaptureInsn() {
+        self.newCaptureInsn = true;
     }
 
     function isCaptured(bir:VarRegister register) returns boolean {
@@ -367,36 +397,43 @@ function bindingsUpTo(BindingChain? bindingLimit, BindingChain? bindings) return
 }
 
 function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bindings, s:Stmt stmt) returns CodeGenError|StmtEffect {
+    StmtContextState initialState = cx.currentState();
+    StmtEffect result;
     if curBlock == () {
         return cx.semanticErr("unreachable code", s:range(stmt));
     }
     else if stmt is ScopedStmt {
-        return codeGenScopedStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenScopedStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:IfElseStmt {
-        return codeGenIfElseStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenIfElseStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:BreakContinueStmt {
-        return codeGenBreakContinueStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenBreakContinueStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:ReturnStmt {
-        return codeGenReturnStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenReturnStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:PanicStmt {
-        return codeGenPanicStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenPanicStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:VarDeclStmt {
-        return codeGenVarDeclStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenVarDeclStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:AssignStmt {
-        return codeGenAssignStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenAssignStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:CompoundAssignStmt {
-        return codeGenCompoundAssignStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenCompoundAssignStmt(cx, curBlock, bindings, stmt);
     }
     else {
-        return codeGenCallStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenCallStmt(cx, curBlock, bindings, stmt);
     }
+    if registersToBeLocallyStored(cx, initialState).length() != 0 {
+        // TODO: backtrack
+        panic error("backtrack");
+    }
+    return result;
 }
 
 function codeGenScopedStmt(StmtContext cx, bir:BasicBlock curBlock, BindingChain? bindings, ScopedStmt stmt) returns CodeGenError|StmtEffect {
@@ -1268,4 +1305,50 @@ function functionDefnIndex(ModuleSymbols mod, s:FunctionDefn defn) returns int? 
         index += 1;
     }
     return ();
+}
+
+function registersToBeLocallyStored(StmtContext sc, StmtContextState initialState) returns bir:VarRegister[] {
+    int[] directRefVarRegisters = sc.directRefVarRegisters;
+    if !sc.newCaptureInsn || directRefVarRegisters.length() == 0 {
+        return [];
+    }
+    bir:VarRegister[] registers = [];
+    bir:FunctionCode code = sc.code;
+    foreach bir:BasicBlock bb in code.blocks {
+        bir:Insn[] newInsns;
+        if initialState.blockState.hasKey(bb.label) {
+            newInsns = bb.insns.slice(initialState.blockState.get(bb.label).instructionCount);
+        }
+        else {
+            newInsns = bb.insns;
+        }
+        foreach bir:Insn insn in newInsns {
+            if insn is bir:CaptureInsn {
+                registers.push(...from var register in insn.operands
+                                    where register is bir:VarRegister && registers.indexOf(register) == ()
+                                    select register);
+            }
+        }
+    }
+    return false;
+}
+
+function newInstruction(bir:FunctionCode initialCode, int bbIndex, int insnIndex) returns boolean {
+    if initialCode.blocks.length() <= bbIndex {
+        return true;
+    }
+    bir:BasicBlock bb = initialCode.blocks[bbIndex];
+    return bb.insns.length() <= insnIndex;
+}
+
+function capturingRegister(bir:CaptureInsn insn, int[] registers) returns boolean {
+    foreach bir:CapturableRegister reg in insn.operands {
+        if reg !is bir:VarRegister {
+            continue;
+        }
+        if registers.indexOf(reg.number) != () {
+            return true;
+        }
+    }
+    return false;
 }

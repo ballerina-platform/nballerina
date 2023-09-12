@@ -163,12 +163,20 @@ class ExprContext {
         // if not we need to capture that register as well
         if self.registerInCurrentFunction(capturedReg) {
             if capturedReg is bir:VarRegister {
-                StmtContext sc = self.stmtContext();
-                sc.markAsCaptured(capturedReg);
+                self.stmtContext().markAsCaptured(capturedReg);
             }
             return capturedReg;
         }
         return self.getCaptureRegister(capturedReg.semType, capturedReg);
+    }
+
+    function markAsDirectRef(bir:VarRegister register) {
+        StmtContext sc = self.stmtContext();
+        sc.markAsDirectRef(register);
+    }
+
+    function markCaptureInsn() {
+        self.stmtContext().markCaptureInsn();
     }
 
     function isCaptured(bir:VarRegister register) returns boolean {
@@ -1242,8 +1250,18 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
                 result = createLocalCopy(cx, bb, reg, ref.qNamePos);
             }
             else {
-                result = bindingReg is bir:VarRegister && cx.isCaptured(bindingReg) ? createLocalCopy(cx, bb, bindingReg, ref.qNamePos):
-                                                                                      constifyRegister(bindingReg);
+                if bindingReg is bir:VarRegister {
+                    if cx.isCaptured(bindingReg) {
+                        result = createLocalCopy(cx, bb, bindingReg, ref.qNamePos);
+                    }
+                    else {
+                        cx.markAsDirectRef(bindingReg);
+                        result = constifyRegister(bindingReg);
+                    }
+                }
+                else {
+                    result = constifyRegister(bindingReg);
+                }
                 binding = result === bindingReg ? b : ();
             }
         }
@@ -1590,6 +1608,7 @@ function codeGenAnonFunction(ExprContext cx, bir:BasicBlock curBlock, s:AnonFunc
     bir:CapturableRegister[] & readonly operands = from var operand in capturedOperands select cx.captureOperand(operand);
     bir:CaptureInsn insn = { functionIndex: ref.index, result, operands, pos };
     curBlock.insns.push(insn);
+    cx.markCaptureInsn();
     return { result, block: curBlock };
 }
 
