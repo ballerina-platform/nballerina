@@ -38,6 +38,7 @@ type BindingLookupResult record {|
 type ClosureContext object {
     *err:SemanticContext;
     function isClosure() returns boolean;
+    function createAssignTmpRegister(bir:SemType t, Position? pos) returns bir:AssignTmpRegister;
 };
 
 type CapturedRegisterMemo readonly & record {|
@@ -45,7 +46,7 @@ type CapturedRegisterMemo readonly & record {|
     bir:CapturedRegister innerRegister;
 |};
 
-type StmtContextState readonly & record {|
+type StmtContextState record {|
     bir:FunctionCode code;
     bir:RegionIndex[] openRegions;
     table<CapturedRegisterMemo> key(outerRegister) capturedRegisters;
@@ -58,10 +59,10 @@ class StmtContext {
     final ModuleSymbols syms;
     final s:SourceFile file;
     final s:Function func;
-    final bir:FunctionCode code;
     final t:SemType returnType;
     final s:FunctionDefn moduleLevelDefn;
-    final table<CapturedRegisterMemo> key(outerRegister) capturedRegisters = table[];
+    table<CapturedRegisterMemo> key(outerRegister) capturedRegisters = table[];
+    bir:FunctionCode code;
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
@@ -100,6 +101,10 @@ class StmtContext {
         return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
+    function createAssignTmpRegister(bir:SemType t, Position? pos = ()) returns bir:AssignTmpRegister {
+        return bir:createAssignTmpRegister(self.code, t, pos);
+    }
+
     function getCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
         // We need to ensure for a given register in the outer function, there is only one captured register.
         CapturedRegisterMemo? memo = self.capturedRegisters[underlying];
@@ -113,11 +118,19 @@ class StmtContext {
 
     // TODO: we need a more efficient way to do this since we need to do this for each stmt
     function currentState() returns StmtContextState {
-        bir:FunctionCode & readonly code = self.code.cloneReadOnly();
-        bir:RegionIndex[] & readonly openRegions = self.openRegions.cloneReadOnly();
-        table<CapturedRegisterMemo> key(outerRegister) & readonly capturedRegisters = self.capturedRegisters.cloneReadOnly();
-        int[] & readonly capturedRegisterNumbers = self.capturedRegisterNumbers.cloneReadOnly();
+        bir:FunctionCode code = self.code.clone();
+        bir:RegionIndex[] openRegions = self.openRegions.clone();
+        table<CapturedRegisterMemo> key(outerRegister) capturedRegisters = self.capturedRegisters.clone();
+        int[] capturedRegisterNumbers = self.capturedRegisterNumbers.clone();
         return { code, openRegions, capturedRegisters, capturedRegisterNumbers };
+    }
+
+    function restoreState(StmtContextState state) {
+        var { code, openRegions, capturedRegisters, capturedRegisterNumbers } = state;
+        self.code = code;
+        self.openRegions = openRegions;
+        self.capturedRegisters = capturedRegisters;
+        self.capturedRegisterNumbers = capturedRegisterNumbers;
     }
 
     function markAsCaptured(bir:VarRegister register) {
@@ -398,6 +411,7 @@ function bindingsUpTo(BindingChain? bindingLimit, BindingChain? bindings) return
 
 function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bindings, s:Stmt stmt) returns CodeGenError|StmtEffect {
     StmtContextState initialState = cx.currentState();
+    bir:Label? initialBlockLabel = curBlock?.label;
     StmtEffect result;
     if curBlock == () {
         return cx.semanticErr("unreachable code", s:range(stmt));
@@ -429,11 +443,54 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bin
     else {
         result = check codeGenCallStmt(cx, curBlock, bindings, stmt);
     }
-    if registersToBeLocallyStored(cx, initialState).length() != 0 {
-        // TODO: backtrack
-        panic error("backtrack");
+    bir:VarRegister[] regs = registersToBeLocallyStored(cx, initialState);
+    if regs.length() != 0 {
+        cx.restoreState(initialState);
+        BindingChain? curBindings = bindings;
+        BindingChain? rangeEnd = curBindings;
+        bir:BasicBlock? bb = ();
+        foreach bir:BasicBlock b in cx.code.blocks {
+            if b.label == initialBlockLabel {
+                bb = b;
+                break;
+            }
+        }
+        if bb == () {
+            panic err:impossible("failed to find the initial block");
+        }
+        foreach var reg in regs {
+            bir:Operand op = createLocalCopy(cx, bb, reg, stmt.startPos);
+            if op !is bir:AssignTmpRegister {
+                panic err:impossible("creating a local copy of constant captured register");
+            }
+            string name = reg.name;
+            var { binding } = check lookupVarRefBinding(cx, name, curBindings, stmt.startPos);
+            curBindings = { head: { name, reg: op, unnarrowed: unnarrowBinding(binding) }, prev: curBindings };
+        }
+        BindingChain rangeStart = <BindingChain>curBindings;
+        var { bindings: newBindings, block } = check codeGenStmt(cx, bb, curBindings, stmt);
+        // New bindings must at least contain the temporary bindings we added
+        newBindings = removeBindingRange(<BindingChain>newBindings, rangeStart, rangeEnd);
+        return { block, bindings: newBindings };
     }
     return result;
+}
+
+function removeBindingRange(BindingChain bindings, BindingChain rangeStart, BindingChain? rangeEnd) returns BindingChain? {
+    BindingChain? previous = (); // last one before the range
+    BindingChain? current = bindings;
+    while current != rangeStart {
+        previous = current;
+        current = current?.prev;
+    }
+    while current != rangeEnd {
+        current = current?.prev;
+    }
+    if previous == () {
+        return current;
+    }
+    previous.prev = current;
+    return previous;
 }
 
 function codeGenScopedStmt(StmtContext cx, bir:BasicBlock curBlock, BindingChain? bindings, ScopedStmt stmt) returns CodeGenError|StmtEffect {
@@ -1330,7 +1387,7 @@ function registersToBeLocallyStored(StmtContext sc, StmtContextState initialStat
             }
         }
     }
-    return false;
+    return shouldCopy;
 }
 
 function newInstruction(bir:FunctionCode initialCode, int bbIndex, int insnIndex) returns boolean {
@@ -1341,14 +1398,15 @@ function newInstruction(bir:FunctionCode initialCode, int bbIndex, int insnIndex
     return bb.insns.length() <= insnIndex;
 }
 
-function capturingRegister(bir:CaptureInsn insn, int[] registers) returns boolean {
+function capturingRegisters(bir:CaptureInsn insn, int[] registers) returns int[] {
+    int[] captured = [];
     foreach bir:CapturableRegister reg in insn.operands {
         if reg !is bir:VarRegister {
             continue;
         }
         if registers.indexOf(reg.number) != () {
-            return true;
+            captured.push(reg.number);
         }
     }
-    return false;
+    return captured;
 }

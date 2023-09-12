@@ -33,6 +33,12 @@ type DeclBinding record {|
     boolean used = false;
 |};
 
+type TmpAssignmentBinding record {|
+    string name;
+    bir:AssignTmpRegister reg;
+    DeclBinding unnarrowed;
+|};
+
 type NarrowBinding record {|
     string name;
     bir:NarrowRegister reg;
@@ -50,7 +56,7 @@ type AssignmentBinding record {|
 type FunctionMarker "func"; // value is chosen such that it fits in a small string
 
 type OccurrenceBinding NarrowBinding|AssignmentBinding;
-type Binding DeclBinding|NarrowBinding|AssignmentBinding;
+type Binding DeclBinding|NarrowBinding|AssignmentBinding|TmpAssignmentBinding;
 
 type BindingChain record {|
     Binding|FunctionMarker head;
@@ -1269,7 +1275,7 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
     return { result, block: bb, binding };
 }
 
-function createLocalCopy(ExprContext cx, bir:BasicBlock block, bir:CapturableRegister register, bir:Position pos) returns bir:Operand {
+function createLocalCopy(ClosureContext cx, bir:BasicBlock block, bir:CapturableRegister register, bir:Position pos) returns bir:Operand {
     bir:AssignTmpRegister localCopy = cx.createAssignTmpRegister(register.semType, pos);
     bir:AssignInsn insn = { operand: register, result: localCopy, pos };
     block.insns.push(insn);
