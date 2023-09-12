@@ -46,11 +46,19 @@ type CapturedRegisterMemo readonly & record {|
     bir:CapturedRegister innerRegister;
 |};
 
+type BlockState readonly & record {|
+    bir:Label label;
+    int instructionCount;
+|};
+
 type StmtContextState record {|
-    bir:FunctionCode code;
-    bir:RegionIndex[] openRegions;
+    int blockCount;
+    int registerCount;
+    int regionCount;
+    int openRegionCount;
+    table<BlockState> key(label) blockState;
     table<CapturedRegisterMemo> key(outerRegister) capturedRegisters;
-    int[] capturedRegisterNumbers;
+    int capturedRegisterCount;
 |};
 
 class StmtContext {
@@ -116,21 +124,30 @@ class StmtContext {
         return register;
     }
 
-    // TODO: we need a more efficient way to do this since we need to do this for each stmt
     function currentState() returns StmtContextState {
-        bir:FunctionCode code = self.code.clone();
-        bir:RegionIndex[] openRegions = self.openRegions.clone();
+        int blockCount = self.code.blocks.length();
+        int registerCount = self.code.registers.length();
+        int regionCount = self.code.regions.length();
+        table<BlockState> key(label) blockState = table key(label) from var block in self.code.blocks select { label: block.label, instructionCount: block.insns.length() };
+        int openRegionCount = self.openRegions.length();
         table<CapturedRegisterMemo> key(outerRegister) capturedRegisters = self.capturedRegisters.clone();
-        int[] capturedRegisterNumbers = self.capturedRegisterNumbers.clone();
-        return { code, openRegions, capturedRegisters, capturedRegisterNumbers };
+        int capturedRegisterCount = self.capturedRegisterNumbers.length();
+        return { blockCount, registerCount, regionCount, blockState,
+                 openRegionCount, capturedRegisters, capturedRegisterCount };
     }
 
     function restoreState(StmtContextState state) {
-        var { code, openRegions, capturedRegisters, capturedRegisterNumbers } = state;
-        self.code = code;
-        self.openRegions = openRegions;
+        var { blockCount, registerCount, regionCount, blockState, openRegionCount,
+              capturedRegisters, capturedRegisterCount } = state;
+        self.code.blocks = self.code.blocks.slice(0, blockCount);
+        self.code.registers = self.code.registers.slice(0, registerCount);
+        self.code.regions = self.code.regions.slice(0, regionCount);
+        foreach bir:BasicBlock bb in self.code.blocks {
+            bb.insns = bb.insns.slice(0, blockState.get(bb.label).instructionCount);
+        }
+        self.openRegions = self.openRegions.slice(0, openRegionCount);
         self.capturedRegisters = capturedRegisters;
-        self.capturedRegisterNumbers = capturedRegisterNumbers;
+        self.capturedRegisterNumbers = self.capturedRegisterNumbers.slice(0, capturedRegisterCount);
     }
 
     function markAsCaptured(bir:VarRegister register) {
@@ -139,11 +156,7 @@ class StmtContext {
     }
 
     function markAsDirectRef(bir:VarRegister register) {
-        self.directRefVarRegisterNumbers.push(register.number);
-    }
-
-    function clearDirectRefVarRegisters() {
-        self.directRefVarRegisterNumbers = [];
+        self.directRefVarRegisters.push(register.number);
     }
 
     function markCaptureInsn() {
@@ -411,8 +424,8 @@ function bindingsUpTo(BindingChain? bindingLimit, BindingChain? bindings) return
 
 function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bindings, s:Stmt stmt) returns CodeGenError|StmtEffect {
     StmtContextState initialState = cx.currentState();
-    bir:Label? initialBlockLabel = curBlock?.label;
     StmtEffect result;
+    int directRefVarRegisterCount = cx.directRefVarRegisters.length();
     if curBlock == () {
         return cx.semanticErr("unreachable code", s:range(stmt));
     }
@@ -444,22 +457,13 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bin
         result = check codeGenCallStmt(cx, curBlock, bindings, stmt);
     }
     bir:VarRegister[] shouldCopyRegisters = registersToBeLocallyStored(cx, initialState);
+    cx.directRefVarRegisters = cx.directRefVarRegisters.slice(0, directRefVarRegisterCount);
     if shouldCopyRegisters.length() != 0 {
         cx.restoreState(initialState);
-        bir:BasicBlock? bb = ();
-        foreach bir:BasicBlock b in cx.code.blocks {
-            if b.label == initialBlockLabel {
-                bb = b;
-                break;
-            }
-        }
-        if bb == () {
-            panic err:impossible("failed to find the initial block");
-        }
         foreach var register in shouldCopyRegisters {
             cx.markAsCaptured(register);
         }
-        return check codeGenStmt(cx, bb, bindings, stmt);
+        return check codeGenStmt(cx, curBlock, bindings, stmt);
     }
     return result;
 }
@@ -1376,25 +1380,4 @@ function registersToBeLocallyStored(StmtContext sc, StmtContextState initialStat
         }
     }
     return registers;
-}
-
-function newInstruction(bir:FunctionCode initialCode, int bbIndex, int insnIndex) returns boolean {
-    if initialCode.blocks.length() <= bbIndex {
-        return true;
-    }
-    bir:BasicBlock bb = initialCode.blocks[bbIndex];
-    return bb.insns.length() <= insnIndex;
-}
-
-function capturingRegisters(bir:CaptureInsn insn, int[] registers) returns int[] {
-    int[] captured = [];
-    foreach bir:CapturableRegister reg in insn.operands {
-        if reg !is bir:VarRegister {
-            continue;
-        }
-        if registers.indexOf(reg.number) != () {
-            captured.push(reg.number);
-        }
-    }
-    return captured;
 }
