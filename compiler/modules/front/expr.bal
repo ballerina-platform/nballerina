@@ -33,12 +33,6 @@ type DeclBinding record {|
     boolean used = false;
 |};
 
-type TmpAssignmentBinding record {|
-    string name;
-    bir:AssignTmpRegister reg;
-    DeclBinding unnarrowed;
-|};
-
 type NarrowBinding record {|
     string name;
     bir:NarrowRegister reg;
@@ -56,7 +50,7 @@ type AssignmentBinding record {|
 type FunctionMarker "func"; // value is chosen such that it fits in a small string
 
 type OccurrenceBinding NarrowBinding|AssignmentBinding;
-type Binding DeclBinding|NarrowBinding|AssignmentBinding|TmpAssignmentBinding;
+type Binding DeclBinding|NarrowBinding|AssignmentBinding;
 
 type BindingChain record {|
     Binding|FunctionMarker head;

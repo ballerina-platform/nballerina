@@ -443,11 +443,9 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bin
     else {
         result = check codeGenCallStmt(cx, curBlock, bindings, stmt);
     }
-    bir:VarRegister[] regs = registersToBeLocallyStored(cx, initialState);
-    if regs.length() != 0 {
+    bir:VarRegister[] shouldCopyRegisters = registersToBeLocallyStored(cx, initialState);
+    if shouldCopyRegisters.length() != 0 {
         cx.restoreState(initialState);
-        BindingChain? curBindings = bindings;
-        BindingChain? rangeEnd = curBindings;
         bir:BasicBlock? bb = ();
         foreach bir:BasicBlock b in cx.code.blocks {
             if b.label == initialBlockLabel {
@@ -458,20 +456,10 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bin
         if bb == () {
             panic err:impossible("failed to find the initial block");
         }
-        foreach var reg in regs {
-            bir:Operand op = createLocalCopy(cx, bb, reg, stmt.startPos);
-            if op !is bir:AssignTmpRegister {
-                panic err:impossible("creating a local copy of constant captured register");
-            }
-            string name = reg.name;
-            var { binding } = check lookupVarRefBinding(cx, name, curBindings, stmt.startPos);
-            curBindings = { head: { name, reg: op, unnarrowed: unnarrowBinding(binding) }, prev: curBindings };
+        foreach var register in shouldCopyRegisters {
+            cx.markAsCaptured(register);
         }
-        BindingChain rangeStart = <BindingChain>curBindings;
-        var { bindings: newBindings, block } = check codeGenStmt(cx, bb, curBindings, stmt);
-        // New bindings must at least contain the temporary bindings we added
-        newBindings = removeBindingRange(<BindingChain>newBindings, rangeStart, rangeEnd);
-        return { block, bindings: newBindings };
+        return check codeGenStmt(cx, bb, bindings, stmt);
     }
     return result;
 }
@@ -1387,7 +1375,7 @@ function registersToBeLocallyStored(StmtContext sc, StmtContextState initialStat
             }
         }
     }
-    return shouldCopy;
+    return registers;
 }
 
 function newInstruction(bir:FunctionCode initialCode, int bbIndex, int insnIndex) returns boolean {
