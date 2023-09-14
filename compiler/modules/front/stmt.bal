@@ -446,7 +446,7 @@ function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bin
     else {
         result = check codeGenCallStmt(cx, curBlock, bindings, stmt);
     }
-    bir:VarRegister[] shouldCopyRegisters = registersToBeLocallyStored(cx, initialState);
+    bir:VarRegister[] shouldCopyRegisters = registersToBeLocallyStored(cx, initialState, cx.directRefVarRegisters.slice(directRefVarRegisterCount));
     cx.directRefVarRegisters = cx.directRefVarRegisters.slice(0, directRefVarRegisterCount);
     cx.newCaptureInsn = false;
     if shouldCopyRegisters.length() != 0 {
@@ -1330,8 +1330,7 @@ function functionDefnIndex(ModuleSymbols mod, s:FunctionDefn defn) returns int? 
     return ();
 }
 
-function registersToBeLocallyStored(StmtContext sc, StmtContextState initialState) returns bir:VarRegister[] {
-    int[] directRefVarRegisters = sc.directRefVarRegisters;
+function registersToBeLocallyStored(StmtContext sc, StmtContextState initialState, int[] directRefVarRegisters) returns bir:VarRegister[] {
     if !sc.newCaptureInsn || directRefVarRegisters.length() == 0 {
         return [];
     }
