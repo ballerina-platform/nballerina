@@ -162,7 +162,7 @@ class ExprContext {
         // we need to check if the register captured by the child is in this function
         // if not we need to capture that register as well
         if self.registerInCurrentFunction(capturedReg) {
-            if capturedReg is bir:VarRegister {
+            if capturedReg is bir:DeclRegister {
                 self.stmtContext().markAsCaptured(capturedReg);
             }
             return capturedReg;
@@ -178,7 +178,7 @@ class ExprContext {
         self.stmtContext().markCaptureInsn();
     }
 
-    function isCaptured(bir:VarRegister register) returns boolean {
+    function isCaptured(bir:DeclRegister register) returns boolean {
         return self.stmtContext().isCaptured(register);
     }
 
@@ -1245,16 +1245,14 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
                 result = createLocalCopy(cx, bb, reg, ref.qNamePos);
             }
             else {
-                if bindingReg is bir:VarRegister {
-                    if cx.isCaptured(bindingReg) {
-                        result = createLocalCopy(cx, bb, bindingReg, ref.qNamePos);
-                    }
-                    else {
-                        cx.markAsDirectRef(bindingReg);
-                        result = constifyRegister(bindingReg);
-                    }
+                bir:DeclRegister underlyingReg = unnarrowBinding(b).reg;
+                if cx.isCaptured(underlyingReg) {
+                    result = createLocalCopy(cx, bb, underlyingReg, ref.qNamePos);
                 }
                 else {
+                    if bindingReg is bir:VarRegister {
+                        cx.markAsDirectRef(bindingReg);
+                    }
                     result = constifyRegister(bindingReg);
                 }
                 binding = result === bindingReg ? b : ();

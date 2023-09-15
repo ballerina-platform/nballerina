@@ -141,7 +141,7 @@ class StmtContext {
         self.innerCapturedRegisters = self.innerCapturedRegisters.slice(0, innerCapturedRegisterCount);
     }
 
-    function markAsCaptured(bir:VarRegister register) {
+    function markAsCaptured(bir:DeclRegister register) {
         uniquePush(self.innerCapturedRegisters, register.number);
     }
 
@@ -153,7 +153,7 @@ class StmtContext {
         self.newCaptureInsn = true;
     }
 
-    function isCaptured(bir:VarRegister register) returns boolean {
+    function isCaptured(bir:DeclRegister register) returns boolean {
         return self.innerCapturedRegisters.indexOf(register.number) != ();
     }
 
