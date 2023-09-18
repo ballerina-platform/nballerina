@@ -86,22 +86,12 @@ class VirtualModule {
         bir:Function func = self.functions[i];
         if func is bir:AnonFunction {
             map<bir:Register> parentRegs = {};
-            int parentIndex = func.parent.index;
-            while true {
-                bir:FunctionCode parent = check self.generateFunctionCode(parentIndex);
-                foreach var reg in parent.registers {
-                    string? name = reg.name;
-                    if name != () {
-                        parentRegs[string `r.${name}`] = reg;
-                    }
+            bir:FunctionCode parent = check self.generateFunctionCode(func.parent.index);
+            foreach bir:Register reg in parent.registers {
+                if reg !is bir:CapturableRegister {
+                    continue;
                 }
-                bir:Function parentFunc = self.functions[parentIndex];
-                if parentFunc is bir:FunctionDefn {
-                   break;
-                }
-                else {
-                    parentIndex = parentFunc.parent.index;
-                }
+                parentRegs[string `r.${reg.name}`] = reg;
             }
             code = toFunctionCode(self.pc, self.functionCodes[i], parentRegs);
         }
@@ -110,6 +100,19 @@ class VirtualModule {
         }
         self.birFunctionCodes[i] = code;
         return code;
+    }
+
+
+    public function hasCaptureInsn(int i) returns boolean {
+        bir:FunctionCode code = checkpanic self.generateFunctionCode(i);
+        foreach bir:BasicBlock bb in code.blocks {
+            foreach bir:Insn insn in bb.insns {
+                if insn is bir:CaptureInsn {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public function finish() returns err:Semantic? {
@@ -367,7 +370,7 @@ function toRegister(ParseContext pc, map<bir:Register> prevRegs, map<bir:Registe
             if captured == () {
                 panic error("parent function doesn't have the corresponding register to capture");
             }
-            if captured !is bir:DeclRegister|bir:CapturedRegister {
+            if captured !is bir:CapturableRegister {
                 panic error("unexpected captured register kind");
             }
             return [nameSexpr, <bir:CapturedRegister>{ pos, captured, number, semType: toSemType(pc, semType), name, scope }];
@@ -508,7 +511,7 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
         }
         ["capture", var result, var funcRef, ...var operandSexprs] => {
             int functionIndex = <int>functionHandleFromSexpr(pc, <FunctionRef>funcRef);
-            (bir:CapturedRegister|bir:DeclRegister)[] & readonly operands = from var operand in operandSexprs select <bir:CapturedRegister|bir:DeclRegister>lookupRegister(pc, <sexpr:Symbol>operand);
+            bir:CapturableRegister[] & readonly operands = from var operand in operandSexprs select <bir:CapturableRegister>lookupRegister(pc, <sexpr:Symbol>operand);
             return <bir:CaptureInsn>{
                 result: toResultRegister(pc, <sexpr:Symbol>result),
                 functionIndex,

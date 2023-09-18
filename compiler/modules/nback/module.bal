@@ -20,8 +20,16 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     // we know about all the anonFunctions before generating the function bodies.
     from int i in 0 ..< functions.length() do { _ = check birMod.generateFunctionCode(i); };
     foreach var func in functions {
-        llvm:FunctionType ty = check isClosureFunction(birMod, func) ? buildClosureFunctionSignature(func.decl, from var register in check closureCapturedRegisters(birMod, <bir:AnonFunction>func) select register.semType):
-                                                                       buildFunctionSignature(func.decl);
+        llvm:FunctionType ty;
+        if check isClosureFunction(birMod, func) {
+            bir:DeclRegister[] capturedRegisters = from var register in check closureCapturedRegisters(birMod, <bir:AnonFunction>func)
+                                                     select underlyingRegister(register);
+            ty = buildClosureFunctionSignature(func.decl, llvm:pointerType(closureStructType(capturedRegisters),
+                                                                           HEAP_ADDR_SPACE));
+        }
+        else {
+            ty = buildFunctionSignature(func.decl);
+        }
         llFuncTypes.push(ty);
         var [mangledName, identifier] = functionIdentifiers(modId, func);
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
@@ -60,7 +68,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     return [llMod, createTypeUsage(mod.usedSemTypes)];
 }
 
-function closureCapturedRegisters(bir:Module mod, bir:AnonFunction func) returns bir:Register[]|BuildError {
+function closureCapturedRegisters(bir:Module mod, bir:AnonFunction func) returns bir:CapturedRegister[]|BuildError {
     bir:FunctionCode code = check mod.generateFunctionCode(func.index);
     return from var register in code.registers where register is bir:CapturedRegister select register;
 }
@@ -78,8 +86,7 @@ function isClosureFunction(bir:Module mod, bir:Function func) returns boolean|Bu
     return false;
 }
 
-function buildClosureFunctionSignature(t:FunctionSignature signature, t:SemType[] capturedValueTys) returns llvm:FunctionType {
-    llvm:PointerType llClosurePtrTy = llvm:pointerType(closureType(from var each in capturedValueTys select each), 1);
+function buildClosureFunctionSignature(t:FunctionSignature signature, llvm:PointerType llClosurePtrTy) returns llvm:FunctionType {
     llvm:Type[] & readonly paramTypes = [llClosurePtrTy, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
     RetRepr repr = semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {

@@ -8,9 +8,9 @@ type Range d:Range;
 
 class VerifyContext {
     private final t:Context tc;
-    private final Function func;
     private final FunctionDefn moduleDefn;
     final Module mod;
+    final Function func;
     final int[] capturedFunctions = [];
 
     function init(Module mod, Function func) {
@@ -459,13 +459,16 @@ function verifyCaptureInsn(VerifyContext vc, CaptureInsn insn) returns err:Inter
     if vc.mod.getFunctions()[insn.functionIndex] !is AnonFunction {
         return vc.invalidErr("only AnonFunctions can capture values", insn.pos);
     }
-    int[] capturedRegisters = [];
+    CapturableRegister[] capturedRegisters = [];
+    Register[] regs = (checkpanic vc.mod.generateFunctionCode(vc.func.index)).registers;
     foreach Operand each in insn.operands {
-        int regNum = each.number;
-        if capturedRegisters.indexOf(regNum) != () {
+        if capturedRegisters.indexOf(each) != () {
             return vc.invalidErr("same value is captured more than once", insn.pos);
         }
-        capturedRegisters.push(regNum);
+        if regs.indexOf(each) == () {
+            return vc.invalidErr("capturing registers outside of current function", insn.pos);
+        }
+        capturedRegisters.push(each);
     }
     vc.capturedFunctions.push(insn.functionIndex);
 }

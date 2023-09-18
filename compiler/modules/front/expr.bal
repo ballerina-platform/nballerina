@@ -41,7 +41,7 @@ type NarrowBinding record {|
 
 type AssignmentBinding record {|
     string name;
-    bir:DeclRegister reg; // same as unnarrowed.reg and invalidates.underlying.underling...
+    bir:DeclRegister|bir:CapturedRegister reg; // same as unnarrowed.reg and invalidates.underlying.underling...
     DeclBinding unnarrowed;
     bir:NarrowRegister invalidates;
     Position pos;
@@ -157,16 +157,41 @@ class ExprContext {
         return bir:createAssignTmpRegister(self.code, t, pos);
     }
 
+    function captureOperand(bir:CapturableRegister capturedReg) returns bir:CapturableRegister {
+        // NOTE: this is used when creating bir:CaptureInsn (ie. from the parent function).
+        // we need to check if the register captured by the child is in this function
+        // if not we need to capture that register as well
+        if self.registerInCurrentFunction(capturedReg) {
+            if capturedReg is bir:DeclRegister {
+                self.stmtContext().markAsCaptured(capturedReg);
+            }
+            return capturedReg;
+        }
+        return self.getCaptureRegister(capturedReg.semType, capturedReg);
+    }
+
+    function markAsDirectRef(bir:VarRegister register) {
+        self.stmtContext().markAsDirectRef(register);
+    }
+
+    function markCaptureInsn() {
+        self.stmtContext().markCaptureInsn();
+    }
+
+    function isCaptured(bir:DeclRegister register) returns boolean {
+        return self.stmtContext().isCaptured(register);
+    }
+
+    private function registerInCurrentFunction(bir:Register reg) returns boolean {
+        return reg.number < self.code.registers.length() && self.code.registers[reg.number] === reg;
+    }
+
     function createNarrowRegister(bir:SemType t, bir:Register underlying, Position? pos = ()) returns bir:NarrowRegister {
         return bir:createNarrowRegister(self.code, t, underlying, pos);
     }
 
-    function createCaptureRegister(bir:SemType t, bir:DeclRegister|bir:CapturedRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
-        StmtContext? sc = self.sc;
-        if sc == () {
-            panic err:impossible("attempt to capture register in constant expression");
-        }
-        return sc.createCaptureRegister(t, underlying, pos);
+    function getCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
+        return self.stmtContext().getCaptureRegister(t, underlying, pos);
     }
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {
@@ -184,7 +209,7 @@ class ExprContext {
         }
     }
 
-    function stmtContext() returns StmtContext|CodeGenError {
+    function stmtContext() returns StmtContext {
         return <StmtContext>self.sc;
     }
 
@@ -1211,23 +1236,37 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
             var { binding: b, inOuterFunction } = v;
             bir:Register bindingReg = b.reg;
             if inOuterFunction {
-                if bindingReg !is bir:DeclRegister|bir:CapturedRegister {
+                if bindingReg !is bir:CapturableRegister {
                     panic err:impossible("unexpected underlying register to capture");
                 }
-                if bindingReg is bir:DeclRegister && bindingReg !is bir:FinalRegister|bir:ParamRegister {
-                    return cx.unimplementedErr("capturing non-final variables not implemented", ref.qNamePos);
-                }
-                bir:CapturedRegister reg = cx.createCaptureRegister(bindingReg.semType, bindingReg, ref.qNamePos);
+                t:SemType semType = bindingReg.semType;
+                bir:CapturedRegister reg = cx.getCaptureRegister(semType, bindingReg, ref.qNamePos);
                 binding = ();
-                result = constifyRegister(reg);
+                result = createLocalCopy(cx, bb, reg, ref.qNamePos);
             }
             else {
-                result = constifyRegister(bindingReg);
+                bir:DeclRegister underlyingReg = unnarrowBinding(b).reg;
+                if cx.isCaptured(underlyingReg) {
+                    result = createLocalCopy(cx, bb, underlyingReg, ref.qNamePos);
+                }
+                else {
+                    if bindingReg is bir:VarRegister {
+                        cx.markAsDirectRef(bindingReg);
+                    }
+                    result = constifyRegister(bindingReg);
+                }
                 binding = result === bindingReg ? b : ();
             }
         }
-    }  
+    }
     return { result, block: bb, binding };
+}
+
+function createLocalCopy(ExprContext cx, bir:BasicBlock block, bir:CapturableRegister register, bir:Position pos) returns bir:Operand {
+    bir:AssignTmpRegister localCopy = cx.createAssignTmpRegister(register.semType, pos);
+    bir:AssignInsn insn = { operand: register, result: localCopy, pos };
+    block.insns.push(insn);
+    return constifyRegister(localCopy);
 }
 
 function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
@@ -1513,16 +1552,18 @@ function genLocalFunction(ExprContext cx, string funcName, Position pos) returns
         return { operand: functionConstOperand(cx, ref), signature: ref.signature };
     }
     else if ref is BindingLookupResult {
-        var { binding } = ref;
+        var { binding, inOuterFunction } = ref;
         bir:Register bindingReg = binding.reg;
         t:SemType semType = bindingReg.semType;
+        bir:Register operand = inOuterFunction ? cx.getCaptureRegister(semType, <bir:CapturableRegister>bindingReg):
+                                                 bindingReg;
         t:FunctionAtomicType? atom = t:functionAtomicType(cx.mod.tc, semType);
         if atom != () {
             t:FunctionSignature signature = t:functionSignature(cx.mod.tc, atom);
-            return { operand: bindingReg, signature };
+            return { operand, signature };
         }
         if t:isSubtype(cx.mod.tc, semType, t:FUNCTION) {
-            return { operand: bindingReg, signature: () };
+            return { operand, signature: () };
         }
     }
     return cx.semanticErr("only a value of function type can be called", pos);
@@ -1548,17 +1589,19 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
 }
 
 function codeGenAnonFunction(ExprContext cx, bir:BasicBlock curBlock, s:AnonFunction func, bir:Position pos) returns CodeGenError|ExprEffect {
-    StmtContext stmtContext = check cx.stmtContext();
+    StmtContext stmtContext = cx.stmtContext();
     t:FunctionSignature signature = check resolveFunctionSignature(cx.mod, stmtContext.moduleLevelDefn, func);
     func.signature = signature;
-    var [ref, ...operands] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);
-    if operands.length() == 0 {
+    var [ref, ...capturedOperands] = check stmtContext.mod.addAnonFunction(func, stmtContext.moduleLevelDefn, cx.bindings);
+    if capturedOperands.length() == 0 {
         bir:FunctionConstOperand result = functionValOperand(cx.mod.tc, ref);
         return { result, block: curBlock };
     }
     bir:TmpRegister result = cx.createTmpRegister(t:functionSemType(cx.mod.tc, signature));
-    bir:CaptureInsn insn = { functionIndex: ref.index, result, operands: operands.cloneReadOnly(), pos };
+    bir:CapturableRegister[] & readonly operands = from var operand in capturedOperands select cx.captureOperand(operand);
+    bir:CaptureInsn insn = { functionIndex: ref.index, result, operands, pos };
     curBlock.insns.push(insn);
+    cx.markCaptureInsn();
     return { result, block: curBlock };
 }
 

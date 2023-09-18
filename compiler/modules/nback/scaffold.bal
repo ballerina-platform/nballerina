@@ -137,6 +137,15 @@ type UsedSemType record {|
     llvm:ConstPointerValue? called = ();
 |};
 
+final RuntimeFunction functionAllocHeapCapture = {
+    name: "function_alloc_heap_capture",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: []
+    },
+    attrs: []
+};
+
 class Scaffold {
     *Context;
     private final Module mod;
@@ -186,6 +195,8 @@ class Scaffold {
         builder.positionAtEnd(entry);
         self.addresses = [];
         self.setCurrentPosition(builder, defn.position);
+        bir:Module birMod = mod.bir;
+        bir:DeclRegister[] capturedDeclRegisters = birMod.hasCaptureInsn(defn.index) ? capturedRegisters(birMod, code) : [];
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
             string? name;
@@ -195,7 +206,19 @@ class Scaffold {
             else {
                 name = register.name;
             }
-            self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
+            if register is bir:DeclRegister && capturedDeclRegisters.indexOf(register) != () {
+                llvm:PointerValue heapPtr = <llvm:PointerValue>buildRuntimeFunctionCall(builder, self, functionAllocHeapCapture, []);
+                heapPtr = builder.bitCast(heapPtr, llvm:pointerType(exactValueType(register.semType), HEAP_ADDR_SPACE), name);
+                self.addresses.push(heapPtr);
+            }
+            else if register is bir:CapturedRegister && !captureByValue(underlyingRegister(register)) {
+                // These are heap allocated values that are passed in from the closure.
+                // We change them to the correct pointer when we save parameters
+                self.addresses.push(constNilTaggedPtr(self));
+            }
+            else {
+                self.addresses.push(builder.alloca(reprs[i].llvm, (), name));
+            }
         }
         if moduleDI !is () && moduleDI.debugFull {
             declareVariables(self, <DIScaffold>diScaffold, entry, code.registers);
@@ -221,10 +244,21 @@ class Scaffold {
             if register !is bir:CapturedRegister {
                 continue;
             }
-            llvm:Value arg = builder.load(builder.getElementPtr(closure, [constIndex(self, 0), constIndex(self, index)]));
-            builder.store(arg, self.address(register));
+            llvm:PointerValue heapPtr = builder.getElementPtr(closure, [constIndex(self, 0),
+                                                                        constIndex(self, index)]);
+            bir:DeclRegister capturedReg = underlyingRegister(register);
+            if !captureByValue(capturedReg) {
+                self.changeAddress(register, <llvm:PointerValue>builder.load(heapPtr));
+            }
+            else {
+                builder.store(builder.load(heapPtr), self.address(register));
+            }
             index += 1;
         }
+    }
+
+    function changeAddress(bir:Register r, llvm:PointerValue ptr) {
+        self.addresses[r.number] = ptr;
     }
 
     function address(bir:Register r) returns llvm:PointerValue => self.addresses[r.number];
@@ -448,6 +482,10 @@ class Scaffold {
     function scheduleBlockNarrowReg(bir:Label label, bir:NarrowRegister reg) {
         self.narrowRegBuilders[label].schedule(reg);
     }
+}
+
+function captureByValue(bir:CapturableRegister reg) returns boolean {
+    return reg is bir:ParamRegister|bir:FinalRegister;
 }
 
 function functionPartIndex(bir:Function func) returns int {
@@ -680,15 +718,53 @@ function functionValueType(t:FunctionSignature signature) returns llvm:StructTyp
                             llvm:pointerType(buildFunctionSignature(signature))]);
 }
 
-function closureValueType(t:FunctionSignature signature, t:SemType[] capturedTypes) returns llvm:StructType {
+function closureValueType(t:FunctionSignature signature, bir:DeclRegister[] capturedValues) returns llvm:StructType {
+    llvm:StructType closureTy = closureStructType(capturedValues);
     return llvm:structType([llvm:pointerType(llFunctionDescType),
-                            llvm:pointerType(buildClosureFunctionSignature(signature, capturedTypes)),
+                            llvm:pointerType(buildClosureFunctionSignature(signature, llvm:pointerType(closureTy, HEAP_ADDR_SPACE))),
                             LLVM_INT,
-                            closureType(capturedTypes)]);
+                            closureTy]);
 }
 
-function closureType(t:SemType[] capturedValTypes) returns llvm:StructType {
-    llvm:Type[] capturedTys = from var each in capturedValTypes select exactValueType(each);
-    return llvm:structType(capturedTys);
+function closureStructType(bir:DeclRegister[] capturedValues) returns llvm:StructType {
+    llvm:Type[] capturedTypes = [];
+    foreach var capturedValue in capturedValues {
+        llvm:Type valueTy = exactValueType(capturedValue.semType);
+        if captureByValue(capturedValue) {
+            capturedTypes.push(valueTy);
+        }
+        else {
+            capturedTypes.push(llvm:pointerType(valueTy, HEAP_ADDR_SPACE));
+        }
+    }
+    return llvm:structType(capturedTypes);
 }
 
+function capturedRegisters(bir:Module mod, bir:FunctionCode code) returns bir:DeclRegister[] {
+    bir:Register[] parentRegisters = code.registers;
+    bir:DeclRegister[] capturedRegisters = [];
+    foreach bir:BasicBlock bb in code.blocks {
+        foreach bir:Insn insn in bb.insns {
+            if insn !is bir:CaptureInsn {
+                continue;
+            }
+            bir:DeclRegister[] captured = from bir:CapturableRegister reg in insn.operands
+                                            select reg is bir:DeclRegister ? reg : underlyingRegister(reg);
+            foreach var reg in captured {
+                int index = reg.number;
+                if index < parentRegisters.length() && parentRegisters[index] === reg {
+                    capturedRegisters.push(reg);
+                }
+            }
+        }
+    }
+    return capturedRegisters;
+}
+
+function underlyingRegister(bir:CapturedRegister register) returns bir:DeclRegister {
+    bir:CapturableRegister captured = register.captured;
+    while captured is bir:CapturedRegister {
+        captured = captured.captured;
+    }
+    return <bir:DeclRegister>captured;
+}

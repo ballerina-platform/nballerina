@@ -56,3 +56,8 @@ ClosurePtr _bal_function_alloc_closure_val(uint32_t nValues) {
     ClosurePtr closure = _bal_alloc(sizeof(Closure) + sizeof(TaggedPtr) * nValues);
     return closure;
 }
+
+GC TaggedPtr *_bal_function_alloc_heap_capture() {
+    GC TaggedPtr *ptr = _bal_alloc(sizeof(TaggedPtr));
+    return ptr;
+}

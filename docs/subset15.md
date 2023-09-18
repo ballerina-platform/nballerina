@@ -418,13 +418,12 @@ Two kinds of `import` are supported.
 
 * `list-constructor-expr` and `mapping-constructor-expr` are not allowed within a `const-expr`.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
-* Anonymous functions do not support capturing non-final variables.
 
 ## Additions from subset 14
 
 * Add support for `function` values
 * Add support for `object` type descriptors with restrictions
-* Add support for anonymous functions with restrictions
+* Add support for anonymous functions
 
 ## Implemented spec changes since 2022R1
 

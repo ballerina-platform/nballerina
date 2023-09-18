@@ -12,6 +12,7 @@ public type Module object {
     // which are in arrays in this.
     public function getTypeContext() returns t:Context;
     public function getFunctions() returns Function[];
+    public function hasCaptureInsn(int i) returns boolean;
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
     public function symbolToString(int partIndex, Symbol sym) returns string;
     // Get the File for a give part index
@@ -215,6 +216,7 @@ public type CapturedRegister readonly & record {|
     CAPTURED_REGISTER_KIND kind = CAPTURED_REGISTER_KIND;
     DeclRegister|CapturedRegister captured;
     RegisterScope scope;
+    string name;
 |};
 
 public type NarrowRegister readonly & record {|
@@ -259,7 +261,7 @@ public function createNarrowRegister(FunctionCode code, SemType semType, Registe
     return r;
 }
 
-public function createCapturedRegister(FunctionCode code, SemType semType, DeclRegister|CapturedRegister captured, string? name, RegisterScope scope, Position? pos = ()) returns CapturedRegister {
+public function createCapturedRegister(FunctionCode code, SemType semType, DeclRegister|CapturedRegister captured, string name, RegisterScope scope, Position? pos = ()) returns CapturedRegister {
     CapturedRegister r = { number: code.registers.length(), captured, semType, pos, scope, name };
     code.registers.push(r);
     return r;
@@ -697,6 +699,8 @@ public type CallIndirectInsn readonly & record {|
     boolean restParamIsList;
 |};
 
+public type CapturableRegister CapturedRegister|DeclRegister;
+
 # Create a function value from an AnonFunction.
 # The operands are the values for the captured registers.
 public type CaptureInsn readonly & record {|
@@ -704,7 +708,7 @@ public type CaptureInsn readonly & record {|
     INSN_CAPTURE name = INSN_CAPTURE;
     # Given functionIndex could be used in only one CaptureInsn
     int functionIndex;
-    [CapturedRegister|DeclRegister...] operands;
+    [CapturableRegister...] operands;
 |};
 
 # Assign a value to a register.
@@ -713,7 +717,7 @@ public type CaptureInsn readonly & record {|
 public type AssignInsn readonly & record {|
     *InsnBase;
     INSN_ASSIGN name = INSN_ASSIGN;
-    AssignTmpRegister|VarRegister|FinalRegister result;
+    AssignTmpRegister|VarRegister|FinalRegister|CapturedRegister result;
     Operand operand;
 |};
 

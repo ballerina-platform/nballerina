@@ -6,8 +6,7 @@ public function main() {
         return x + a;
     };
     a = 10;
-    io:println(a); // @output 10
-    int b = f(5);
-    io:println(b); // @output 15
+    int b = a + 5;
+    int c = f(b);
+    io:println(c); // @output 25
 }
-

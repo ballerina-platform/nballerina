@@ -41,8 +41,22 @@ type ClosureContext object {
 };
 
 type CapturedRegisterMemo readonly & record {|
-    int captured;
-    bir:CapturedRegister reg;
+    bir:CapturableRegister outerRegister;
+    bir:CapturedRegister innerRegister;
+|};
+
+type BlockState readonly & record {|
+    bir:Label label;
+    int instructionCount;
+|};
+
+type StmtContextState record {|
+    int registerCount;
+    int regionCount;
+    int openRegionCount;
+    table<BlockState> key(label) blockState;
+    table<CapturedRegisterMemo> key(outerRegister) capturedRegisters;
+    int innerCapturedRegisterCount;
 |};
 
 class StmtContext {
@@ -54,10 +68,13 @@ class StmtContext {
     final bir:FunctionCode code;
     final t:SemType returnType;
     final s:FunctionDefn moduleLevelDefn;
+    table<CapturedRegisterMemo> key(outerRegister) outerCapturedRegisters = table[];
     LoopContext? loopContext = ();
     bir:RegionIndex[] openRegions = [];
     bir:RegisterScope[] scopeStack = [];
-    table<CapturedRegisterMemo> key(captured) capturedRegisters = table [];
+    int[] innerCapturedRegisters = [];
+    boolean newCaptureInsn = false;
+    int[] directRefVarRegisters = [];
 
     function init(Module mod, ModuleSymbols syms, s:Function func, s:FunctionDefn moduleLevelDefn, t:SemType returnType) {
         self.mod = mod;
@@ -90,14 +107,54 @@ class StmtContext {
         return bir:createParamRegister(self.code, t, pos, name, self.getCurrentScope());
     }
 
-    function createCaptureRegister(bir:SemType t, bir:DeclRegister|bir:CapturedRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
-        CapturedRegisterMemo? memo = self.capturedRegisters[underlying.number];
+    function getCaptureRegister(bir:SemType t, bir:CapturableRegister underlying, Position? pos = ()) returns bir:CapturedRegister {
+        // We need to ensure for a given register in the outer function, there is only one captured register.
+        CapturedRegisterMemo? memo = self.outerCapturedRegisters[underlying];
         if memo != () {
-            return memo.reg;
+            return memo.innerRegister;
         }
         bir:CapturedRegister register = bir:createCapturedRegister(self.code, t, underlying, underlying.name, self.getCurrentScope(), pos);
-        self.capturedRegisters.add({ captured: underlying.number, reg: register });
+        self.outerCapturedRegisters.add({ outerRegister: underlying, innerRegister: register });
         return register;
+    }
+
+    function currentState() returns StmtContextState {
+        int registerCount = self.code.registers.length();
+        int regionCount = self.code.regions.length();
+        table<BlockState> key(label) blockState = table key(label) from var block in self.code.blocks select { label: block.label, instructionCount: block.insns.length() };
+        int openRegionCount = self.openRegions.length();
+        table<CapturedRegisterMemo> key(outerRegister) capturedRegisters = self.outerCapturedRegisters.clone();
+        int innerCapturedRegisterCount = self.innerCapturedRegisters.length();
+        return { registerCount, regionCount, blockState, openRegionCount, capturedRegisters, innerCapturedRegisterCount };
+    }
+
+    function restoreState(StmtContextState state) {
+        var { registerCount, regionCount, blockState, openRegionCount, capturedRegisters, innerCapturedRegisterCount } = state;
+        self.code.blocks = self.code.blocks.slice(0, blockState.length());
+        self.code.registers = self.code.registers.slice(0, registerCount);
+        self.code.regions = self.code.regions.slice(0, regionCount);
+        foreach bir:BasicBlock bb in self.code.blocks {
+            bb.insns = bb.insns.slice(0, blockState.get(bb.label).instructionCount);
+        }
+        self.openRegions = self.openRegions.slice(0, openRegionCount);
+        self.outerCapturedRegisters = capturedRegisters;
+        self.innerCapturedRegisters = self.innerCapturedRegisters.slice(0, innerCapturedRegisterCount);
+    }
+
+    function markAsCaptured(bir:DeclRegister register) {
+        uniquePush(self.innerCapturedRegisters, register.number);
+    }
+
+    function markAsDirectRef(bir:VarRegister register) {
+        uniquePush(self.directRefVarRegisters, register.number);
+    }
+
+    function markCaptureInsn() {
+        self.newCaptureInsn = true;
+    }
+
+    function isCaptured(bir:DeclRegister register) returns boolean {
+        return self.innerCapturedRegisters.indexOf(register.number) != ();
     }
 
     public function getCurrentScope() returns bir:RegisterScope {
@@ -356,36 +413,50 @@ function bindingsUpTo(BindingChain? bindingLimit, BindingChain? bindings) return
 }
 
 function codeGenStmt(StmtContext cx, bir:BasicBlock? curBlock, BindingChain? bindings, s:Stmt stmt) returns CodeGenError|StmtEffect {
+    StmtContextState initialState = cx.currentState();
+    StmtEffect result;
+    int directRefVarRegisterCount = cx.directRefVarRegisters.length();
     if curBlock == () {
         return cx.semanticErr("unreachable code", s:range(stmt));
     }
     else if stmt is ScopedStmt {
-        return codeGenScopedStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenScopedStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:IfElseStmt {
-        return codeGenIfElseStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenIfElseStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:BreakContinueStmt {
-        return codeGenBreakContinueStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenBreakContinueStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:ReturnStmt {
-        return codeGenReturnStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenReturnStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:PanicStmt {
-        return codeGenPanicStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenPanicStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:VarDeclStmt {
-        return codeGenVarDeclStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenVarDeclStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:AssignStmt {
-        return codeGenAssignStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenAssignStmt(cx, curBlock, bindings, stmt);
     }
     else if stmt is s:CompoundAssignStmt {
-        return codeGenCompoundAssignStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenCompoundAssignStmt(cx, curBlock, bindings, stmt);
     }
     else {
-        return codeGenCallStmt(cx, curBlock, bindings, stmt);
+        result = check codeGenCallStmt(cx, curBlock, bindings, stmt);
     }
+    bir:VarRegister[] shouldCopyRegisters = registersToBeLocallyStored(cx, initialState, cx.directRefVarRegisters.slice(directRefVarRegisterCount));
+    cx.directRefVarRegisters = cx.directRefVarRegisters.slice(0, directRefVarRegisterCount);
+    cx.newCaptureInsn = false;
+    if shouldCopyRegisters.length() != 0 {
+        cx.restoreState(initialState);
+        foreach var register in shouldCopyRegisters {
+            cx.markAsCaptured(register);
+        }
+        return check codeGenStmt(cx, curBlock, bindings, stmt);
+    }
+    return result;
 }
 
 function codeGenScopedStmt(StmtContext cx, bir:BasicBlock curBlock, BindingChain? bindings, ScopedStmt stmt) returns CodeGenError|StmtEffect {
@@ -894,26 +965,33 @@ function codeGenAssignToVar(StmtContext cx, bir:BasicBlock startBlock, BindingCh
     return { block: nextBlock, bindings };
 }
 
-function lookupVarRefForAssign(StmtContext cx, BindingChain? initialBindings, string varName, Position pos) returns CodeGenError|[bir:VarRegister, BindingChain?] {
-    Binding binding = check lookupVarRefBinding(cx, varName, initialBindings, pos);
+function lookupVarRefForAssign(StmtContext cx, BindingChain? initialBindings, string varName, Position pos) returns CodeGenError|[bir:VarRegister|bir:CapturedRegister, BindingChain?] {
+    var { binding, inOuterFunction } = check lookupVarRefBinding(cx, varName, initialBindings, pos);
     DeclBinding unnarrowed = unnarrowBinding(binding);
     if unnarrowed.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`, pos);
     }
+    bir:VarRegister|bir:CapturedRegister reg;
     bir:VarRegister unnarrowedReg = <bir:VarRegister>unnarrowed.reg; // assigning to final or param registers are semantic errors
+    if inOuterFunction {
+        reg = cx.getCaptureRegister(unnarrowedReg.semType, unnarrowedReg, pos);
+    }
+    else {
+        reg = unnarrowedReg;
+    }
     BindingChain? bindings;
     if binding is NarrowBinding {
         // create an assignment binding shadowing the narrowed binding
-        bindings = { head: { name: varName, reg: unnarrowedReg, unnarrowed, pos, invalidates: binding.reg }, prev: initialBindings };
+        bindings = { head: { name: varName, reg, unnarrowed, pos, invalidates: binding.reg }, prev: initialBindings };
     }
     else {
         // no narrowed binding in effect
         bindings = ();
     }
-    return [unnarrowedReg, bindings];
+    return [reg, bindings];
 }
 
-function codeGenAssign(StmtContext cx, BindingChain? initialBindings, bir:BasicBlock block, bir:VarRegister|bir:FinalRegister result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
+function codeGenAssign(StmtContext cx, BindingChain? initialBindings, bir:BasicBlock block, bir:VarRegister|bir:FinalRegister|bir:CapturedRegister result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(block, initialBindings, semType, expr);
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
@@ -924,7 +1002,14 @@ function codeGenLExpr(StmtContext cx, bir:BasicBlock startBlock, BindingChain? i
     bir:Register reg;
     bir:BasicBlock block;
     if container is s:VarRefExpr {
-        reg = (check lookupVarRefBinding(cx, container.name, initialBindings, container.startPos)).reg;
+        var { binding, inOuterFunction } = check lookupVarRefBinding(cx, container.name, initialBindings, container.startPos);
+        bir:Register underlying = binding.reg;
+        if inOuterFunction {
+            reg = cx.getCaptureRegister(underlying.semType, <bir:CapturableRegister>underlying);
+        }
+        else {
+            reg = underlying;
+        }
         block = startBlock;
     }
     else  {
@@ -1158,10 +1243,10 @@ function codeGenCheckingCond(ExprContext cx, bir:BasicBlock bb, bir:Register ope
     return { result, block: okBlock };
 }
 
-function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings, Position pos) returns Binding|CodeGenError {
+function lookupVarRefBinding(StmtContext cx, string name, BindingChain? bindings, Position pos) returns BindingLookupResult|CodeGenError {
     var b = check lookupLocalVarRef(cx, cx.syms, name, bindings, pos);
     if b is BindingLookupResult {
-        return b.binding;
+        return b;
     }
     else {
         return cx.semanticErr("an lvalue can only refer to a variable definition", pos);
@@ -1243,4 +1328,38 @@ function functionDefnIndex(ModuleSymbols mod, s:FunctionDefn defn) returns int? 
         index += 1;
     }
     return ();
+}
+
+function registersToBeLocallyStored(StmtContext sc, StmtContextState initialState, int[] directRefVarRegisters) returns bir:VarRegister[] {
+    if !sc.newCaptureInsn || directRefVarRegisters.length() == 0 {
+        return [];
+    }
+    bir:VarRegister[] registers = [];
+    bir:FunctionCode code = sc.code;
+    foreach bir:BasicBlock bb in code.blocks {
+        bir:Insn[] newInsns;
+        if initialState.blockState.hasKey(bb.label) {
+            newInsns = bb.insns.slice(initialState.blockState.get(bb.label).instructionCount);
+        }
+        else {
+            newInsns = bb.insns;
+        }
+        foreach bir:Insn insn in newInsns {
+            if insn is bir:CaptureInsn {
+                registers.push(...from var register in insn.operands
+                                    where register is bir:VarRegister &&
+                                          directRefVarRegisters.indexOf(register.number) != () &&
+                                          registers.indexOf(register) == ()
+                                    select register);
+            }
+        }
+    }
+    return registers;
+}
+
+function uniquePush(int[] buffer, int val) {
+    if buffer.indexOf(val) != () {
+        return;
+    }
+    buffer.push(val);
 }

@@ -6,7 +6,8 @@ function foo(boolean flag, int offset) returns F {
         int offset = 10; // @error
         if (flag) {
             return x + offset;
-        } else {
+        }
+        else {
             return x - offset;
         }
     };

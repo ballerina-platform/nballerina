@@ -21,6 +21,8 @@ class Module {
     final bir:Function[] functions;
     final bir:Function[] parentStack = [];
     final bir:FunctionCode?[] functionCodes = [];
+    final boolean[] enclosingFunction = [];
+    final [s:AnonFunction, bir:InternalFunctionRef][] anonFunctionCache = [];
 
     function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
         self.id = id;
@@ -52,6 +54,7 @@ class Module {
         if memo != () {
             return memo;
         }
+        self.enclosingFunction[i] = false;
         self.parentStack.push(self.functions[i]);
         s:FunctionDefn defn = self.functionDefnSource[i];
         bir:FunctionCode functionCode = check codeGenFunction(self, self.functionDefnSource[i], defn, self.functions[i].decl);
@@ -60,12 +63,21 @@ class Module {
         return functionCode;
     }
 
-    public function addAnonFunction(s:AnonFunction func, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:InternalFunctionRef, bir:CapturedRegister|bir:DeclRegister...]|CodeGenError {
+    public function addAnonFunction(s:AnonFunction func, s:FunctionDefn moduleLevelDefn, BindingChain? bindings) returns [bir:InternalFunctionRef, bir:CapturableRegister...]|CodeGenError {
+        foreach var [cachedFunc, ref] in self.anonFunctionCache {
+            if func === cachedFunc {
+                bir:FunctionCode code = check self.generateFunctionCode(ref.index);
+                return [ref, ...from var reg in code.registers where reg is bir:CapturedRegister select reg.captured];
+            }
+        }
         bir:Function parent = self.parentStack[self.parentStack.length() - 1];
+        self.enclosingFunction[parent.index] = true;
         t:FunctionSignature signature = <t:FunctionSignature>func.signature;
         int index = self.functions.length();
+        self.enclosingFunction[index] = false;
         bir:InternalFunctionRef ref = { index, signature, erasedSignature: signature };
         bir:AnonFunction birFunc =  { index, decl: signature, position: func.startPos, parent };
+        self.anonFunctionCache.push([func, ref]);
         self.functions.push(birFunc);
         self.parentStack.push(birFunc);
         // NOTE: we need to codegen the func in order to figure out it's capture values
@@ -74,7 +86,11 @@ class Module {
         self.functionCodes[birFunc.index] = code;
         return [ref, ...from var reg in code.registers where reg is bir:CapturedRegister select reg.captured];
     }
-   
+
+    public function hasCaptureInsn(int i) returns boolean {
+        return self.enclosingFunction[i];
+    }
+
     public function finish() returns err:Semantic? {
         map<Import>[] partPrefixes = self.syms.partPrefixes;
         foreach int i in 0 ..< partPrefixes.length() {
