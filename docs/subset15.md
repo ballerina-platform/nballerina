@@ -65,7 +65,7 @@ For programs that are in the subset, the compiler should conform to the Ballerin
    * error constructor `error(msg)`
    * `check` expression
    * `checkpanic` expression
-   * explicit anonymous function `function (T1 A1, T2 A2, ..., Tn An) { S1, S2, ..., Sn }`
+   * anonymous function with explicit parameter types `function (T1 P1, T2 P2, ..., Tn Pn) { ... }`
 * Langlib functions:
   * `array:length`
   * `array:push`
@@ -419,7 +419,7 @@ Two kinds of `import` are supported.
 
 * `list-constructor-expr` and `mapping-constructor-expr` are not allowed within a `const-expr`.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
-* Once a non-final value is captured it will not be narrowed. If it is already narrowed at the point of capture then capturing will undo the narrowing.
+* After a variable is captured, its type can no longer be narrowed (e.g. by a type test) unless the variable is final.
 
 ## Additions from subset 14
 
