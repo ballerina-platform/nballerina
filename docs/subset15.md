@@ -65,6 +65,7 @@ For programs that are in the subset, the compiler should conform to the Ballerin
    * error constructor `error(msg)`
    * `check` expression
    * `checkpanic` expression
+   * anonymous function with explicit parameter types `function (T1 P1, T2 P2, ..., Tn Pn) { ... }`
 * Langlib functions:
   * `array:length`
   * `array:push`
@@ -418,12 +419,13 @@ Two kinds of `import` are supported.
 
 * `list-constructor-expr` and `mapping-constructor-expr` are not allowed within a `const-expr`.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
+* After a variable is captured, its type can no longer be narrowed (e.g. by a type test) unless the variable is final.
 
 ## Additions from subset 14
 
 * Add support for `function` values
-* Add support for `object` type descriptors with restrictions
 * Add support for anonymous functions
+* Add support for `object` type descriptors with restrictions
 
 ## Implemented spec changes since 2022R1
 
