@@ -1409,7 +1409,7 @@ function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
 }
 
 function finishCodeGenTypeTest(ExprContext cx, t:SemType semType, bir:Operand operand, bir:BasicBlock nextBlock, boolean negated, Position pos) returns CodeGenError|BooleanExprEffect {
-    t:Context tc = cx.mod.tc;  
+    t:Context tc = cx.mod.tc;
     t:SemType curSemType = operandSemType(tc, operand);
     t:SemType diff = t:diff(curSemType, semType);
     if t:isEmpty(tc, diff) {
@@ -1426,9 +1426,10 @@ function finishCodeGenTypeTest(ExprContext cx, t:SemType semType, bir:Operand op
         return { result: singletonBooleanOperand(tc, negated), block: nextBlock };
     }
     bir:TmpRegister result = cx.createTmpRegister(t:BOOLEAN, pos);
-    // Either diff or intersect should be empty if the operand is singleton
-    bir:Register reg = <bir:Register>operand;
-    bir:TypeTestInsn insn = { operand: reg, semType, result, negated, pos };
+    if operand !is bir:Register|bir:FunctionConstOperand {
+        panic err:impossible("either diff or intersect should be empty if the operand is singleton");
+    }
+    bir:TypeTestInsn insn = { operand, semType, result, negated, pos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
 }

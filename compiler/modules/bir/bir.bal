@@ -750,7 +750,7 @@ public type TypeTestInsn readonly & record {|
     # Gets result of test.
     # Must be exactly type boolean
     # Holds value to be tested.
-    Register operand;
+    Register|FunctionConstOperand operand;
     SemType semType;
     boolean negated;
 |};

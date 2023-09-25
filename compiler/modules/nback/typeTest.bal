@@ -77,7 +77,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     builder.positionAtEnd(continueBlock);
 }
 
-function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Register operand, bir:Position pos, t:SemType semType) returns BuildError|TypeTestedValue {
+function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, bir:Position pos, t:SemType semType) returns BuildError|TypeTestedValue {
     var [repr, value] = check buildReprValue(builder, scaffold, operand);
     llvm:PointerValue? valueToExactify = ();
     llvm:Value hasType;

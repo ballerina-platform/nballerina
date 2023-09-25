@@ -441,9 +441,10 @@ function toInsn(FuncParseContext pc, Insn insnSexpr, Position? posSexpr) returns
                 pos
             };
         }
-        ["type-test", var result, var ty, var operand, var negated] => {
+        ["type-test", var result, var ty, var operandSexpr, var negated] => {
+            bir:FunctionConstOperand|bir:Register operand = <bir:FunctionConstOperand|bir:Register>toOperand(pc, <Operand>operandSexpr);
             return <bir:TypeTestInsn>{
-                operand: lookupRegister(pc, <sexpr:Symbol>operand),
+                operand,
                 semType: toSemType(pc, <ts:Type>ty),
                 result: toResultRegister(pc, <sexpr:Symbol>result),
                 negated: <boolean>negated,
