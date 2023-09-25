@@ -1425,11 +1425,15 @@ function finishCodeGenTypeTest(ExprContext cx, t:SemType semType, bir:Operand op
     if t:isEmpty(tc, intersect) {
         return { result: singletonBooleanOperand(tc, negated), block: nextBlock };
     }
-    bir:TmpRegister result = cx.createTmpRegister(t:BOOLEAN, pos);
-    if operand !is bir:Register|bir:FunctionConstOperand {
-        panic err:impossible("either diff or intersect should be empty if the operand is singleton");
+    // Either diff or intersect should be empty if the operand is singleton
+    if operand is bir:FunctionConstOperand {
+        // FunctionConstOperands are not singleton but their type is fixed
+        bir:BooleanConstOperand result = singletonBooleanOperand(tc, t:isSubtype(tc, operand.semType, semType) != negated);
+        return { result, block: nextBlock };
     }
-    bir:TypeTestInsn insn = { operand, semType, result, negated, pos };
+    bir:TmpRegister result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:Register reg = <bir:Register>operand;
+    bir:TypeTestInsn insn = { operand: reg, semType, result, negated, pos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
 }
