@@ -168,7 +168,7 @@ Type `any` and some related operations:
    * type cast `<TD>E` (can panic)
    * `===` and `!==` operators
    * nil constant `()`
-* Standard Library
+* Ballerina library
    * Argument for `io:println` has type `any` not just `int`
 
 ## Implemented spec changes since 2021R1
