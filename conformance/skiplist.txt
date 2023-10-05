@@ -5,7 +5,6 @@ computed-name-field
 decimal-max
 defaultable-param
 error-type-parameter
-explicit-anonymous-function-expr
 float:PI
 handle
 HexFloatingPointLiteral
