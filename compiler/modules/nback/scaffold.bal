@@ -709,8 +709,8 @@ function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Func
                                                  isConstant=true,
                                                  unnamedAddr=true,
                                                  linkage= "internal");
-    return context.constGetElementPtr(context.constAddrSpaceCast(ptr, LLVM_TAGGED_PTR),
-                                      [context.constInt(LLVM_INT, TAG_FUNCTION | FUNCTION_VARIANT_NON_CAPTURING)]);
+    return context.constGetElementPtr(context.constAddrSpaceCast(context.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_TAGGED_PTR),
+                                      [context.constInt(LLVM_INT, TAG_FUNCTION | FUNCTION_VARIANT_NON_CAPTURING | FLAG_EXACT)]);
 }
 
 function functionValueType(t:FunctionSignature signature) returns llvm:StructType {

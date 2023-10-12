@@ -5,6 +5,16 @@ import wso2/nballerina.print.llvm;
 
 final llvm:PointerType llUniformArgArrayType = llvm:pointerType(LLVM_TAGGED_PTR);
 
+// FIXME: remove this
+final RuntimeFunction functionDebugPtr = {
+    name: "debug_ptr",
+    ty: {
+        returnType: LLVM_VOID,
+        paramTypes: [LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
 final RuntimeFunction functionIsClosureFunction = {
     name: "function_is_closure",
     ty: {
@@ -27,7 +37,7 @@ final RuntimeFunction functionIsExactFunction = {
     name: "function_is_exact",
     ty: {
         returnType: LLVM_BOOLEAN,
-        paramTypes: [llvm:pointerType(llFunctionDescType), heapPointerType(llFunctionType)]
+        paramTypes: [llvm:pointerType(llFunctionDescType), heapPointerType(llFunctionType), LLVM_TAGGED_PTR]
     },
     attrs: []
 };
@@ -115,7 +125,7 @@ function buildCapture(llvm:Builder builder, Scaffold scaffold, bir:CaptureInsn i
                                                                                     constIndex(scaffold, 2)],
                                                                        "inbounds"));
     llvm:PointerValue funcValuePtr = builder.getElementPtr(builder.addrSpaceCast(closureVal, LLVM_TAGGED_PTR),
-                                                           [constInt(scaffold, (TAG_FUNCTION | FUNCTION_VARIANT_CAPTURING))]);
+                                                           [constInt(scaffold, (TAG_FUNCTION | FUNCTION_VARIANT_CAPTURING | FLAG_EXACT))]);
     builder.store(funcValuePtr, scaffold.address(result));
 }
 
@@ -131,6 +141,7 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     bir:Register funcOperand = insn.operands[0];
     var { funcValuePtr, funcPtr, uniformFuncPtr } = check buildIndirectFunctionValue(builder, scaffold, funcOperand);
     llvm:PointerValue taggedFuncPtr = scaffold.address(funcOperand);
+    // FIXME: May be don't allocate this if not needed
     var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
     t:SemType funcTy = funcOperand.semType;
     t:FunctionAtomicType? atomic = t:functionAtomicType(scaffold.typeContext(), funcTy);
@@ -155,7 +166,7 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     t:FunctionSignature signature = t:functionSignature(scaffold.typeContext(), atomic);
     llvm:ConstPointerValue signatureDescPtr = scaffold.getCalledType(signature);
     llvm:Value isExact = buildRuntimeFunctionCall(builder, scaffold, functionIsExactFunction,
-                                                  [signatureDescPtr, builder.addrSpaceCast(funcValuePtr, heapPointerType(llFunctionType))]);
+                                                  [signatureDescPtr, builder.addrSpaceCast(funcValuePtr, heapPointerType(llFunctionType)), builder.load(scaffold.address(funcOperand))]);
     llvm:BasicBlock ifExact = scaffold.addBasicBlock();
     llvm:BasicBlock ifNotExact = scaffold.addBasicBlock();
     llvm:BasicBlock afterCall = scaffold.addBasicBlock();

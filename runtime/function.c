@@ -61,3 +61,8 @@ GC TaggedPtr *_bal_function_alloc_heap_capture() {
     GC TaggedPtr *ptr = _bal_alloc(sizeof(TaggedPtr));
     return ptr;
 }
+
+void _bal_debug_ptr(const TaggedPtr fp) {
+    printf("ptr: %p\n", fp);
+}
+

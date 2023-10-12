@@ -48,7 +48,7 @@ type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|P
 
 final llvm:StructType LLVM_TAGGED_WITH_PANIC_CODE = llvm:structType([LLVM_TAGGED_PTR, LLVM_INT]);
 
-final t:BasicTypeBitSet POTENTIALLY_EXACT = t:basicTypeUnion(t:LIST|t:MAPPING);
+final t:BasicTypeBitSet POTENTIALLY_EXACT = t:basicTypeUnion(t:LIST|t:MAPPING|t:FUNCTION);
 
 type RuntimeFunction readonly & record {|
     string name;
@@ -214,13 +214,15 @@ function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
 
 function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType) returns llvm:Value|BuildError {
     llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr);
-    if operand is bir:Register && operationWidens(scaffold, operand, targetType) {
+    // FIXME: consider factoring bir:Regiseter|bir:FunctionConstOperand to single type (we had the same in another recent issue)
+    if operand is bir:Register|bir:FunctionConstOperand && operationWidens(scaffold, operand, targetType) {
         value = buildClearExact(builder, scaffold, value, operand.semType);
     }
     return value;
 }
 
-function operationWidens(Scaffold scaffold, bir:Register operand, t:SemType targetType) returns boolean {
+function operationWidens(Scaffold scaffold, bir:Register|bir:FunctionConstOperand operand, t:SemType targetType) returns boolean {
+    // TODO: rename this to be something other than struct
     t:SemType sourceStructType = t:intersect(operand.semType, POTENTIALLY_EXACT);
     t:BasicTypeBitSet sourceStructUniformTypes = t:widenToBasicTypes(sourceStructType);
     if sourceStructUniformTypes == t:NEVER {
