@@ -46,6 +46,8 @@ const PANIC_MAPPING_STORE = 9;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
+type PotentiallyExactOperand bir:Register|bir:FunctionConstOperand;
+
 final llvm:StructType LLVM_TAGGED_WITH_PANIC_CODE = llvm:structType([LLVM_TAGGED_PTR, LLVM_INT]);
 
 final t:BasicTypeBitSet POTENTIALLY_EXACT = t:basicTypeUnion(t:LIST|t:MAPPING|t:FUNCTION);
@@ -214,30 +216,28 @@ function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
 
 function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType) returns llvm:Value|BuildError {
     llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr);
-    // FIXME: consider factoring bir:Regiseter|bir:FunctionConstOperand to single type (we had the same in another recent issue)
-    if operand is bir:Register|bir:FunctionConstOperand && operationWidens(scaffold, operand, targetType) {
+    if operand is PotentiallyExactOperand && operationWidens(scaffold, operand, targetType) {
         value = buildClearExact(builder, scaffold, value, operand.semType);
     }
     return value;
 }
 
-function operationWidens(Scaffold scaffold, bir:Register|bir:FunctionConstOperand operand, t:SemType targetType) returns boolean {
-    // TODO: rename this to be something other than struct
-    t:SemType sourceStructType = t:intersect(operand.semType, POTENTIALLY_EXACT);
-    t:BasicTypeBitSet sourceStructUniformTypes = t:widenToBasicTypes(sourceStructType);
-    if sourceStructUniformTypes == t:NEVER {
+function operationWidens(Scaffold scaffold, PotentiallyExactOperand operand, t:SemType targetType) returns boolean {
+    t:SemType sourceExactType = t:intersect(operand.semType, POTENTIALLY_EXACT);
+    t:BasicTypeBitSet sourceUnifromType = t:widenToBasicTypes(sourceExactType);
+    if sourceUnifromType == t:NEVER {
         return false;
     }
     // Going from e.g. `int[]` to `int[]|map<any>` does not lose exactness,
     // but going from e.g. `int[]|map<int>` to `int[]|map<any>` does.
-    t:SemType targetStructType = t:intersect(targetType, sourceStructUniformTypes);
-    if targetStructType == t:NEVER {
+    t:SemType targetExactType = t:intersect(targetType, sourceUnifromType);
+    if targetExactType == t:NEVER {
         return false;
     }
     // Is the sourceStructType a _proper_ subtype of the targetStructType?
     // Note that we already know that sourceStructType is a subtype of targetStructType,
     // so we need to check that targetStructType is not a subtype of sourceStructType.
-    return sourceStructType != targetStructType && !t:isSubtype(scaffold.typeContext(), targetStructType, sourceStructType);
+    return sourceExactType != targetExactType && !t:isSubtype(scaffold.typeContext(), targetExactType, sourceExactType);
 }
 
 function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value tagged, t:SemType sourceType) returns llvm:Value {

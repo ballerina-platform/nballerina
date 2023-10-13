@@ -5,16 +5,6 @@ import wso2/nballerina.print.llvm;
 
 final llvm:PointerType llUniformArgArrayType = llvm:pointerType(LLVM_TAGGED_PTR);
 
-// FIXME: remove this
-final RuntimeFunction functionDebugPtr = {
-    name: "debug_ptr",
-    ty: {
-        returnType: LLVM_VOID,
-        paramTypes: [LLVM_TAGGED_PTR]
-    },
-    attrs: []
-};
-
 final RuntimeFunction functionIsClosureFunction = {
     name: "function_is_closure",
     ty: {
@@ -29,15 +19,6 @@ final RuntimeFunction functionAllocateClosureVal = {
     ty: {
         returnType: llvm:pointerType(llClosureType, HEAP_ADDR_SPACE),
         paramTypes: ["i32"]
-    },
-    attrs: []
-};
-
-final RuntimeFunction functionIsExactFunction = {
-    name: "function_is_exact",
-    ty: {
-        returnType: LLVM_BOOLEAN,
-        paramTypes: [llvm:pointerType(llFunctionDescType), heapPointerType(llFunctionType), LLVM_TAGGED_PTR]
     },
     attrs: []
 };
@@ -141,8 +122,6 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     bir:Register funcOperand = insn.operands[0];
     var { funcValuePtr, funcPtr, uniformFuncPtr } = check buildIndirectFunctionValue(builder, scaffold, funcOperand);
     llvm:PointerValue taggedFuncPtr = scaffold.address(funcOperand);
-    // FIXME: May be don't allocate this if not needed
-    var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
     t:SemType funcTy = funcOperand.semType;
     t:FunctionAtomicType? atomic = t:functionAtomicType(scaffold.typeContext(), funcTy);
     // We say a function call is exact if the compile time type of the function variable
@@ -158,6 +137,7 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
         t:Context tc = scaffold.typeContext();
         t:SemType returnType = <t:SemType>t:functionReturnType(scaffold.typeContext(), funcTy,
                                                                t:tupleTypeWrappedRo(tc.env, ...argTypes));
+        var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
         return buildCallInexact(builder, scaffold, funcPtr, [taggedFuncPtr, funcValuePtr],
                                 uniformFuncPtr, uniformArgArray, nArgs, result, returnType);
     }
@@ -174,6 +154,7 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
                          args, result, signature.returnType);
     builder.br(afterCall);
     builder.positionAtEnd(ifNotExact);
+    var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
     check buildCallInexact(builder, scaffold, funcPtr, [taggedFuncPtr, funcValuePtr],
                            uniformFuncPtr, uniformArgArray, nArgs, result, signature.returnType);
     builder.br(afterCall);

@@ -23,7 +23,8 @@ function executeOp(Op op) returns int {
         return fn(op.lhs, op.rhs);
     }
     else {
-        return fn(op.lhs);
+        UnaryFn f = <UnaryFn>fn;
+        return f(op.lhs);
     }
 }
 
