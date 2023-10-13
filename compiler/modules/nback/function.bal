@@ -164,9 +164,7 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
     // If the function type is atomic, we have to check for the exactness at runtime
     // and decide whether to use exact call or inexact call.
     t:FunctionSignature signature = t:functionSignature(scaffold.typeContext(), atomic);
-    llvm:ConstPointerValue signatureDescPtr = scaffold.getCalledType(signature);
-    llvm:Value isExact = buildRuntimeFunctionCall(builder, scaffold, functionIsExactFunction,
-                                                  [signatureDescPtr, builder.addrSpaceCast(funcValuePtr, heapPointerType(llFunctionType)), builder.load(scaffold.address(funcOperand))]);
+    llvm:Value isExact = buildIsExact(builder, scaffold, builder.load(scaffold.address(funcOperand)));
     llvm:BasicBlock ifExact = scaffold.addBasicBlock();
     llvm:BasicBlock ifNotExact = scaffold.addBasicBlock();
     llvm:BasicBlock afterCall = scaffold.addBasicBlock();

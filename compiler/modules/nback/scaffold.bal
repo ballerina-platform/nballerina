@@ -333,19 +333,6 @@ class Scaffold {
         return value;
     }
 
-    function getCalledType(t:FunctionSignature signature) returns llvm:ConstPointerValue {
-        t:SemType signatureTy = t:functionSemType(self.typeContext(), signature);
-        UsedSemType used = self.getUsedSemType(signatureTy);
-        llvm:ConstPointerValue? value = used.called;
-        if value != () {
-            return value;
-        }
-        string symbol = mangleTypeSymbol(self.mod.modId, USED_CALLED, used.index);
-        llvm:ConstPointerValue v = self.getModule().addGlobal(llFunctionDescType, symbol, isConstant=true);
-        used.called = v;
-        return v;
-    }
-
     function getDecimal(decimal val) returns DecimalDefn {
         string str = val.toString();
         DecimalDefn? curDefn = self.mod.decimalDefns[str];

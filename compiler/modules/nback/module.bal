@@ -170,9 +170,6 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
         if used.exactify != () {
             use |= USED_EXACTIFY;
         }
-        if used.called != () {
-            use |= USED_CALLED;
-        }
         uses.push(use);
     }
     return { types: types.cloneReadOnly(), uses: uses.cloneReadOnly() };
