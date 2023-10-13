@@ -137,9 +137,9 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
         t:Context tc = scaffold.typeContext();
         t:SemType returnType = <t:SemType>t:functionReturnType(scaffold.typeContext(), funcTy,
                                                                t:tupleTypeWrappedRo(tc.env, ...argTypes));
-        var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
         return buildCallInexact(builder, scaffold, funcPtr, [taggedFuncPtr, funcValuePtr],
-                                uniformFuncPtr, uniformArgArray, nArgs, result, returnType);
+                                uniformFuncPtr, result, returnType,
+                                ...check buildUniformArgArray(builder, scaffold, insn));
     }
     // If the function type is atomic, we have to check for the exactness at runtime
     // and decide whether to use exact call or inexact call.
@@ -154,9 +154,9 @@ function buildCallIndirect(llvm:Builder builder, Scaffold scaffold, bir:CallIndi
                          args, result, signature.returnType);
     builder.br(afterCall);
     builder.positionAtEnd(ifNotExact);
-    var [nArgs, uniformArgArray] = check buildUniformArgArray(builder, scaffold, insn);
     check buildCallInexact(builder, scaffold, funcPtr, [taggedFuncPtr, funcValuePtr],
-                           uniformFuncPtr, uniformArgArray, nArgs, result, signature.returnType);
+                           uniformFuncPtr, result, signature.returnType,
+                           ...check buildUniformArgArray(builder, scaffold, insn));
     builder.br(afterCall);
     builder.positionAtEnd(afterCall);
 }
@@ -234,7 +234,7 @@ function buildCallExactInner(llvm:Builder builder, Scaffold scaffold, llvm:Funct
 // This builds each argument in the call instruction as a tagged pointer and store them in an array. We call this array the uniform argument array.
 // In cases where there are rest parameters as a single list (see bir:CallIndirectInsn for more details), this will spread
 // that list into individual arguments in the uniform argument array.
-function buildUniformArgArray(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns [llvm:Value, llvm:PointerValue]|BuildError {
+function buildUniformArgArray(llvm:Builder builder, Scaffold scaffold, bir:CallIndirectInsn insn) returns [llvm:PointerValue, llvm:Value]|BuildError {
     bir:Operand[] args = insn.operands.slice(1);
     int requiredArgCount = insn.restParamIsList ? args.length() - 1 : args.length();
     llvm:Value[] uniformArgs = from int i in 0 ..< requiredArgCount
@@ -269,7 +269,7 @@ function buildUniformArgArray(llvm:Builder builder, Scaffold scaffold, bir:CallI
         buildVoidRuntimeFunctionCall(builder, scaffold, addToUniformArgsFunction,
                                      [uniformArgArray, restArgs, constInt(scaffold, uniformArgs.length())]);
     }
-    return [nArgs, uniformArgArray];
+    return [uniformArgArray, nArgs];
 }
 
 // This is using the uniform argument array and uniform function (defined in init.bal createUniformFunction)
@@ -278,8 +278,8 @@ function buildUniformArgArray(llvm:Builder builder, Scaffold scaffold, bir:CallI
 // the call site return type.
 function buildCallInexact(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue func,
                           [llvm:PointerValue, llvm:PointerValue] functionValuePtrs,
-                          llvm:PointerValue uniformFuncPtr, llvm:PointerValue uniformArgArray, llvm:Value nArgs,
-                          bir:Register result, t:SemType returnType) returns BuildError? {
+                          llvm:PointerValue uniformFuncPtr, bir:Register result,
+                          t:SemType returnType, llvm:PointerValue uniformArgArray, llvm:Value nArgs) returns BuildError? {
     CallBuilderWithMaybeCapture builderFn = function(llvm:Value? capturedVals) returns BuildError? {
         return buildCallInexactInner(builder, scaffold, result, func, capturedVals,
                                      uniformFuncPtr, uniformArgArray, nArgs, returnType);
