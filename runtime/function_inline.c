@@ -7,7 +7,3 @@ bool READONLY _bal_function_is_closure(const TaggedPtr fp) {
     }
     return true;
 }
-
-bool READONLY _bal_function_is_exact(FunctionDescPtr desc, FunctionPtr value) {
-    return desc == value->desc;
-}

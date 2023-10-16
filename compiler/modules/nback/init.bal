@@ -186,7 +186,6 @@ function buildInitTypes(llvm:Context llContext, llvm:Module llMod, llvm:Builder 
     finishSubtypeDefns(cx);
     buildInitTypesForUsage(builder, cx, modules, USED_EXACTIFY);
     buildInitTypesForUsage(builder, cx, modules, USED_TYPE_TEST);
-    buildInitTypesForUsage(builder, cx, modules, USED_CALLED);
 }
 
 function buildInitTypesForUsage(llvm:Builder builder, InitModuleContext cx, ProgramModule[] modules, TypeHowUsed howUsed) {
@@ -204,27 +203,12 @@ function buildInitTypesForUsage(llvm:Builder builder, InitModuleContext cx, Prog
                 else if howUsed == USED_EXACTIFY {
                     addExactifyTypeSymbol(cx, sym, ty);
                 }
-                else if howUsed == USED_CALLED {
-                    addCalledTypeSymbol(builder, cx, sym, ty);
-                }
                 else {
                     addTypeTestTypeSymbol(cx, sym, <t:ComplexSemType>ty);
                 }
             }
         }
     }
-}
-
-function addCalledTypeSymbol(llvm:Builder builder, InitModuleContext cx, string symbol, t:SemType semType) {
-    ConstructTypeDefn? existingDefn = cx.constructTypeDefns[ID_FUNCTION][semType];
-    if existingDefn != () {
-        _ = cx.llMod.addAlias(existingDefn.llType, existingDefn.ptr, symbol);
-        return;
-    }
-    // Since we handle construct usages before call usages this means we have a signature without an actual function value
-    // therefor all we need is a unique pointer to differentiate signatures
-    llvm:PointerType llType = llvm:pointerType(llFunctionDescType);
-    _ = cx.llMod.addGlobal(llType, symbol, initializer=cx.llContext().constNull(llvm:pointerType(llFunctionDescType)));
 }
 
 function addConstructTypeSymbol(llvm:Builder builder, InitModuleContext cx, string symbol, t:SemType semType)  {

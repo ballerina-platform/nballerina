@@ -333,19 +333,6 @@ class Scaffold {
         return value;
     }
 
-    function getCalledType(t:FunctionSignature signature) returns llvm:ConstPointerValue {
-        t:SemType signatureTy = t:functionSemType(self.typeContext(), signature);
-        UsedSemType used = self.getUsedSemType(signatureTy);
-        llvm:ConstPointerValue? value = used.called;
-        if value != () {
-            return value;
-        }
-        string symbol = mangleTypeSymbol(self.mod.modId, USED_CALLED, used.index);
-        llvm:ConstPointerValue v = self.getModule().addGlobal(llFunctionDescType, symbol, isConstant=true);
-        used.called = v;
-        return v;
-    }
-
     function getDecimal(decimal val) returns DecimalDefn {
         string str = val.toString();
         DecimalDefn? curDefn = self.mod.decimalDefns[str];
@@ -709,8 +696,8 @@ function addFunctionValueDefn(llvm:Context context, llvm:Module llMod, llvm:Func
                                                  isConstant=true,
                                                  unnamedAddr=true,
                                                  linkage= "internal");
-    return context.constGetElementPtr(context.constAddrSpaceCast(ptr, LLVM_TAGGED_PTR),
-                                      [context.constInt(LLVM_INT, TAG_FUNCTION | FUNCTION_VARIANT_NON_CAPTURING)]);
+    return context.constGetElementPtr(context.constAddrSpaceCast(context.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_TAGGED_PTR),
+                                      [context.constInt(LLVM_INT, TAG_FUNCTION | FUNCTION_VARIANT_NON_CAPTURING | FLAG_EXACT)]);
 }
 
 function functionValueType(t:FunctionSignature signature) returns llvm:StructType {

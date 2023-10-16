@@ -21,7 +21,8 @@ function executeOp(Op op) returns int {
     BinaryFn|UnaryFn fn = op.fn;
     if fn is BinaryFn {
         return fn(op.lhs, op.rhs);
-    } else {
+    }
+    else {
         UnaryFn f = <UnaryFn>fn;
         return f(op.lhs);
     }
