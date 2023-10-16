@@ -2,11 +2,11 @@
 
 This is issue [#204](https://github.com/ballerina-platform/nballerina/issues/204).
 
-Exactness tracking is an optimization that applies to tagged pointers with a uniform type of read-write list or read-write mapping, which we will call the _potentially exact_ uniform types.
+Exactness tracking is an optimization that applies to tagged pointers with a uniform type of read-write list, read-write mapping or function, which we will call the _potentially exact_ uniform types.
 
-Exactness tracking maintains a bit in tagged pointers of these uniform types, called the _exact bit_. (This is the bit #2, starting with 0 as the least significant.) We say that a tagged pointer is exact if its exact bit is set. The goal of exactness tracking is to guarantee that whenever a get or set operation is performed on an exact tagged pointer, the compile-time type is equal to the inherent type. The compile-time type is the type of the register in the instruction in the intermediate representation (BIR).
+Exactness tracking maintains a bit in tagged pointers of these uniform types, called the _exact bit_. (This is the bit #2, starting with 0 as the least significant.) We say that a tagged pointer is exact if its exact bit is set. The goal of exactness tracking is to guarantee that whenever a get, set or call operation is performed on an exact tagged pointer, the compile-time type is equal to the inherent type. The compile-time type is the type of the register in the instruction in the intermediate representation (BIR).
 
-This enables two important optimizations.
+This enables three important optimizations.
 
 First, when a member of a structure s is set to a value v, and the tagged pointer for s is exact, it is not necessary to check that the v has the type required by the inherent type. The check performed at compile-time will be sufficient to guarantee this.
 
@@ -18,6 +18,7 @@ Second, it allows us to optimize the case when we have multiple representations 
 
 Then suppose we have an expression `v[i]` where the static type of `v` is `int[]`.  We can compile this into code that checks the exact bit, and if it is set, performs the access knowing that representation 2 is being used, and otherwise uses a `get` function pointer accessed via the list's descriptor. When there are only 3 representations, this could be done easily without exact tracking. But with exact tracking we can efficiently have many optimized representations, for example a representation for every tuple type: if we have a type `[int,int]` we can represent it as an LLVM `{i64*, i64, i64}`, where the initial `i64*` points to a list descriptor. This is particularly useful for records: we can use a representation similar to what would be used in a language like C++.
 
+Finally, it allows us to check if the compile time type of the function variable is the same as the inherent type. If so we can avoid calling the function via the uniform function and instead perform an indirect jump using the executable code pointer.
 ## Implementation
 
 We define a type S to be _equivalent within_ X to type T, if T & X is equivalent to S & X.  We write this S =<sub>X</sub> T. If v is a mutable structure, then we write I(v) to mean the inherent type of v, and U(v) to mean the uniform type of V.

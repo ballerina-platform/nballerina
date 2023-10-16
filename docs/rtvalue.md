@@ -90,7 +90,7 @@ In addition to these closure data structure will have
 1. Number of variables captured
 2. Flexible array member to store captured variables
 
-The Z bit is set for closures.
+The X bit is used for [exactness tracking](exact.md) and Z bit is set for closures.
 
 ### List
 
