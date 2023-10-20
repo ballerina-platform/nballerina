@@ -1,33 +1,29 @@
 # Usage
-## Build the jni.llvm
-1. Run `./gradlew copyDependencies` to download and copy dependencies to the local `target/platform-libs` directory. (This needs to be done only once for the first build)
-2. Run `bal build` to build the project
 
-## Build nBallerina complier using JNI
-Run `./gradlew testBuild`
+## 1 Build nBallerina complier using JNI
+Run `make buildWithRuntime`
 
-This will create new ballerina package in `testbuild` directory the root directory where
-1. Change all the imports of `print.llvm` to `jni.llvm`
-2. Remove the `print.llvm` module and insert `jni.llvm` module instead
-3. Run `bal build` on the new ballerina package
+This will create new ballerina package in `testbuild` directory by,
+1. Replace `print.llvm` with `jni.llvm`
+2. Run `bal build` on the new package
+3. Add the inline runtime (`balrt_inline.bc`) in to the resulting `jar` file
 
-To clean this build either delete the `testbuild` directory or run `./gradlew cleanTestBuild`.
+Resulting compiler includes the necessary parts of the LLVM tool-chain (using [Bytedeco's LLVM presets](https://github.com/bytedeco/javacpp-presets/tree/master/llvm) as well as the inline runtime (`balrt_inline.bc`) and can compile Ballerina source files in to object files directly.
 
-## Compare llvm ir generated against print.llvm
-Run `./gradlew compareTestCases`
-# Sample code
-```
-import llvm_jni.llvm;
-import  ballerina/io;
-public function main() {
-    llvm:Context context = new;
-    llvm:Builder builder = context.createBuilder();
-    llvm:Module m = context.createModule();
-    llvm:Function mainFunction = m.addFunction("main", {returnType: "void", paramTypes: ["i64", "i1"]});
-    llvm:BasicBlock initBlock = mainFunction.appendBasicBlock();
-    builder.positionAtEnd(initBlock);
-    builder.ret(llvm:constInt("i64",0));
-    io:println(m.toString());
-    checkpanic m.toFile("test.ll");
-}
-```
+To clean this build either delete the `testbuild` directory or run `make clean`.
+
+## 2 Build native executable
+Run `make buildNative`
+
+This will extend 1 by compiling the nBallerina compiler using [GraalVM](https://www.graalvm.org/) creating a native executable.
+
+### 2.1 Pruning unwanted LLVM dependencies
+When building the native executable as an intermediate step we crate a Java version of the compiler that can run in multiple operating systems. For this we include LLVM tool-chain for each of those operating systems. However this is not needed when building the native executable. To prune these unnecessary dependencies you can pass in a `Ballerina.toml` file with only the dependencies needed for your operating system. For example in a Linux X86-64 machine we can use `make BAL_CONFIG=BallerinaLinuxX86_64.toml buildNative`.
+
+### 2.2 Building release bundle
+Run `make buildRelease`
+
+This will create the release artifacts in `build/nballerina` directory. It will include native executable, runtime and script (`nballerina.sh`) that will handle linking object files with runtime using operating system's C compiler.
+
+# 3.Testing
+In order to test the compiler against the test suite run `make test LINK_FILE_EXTENSION=.o COMPILER=<Path to compiler>` in `test` directory

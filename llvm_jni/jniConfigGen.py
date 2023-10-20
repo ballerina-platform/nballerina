@@ -30,7 +30,8 @@ reflection_workaround_types = [
     "org.bytedeco.llvm.LLVM.LLVMOrcCLookupSetElement",
     "org.bytedeco.llvm.LLVM.LLVMOrcCLookupSetElement",
     "org.bytedeco.llvm.LLVM.LLVMOrcCSymbolsList",
-    "org.bytedeco.llvm.LLVM.LLVMOrcCSymbolAliasMapEntry"
+    "org.bytedeco.llvm.LLVM.LLVMOrcCSymbolAliasMapEntry",
+    "org.bytedeco.javacpp.Pointer$NativeDeallocator"
 ]
 
 
@@ -75,17 +76,11 @@ class ConfigContext:
         return {
             "name": name,
             "queryAllPublicConstructors": True,
-            "queryAllDeclaredConstructors": True,
             "queryAllPublicMethods": True,
-            "queryAllDeclaredMethods": True,
             "allPublicConstructors": True,
-            "allDeclaredConstructors": True,
             "allPublicMethods": True,
-            "allDeclaredMethods": True,
             "allPublicFields": True,
-            "allDeclaredFields": True,
             "allPublicClasses": True,
-            "allDeclaredClasses": True
         }
 
 
