@@ -18,7 +18,7 @@ Second, it allows us to optimize the case when we have multiple representations 
 
 Then suppose we have an expression `v[i]` where the static type of `v` is `int[]`.  We can compile this into code that checks the exact bit, and if it is set, performs the access knowing that representation 2 is being used, and otherwise uses a `get` function pointer accessed via the list's descriptor. When there are only 3 representations, this could be done easily without exact tracking. But with exact tracking we can efficiently have many optimized representations, for example a representation for every tuple type: if we have a type `[int,int]` we can represent it as an LLVM `{i64*, i64, i64}`, where the initial `i64*` points to a list descriptor. This is particularly useful for records: we can use a representation similar to what would be used in a language like C++.
 
-Finally, it allows us to check if the compile time type of the function variable is the same as the inherent type. If so we can avoid calling the function via the uniform function and instead perform an indirect jump using the executable code pointer.
+Finally, it allows us to check if the compile time type of the function reference is the same as the inherent type. If so we can avoid calling the function via the uniform function and instead perform an indirect jump using the executable code pointer.
 ## Implementation
 
 We define a type S to be _equivalent within_ X to type T, if T & X is equivalent to S & X.  We write this S =<sub>X</sub> T. If v is a mutable structure, then we write I(v) to mean the inherent type of v, and U(v) to mean the uniform type of V.
@@ -145,5 +145,3 @@ In the future, we will want to extend this to work with readonly mappings and re
 First, we will need to say that if exactness implies that if the static type allows mutability, then the value is mutable. So if an exact tagged pointer has a static type of `int[]`, then the value must be a mutable list not a readonly list.  If the value is a readonly list, then the static type would need to be readonly for the tagged pointer to be exact.
 
 Second, readonly values don't have an inherent type. So we will need to define something for readonly values that can be used instead.
-
-
