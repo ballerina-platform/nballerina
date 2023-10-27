@@ -19,4 +19,4 @@ java -jar ./compiler.jar --outDir "$buildDir" "$src"
 
 objects=$(find "$buildDir" -name "*.o" | tr '\n' ' ')
 srcName=$(basename "$src" .bal)
-cc -O2 -o "$buildDir/$srcName" $objects ./balrt.a -lm
+cc -static -O2 -o "$buildDir/$srcName" $objects ./balrt.a -lm

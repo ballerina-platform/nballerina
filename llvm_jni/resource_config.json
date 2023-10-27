@@ -2,6 +2,8 @@
   "resources": [
     {"pattern": ".*/*.so"},
     {"pattern": ".*/*.so.16"},
-    {"pattern": "balrt_inline.bc" }
+    {"pattern": ".*/*.properties"},
+    {"pattern": "balrt_inline.bc"},
+    {"pattern": "balrt_inline_aarch64.bc"}
   ]
 }

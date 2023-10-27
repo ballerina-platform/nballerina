@@ -7,13 +7,24 @@ Compiler for the [Ballerina language](https://ballerina.io/) that can generate n
 ## Usage
 Run `nballerina.sh <Path to bal source file>` to compile. Resulting executable (along with build artifacts) will be in `./build` directory
 
+### Cross compiling
+Only supported target is `aarch64-linux-gnu`. In order to cross compile first install fallowing dependencies
+1. GCC support libraries for aarch64.
+```
+sudo apt-get install libgcc-9-dev-arm64-cross
+```
+2. Clang and LLD
+```
+sudo apt-get install clang lld
+```
+Run `nballerina.sh <Path to bal source file> --target linux:aarch64`
+
 ## Language restrictions
 Currently only a subset of the language is supported
 * Only values allowed are of basic type nil, boolean, int, float, decimal, string, list, mapping, error and function.
 * At module level
    * function definitions
       * no default arguments
-      * no rest arguments
       * may be declared `public`
    * const definitions
       * not of structured types
@@ -21,7 +32,7 @@ Currently only a subset of the language is supported
 * Type descriptors:
    * predefined basic type name: `boolean`, `decimal`, `error`, `float`, `int`, `string`
    * nil type `()`
-   * singletons of basic type boolean, int, float, decimal, string
+   * singletons of basic type `boolean`, `int`, `float`, `decimal`, `string`
    * `any` type
    * `byte` type
    * `anydata` type
@@ -78,6 +89,7 @@ Currently only a subset of the language is supported
   * `map:length`
   * `int:toHexString`
   * `error:message`
-* Standard library functions:
-  * `io:println` (restricted to a single argument)
+* Ballerina library functions:
+  * `io:println`
+
 For a more formal definition of language restrictions please refer to [grammar file](https://github.com/ballerina-platform/nballerina/blob/58eb1c0add1eb7fe84a570f01b275444a88ca202/docs/subset15.md)

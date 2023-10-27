@@ -14,7 +14,6 @@ Currently only a subset of the language is supported
 * At module level
    * function definitions
       * no default arguments
-      * no rest arguments
       * may be declared `public`
    * const definitions
       * not of structured types
@@ -22,7 +21,7 @@ Currently only a subset of the language is supported
 * Type descriptors:
    * predefined basic type name: `boolean`, `decimal`, `error`, `float`, `int`, `string`
    * nil type `()`
-   * singletons of basic type boolean, int, float, decimal, string
+   * singletons of basic type `boolean`, `int`, `float`, `decimal`, `string`
    * `any` type
    * `byte` type
    * `anydata` type
@@ -79,7 +78,7 @@ Currently only a subset of the language is supported
   * `map:length`
   * `int:toHexString`
   * `error:message`
-* Standard library functions:
-  * `io:println` (restricted to a single argument)
-For a more formal definition of language restrictions please refer to [grammar file](https://github.com/ballerina-platform/nballerina/blob/58eb1c0add1eb7fe84a570f01b275444a88ca202/docs/subset15.md)
+* Ballerina library functions:
+  * `io:println`
 
+For a more formal definition of language restrictions please refer to [grammar file](https://github.com/ballerina-platform/nballerina/blob/58eb1c0add1eb7fe84a570f01b275444a88ca202/docs/subset15.md)
