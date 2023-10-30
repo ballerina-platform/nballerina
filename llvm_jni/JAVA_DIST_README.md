@@ -2,8 +2,8 @@
 Compiler for the [Ballerina language](https://ballerina.io/) that can generate native executables.
 
 ## Requirements
++ Make sure you have Java 17 or later and `java` command is working.
 + Compiler uses the operating system's C compiler (`cc`) for linking.
-+ Compiler is executed using operating system's Java runtime. Make sure you have Java 17 or later and `java` command is working.
 
 ## Usage
 Run `nballerina.sh <Path to bal source file>` to compile. Resulting executable (along with build artifacts) will be in `./build` directory

@@ -5,6 +5,7 @@ JNI_SRC=$(wildcard ./modules/jni.llvm/*.bal)
 INLINE_RUNTIME=../runtime/balrt_inline.bc
 RUNTIME=../runtime/balrt.a
 DEPENDECIES_DIR=$(COMBINED_SRC_DIR)/target/platform-libs
+BASE_JAR=$(COMBINED_SRC_DIR)/target/bin/nballerina_base.jar
 COMPILER_JAR=$(COMBINED_SRC_DIR)/target/bin/nballerina.jar
 COMPILER_NATIVE=$(COMBINED_SRC_DIR)/target/bin/nballerina
 BAL_CONFIG?=Ballerina.toml
@@ -23,7 +24,7 @@ JAR_DIST_NAME=nballerina.$(VERSION)-jvm-$(ARCH)
 JAR_DIST_DIR=../build/$(JAR_DIST_NAME)
 
 ifeq ($(ARCH), x86_64)
-	DIST_FILES=../build/$(DIST_NAME).tar.gz ../build/$(JAR_DIST_NAME).tar.gz
+	DIST_FILES=../build/$(DIST_NAME).tar.gz
 else
 	DIST_FILES=../build/$(JAR_DIST_NAME).tar.gz
 endif
@@ -82,18 +83,22 @@ $(DIST_DIR): $(COMPILER_NATIVE) $(RUNTIME_STAMP) $(RUNTIME)
 $(INLINE_RUNTIME) $(RUNTIME):
 	$(MAKE) -C ../runtime all
 
-$(RUNTIME_STAMP): $(INLINE_RUNTIME) $(COMPILER_JAR)
+$(RUNTIME_STAMP): $(INLINE_RUNTIME) $(BASE_JAR)
 	cp $(INLINE_RUNTIME) $(COMBINED_SRC_DIR)/target/bin
+	cp $(BASE_JAR) $(COMPILER_JAR)
 	cd $(COMBINED_SRC_DIR)/target/bin; jar uf nballerina.jar balrt_inline.bc
 	cd $(COMBINED_SRC_DIR)/target/bin; zip -d nballerina.jar ./META-INF/native-image/*
 	rm $(COMBINED_SRC_DIR)/target/bin/balrt_inline.bc
 	@touch $@
 
-$(COMPILER_NATIVE): $(COMPILER_JAR) $(RUNTIME_STAMP) $(GENERATED_CONFIGS)
+$(COMPILER_NATIVE): $(COMPILER_JAR) $(GENERATED_CONFIGS)
 	cd $(COMBINED_SRC_DIR)/target/bin; native-image --no-fallback -H:+StaticExecutableWithDynamicLibC -H:MaxDuplicationFactor=75 -H:ResourceConfigurationFiles=../../../llvm_jni/resource_config.json -H:ReflectionConfigurationFiles=$(REFLECTION_CONFIG) -H:JNIConfigurationFiles=$(JNI_CONFIG) -jar nballerina.jar
 
-$(COMPILER_JAR): $(DEPENDENCIES_STAMP) $(COMPILER_STAMP) $(JNI_STAMP)
+$(COMPILER_JAR): $(BASE_JAR) $(RUNTIME_STAMP)
+
+$(BASE_JAR): $(DEPENDENCIES_STAMP) $(COMPILER_STAMP) $(JNI_STAMP)
 	cd $(COMBINED_SRC_DIR); bal build --offline
+	mv $(COMPILER_JAR) $(BASE_JAR)
 
 %.tar.gz: %
 	tar -czf $@ -C $(@D) $(<F)
