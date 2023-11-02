@@ -1,3 +1,4 @@
+LLVM_SUFFIX?=-16
 COMBINED_SRC_DIR=../testbuild
 COMPILER_DIR=../compiler
 COMPILER_SRC=$(wildcard $(COMPILER_DIR)/*.bal) $(wildcard $(COMPILER_DIR)/modules/*/*.bal)

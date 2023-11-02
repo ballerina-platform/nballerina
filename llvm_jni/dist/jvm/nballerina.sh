@@ -10,13 +10,14 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     exit 0
 fi
 
+scriptDir=$(dirname "$0")
 src="$1"
 buildDir="$(pwd)/build"
 rm -rf "$buildDir"
 mkdir -p "$buildDir"
 
-java -jar ./compiler.jar --outDir "$buildDir" "$src"
+java -jar "$scriptDir/./compiler.jar" --outDir "$buildDir" "$src"
 
 objects=$(find "$buildDir" -name "*.o" | tr '\n' ' ')
 srcName=$(basename "$src" .bal)
-cc -static -O2 -o "$buildDir/$srcName" $objects ./balrt.a -lm
+cc -static -O2 -o "$buildDir/$srcName" $objects "$scriptDir/./balrt.a" -lm
