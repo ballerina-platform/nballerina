@@ -8,7 +8,6 @@ For programs that are in the subset, the compiler should conform to the Ballerin
 * At module level
    * function definitions
       * no default arguments
-      * no rest arguments
       * may be declared `public`
    * const definitions
       * not of structured types
@@ -73,8 +72,8 @@ For programs that are in the subset, the compiler should conform to the Ballerin
   * `map:length`
   * `int:toHexString`
   * `error:message`
-* Standard library functions:
-  * `io:println` (restricted to a single argument)
+* Ballerina library functions:
+  * `io:println`
 
 ## Grammar
 
@@ -188,7 +187,7 @@ statement =
   | foreach-stmt
   | panic-stmt
   | match-stmt
- 
+
 local-var-decl-stmt = ["final"] type-desc binding-pattern "=" expression ";"
 
 binding-pattern = identifier | wildcard-binding-pattern
