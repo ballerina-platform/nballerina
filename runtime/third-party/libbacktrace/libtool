@@ -2275,7 +2275,7 @@ If the OUTPUT-FILE ends in \`.la', then a libtool library is created,
 only library objects (\`.lo' files) may be specified, and \`-rpath' is
 required, except when creating a convenience library.
 
-If OUTPUT-FILE ends in \`.a' or \`.lib', then a standard library is created
+If OUTPUT-FILE ends in \`.a' or \`.lib', then a Ballerina library package is created
 using \`ar' and \`ranlib', or on Windows using \`lib'.
 
 If OUTPUT-FILE ends in \`.lo' or \`.${objext}', then a reloadable object file
