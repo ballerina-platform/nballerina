@@ -2,7 +2,8 @@ LLVM_SUFFIX?=-16
 COMBINED_SRC_DIR=../testbuild
 COMPILER_DIR=../compiler
 COMPILER_SRC=$(wildcard $(COMPILER_DIR)/*.bal) $(wildcard $(COMPILER_DIR)/modules/*/*.bal)
-COMBINED_SRC=$(subst $(COMPILER_DIR),$(COMBINED_SRC_DIR),$(COMPILER_SRC))
+PRINT_LLVM_SRC=$(wildcard $(COMPILER_DIR)/modules/print.llvm/*.bal) $(COMPILER_DIR)/output.bal
+COMBINED_SRC=$(subst $(COMPILER_DIR),$(COMBINED_SRC_DIR),$(filter-out $(PRINT_LLVM_SRC), $(COMPILER_SRC)))
 JNI_SRC=$(wildcard ./modules/jni.llvm/*.bal)
 INLINE_RUNTIME=../runtime/balrt_inline.bc
 RUNTIME=../runtime/balrt.a
@@ -65,8 +66,6 @@ $(COMBINED_SRC_DIR)/%.bal: $(COMPILER_DIR)/%.bal
 	sed 's/print.llvm/jni.llvm/g' $< > $@
 
 $(COMPILER_STAMP): $(COMBINED_SRC)
-	rm -rf $(COMBINED_SRC_DIR)/modules/print.llvm
-	rm $(COMBINED_SRC_DIR)/output.bal
 	@touch $@
 
 $(AARCH64_RUNTIME) $(AARCH64_INLINE_RUNTIME):
