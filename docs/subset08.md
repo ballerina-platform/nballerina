@@ -48,14 +48,13 @@
    * error constructor `error(msg)`
    * `check` expression
    * `checkpanic` expression
-* Langlib functions:
+* Ballerina library functions:
   * `array:length`
   * `array:push`
   * `string:length`
   * `map:length`
   * `int:toHexString`
   * `error:message`
-* Standard library functions:
   * `io:println` (restricted to a single argument)
 
 ## Grammar
