@@ -27,7 +27,7 @@ SYSTEM?=linux
 ARCH?=amd64
 DIST_NAME=nballerina.$(VERSION)-$(SYSTEM)-$(ARCH)
 DIST_DIR=../build/$(DIST_NAME)
-DIST_AR=../build/$(DIST_NAME).tar.gz
+DIST_AR=../build/$(DIST_NAME).tar.xz
 ifeq ($(ARCH), amd64)
 	DIST_INLINE_RUNTIME=$(AARCH64_INLINE_RUNTIME) $(INLINE_RUNTIME)
 	DIST_RUNTIME=$(RUNTIME) $(AARCH64_RUNTIME)
@@ -108,8 +108,8 @@ $(BASE_JAR): $(DEPENDENCIES_STAMP) $(COMPILER_STAMP) $(JNI_STAMP)
 $(RUNTIME) $(INLINE_RUNTIME):
 	$(MAKE) -C ../runtime dist
 
-%.tar.gz: %
-	tar -czf $@ -C $(@D) $(<F)
+%.tar.xz: %
+	tar -cJf $@ -C $(@D) $(<F)
 
 test: $(DEPENDENCIES_STAMP) $(COMPILER_STAMP) $(JNI_STAMP)
 	cd $(COMBINED_SRC_DIR); bal test --offline --tests nballerina:testCompileVPO
