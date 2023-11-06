@@ -8,16 +8,11 @@ Compiler for the [Ballerina language](https://ballerina.io/) that can generate n
 Run `nballerina.sh <Path to bal source file>` to compile. Resulting executable (along with build artifacts) will be in `./build` directory
 
 ### Cross compiling
-Only supported target is `aarch64-linux-gnu`. In order to cross compile first install fallowing dependencies
-1. GCC support libraries for aarch64.
+Only supported target is `aarch64-linux-gnu`. In order to cross compile first install GCC cross compiler for aarch64.
 ```
-sudo apt-get install libgcc-9-dev-arm64-cross
+sudo apt-get install gcc-aarch64-linux-gnu
 ```
-2. Clang and LLD
-```
-sudo apt-get install clang lld
-```
-Run `nballerina.sh <Path to bal source file> --target linux:aarch64`
+Then run `nballerina.sh <Path to bal source file> --target aarch64`
 
 ## Language restrictions
 Currently only a subset of the language is supported
@@ -82,14 +77,13 @@ Currently only a subset of the language is supported
    * `check` expression
    * `checkpanic` expression
    * anonymous function with explicit parameter types `function (T1 P1, T2 P2, ..., Tn Pn) { ... }`
-* Langlib functions:
+* Ballerina library functions:
   * `array:length`
   * `array:push`
   * `string:length`
   * `map:length`
   * `int:toHexString`
   * `error:message`
-* Ballerina library functions:
   * `io:println`
 
-For a more formal definition of language restrictions please refer to [grammar file](https://github.com/ballerina-platform/nballerina/blob/58eb1c0add1eb7fe84a570f01b275444a88ca202/docs/subset15.md)
+For a more formal definition of language restrictions please refer to the [grammar file](https://github.com/ballerina-platform/nballerina/blob/58eb1c0add1eb7fe84a570f01b275444a88ca202/docs/subset15.md)

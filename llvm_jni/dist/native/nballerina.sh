@@ -21,7 +21,6 @@ rm -rf "$buildDir"
 mkdir -p "$buildDir"
 
 c_compiler=cc
-extra_c_flags=""
 runtime="$scriptDir/./balrt.a"
 if [ $# -gt 1 ]; then
     if [ "$2" = "--target" ]; then
@@ -30,8 +29,7 @@ if [ $# -gt 1 ]; then
         fi
         if [ "$3" = "aarch64" ]; then
             "$scriptDir/./compiler" --outDir "$buildDir" --target aarch64-unknown-linux-gnu "$src"
-            c_compiler=clang
-            extra_c_flags="-target aarch64-linux-gnu -fuse-ld=lld"
+            c_compiler=aarch64-linux-gnu-gcc
             runtime="$scriptDir/./balrt_aarch64.a"
         else
             echo "Error: unsupported target $3"
@@ -46,4 +44,4 @@ fi
 
 objects=$(find "$buildDir" -name "*.o" | tr '\n' ' ')
 srcName=$(basename "$src" .bal)
-"$c_compiler" -static -O2 $extra_c_flags -o "$buildDir/$srcName" $objects "$runtime" -lm
+"$c_compiler" -static -O2 -o "$buildDir/$srcName" $objects "$runtime" -lm

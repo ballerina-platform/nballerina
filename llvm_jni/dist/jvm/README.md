@@ -71,14 +71,13 @@ Currently only a subset of the language is supported
    * `check` expression
    * `checkpanic` expression
    * anonymous function with explicit parameter types `function (T1 P1, T2 P2, ..., Tn Pn) { ... }`
-* Langlib functions:
+* Ballerina library functions:
   * `array:length`
   * `array:push`
   * `string:length`
   * `map:length`
   * `int:toHexString`
   * `error:message`
-* Ballerina library functions:
   * `io:println`
 
-For a more formal definition of language restrictions please refer to [grammar file](https://github.com/ballerina-platform/nballerina/blob/58eb1c0add1eb7fe84a570f01b275444a88ca202/docs/subset15.md)
+For a more formal definition of language restrictions please refer to the [grammar file](https://github.com/ballerina-platform/nballerina/blob/58eb1c0add1eb7fe84a570f01b275444a88ca202/docs/subset15.md)
