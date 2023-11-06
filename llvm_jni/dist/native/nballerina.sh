@@ -2,7 +2,7 @@
 set -e
 
 print_usage_and_exit() {
-    echo "Usage: $0 <filename.bal> [--target <target>]"
+    echo "Usage: $0 <filename.bal> [--target aarch64]"
     exit "$1"
 }
 
@@ -28,7 +28,7 @@ if [ $# -gt 1 ]; then
         if [ $# -lt 3 ]; then
             print_usage_and_exit 1
         fi
-        if [ "$3" = "linux:aarch64" ]; then
+        if [ "$3" = "aarch64" ]; then
             "$scriptDir/./compiler" --outDir "$buildDir" --target aarch64-unknown-linux-gnu "$src"
             c_compiler=clang
             extra_c_flags="-target aarch64-linux-gnu -fuse-ld=lld"
