@@ -13,3 +13,8 @@ void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val) {
         _bal_panic_internal(err);
     }
 }
+
+int64_t READONLY _bal_list_length(TaggedPtr p) {
+    ListPtr lp = taggedToPtr(p);
+    return lp->tpArray.length;
+}

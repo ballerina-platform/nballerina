@@ -7,3 +7,8 @@ bool READONLY _bal_function_is_closure(const TaggedPtr fp) {
     }
     return true;
 }
+
+GC ExecCodePtr READONLY _bal_function_code_ptr(const TaggedPtr tp) {
+    FunctionPtr fp = taggedToPtr(tp);
+    return fp->code;
+}

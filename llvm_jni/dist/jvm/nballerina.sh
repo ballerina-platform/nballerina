@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 if [ $# -ne 1 ]; then
     echo "Error: expected $0 <source file>"
@@ -23,4 +23,4 @@ while IFS= read -r -d $'\0' object; do
   objects+=("$object")
 done < <(find "$buildDir" -name "$srcName*.o" -print0)
 
-cc -static -O2 -o "$buildDir/$srcName" "${objects[@]}" "$scriptDir/./balrt.a" -lm
+cc -O2 -o "$buildDir/$srcName" "${objects[@]}" "$scriptDir/./balrt.a" -lm
