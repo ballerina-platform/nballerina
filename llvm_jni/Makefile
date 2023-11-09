@@ -1,6 +1,7 @@
 LLVM_SUFFIX?=-16
 COMBINED_SRC_DIR=../testbuild
 COMPILER_DIR=../compiler
+SUBSET_DOC=../docs/subset15.md
 COMPILER_SRC=$(wildcard $(COMPILER_DIR)/*.bal) $(wildcard $(COMPILER_DIR)/modules/*/*.bal)
 PRINT_LLVM_SRC=$(wildcard $(COMPILER_DIR)/modules/print.llvm/*.bal) $(COMPILER_DIR)/output.bal
 COMBINED_SRC=$(subst $(COMPILER_DIR),$(COMBINED_SRC_DIR),$(filter-out $(PRINT_LLVM_SRC), $(COMPILER_SRC)))
@@ -87,6 +88,7 @@ $(DIST_DIR): $(DIST_COMPILER) $(DIST_RUNTIME) $(RUNTIME_STAMP)
 	cp $(DIST_RUNTIME) $(DIST_DIR)
 	cp $(DIST_COMPILER) $(DIST_DIR)/compiler$(suffix $(DIST_COMPILER))
 	cp $(DIST_BASE_DIR)/* $(DIST_DIR)
+	cp $(SUBSET_DOC) $(DIST_DIR)/subset.md
 	chmod +x $(DIST_DIR)/nballerina.sh
 
 $(RUNTIME_STAMP): $(DIST_INLINE_RUNTIME) $(BASE_JAR)

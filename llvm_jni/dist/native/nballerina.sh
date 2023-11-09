@@ -1,8 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 print_usage_and_exit() {
-    echo "Usage: $0 <filename.bal> [--target aarch64]"
+    echo "Usage: $0 <source file> [--target aarch64]"
     exit "$1"
 }
 
@@ -42,6 +42,10 @@ else
     "$scriptDir"/./compiler --outDir "$buildDir" "$src"
 fi
 
-objects=$(find "$buildDir" -name "*.o" | tr '\n' ' ')
 srcName=$(basename "$src" .bal)
-"$c_compiler" -static -O2 -o "$buildDir/$srcName" $objects "$runtime" -lm
+objects=()
+while IFS= read -r -d $'\0' object; do
+  objects+=("$object")
+done < <(find "$buildDir" -name "$srcName*.o" -print0)
+
+"$c_compiler" -static -O2 -o "$buildDir/$srcName" "${objects[@]}" "$runtime"
