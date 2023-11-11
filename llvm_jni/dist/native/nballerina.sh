@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 print_usage_and_exit() {
@@ -43,9 +43,8 @@ else
 fi
 
 srcName=$(basename "$src" .bal)
-objects=()
-while IFS= read -r -d $'\0' object; do
-  objects+=("$object")
-done < <(find "$buildDir" -name "$srcName*.o" -print0)
 
-"$c_compiler" -static -O2 -o "$buildDir/$srcName" "${objects[@]}" "$runtime"
+find "$buildDir" -name "$srcName*.o" -print0 | \
+    awk -v rt="$runtime" '{print $0 rt"\0-lm"}' | \
+    tr '\n' '\0' | \
+    xargs -0 "$c_compiler" -O2 -static -o "$buildDir"/"$srcName"
