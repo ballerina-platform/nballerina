@@ -19,8 +19,8 @@ mkdir -p "$buildDir"
 java -jar "$scriptDir/./compiler.jar" --outDir "$buildDir" "$src"
 
 srcName=$(basename "$src" .bal)
+objects=$(find "$buildDir" -maxdepth 1 -name "$srcName*.o")
 
 find "$buildDir" -maxdepth 1 -name "$srcName*.o" -print0 | \
-    awk -v rt="$runtime" '{print $0 rt"\0-lm"}' | \
-    tr '\n' '\0' | \
-    xargs -0 cc -O2 -o "$buildDir"/"$srcName"
+    xargs -0 awk -v rt="$runtime" 'BEGIN { for (i = 1; i < ARGC; i++) printf "\"%s\" ", ARGV[i]; printf "%s -lm\n", rt; }' | \
+    xargs -t cc -O2 -o "$buildDir"/"$srcName"
