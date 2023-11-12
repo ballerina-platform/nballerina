@@ -44,7 +44,7 @@ fi
 
 srcName=$(basename "$src" .bal)
 
-find "$buildDir" -name "$srcName*.o" -print0 | \
+find "$buildDir" -maxdepth 1 -name "$srcName*.o" -print0 | \
     awk -v rt="$runtime" '{print $0 rt"\0-lm"}' | \
     tr '\n' '\0' | \
     xargs -0 "$c_compiler" -O2 -static -o "$buildDir"/"$srcName"

@@ -20,7 +20,7 @@ java -jar "$scriptDir/./compiler.jar" --outDir "$buildDir" "$src"
 
 srcName=$(basename "$src" .bal)
 
-find "$buildDir" -name "$srcName*.o" -print0 | \
+find "$buildDir" -maxdepth 1 -name "$srcName*.o" -print0 | \
     awk -v rt="$runtime" '{print $0 rt"\0-lm"}' | \
     tr '\n' '\0' | \
     xargs -0 cc -O2 -o "$buildDir"/"$srcName"
