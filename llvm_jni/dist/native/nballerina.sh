@@ -45,6 +45,5 @@ fi
 srcName=$(basename "$src" .bal)
 
 find "$buildDir" -maxdepth 1 -name "$srcName*.o" -print0 | \
-    awk -v rt="$runtime" '{print $0 rt"\0-lm"}' | \
-    tr '\n' '\0' | \
-    xargs -0 "$c_compiler" -O2 -static -o "$buildDir"/"$srcName"
+    xargs -0 awk -v rt="$runtime" 'BEGIN { for (i = 1; i < ARGC; i++) printf "\"%s\" ", ARGV[i]; printf "%s -lm\n", rt; }' | \
+    xargs "$c_compiler" -O2 -static -o "$buildDir"/"$srcName"

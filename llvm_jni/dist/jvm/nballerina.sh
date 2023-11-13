@@ -23,4 +23,4 @@ objects=$(find "$buildDir" -maxdepth 1 -name "$srcName*.o")
 
 find "$buildDir" -maxdepth 1 -name "$srcName*.o" -print0 | \
     xargs -0 awk -v rt="$runtime" 'BEGIN { for (i = 1; i < ARGC; i++) printf "\"%s\" ", ARGV[i]; printf "%s -lm\n", rt; }' | \
-    xargs -t cc -O2 -o "$buildDir"/"$srcName"
+    xargs cc -O2 -o "$buildDir"/"$srcName"

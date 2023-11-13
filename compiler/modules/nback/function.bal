@@ -8,7 +8,7 @@ final llvm:PointerType llUniformArgArrayType = llvm:pointerType(LLVM_TAGGED_PTR)
 final RuntimeFunction functionCodePtr = {
     name: "function_code_ptr",
     ty: {
-        returnType: LLVM_TAGGED_PTR,
+        returnType: llvm:pointerType(llvm:functionType("void", []), HEAP_ADDR_SPACE),
         paramTypes: [LLVM_TAGGED_PTR]
     },
     attrs: []
@@ -205,10 +205,9 @@ function buildDirectFunctionValue(Scaffold scaffold, bir:FunctionConstOperand op
 function functionCodePtrType(Scaffold scaffold, t:SemType funcType) returns llvm:PointerType {
     t:FunctionAtomicType? atomic = t:functionAtomicType(scaffold.typeContext(), funcType);
     if atomic == () {
-        return llvm:pointerType(llFunctionType);
+        return llvm:pointerType("i8"); // non-atomic functions can't be called directly
     }
-    t:FunctionSignature signature = t:functionSignature(scaffold.typeContext(), atomic);
-    return llvm:pointerType(buildFunctionSignature(signature));
+    return llvm:pointerType(buildFunctionSignature(t:functionSignature(scaffold.typeContext(), atomic)));
 }
 
 function functionValuePtrType(Scaffold scaffold, t:SemType funcType) returns llvm:PointerType {
