@@ -40,8 +40,15 @@ public distinct class Context {
         return new (jLLVMConstStringInContext(self.LLVMContext, java:fromString(checkpanic string:fromBytes(bytes)), bytes.length(), 1), arrayType("i8", bytes.length()));
     }
 
-    public function constStruct(Value[] elements) returns ConstValue {
-        return new (jLLVMConstStructInContext(self.LLVMContext, PointerPointerFromValues(elements).jObject, elements.length(), 0), structType(from var element in elements select element.ty));
+    public function constStruct(Value[] elements, StructType? ty = ()) returns ConstValue {
+        if ty != () && ty.name != () {
+            return new(jLLVMConstNamedStruct(typeToLLVMType(self, ty), PointerPointerFromValues(elements).jObject,
+                                             elements.length()),
+                       ty);
+        }
+        return new (jLLVMConstStructInContext(self.LLVMContext, PointerPointerFromValues(elements).jObject,
+                                              elements.length(), 0),
+                    structType(from var element in elements select element.ty));
     }
 
     public function constArray(Type elementType, ConstValue[] values) returns ConstValue {
@@ -129,6 +136,12 @@ function jLLVMConstStructInContext(handle context, handle values, int count, int
     name: "LLVMConstStructInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "org.bytedeco.javacpp.PointerPointer", "int", "int"]
+} external;
+
+function jLLVMConstNamedStruct(handle typeRef, handle values, int count) returns handle = @java:Method {
+    name: "LLVMConstNamedStruct",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.javacpp.PointerPointer", "int"]
 } external;
 
 function jLLVMConstGEP(handle ty, handle pointer, handle indices, int numIndices) returns handle = @java:Method {

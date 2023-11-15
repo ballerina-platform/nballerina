@@ -91,7 +91,7 @@ final RuntimeFunction taggedToIntFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: []
 };
 
 final RuntimeFunction taggedToFloatFunction = {
@@ -100,7 +100,7 @@ final RuntimeFunction taggedToFloatFunction = {
         returnType: "double",
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: []
 };
 
 final RuntimeFunction taggedClearExactAnyFunction = {

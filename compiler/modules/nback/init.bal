@@ -347,16 +347,18 @@ function createUniformFunction(llvm:Builder builder, InitModuleContext cx, t:Fun
         buildVoidRuntimeFunctionCall(builder, cx, addToRestArgsFunction,
                                      [builder.load(restArgArrayPtr), uniformArgArray, startingOffset, nRestArgs]);
     }
-    llvm:FunctionType funcTy = buildFunctionSignature(signature);
-    llvm:PointerValue funcPtr = builder.bitCast(<llvm:PointerValue>func.getParam(0), llvm:pointerType(funcTy));
     llvm:Value[] args = from var each in exactArgs select builder.load(each);
     llvm:Value isClosure = func.getParam(3);
     llvm:BasicBlock ifClosure = func.appendBasicBlock();
     llvm:BasicBlock ifNotClosure = func.appendBasicBlock();
     builder.condBr(isClosure, ifClosure, ifNotClosure);
     builder.positionAtEnd(ifClosure);
-    finishCreateUniformFunction(builder, cx, funcPtr, [func.getParam(4), ...args], signature.returnType);
+    llvm:PointerValue closurePtr = builder.bitCast(<llvm:PointerValue>func.getParam(0),
+                                                    llvm:pointerType(buildClosureFunctionSignature(signature, ())));
+    finishCreateUniformFunction(builder, cx, closurePtr, [func.getParam(4), ...args], signature.returnType);
     builder.positionAtEnd(ifNotClosure);
+    llvm:PointerValue funcPtr = builder.bitCast(<llvm:PointerValue>func.getParam(0),
+                                                llvm:pointerType(buildFunctionSignature(signature)));
     finishCreateUniformFunction(builder, cx, funcPtr, args, signature.returnType);
     return func;
 }
@@ -665,7 +667,7 @@ function finishSubtypeDefns(InitModuleContext cx) {
         if structType != () {
             SubtypeStruct sub = createSubtypeStruct(cx, defn.typeCode, defn.semType);
             cx.llContext().structSetBody(structType, sub.types);
-            cx.llMod.setInitializer(defn.ptr, cx.llContext().constStruct(sub.values));
+            cx.llMod.setInitializer(defn.ptr, cx.llContext().constStruct(sub.values, structType));
         }
     }
 }
@@ -865,7 +867,7 @@ function createPrecomputedSubtypeStruct(InitModuleContext cx, TypeIdBasicType ba
 function createArrayMapSubtypeStruct(InitModuleContext cx, t:BasicTypeBitSet bitSet, TypeKindArrayOrMap arrayOrMap) returns SubtypeStruct {
     return {
         types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET],
-        values: [getSubtypeContainsFunc(cx, arrayOrMap), constI32(cx, bitSet)]
+        values: [getSubtypeContainsFunc(cx, arrayOrMap), constBitset(cx, bitSet)]
     };
 }
 

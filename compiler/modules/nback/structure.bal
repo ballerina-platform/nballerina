@@ -54,7 +54,7 @@ final RuntimeFunction listFillingGetFunction = {
         returnType: LLVM_TAGGED_WITH_PANIC_CODE,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_INT]
     },
-    attrs: ["readonly"]
+    attrs: []
 };
 
 final RuntimeFunction mappingGetFunction = {
@@ -63,7 +63,7 @@ final RuntimeFunction mappingGetFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: []
 };
 
 final RuntimeFunction mappingFillingGetFunction = {
@@ -72,7 +72,7 @@ final RuntimeFunction mappingFillingGetFunction = {
         returnType: LLVM_TAGGED_WITH_PANIC_CODE,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: []
 };
 
 final RuntimeFunction mappingIndexedGetFunction = {
@@ -81,7 +81,7 @@ final RuntimeFunction mappingIndexedGetFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_INT]
     },
-    attrs: ["readonly"]
+    attrs: []
 };
 
 final RuntimeFunction mappingInitMemberFunction = {

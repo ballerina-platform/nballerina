@@ -86,7 +86,7 @@ public class Context {
         return new(self);
     }
 
-    public function constStruct(Value[] elements) returns ConstValue {
+    public function constStruct(Value[] elements, StructType? ty = ()) returns ConstValue {
         string[] structBody = [];
         Type[] elemTypes = [];
         structBody.push("{");

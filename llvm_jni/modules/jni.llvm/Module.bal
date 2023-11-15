@@ -28,6 +28,8 @@ final readonly & map<int> moduleFlagBehaviorToInt = {
     "max": 6
 };
 
+const LLVMAbortProcessAction = 0;
+
 public distinct class Module {
     handle LLVMModule;
     Context context;
@@ -141,6 +143,8 @@ public distinct class Module {
                                                             getLLVMRelocMode(relocMode),
                                                             getLLVMCodeModel(codeModel));
         self.setModuleInfo(self.LLVMModule, targetTriple, jTargetMachineRef);
+        BytePointer verifyError = new(jBytePointer());
+        int _ = jLLVMVerifyModule(self.LLVMModule, LLVMAbortProcessAction, verifyError.jObject);
         self.runOptimizationPasses(llvmOptLevel);
         BytePointer emitError = new(jBytePointer());
         int isEmitError = jLLVMTargetMachineEmitToFile(jTargetMachineRef, self.LLVMModule, file.jObject, 1, emitError.jObject);
@@ -257,7 +261,9 @@ public distinct class Module {
             fnType = { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] };
         }
         PointerPointer paramTypes = PointerPointerFromTypes(self.context, from var each in fnType.paramTypes select each);
-        int paramCount = fnType.paramTypes.length();
+        // In cases we have multiple parameters of the same type we need to pass just one to get the correct overloaded
+        // function. Not sure why
+        int paramCount = name is IntegerArithmeticIntrinsicName|"expect.i1" ? 1 : fnType.paramTypes.length();
         return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, paramCount), fnType, self.context,
                     jLLVMIntrinsicGetType(self.context.LLVMContext, id, paramTypes.jObject, paramCount));
     }
@@ -639,4 +645,10 @@ function jLLVMIntrinsicGetType(handle context, int id, handle params, int paramC
     name: "LLVMIntrinsicGetType",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "int", "org.bytedeco.javacpp.PointerPointer", "long"]
+} external;
+
+function jLLVMVerifyModule(handle moduleRef, int failureAction, handle err) returns int = @java:Method {
+    name: "LLVMVerifyModule",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "int", "org.bytedeco.javacpp.BytePointer"]
 } external;
