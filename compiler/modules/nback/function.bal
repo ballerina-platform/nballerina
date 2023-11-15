@@ -299,7 +299,7 @@ function buildCallInexactInner(llvm:Builder builder, Scaffold scaffold, bir:Regi
                                llvm:PointerValue uniformFuncPtr, llvm:PointerValue uniformArgArray, llvm:Value nArgs,
                                t:SemType returnType) returns BuildError? {
     llvm:Value[] args = capturedVals == () ? [func, uniformArgArray, nArgs, constBoolean(scaffold, false),
-                                              builder.bitCast(constNilTaggedPtr(scaffold), llvm:pointerType(LLVM_TAGGED_PTR))]:
+                                              builder.addrSpaceCast(constNilTaggedPtr(scaffold), llvm:pointerType(LLVM_TAGGED_PTR))]:
                                              [func, uniformArgArray, nArgs, constBoolean(scaffold, true), capturedVals];
     llvm:Value? returnVal = buildFunctionCall(builder, scaffold, <llvm:PointerValue>builder.load(uniformFuncPtr),
                                               args);
