@@ -69,7 +69,7 @@ public function functionType(RetType returnType, Type[] paramTypes) returns Func
 public type Linkage "internal"|"external";
 
 public type FunctionEnumAttribute "nocallback"|"nofree"|"nosync"|"readnone"|"noreturn"|"cold"|"nounwind"|"readnone"|"speculatable"|"willreturn";
-public type ParamEnumAttribute "signext"|"zeroext"|"nest";
+public type ParamEnumAttribute "signext"|"zeroext"|"nest"|"readonly";
 public type ReturnEnumAttribute "signext"|"zeroext"|"noalias";
 public type MemoryAttribure "none";
 public type EnumAttribute FunctionEnumAttribute | (readonly & [int, ParamEnumAttribute]) | (readonly & ["return", ReturnEnumAttribute])| (readonly & ["memory", MemoryAttribure]);

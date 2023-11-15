@@ -9,7 +9,7 @@ final RuntimeFunction stringCmpFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction decimalCmpFunction = {
@@ -18,7 +18,7 @@ final RuntimeFunction decimalCmpFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction optIntCompareFunction = {
@@ -27,7 +27,7 @@ final RuntimeFunction optIntCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction optFloatCompareFunction = {
@@ -36,7 +36,7 @@ final RuntimeFunction optFloatCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction optStringCompareFunction = {
@@ -45,7 +45,7 @@ final RuntimeFunction optStringCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction optBooleanCompareFunction = {
@@ -54,7 +54,7 @@ final RuntimeFunction optBooleanCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction optDecimalCompareFunction = {
@@ -63,7 +63,7 @@ final RuntimeFunction optDecimalCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction optListCompareFunction = {
@@ -72,7 +72,7 @@ final RuntimeFunction optListCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction arrayIntCompareFunction = {
@@ -81,7 +81,7 @@ final RuntimeFunction arrayIntCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction arrayFloatCompareFunction = {
@@ -90,7 +90,7 @@ final RuntimeFunction arrayFloatCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction arrayStringCompareFunction = {
@@ -99,7 +99,7 @@ final RuntimeFunction arrayStringCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction arrayBooleanCompareFunction = {
@@ -108,7 +108,7 @@ final RuntimeFunction arrayBooleanCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction arrayListCompareFunction = {
@@ -117,7 +117,7 @@ final RuntimeFunction arrayListCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction arrayExactIntCompareFunction = {
@@ -126,7 +126,7 @@ final RuntimeFunction arrayExactIntCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 final RuntimeFunction arrayDecimalCompareFunction = {
@@ -135,7 +135,7 @@ final RuntimeFunction arrayDecimalCompareFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [[0, "readonly"], [1, "readonly"]]
 };
 
 type TaggedCompareFunction readonly & record {|
