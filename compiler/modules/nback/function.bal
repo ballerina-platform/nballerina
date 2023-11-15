@@ -5,15 +5,6 @@ import wso2/nballerina.print.llvm;
 
 final llvm:PointerType llUniformArgArrayType = llvm:pointerType(LLVM_TAGGED_PTR);
 
-final RuntimeFunction functionCodePtr = {
-    name: "function_code_ptr",
-    ty: {
-        returnType: llvm:pointerType(llvm:functionType("void", []), HEAP_ADDR_SPACE),
-        paramTypes: [LLVM_TAGGED_PTR]
-    },
-    attrs: []
-};
-
 final RuntimeFunction functionIsClosureFunction = {
     name: "function_is_closure",
     ty: {
@@ -178,9 +169,9 @@ function buildIndirectFunctionValue(llvm:Builder builder, Scaffold scaffold, bir
     llvm:PointerValue funcDescPtr = <llvm:PointerValue>builder.load(builder.getElementPtr(funcValuePtr, [constIndex(scaffold, 0),
                                                                                                          constIndex(scaffold, 0)],
                                                                     "inbounds"));
-    llvm:PointerValue funcPtr = builder.addrSpaceCast(<llvm:PointerValue>buildRuntimeFunctionCall(builder, scaffold,
-                                                                                                  functionCodePtr, [funcValuePtr]),
-                                                      functionCodePtrType(scaffold, operand.semType));
+    llvm:PointerValue funcPtr = <llvm:PointerValue>builder.load(builder.getElementPtr(funcValuePtr, [constIndex(scaffold, 0),
+                                                                                                     constIndex(scaffold, 1)],
+                                                                "inbounds"));
     llvm:PointerValue uniformFuncPtr = builder.getElementPtr(funcDescPtr, [constIndex(scaffold, 0),
                                                                            constIndex(scaffold, 1)],
                                                              "inbounds");
@@ -200,14 +191,6 @@ function buildDirectFunctionValue(Scaffold scaffold, bir:FunctionConstOperand op
         func = check buildFunctionDecl(scaffold, funcSymbol, erasedSignature);
     }
     return { signature, erasedSignature, func };
-}
-
-function functionCodePtrType(Scaffold scaffold, t:SemType funcType) returns llvm:PointerType {
-    t:FunctionAtomicType? atomic = t:functionAtomicType(scaffold.typeContext(), funcType);
-    if atomic == () {
-        return llvm:pointerType("i8"); // non-atomic functions can't be called directly
-    }
-    return llvm:pointerType(buildFunctionSignature(t:functionSignature(scaffold.typeContext(), atomic)));
 }
 
 function functionValuePtrType(Scaffold scaffold, t:SemType funcType) returns llvm:PointerType {

@@ -3,16 +3,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-
-final RuntimeFunction listLengthFunction = {
-    name: "list_length",
-    ty: {
-        returnType: "i64",
-        paramTypes: [LLVM_TAGGED_PTR]
-    },
-    attrs: []
-};
-
 final RuntimeFunction mappingSetFunction = {
     name: "mapping_set",
     ty: {
@@ -241,10 +231,9 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
                                                    heapPointerType(llListType));
         llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
         llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
-        llvm:Value length = buildRuntimeFunctionCall(builder, scaffold, listLengthFunction, [taggedStruct]);
         builder.condBr(builder.iCmp("ult",
                                     index,
-                                    length),
+                                    builder.load(builder.getElementPtr(struct, [constInt(scaffold, 0), constIndex(scaffold, 1)]), ALIGN_HEAP)),
                        continueBlock,
                        outOfBoundsBlock);
         builder.positionAtEnd(outOfBoundsBlock);
