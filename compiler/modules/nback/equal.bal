@@ -26,7 +26,7 @@ final RuntimeFunction stringEqFunction = {
         returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: [["return", "zeroext"], [0, "readonly"], [1, "readonly"]]
+    attrs: [["return", "zeroext"], ["param", 0, "readonly"], ["param", 1, "readonly"]]
 };
 
 final RuntimeFunction eqFunction = {
@@ -35,7 +35,7 @@ final RuntimeFunction eqFunction = {
         returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: [["return", "zeroext"], [0, "readonly"], [1, "readonly"]]
+    attrs: [["return", "zeroext"], ["param", 0, "readonly"], ["param", 1, "readonly"]]
 };
 
 final RuntimeFunction exactEqFunction = {
@@ -44,7 +44,7 @@ final RuntimeFunction exactEqFunction = {
         returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: [["return", "zeroext"], [0, "readonly"], [1, "readonly"]]
+    attrs: [["return", "zeroext"], ["param", 0, "readonly"], ["param", 1, "readonly"]]
 };
 
 final RuntimeFunction decimalExactEqFunction = {
@@ -53,7 +53,7 @@ final RuntimeFunction decimalExactEqFunction = {
         returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: [["return", "zeroext"], [0, "readonly"], [1, "readonly"]]
+    attrs: [["return", "zeroext"], ["param", 0, "readonly"], ["param", 1, "readonly"]]
 };
 
 type CmpEqOp "ne"|"eq";

@@ -787,8 +787,7 @@ function addEnumAttributeInner(EnumAttribute attribute, FunctionBase func) {
         ReturnEnumAttribute attrib = attribute[1];
         func.addReturnAttribute(attrib);
     } else {
-        ParamEnumAttribute attrib = attribute[1];
-        int paramIndex = attribute[0];
+        var [_, paramIndex, attrib] = attribute;
         func.addParamAttribute(paramIndex, attrib);
     }
 }

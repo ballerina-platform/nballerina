@@ -63,7 +63,7 @@ final RuntimeFunction mappingGetFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: [[0, "readonly"]]
+    attrs: [["param", 0, "readonly"]]
 };
 
 final RuntimeFunction mappingFillingGetFunction = {
@@ -81,7 +81,7 @@ final RuntimeFunction mappingIndexedGetFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_INT]
     },
-    attrs: [[0, "readonly"]]
+    attrs: [["param", 0, "readonly"]]
 };
 
 final RuntimeFunction mappingInitMemberFunction = {

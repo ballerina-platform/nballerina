@@ -227,7 +227,7 @@ function buildCallExactInner(llvm:Builder builder, Scaffold scaffold, llvm:Funct
     llvm:Value? retValue;
     if capturedVals != () {
         argValues = [capturedVals, ...argValues];
-        // clsoures are always function pointers
+        // closure are always function pointers
         llvm:PointerValue closurePtr = builder.bitCast(<llvm:PointerValue>func,
                                                        llvm:pointerType(buildClosureFunctionSignature(signature, ())));
         retValue = buildFunctionCall(builder, scaffold, closurePtr, argValues);

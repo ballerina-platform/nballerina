@@ -72,7 +72,7 @@ public type FunctionEnumAttribute "nocallback"|"nofree"|"nosync"|"readnone"|"nor
 public type ParamEnumAttribute "signext"|"zeroext"|"nest"|"readonly";
 public type ReturnEnumAttribute "signext"|"zeroext"|"noalias";
 public type MemoryAttribure "none";
-public type EnumAttribute FunctionEnumAttribute | (readonly & [int, ParamEnumAttribute]) | (readonly & ["return", ReturnEnumAttribute])| (readonly & ["memory", MemoryAttribure]);
+public type EnumAttribute FunctionEnumAttribute | (readonly & ["param", int, ParamEnumAttribute]) | (readonly & ["return", ReturnEnumAttribute])| (readonly & ["memory", MemoryAttribure]);
 
 // Subtype of LLVMOpcode
 
