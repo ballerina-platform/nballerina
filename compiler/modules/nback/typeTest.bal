@@ -8,7 +8,7 @@ final RuntimeFunction typeContainsFunction = {
         returnType: LLVM_BOOLEAN,
         paramTypes: [llvm:pointerType(llComplexType), LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"], ["param", 1, "readonly"]]
 };
 
 final RuntimeFunction typeContainsIntFunction = {
@@ -17,7 +17,7 @@ final RuntimeFunction typeContainsIntFunction = {
         returnType: LLVM_BOOLEAN,
         paramTypes: [llvm:pointerType(llComplexType), LLVM_INT]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"]]
 };
 
 final RuntimeFunction typeContainsFloatFunction = {
@@ -26,7 +26,7 @@ final RuntimeFunction typeContainsFloatFunction = {
         returnType: LLVM_BOOLEAN,
         paramTypes: [llvm:pointerType(llComplexType), LLVM_FLOAT]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"]]
 };
 
 final RuntimeFunction structureExactifyFunction = {
@@ -35,7 +35,7 @@ final RuntimeFunction structureExactifyFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR, llvm:pointerType(LLVM_TID)]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"], ["param", 1, "readonly"]]
 };
 
 type TypeTestedValue record {|

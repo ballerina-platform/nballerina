@@ -86,7 +86,7 @@ public class Context {
         return new(self);
     }
 
-    public function constStruct(Value[] elements) returns ConstValue {
+    public function constStruct(Value[] elements, StructType? ty = ()) returns ConstValue {
         string[] structBody = [];
         Type[] elemTypes = [];
         structBody.push("{");
@@ -787,8 +787,7 @@ function addEnumAttributeInner(EnumAttribute attribute, FunctionBase func) {
         ReturnEnumAttribute attrib = attribute[1];
         func.addReturnAttribute(attrib);
     } else {
-        ParamEnumAttribute attrib = attribute[1];
-        int paramIndex = attribute[0];
+        var [_, paramIndex, attrib] = attribute;
         func.addParamAttribute(paramIndex, attrib);
     }
 }

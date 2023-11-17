@@ -224,10 +224,17 @@ function buildCallExactInner(llvm:Builder builder, Scaffold scaffold, llvm:Funct
                              bir:Operand[] args, llvm:Value? capturedVals, bir:Register result, t:SemType returnTy) returns BuildError? {
     llvm:Value[] argValues = check buildFunctionCallArgs(builder, scaffold, erasedSignature.paramTypes,
                                                          signature.paramTypes, args);
+    llvm:Value? retValue;
     if capturedVals != () {
         argValues = [capturedVals, ...argValues];
+        // closure are always function pointers
+        llvm:PointerValue closurePtr = builder.bitCast(<llvm:PointerValue>func,
+                                                       llvm:pointerType(buildClosureFunctionSignature(signature, ())));
+        retValue = buildFunctionCall(builder, scaffold, closurePtr, argValues);
     }
-    llvm:Value? retValue = buildFunctionCall(builder, scaffold, func, argValues);
+    else {
+        retValue = buildFunctionCall(builder, scaffold, func, argValues);
+    }
     buildStoreRet(builder, scaffold, semTypeRetRepr(returnTy), retValue, result);
 }
 
@@ -291,7 +298,8 @@ function buildCallInexactInner(llvm:Builder builder, Scaffold scaffold, bir:Regi
                                llvm:PointerValue func, llvm:Value? capturedVals,
                                llvm:PointerValue uniformFuncPtr, llvm:PointerValue uniformArgArray, llvm:Value nArgs,
                                t:SemType returnType) returns BuildError? {
-    llvm:Value[] args = capturedVals == () ? [func, uniformArgArray, nArgs, constBoolean(scaffold, false), constNilTaggedPtr(scaffold)]:
+    llvm:Value[] args = capturedVals == () ? [func, uniformArgArray, nArgs, constBoolean(scaffold, false),
+                                              builder.addrSpaceCast(constNilTaggedPtr(scaffold), llvm:pointerType(LLVM_TAGGED_PTR))]:
                                              [func, uniformArgArray, nArgs, constBoolean(scaffold, true), capturedVals];
     llvm:Value? returnVal = buildFunctionCall(builder, scaffold, <llvm:PointerValue>builder.load(uniformFuncPtr),
                                               args);

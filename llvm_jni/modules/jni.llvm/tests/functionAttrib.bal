@@ -7,7 +7,7 @@ function functionAttrib() returns Module {
     FunctionDefn test = m.addFunctionDefn("test", {returnType: "i64", paramTypes: ["i64", "i64", "i64"]});
     test.addEnumAttribute("nounwind");
     test.addEnumAttribute(["return", "noalias"]);
-    test.addEnumAttribute([0, "zeroext"]);
+    test.addEnumAttribute(["param", 0, "zeroext"]);
     Value p0 = test.getParam(0);
     Value p1 = test.getParam(1);
     Value p2 = test.getParam(2);
@@ -20,7 +20,7 @@ function functionAttrib() returns Module {
     FunctionDecl test2 = m.addFunctionDecl("test2", {returnType:"i64", paramTypes:["i64", "i64", "i64"]});
     test2.addEnumAttribute("nounwind");
     test2.addEnumAttribute(["return", "noalias"]);
-    test2.addEnumAttribute([0, "zeroext"]);
+    test2.addEnumAttribute(["param", 0, "zeroext"]);
     return m;
 }
 

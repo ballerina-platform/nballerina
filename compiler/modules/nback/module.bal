@@ -86,8 +86,9 @@ function isClosureFunction(bir:Module mod, bir:Function func) returns boolean|Bu
     return false;
 }
 
-function buildClosureFunctionSignature(t:FunctionSignature signature, llvm:PointerType llClosurePtrTy) returns llvm:FunctionType {
-    llvm:Type[] & readonly paramTypes = [llClosurePtrTy, ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
+function buildClosureFunctionSignature(t:FunctionSignature signature, llvm:PointerType? llClosurePtrTy) returns llvm:FunctionType {
+    llvm:Type[] & readonly paramTypes = [llClosurePtrTy ?: llvm:pointerType(LLVM_TAGGED_PTR),
+                                         ...from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm];
     RetRepr repr = semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {
         returnType: repr.llvm,

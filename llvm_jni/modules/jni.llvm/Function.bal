@@ -49,31 +49,26 @@ public distinct class Function {
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
-        handle? attributeName = ();
-        int? index = ();
-        int? attributeNameLength = ();
-        if attribute is FunctionEnumAttribute {
-            index = -1;
-            attributeName = java:fromString(attribute);
-            string attributeContent = attribute;
-            attributeNameLength = attributeContent.length();
-        } else {
-            if attribute[0] == "return" {
+        int index;
+        string attributeContent;
+        match attribute {
+            ["return", var attr] => {
                 index = 0;
-            } else {
-                index = <int>attribute[0] + 1;
+                attributeContent = attr;
             }
-            string attributeContent = attribute[1];
-            attributeNameLength = attributeContent.length();
-            attributeName = java:fromString(attributeContent);
+            ["param", var i, var attr] => {
+                index = i + 1;
+                attributeContent = attr;
+            }
+            var attr => {
+                index = -1;
+                attributeContent = <FunctionEnumAttribute>attr;
+            }
         }
-        if attributeName is () || index is () || attributeNameLength is (){
-            panic error("Failed to convert the given attribute");
-        } else {
-            int attrKind = jLLVMGetEnumAttributeKindForName(attributeName, attributeNameLength);
-            handle attr = jLLVMCreateEnumAttribute(self.context.LLVMContext, attrKind, 0);
-            jLLVMAddAttributeAtIndex(self.LLVMValueRef, index, attr);
-        }
+        handle attributeName = java:fromString(attributeContent);
+        int attrKind = jLLVMGetEnumAttributeKindForName(attributeName, attributeContent.length());
+        handle attr = jLLVMCreateEnumAttribute(self.context.LLVMContext, attrKind, 0);
+        jLLVMAddAttributeAtIndex(self.LLVMValueRef, index, attr);
     }
 
     public function setGC(string? name) {

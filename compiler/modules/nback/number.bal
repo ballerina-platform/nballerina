@@ -20,7 +20,7 @@ final RuntimeFunction decimalNegFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"]]
 };
 
 final RuntimeFunction convertToFloatFunction = {
@@ -29,7 +29,7 @@ final RuntimeFunction convertToFloatFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"]]
 };
 
 final RuntimeFunction decimalToIntFunction = {
@@ -38,7 +38,7 @@ final RuntimeFunction decimalToIntFunction = {
         returnType: LLVM_INT_WITH_OVERFLOW,
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"]]
 };
 
 final RuntimeFunction convertToIntFunction = {
@@ -47,7 +47,7 @@ final RuntimeFunction convertToIntFunction = {
         returnType: llvm:structType([LLVM_TAGGED_PTR, "i1"]),
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"]]
 };
 
 final RuntimeFunction decimalFromIntFunction = {
@@ -56,7 +56,7 @@ final RuntimeFunction decimalFromIntFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_INT]
     },
-    attrs: ["readonly"]
+    attrs: []
 };
 
 final RuntimeFunction decimalFromFloatFunction = {
@@ -65,7 +65,7 @@ final RuntimeFunction decimalFromFloatFunction = {
         returnType: LLVM_TAGGED_WITH_PANIC_CODE,
         paramTypes: [LLVM_FLOAT]
     },
-    attrs: ["readonly"]
+    attrs: []
 };
 
 final RuntimeFunction convertToDecimalFunction = {
@@ -74,7 +74,7 @@ final RuntimeFunction convertToDecimalFunction = {
         returnType: LLVM_TAGGED_WITH_PANIC_CODE,
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"]]
 };
 
 final readonly & map<RuntimeFunction> decimalArithmeticFuncs = createDecimalArithmeticFuncs();
@@ -86,7 +86,7 @@ function createDecimalArithmeticFuncs() returns readonly & map<RuntimeFunction> 
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     };
     foreach var [op, name] in decimalArithmeticFuncNames.entries() {
-        m[op] = { name: "decimal_" + name, ty, attrs: ["readonly"] };
+        m[op] = { name: "decimal_" + name, ty, attrs: [["param", 0, "readonly"]] };
     }
     return m.cloneReadOnly();
 }
@@ -97,7 +97,7 @@ final RuntimeFunction decimalToFloatFunction = {
         returnType: "double",
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: ["readonly"]
+    attrs: [["param", 0, "readonly"]]
 };
 
 function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntArithmeticBinaryInsn insn) {

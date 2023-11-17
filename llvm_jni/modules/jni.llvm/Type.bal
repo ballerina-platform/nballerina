@@ -1,20 +1,18 @@
 import ballerina/jballerina.java;
 
+
 function typeToLLVMType(Context context, RetType ty) returns handle {
     if ty is PointerType {
-        handle baseType = typeToLLVMType(context, ty.pointsTo);
-        return jLLVMPointerType(baseType, ty.addressSpace);
+        return jLLVMPointerTypeInContext(context.LLVMContext, ty.addressSpace);
     }
     if ty is StructType {
-        if context is Context {
-            handle? namedTy = context.namedStructTypeToLLVMType(ty);
-            if namedTy is handle {
-                return namedTy;
-            }
+        handle? namedTy = context.namedStructTypeToLLVMType(ty);
+        if namedTy is handle {
+            return namedTy;
         }
         PointerPointer typeArr = PointerPointerFromTypes(context, ty.elementTypes);
         int elementCount = ty.elementTypes.length();
-        return jLLVMStructType(typeArr.jObject, elementCount, 0);
+        return jLLVMStructTypeInContext(context.LLVMContext, typeArr.jObject, elementCount, 0);
     }
     if ty is ArrayType {
         handle elementType = typeToLLVMType(context, ty.elementType);
@@ -158,10 +156,10 @@ function jLLVMConstPointerNull(handle ty) returns handle = @java:Method {
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef"]
 } external;
 
-function jLLVMPointerType(handle ty, int addressSpace) returns handle = @java:Method {
-    name: "LLVMPointerType",
+function jLLVMPointerTypeInContext(handle ty, int addressSpace) returns handle = @java:Method {
+    name: "LLVMPointerTypeInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "int"]
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "int"]
 } external;
 
 function jLLVMArrayType(handle elementType, int elementCount) returns handle = @java:Method {
@@ -170,8 +168,8 @@ function jLLVMArrayType(handle elementType, int elementCount) returns handle = @
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "int"]
 } external;
 
-function jLLVMStructType(handle elementTypes, int elementCount, int packed) returns handle = @java:Method {
-    name: "LLVMStructType",
+function jLLVMStructTypeInContext(handle contextRef, handle elementTypes, int elementCount, int packed) returns handle = @java:Method {
+    name: "LLVMStructTypeInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.javacpp.PointerPointer", "int", "int"]
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "org.bytedeco.javacpp.PointerPointer", "int", "int"]
 } external;
