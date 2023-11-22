@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 print_usage_and_exit() {
@@ -14,7 +14,7 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     print_usage_and_exit 0
 fi
 
-scriptDir=$(dirname "$0")
+scriptDir=$(realpath $(dirname "$0"))
 src="$1"
 buildDir="$(pwd)/build"
 rm -rf "$buildDir"
@@ -30,7 +30,7 @@ if [ $# -gt 1 ]; then
         if [ "$3" = "aarch64" ]; then
             "$scriptDir/./compiler" --outDir "$buildDir" --target aarch64-unknown-linux-gnu "$src"
             c_compiler=aarch64-linux-gnu-gcc
-            runtime="$scriptDir/./balrt_aarch64.a"
+            runtime="$scriptDir/balrt_aarch64.a"
         else
             echo "Error: unsupported target $3"
             exit 1
@@ -44,6 +44,10 @@ fi
 
 srcName=$(basename "$src" .bal)
 
-find "$buildDir" -maxdepth 1 -name "$srcName*.o" -print0 | \
-    xargs -0 awk -v rt="$runtime" 'BEGIN { for (i = 1; i < ARGC; i++) printf "\"%s\" ", ARGV[i]; printf "%s -lm\n", rt; }' | \
-    xargs "$c_compiler" -O2 -static -o "$buildDir"/"$srcName"
+cd "$buildDir"
+objects=()
+for f in "$srcName"*.o; do
+    objects+=("$buildDir/$f")
+done
+
+"$c_compiler" -O2 -static -o "$srcName" "${objects[@]}" -lm "$scriptDir/./$runtime"

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 if [ $# -ne 1 ]; then
     echo "Error: expected $0 <source file>"
@@ -10,7 +10,7 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     exit 0
 fi
 
-scriptDir=$(dirname "$0")
+scriptDir=$(realpath $(dirname "$0"))
 src="$1"
 buildDir="$(pwd)/build"
 runtime="$scriptDir/./balrt.a"
@@ -19,8 +19,10 @@ mkdir -p "$buildDir"
 java -jar "$scriptDir/./compiler.jar" --outDir "$buildDir" "$src"
 
 srcName=$(basename "$src" .bal)
-objects=$(find "$buildDir" -maxdepth 1 -name "$srcName*.o")
+cd "$buildDir"
+objects=()
+for f in "$srcName"*.o; do
+    objects+=("$buildDir/$f")
+done
 
-find "$buildDir" -maxdepth 1 -name "$srcName*.o" -print0 | \
-    xargs -0 awk -v rt="$runtime" 'BEGIN { for (i = 1; i < ARGC; i++) printf "\"%s\" ", ARGV[i]; printf "%s -lm\n", rt; }' | \
-    xargs cc -O2 -o "$buildDir"/"$srcName"
+cc -O2 -o "$srcName" "${objects[@]}" -lm "$runtime"
