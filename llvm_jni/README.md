@@ -1,33 +1,25 @@
 # Usage
-## Build the jni.llvm
-1. Run `./gradlew copyDependencies` to download and copy dependencies to the local `target/platform-libs` directory. (This needs to be done only once for the first build)
-2. Run `bal build` to build the project
 
-## Build nBallerina complier using JNI
-Run `./gradlew testBuild`
+## 1 Build nBallerina complier using JNI
+Run `make`.
 
-This will create new ballerina package in `testbuild` directory the root directory where
-1. Change all the imports of `print.llvm` to `jni.llvm`
-2. Remove the `print.llvm` module and insert `jni.llvm` module instead
-3. Run `bal build` on the new ballerina package
+This will create new ballerina package in `testbuild` directory by,
+1. Replace `print.llvm` with `jni.llvm`.
+2. Run `bal build` on the new package.
+3. Add the inline runtime (`balrt_inline.bc`) into the resulting `jar` file.
+4. Generate a native executable using [GraalVM](https://www.graalvm.org/).
 
-To clean this build either delete the `testbuild` directory or run `./gradlew cleanTestBuild`.
+Resulting compiler includes the necessary parts of the LLVM tool-chain (using [Bytedeco's LLVM presets](https://github.com/bytedeco/javacpp-presets/tree/master/llvm) as well as the inline runtime (`balrt_inline.bc`) and can compile Ballerina source files into object files directly.
 
-## Compare llvm ir generated against print.llvm
-Run `./gradlew compareTestCases`
-# Sample code
-```
-import llvm_jni.llvm;
-import  ballerina/io;
-public function main() {
-    llvm:Context context = new;
-    llvm:Builder builder = context.createBuilder();
-    llvm:Module m = context.createModule();
-    llvm:Function mainFunction = m.addFunction("main", {returnType: "void", paramTypes: ["i64", "i1"]});
-    llvm:BasicBlock initBlock = mainFunction.appendBasicBlock();
-    builder.positionAtEnd(initBlock);
-    builder.ret(llvm:constInt("i64",0));
-    io:println(m.toString());
-    checkpanic m.toFile("test.ll");
-}
-```
+### 1.1 Pruning unwanted LLVM dependencies
+When building the native executable as an intermediate step we crate a Java version of the compiler that can run in multiple operating systems. For this we include LLVM tool-chain for each of those operating systems. However this is not needed when building a single native executable targeting a single operating system/architecture combination. To prune unnecessary dependencies you can pass in a `Ballerina.toml` file with only the dependencies needed for your operating system. For example in a Linux AMD64 machine we can use `make BAL_CONFIG=BallerinaLinuxAMD64.toml`.
+
+### 1.2 Creating distribution tar file
+Run `make dist`
+
+This will create the release artifacts in `build` directory. There are two possible versions
+1. If you use `ARCH=amd64` (this is the default) it will generate a native executable with support for cross compiling to AArch64, along with AMD64 and AArch64 versions of the runtime.
+2. Otherwise it will generate a `jar` file containing the compiler as well as runtime in the host systems architecture.
+
+## 2.Testing
+In order to test the compiler against the test suite run `make test LINK_FILE_EXTENSION=.o COMPILER=<Path to compiler>` in `test` directory.

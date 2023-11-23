@@ -94,13 +94,24 @@ public distinct class Module {
 
     function linkInlineLibrary() {
         LLVMMemoryBuffer runtimeMemBuffer = new;
-        runtimeMemBuffer.storeResource("balrt_inline.bc");
+        runtimeMemBuffer.storeResource(self.pickRuntime());
         Module libModule = new("balrt_inline", self.context);
         libModule.parseBitCode(runtimeMemBuffer);
         int result = jLLVMLinkModules2(self.LLVMModule, libModule.LLVMModule);
         if result != 0 {
             panic error("Failed to link the inline runtime");
         }
+    }
+
+    private function pickRuntime() returns string {
+        TargetTriple? targetTriple = self.targetTriple;
+        if targetTriple == () {
+            return "balrt_inline.bc";
+        }
+        else if targetTriple is "aarch64-linux-gnu"|"aarch64-unknown-linux-gnu" {
+            return "balrt_inline_aarch64.bc";
+        }
+        panic error("Only aarch64-linux-gnu supported as a cross compilation target");
     }
 
     // Corresponds to LLVMParseBitcodeInContext2
@@ -113,7 +124,7 @@ public distinct class Module {
 
     public function printModuleToObjectFile(string fileName, *ObjectFileGenOptions opts) returns io:Error? {
         self.finalizeDIBuilder();
-        self.linkInlineLibrary(); 
+        self.linkInlineLibrary();
         string optLevel = opts.optLevel ?: "Default";
         // We are defaulting to PIC (Position Independent Code) since clang defaults to PIE (Position Independent Executable)
         string relocMode = opts.relocMode ?: "PIC";
