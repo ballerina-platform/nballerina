@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 print_usage_and_exit() {
@@ -21,7 +21,7 @@ rm -rf "$buildDir"
 mkdir -p "$buildDir"
 
 c_compiler=cc
-runtime="$scriptDir/./balrt.a"
+runtime="$scriptDir/balrt.a"
 if [ $# -gt 1 ]; then
     if [ "$2" = "--target" ]; then
         if [ $# -lt 3 ]; then
@@ -44,10 +44,4 @@ fi
 
 srcName=$(basename "$src" .bal)
 
-cd "$buildDir"
-objects=()
-for f in "$srcName"*.o; do
-    objects+=("$buildDir/$f")
-done
-
-"$c_compiler" -O2 -static -o "$srcName" "${objects[@]}" -lm "$scriptDir/./$runtime"
+"$c_compiler" -O2 -static -o "$srcName" "$buildDir/$srcName"*.o -lm "$runtime"

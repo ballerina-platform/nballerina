@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 if [ $# -ne 1 ]; then
     echo "Error: expected $0 <source file>"
@@ -13,7 +13,7 @@ fi
 scriptDir=$(realpath $(dirname "$0"))
 src="$1"
 buildDir="$(pwd)/build"
-runtime="$scriptDir/./balrt.a"
+runtime="$scriptDir/balrt.a"
 mkdir -p "$buildDir"
 
 java -jar "$scriptDir/./compiler.jar" --outDir "$buildDir" "$src"
@@ -25,4 +25,4 @@ for f in "$srcName"*.o; do
     objects+=("$buildDir/$f")
 done
 
-cc -O2 -o "$srcName" "${objects[@]}" -lm "$runtime"
+cc -O2 -o "$srcName" "$buildDir/$srcName"*.o -lm "$runtime"
